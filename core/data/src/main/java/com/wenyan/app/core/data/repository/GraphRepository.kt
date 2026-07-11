@@ -6,6 +6,17 @@ import com.wenyan.app.core.database.entity.GraphNodeType
 import kotlinx.coroutines.flow.Flow
 
 /**
+ * 带可提取性 R 值的图谱节点数据对（阶段3新增）。
+ *
+ * @property node 图谱节点实体
+ * @property retrievability 可提取性 R（0-1），-1f 表示节点无关联知识点
+ */
+data class NodeWithRetrievability(
+    val node: GraphNodeEntity,
+    val retrievability: Float,
+)
+
+/**
  * 知识图谱仓库接口。
  *
  * 协调图谱节点、边与记忆记录的查询与写入能力。
@@ -93,7 +104,7 @@ interface GraphRepository {
     /**
      * 计算节点的可提取性 R（Retrievability）。
      *
-     * 基于 FSRS 算法的保持率公式：R = exp(-elapsed / stability)
+     * 基于 FSRS-6 算法的保持率公式（幂律）：R = (1 + t/(9*S))^(-1)
      *
      * Spec 第 313-315 行：若前置节点 R < 0.7，先插入该前置节点的复习卡片。
      *
@@ -101,4 +112,14 @@ interface GraphRepository {
      * @return 可提取性 R，取值范围 [0.0, 1.0]
      */
     fun getRetrievability(nodeId: String): Flow<Float>
+
+    /**
+     * 批量获取所有节点及其可提取性 R（阶段3新增）。
+     *
+     * 一次性 combine 节点流与记忆记录流，批量计算 R 值，避免 N+1 查询。
+     * 记忆记录变更时（如评分后 upsert），R 值自动刷新。
+     *
+     * @return 节点 + R 值列表的 Flow
+     */
+    fun getNodesWithRetrievability(): Flow<List<NodeWithRetrievability>>
 }
