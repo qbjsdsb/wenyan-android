@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.cards.CardTemplate
 import com.wenyan.app.core.data.repository.CardRepository
+import com.wenyan.app.core.data.repository.SchedulingRepository
+import com.wenyan.app.core.database.entity.CardTemplateType
+import com.wenyan.app.core.fsrs.Rating
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -11,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -21,16 +25,16 @@ import javax.inject.Inject
  * 数据来源：[CardRepository.getCardsForReview] 返回已验证知识点经
  * [com.wenyan.app.core.data.cards.CardSplitter] 拆分的卡片流。
  *
- * 评分调度（rateCard）当前仅推进卡片索引。完整的 FSRS 调度需要：
- * 1. 在 DataModule 中提供 FsrsWrapper（需三档参数 TierFsrsConfig）
- * 2. 新增 SchedulingRepository：将 CardTemplate 映射回 MemoRecord，
- *    调用 FsrsWrapper.schedule() 后持久化到 memo_records 表
- * 3. 将 FlashCard（FSRS内部模型）与 CardTemplate（UI模型）解耦
- * 以上属于独立 Task，不在本次 P1 连通范围内。
+ * 评分调度（阶段3接通）：
+ * - [rateCard] 先推进卡片索引（保证 UI 流畅），再异步调用
+ *   [SchedulingRepository.rateCard] 完成 FSRS 调度回写。
+ * - 评分档位（AGAIN/HARD/GOOD/EASY）由 [CardRating] → [Rating] 映射。
+ * - tier 由 [CardTemplateType] 推断，SchedulingRepository 内部按 tier 构造 FsrsWrapper。
  */
 @HiltViewModel
 class CardsViewModel @Inject constructor(
     private val cardRepository: CardRepository,
+    private val schedulingRepository: SchedulingRepository,
 ) : ViewModel() {
 
     // 翻转状态（UI 交互层）
@@ -77,18 +81,42 @@ class CardsViewModel @Inject constructor(
     }
 
     /**
-     * FSRS 评分（Again/Hard/Good/Easy），推进到下一张卡。
+     * FSRS 评分（Again/Hard/Good/Easy），推进到下一张卡并异步完成调度回写。
      *
-     * TODO（FSRS调度集成Task）：
-     * - 将评分映射为 [com.wenyan.app.core.fsrs.Rating]
-     * - 通过 SchedulingRepository 查找当前卡片对应的 MemoRecord
-     * - 调用 FsrsWrapper.schedule(flashCard, rating) 计算新调度
-     * - 持久化更新后的 MemoRecord（stability/difficulty/dueDate/state）
-     * - 根据评分档位（TIER_EXACT/TIER_FRAMEWORK/TIER_UNDERSTAND）应用三档参数
+     * 流程：
+     * 1. 读取当前卡片的 pointId 和 cardType
+     * 2. 先推进索引 + 重置翻转状态（保证 UI 立即响应）
+     * 3. 异步调用 SchedulingRepository.rateCard 完成 FSRS 调度
+     *
+     * 无 pointId 的卡片（pointId 为空）仅推进索引，不触发调度。
      */
     fun rateCard(rating: CardRating) {
+        val current = uiState.value.currentCard ?: return
+        val pointId = current.pointId
+        val cardTypeStr = current.cardType
+
+        // 先推进 UI（立即响应）
         _isFlipped.update { false }
         _currentIndex.update { it + 1 }
+
+        // 无 pointId 的卡片仅推进索引
+        if (pointId.isBlank()) return
+
+        // 异步完成 FSRS 调度回写
+        viewModelScope.launch {
+            val fsrsRating = when (rating) {
+                CardRating.AGAIN -> Rating.AGAIN
+                CardRating.HARD -> Rating.HARD
+                CardRating.GOOD -> Rating.GOOD
+                CardRating.EASY -> Rating.EASY
+            }
+            val templateType = try {
+                CardTemplateType.valueOf(cardTypeStr)
+            } catch (e: IllegalArgumentException) {
+                null
+            } ?: return@launch
+            schedulingRepository.rateCard(pointId, fsrsRating, templateType)
+        }
     }
 
     /** 将 [CardTemplate] 映射为 UI 层 [CardItem] */
@@ -97,6 +125,7 @@ class CardsViewModel @Inject constructor(
         front = front,
         back = back,
         cardType = templateType.name,
+        pointId = pointId,
     )
 }
 
@@ -116,6 +145,8 @@ data class CardItem(
     val front: String,
     val back: String,
     val cardType: String,
+    /** 关联知识点 ID（阶段3新增，用于 FSRS 调度回写） */
+    val pointId: String = "",
 )
 
 // FSRS 评分等级
