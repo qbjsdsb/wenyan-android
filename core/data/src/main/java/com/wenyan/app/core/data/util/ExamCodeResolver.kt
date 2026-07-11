@@ -38,7 +38,7 @@ object ExamCodeResolver {
         val matched = history.find { record ->
             record.examCode == examCode &&
                 year >= record.validFromYear &&
-                (record.validToYear == null || year <= record.validToYear)
+                (record.validToYear?.let { year <= it } ?: true)
         }
 
         // 4. 检测语义翻转：同一 exam_code 在不同年份是否有不同 subject_name
