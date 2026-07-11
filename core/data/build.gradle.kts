@@ -30,6 +30,7 @@ android {
 dependencies {
     implementation(project(":core:common"))
     api(project(":core:database"))
+    api(project(":core:fsrs"))
 
     // Hilt
     implementation(libs.hilt.android)
