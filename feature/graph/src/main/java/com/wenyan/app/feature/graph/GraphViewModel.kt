@@ -3,8 +3,8 @@ package com.wenyan.app.feature.graph
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.repository.GraphRepository
+import com.wenyan.app.core.data.repository.NodeWithRetrievability
 import com.wenyan.app.core.database.entity.GraphEdgeEntity
-import com.wenyan.app.core.database.entity.GraphNodeEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -15,15 +15,14 @@ import javax.inject.Inject
 /**
  * 知识图谱模块 ViewModel。
  *
- * 管理 UI 状态：图谱节点 + 边。
+ * 管理 UI 状态：图谱节点（含 R 值）+ 边。
  *
- * 数据来源：[GraphRepository.getAllNodes] 和 [GraphRepository.getAllEdges]
- * 返回 Room 观察流，数据库变更时自动更新。
+ * 数据来源：
+ * - [GraphRepository.getNodesWithRetrievability]：批量返回节点 + 可提取性 R（阶段3接通）
+ * - [GraphRepository.getAllEdges]：图谱边
  *
- * 可提取性（retrievability）当前设为 0f 占位。逐节点调用
- * [GraphRepository.getRetrievability] 会导致 N+1 查询，
- * 正确方案是在 DAO 层新增 JOIN 查询（graph_nodes JOIN memo_records）
- * 一次性返回带 R 值的节点列表，属于独立优化 Task。
+ * R 值通过 combine(observeAll nodes, observeAll memos) 批量计算，
+ * 评分后 memo_records 变更时 R 值自动刷新。
  */
 @HiltViewModel
 class GraphViewModel @Inject constructor(
@@ -33,15 +32,15 @@ class GraphViewModel @Inject constructor(
     /**
      * 图谱 UI 状态。
      *
-     * 合并节点流与边流，数据库变更时自动刷新。
+     * 合并节点流（含 R 值）与边流，数据库变更时自动刷新。
      */
     val uiState: StateFlow<GraphUiState> = combine(
-        graphRepository.getAllNodes(),
+        graphRepository.getNodesWithRetrievability(),
         graphRepository.getAllEdges(),
-    ) { nodes, edges ->
+    ) { nodesWithR, edges ->
         GraphUiState(
             isLoading = false,
-            nodes = nodes.map { it.toUiItem() },
+            nodes = nodesWithR.map { it.toUiItem() },
             edges = edges.map { it.toUiItem() },
         )
     }.stateIn(
@@ -50,11 +49,11 @@ class GraphViewModel @Inject constructor(
         initialValue = GraphUiState(isLoading = true),
     )
 
-    /** 将 [GraphNodeEntity] 映射为 UI 层 [GraphNodeItem] */
-    private fun GraphNodeEntity.toUiItem(): GraphNodeItem = GraphNodeItem(
-        id = id,
-        label = label,
-        retrievability = 0f, // TODO: 批量计算R值（需DAO层JOIN查询避免N+1）
+    /** 将 [NodeWithRetrievability] 映射为 UI 层 [GraphNodeItem] */
+    private fun NodeWithRetrievability.toUiItem(): GraphNodeItem = GraphNodeItem(
+        id = node.id,
+        label = node.label,
+        retrievability = retrievability,
     )
 
     /** 将 [GraphEdgeEntity] 映射为 UI 层 [GraphEdgeItem] */
