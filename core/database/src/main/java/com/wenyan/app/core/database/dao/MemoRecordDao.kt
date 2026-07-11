@@ -40,6 +40,15 @@ interface MemoRecordDao {
     @Query("SELECT * FROM memo_records WHERE in_priority_queue = 1 ORDER BY next_review_at ASC")
     fun observePriorityQueue(): Flow<List<MemoRecordEntity>>
 
+    /**
+     * 观察全部记忆记录（阶段3新增，用于图谱批量计算 R 值）。
+     *
+     * 与 [com.wenyan.app.core.database.dao.GraphNodeDao.observeAll] combine 后，
+     * 一次性计算所有节点的可提取性，避免 N+1 查询。
+     */
+    @Query("SELECT * FROM memo_records")
+    fun observeAll(): Flow<List<MemoRecordEntity>>
+
     @Query("SELECT COUNT(*) FROM memo_records WHERE state = :state")
     suspend fun countByState(state: String): Int
 }
