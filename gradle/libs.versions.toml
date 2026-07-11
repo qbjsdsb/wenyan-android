@@ -107,8 +107,7 @@ androidx-datastore-core = { group = "androidx.datastore", name = "datastore", ve
 # AndroidX Security + Keystore
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 
-# FSRS-Kotlin 间隔重复算法（JitPack，库内部硬编码 enableFuzz=true，封装层需覆盖实现精确间隔）
-fsrs-kotlin = { group = "com.github.open-spaced-repetition", name = "FSRS-Kotlin", version.ref = "fsrsKotlin" }
+# FSRS-6 算法已由 FsrsWrapper.kt 自行实现，无需外部库
 
 # 测试
 junit = { group = "junit", name = "junit", version.ref = "junit" }
