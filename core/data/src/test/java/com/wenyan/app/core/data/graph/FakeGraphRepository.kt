@@ -111,9 +111,11 @@ fun testEdge(
     from: String,
     to: String,
     type: String = "RELATED_CONCEPT",
+    label: String? = null,
 ) = GraphEdgeEntity(
     id = "${from}_$to",
     sourceId = from,
     targetId = to,
     type = type,
+    label = label,
 )
