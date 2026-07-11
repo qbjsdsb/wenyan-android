@@ -30,9 +30,7 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
 
-    // FSRS-Kotlin 间隔重复算法库（JitPack）
-    // 库内部硬编码 enableFuzz=true，封装层 FsrsWrapper 需覆盖实现 enableFuzz=false（精确记忆档要求）
-    implementation(libs.fsrs.kotlin)
+    // FSRS-6 算法已由 FsrsWrapper.kt 自行实现，无需外部依赖
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
