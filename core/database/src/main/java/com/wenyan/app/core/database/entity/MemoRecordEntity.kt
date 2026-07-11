@@ -17,6 +17,9 @@ import androidx.room.PrimaryKey
  * - last_review_at: 上次复习时间
  * - next_review_at: 下次复习时间
  * - review_count / fail_count: 复习/失败次数
+ * - elapsed_days: 距上次复习天数（阶段3新增，FSRS调度状态）
+ * - scheduled_days: 上次调度的间隔天数（阶段3新增）
+ * - reps: 总复习次数（阶段3新增，与 review_count 同步）
  * - history: 复习历史，JSON 字符串（结构复杂，业务层解析）
  * - in_priority_queue: 是否在优先队列，默认 0
  */
@@ -61,6 +64,18 @@ data class MemoRecordEntity(
 
     @ColumnInfo(name = "fail_count", defaultValue = "0")
     val failCount: Int = 0,
+
+    /** 距上次复习天数（FSRS调度状态，阶段3新增） */
+    @ColumnInfo(name = "elapsed_days", defaultValue = "0")
+    val elapsedDays: Int = 0,
+
+    /** 上次调度的间隔天数（FSRS调度状态，阶段3新增） */
+    @ColumnInfo(name = "scheduled_days", defaultValue = "0")
+    val scheduledDays: Int = 0,
+
+    /** 总复习次数（FSRS调度状态，阶段3新增，与 review_count 同步） */
+    @ColumnInfo(name = "reps", defaultValue = "0")
+    val reps: Int = 0,
 
     /** 复习历史，JSON 字符串（结构复杂，业务层解析） */
     @ColumnInfo(name = "history")
