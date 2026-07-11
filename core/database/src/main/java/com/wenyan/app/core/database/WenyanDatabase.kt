@@ -47,7 +47,7 @@ import com.wenyan.app.core.database.entity.WritingPatternEntity
  * 文研App Room 数据库。
  *
  * - 数据库名：wenyan.db
- * - 版本：1（Task 11-13 完成全部 Entity 与 DAO 接入）
+ * - 版本：2（阶段3：memo_records 补 elapsed_days/scheduled_days/reps 字段）
  *
  * 共 19 张表（无 mentors 表，导师信息改为外链官网）：
  * 1. subjects                科目
@@ -94,7 +94,7 @@ import com.wenyan.app.core.database.entity.WritingPatternEntity
         ExamCodeHistoryEntity::class,
         DataSourceEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(WenyanTypeConverters::class)
