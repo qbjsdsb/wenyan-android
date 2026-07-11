@@ -135,9 +135,10 @@ class SeedDataLoader @Inject constructor(
         }
 
         // 步骤3：导入知识点（按 subject 字段映射到默认章节）
-        val knowledgePointEntities = seedData.knowledgePoints.map { seed ->
+        // 注意：若知识点 subject 不在 subjects 列表中，跳过该知识点（避免外键约束失败）
+        val knowledgePointEntities = seedData.knowledgePoints.mapNotNull { seed ->
             val chapterId = subjectNameToChapterId[seed.subject]
-                ?: "chapter_default_misc"
+                ?: return@mapNotNull null
             KnowledgePointEntity(
                 id = seed.id,
                 chapterId = chapterId,
@@ -187,8 +188,10 @@ class SeedDataLoader @Inject constructor(
         }
 
         // 步骤5：导入真题（按 subject 字段映射到 subjectId）
-        val examQuestionEntities = seedData.examQuestions.map { seed ->
-            val subjectId = subjectNameToId[seed.subject] ?: "subj_misc"
+        // 注意：若真题 subject 不在 subjects 列表中，跳过该真题（避免外键约束失败）
+        val examQuestionEntities = seedData.examQuestions.mapNotNull { seed ->
+            val subjectId = subjectNameToId[seed.subject]
+                ?: return@mapNotNull null
             ExamQuestionEntity(
                 id = seed.id,
                 year = seed.year,
