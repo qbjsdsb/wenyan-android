@@ -17,6 +17,9 @@ interface MemoRecordDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: MemoRecordEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(entities: List<MemoRecordEntity>)
+
     @Update
     suspend fun update(entity: MemoRecordEntity)
 
