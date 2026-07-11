@@ -124,7 +124,7 @@ object CardSplitter {
         if (items.size < 2) return emptyList()
 
         // 按首字（姓氏/前缀）聚类
-        val grouped = items.groupBy { it.firstOrNull() ?: "" }
+        val grouped = items.groupBy { it.firstOrNull()?.toString() ?: "" }
             .filter { it.key.isNotEmpty() && it.value.size >= 2 }
 
         return grouped.values.flatMap { confusedItems ->
