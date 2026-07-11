@@ -117,16 +117,11 @@ class AntiRoteMemorizationTest {
     // 验证常量值（STREAK_THRESHOLD=5, RELATED_ERROR_THRESHOLD=0.4f）
     @Test
     fun constants_streakThreshold_isCorrect() {
-        // 通过反射访问 private companion object 常量
-        val companion = AntiRoteMemorization::class.java
-            .getDeclaredField("Companion")
-            .apply { isAccessible = true }
-            .get(AntiRoteMemorization)
-
-        val streakField = companion::class.java
+        // Kotlin companion object 中的 private const val 被编译为外部类的静态字段
+        val streakField = AntiRoteMemorization::class.java
             .getDeclaredField("STREAK_THRESHOLD")
             .apply { isAccessible = true }
-        val streakValue = streakField.get(companion) as Int
+        val streakValue = streakField.get(null) as Int
 
         assertEquals("STREAK_THRESHOLD 应为 5", 5, streakValue)
     }
@@ -134,15 +129,10 @@ class AntiRoteMemorizationTest {
     // 验证常量值 - RELATED_ERROR_THRESHOLD
     @Test
     fun constants_relatedErrorThreshold_isCorrect() {
-        val companion = AntiRoteMemorization::class.java
-            .getDeclaredField("Companion")
-            .apply { isAccessible = true }
-            .get(AntiRoteMemorization)
-
-        val errorRateField = companion::class.java
+        val errorRateField = AntiRoteMemorization::class.java
             .getDeclaredField("RELATED_ERROR_THRESHOLD")
             .apply { isAccessible = true }
-        val errorRateValue = errorRateField.get(companion) as Float
+        val errorRateValue = errorRateField.get(null) as Float
 
         assertEquals("RELATED_ERROR_THRESHOLD 应为 0.4f", 0.4f, errorRateValue, 0.001f)
     }

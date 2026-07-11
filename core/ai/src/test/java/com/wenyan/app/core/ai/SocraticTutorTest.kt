@@ -72,7 +72,7 @@ class SocraticTutorTest {
     @Test
     fun c5_3_aiLetsUserTryFirst_validateUserAnswer() {
         // 有效答案（≥50字且含中文）应通过验证
-        val validAnswer = "江西诗派是宋代重要的诗歌流派，以黄庭坚为代表，主张点铁成金、夺胎换骨等创作手法，强调学习杜甫。"
+        val validAnswer = "江西诗派是宋代重要的诗歌流派，以黄庭坚为代表，主张点铁成金、夺胎换骨等创作手法，强调学习杜甫诗法，追求瘦硬峭拔的诗风。"
         val validation = tutor.validateUserAnswer(validAnswer)
 
         assertTrue("有效答案（≥50字含中文）应通过验证", validation.isValid)
@@ -209,7 +209,7 @@ class SocraticTutorTest {
     // 验证validateUserAnswer：答案≥50字且含中文返回isValid=true
     @Test
     fun validateUserAnswer_validAnswer_returnsValid() {
-        val validAnswer = "这是一个足够长的答案，超过五十个字符，并且包含中文内容，应该通过验证。"
+        val validAnswer = "这是一个足够长的答案，超过五十个字符，并且包含中文内容，应该能够通过验证机制，详细地阐述了相关的文学知识点。"
         val validation = tutor.validateUserAnswer(validAnswer)
 
         assertTrue("答案≥50字且含中文应 isValid=true", validation.isValid)
@@ -218,7 +218,7 @@ class SocraticTutorTest {
     // 验证RAG无结果时返回"该问题不在当前资料库覆盖范围内"
     @Test
     fun ragNoResults_returnsNoResultMessage() = runBlocking {
-        val userAnswer = "江西诗派是宋代重要的诗歌流派，以黄庭坚为代表，主张点铁成金、夺胎换骨等创作手法。"
+        val userAnswer = "江西诗派是宋代重要的诗歌流派，以黄庭坚为代表，主张点铁成金、夺胎换骨等创作手法，强调学习杜甫诗法，追求瘦硬峭拔的诗风。"
 
         val guide = tutor.guideEssayAnswer("论述江西诗派的特点", userAnswer).first()
 
