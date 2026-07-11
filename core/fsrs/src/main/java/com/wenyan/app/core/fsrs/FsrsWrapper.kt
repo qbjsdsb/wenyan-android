@@ -1,0 +1,395 @@
+package com.wenyan.app.core.fsrs
+
+import kotlin.math.exp
+import kotlin.math.pow
+import kotlin.random.Random
+import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
+
+/**
+ * FSRS-Kotlin库封装层
+ *
+ * 对应设计文档第5.4.3节 FSRS-6完整实现（第3460-3744行）和spec.md第265-268行。
+ *
+ * FSRS-Kotlin库（https://github.com/open-spaced-repetition/FSRS-Kotlin）内部硬编码 enableFuzz=true，
+ * 无法通过构造函数外部控制。本封装层fork/包装库的FSRS算法，实现：
+ * 1. enableFuzz参数可控（精确记忆档TIER_EXACT要求enableFuzz=false，精确到天）
+ * 2. 三档参数预设（stabilityGrowthFactor/easyBonus/againPenalty）可注入
+ * 3. requestRetention（对应spec中的desired_retention）可动态调整
+ *
+ * FSRS-6核心公式（设计文档第4628-4640行）：
+ * - 可提取性：R = (1 + t/(9*S))^(-1)
+ * - 难度更新含均值回归：D_next = w[6]*D' + (1-w[6])*w[4]
+ * - 遗忘稳定性更新：S' = w[11] * D^(-w[12]) * ((S+1)^w[13] - 1) * exp(-w[14]*(1-R))
+ * - 间隔计算：I = 9*S*(1/R_target - 1)
+ *
+ * @param requestRetention    目标保留率 R_target（对应spec的desired_retention，库的requestRetention）
+ * @param maximumInterval     最大间隔（天）
+ * @param enableFuzz          是否启用模糊因子（false=精确间隔，TIER_EXACT要求false）
+ * @param stabilityGrowthFactor 稳定性增长系数（三档参数，默认1.0=标准FSRS增长）
+ * @param easyBonus           Easy额外加成（三档参数，默认1.0）
+ * @param againPenalty        Again惩罚系数（三档参数，默认1.0=不额外惩罚）
+ */
+class FsrsWrapper(
+    private val requestRetention: Float,
+    private val maximumInterval: Int,
+    private val enableFuzz: Boolean = true,
+    private val stabilityGrowthFactor: Float = 1.0f,
+    private val easyBonus: Float = 1.0f,
+    private val againPenalty: Float = 1.0f
+) {
+    companion object {
+        private const val DAY_MS = 86_400_000L
+
+        /** FSRS-6学习阶段间隔（Again=1分钟，Hard=5分钟，其他=1天） */
+        private const val LEARNING_STEP_AGAIN_DAYS = 1f / 1440f   // 1分钟换算为天
+        private const val LEARNING_STEP_HARD_DAYS = 5f / 1440f     // 5分钟换算为天
+
+        /**
+         * FSRS-6默认参数（21个，w[0]-w[20]）
+         * 对应设计文档第3501-3509行 DEFAULT_WEIGHTS_FSRS_6
+         */
+        val DEFAULT_WEIGHTS = floatArrayOf(
+            0.2172f, 0.3174f, 1.7265f, 5.1816f,  // w[0-3] 新卡初始稳定性S0
+            4.7284f, 1.0526f, 0.5699f, 0.2197f,  // w[4-7] 初始难度D0 + 难度变化 + 均值回归 + 振幅
+            1.5336f, 0.1752f, 0.9441f, 2.4926f,  // w[8-11] 回忆稳定性更新 + 遗忘稳定性更新
+            0.0606f, 0.4656f, 1.1842f, 0.5316f,  // w[12-15] 遗忘参数 + Hard惩罚因子
+            0.2316f,                               // w[16] Easy奖励因子
+            0.0f, 0.0f,                            // w[17-18] FSRS-5短期记忆稳定性
+            0.0f, 0.0f                             // w[19-20] FSRS-6学习/重学阶段短期参数
+        )
+    }
+
+    /** FSRS-6参数权重（21个） */
+    private val w: FloatArray = DEFAULT_WEIGHTS
+
+    // ===================== 公开API =====================
+
+    /**
+     * 按指定评分调度卡片，返回更新后的卡片
+     *
+     * @param card   待调度的卡片
+     * @param rating 评分（AGAIN/HARD/GOOD/EASY）
+     * @param now    当前时间（默认LocalDateTime.now()）
+     * @return 调度后的新卡片（dueDate/stability/difficulty等已更新）
+     */
+    fun schedule(card: FlashCard, rating: Rating, now: LocalDateTime = LocalDateTime.now()): FlashCard {
+        val schedulingCard = scheduleInternal(card, rating, now)
+        return schedulingCard.card
+    }
+
+    /**
+     * 计算卡片当前的可提取性R（0-1）
+     *
+     * 对应设计文档第3631行 retrievability公式：R = (1 + t/(9*S))^(-1)
+     * 新卡（stability=0或lastReview=null）返回0。
+     *
+     * @param card 待计算的卡片
+     * @param now  当前时间
+     * @return 可提取性R（0-1之间）
+     */
+    fun getRetrievability(card: FlashCard, now: LocalDateTime = LocalDateTime.now()): Float {
+        val lastReview = card.lastReview ?: return 0f
+        if (card.stability <= 0f) return 0f
+        val elapsedDays = ChronoUnit.DAYS.between(lastReview, now).toFloat().coerceAtLeast(0f)
+        return retrievability(elapsedDays, card.stability)
+    }
+
+    /**
+     * 一次性返回4种评分的调度结果（用于UI预览按钮显示间隔）
+     *
+     * @param card 待调度的卡片
+     * @param now  当前时间
+     * @return Map<Rating, FlashCard>，每种评分对应的调度结果
+     */
+    fun repeat(card: FlashCard, now: LocalDateTime = LocalDateTime.now()): Map<Rating, FlashCard> {
+        return Rating.entries.associateWith { schedule(card, it, now) }
+    }
+
+    /**
+     * 解决卡片级档位保持率与全局保持率的冲突
+     *
+     * 对应spec.md第301-305行（内容类型与全局保持率冲突）：
+     * - 卡片级预设优先于全局保持率
+     * - 作品背诵卡片(0.95)在基础阶段(全局0.85) → 取较高值0.95，不降级
+     * - 全局保持率仅作为未指定类型卡片的默认值
+     *
+     * @param cardTier        卡片所属档位
+     * @param globalRetention 全局保持率（由考研倒计时阶段决定）
+     * @return 最终使用的保持率（取较高值）
+     */
+    fun resolveRetention(cardTier: MemoryTier, globalRetention: Float): Float {
+        val cardRetention = TIER_CONFIGS[cardTier]?.targetRetention ?: 0.90f
+        // 取较高值，卡片级档位优先，不降级
+        return maxOf(cardRetention, globalRetention)
+    }
+
+    // ===================== 内部调度逻辑 =====================
+
+    /**
+     * 内部调度方法，返回完整的SchedulingCard（卡片+日志）
+     * 对应设计文档第3559-3600行 schedule方法
+     */
+    private fun scheduleInternal(card: FlashCard, rating: Rating, now: LocalDateTime): SchedulingCard {
+        val elapsedDays = if (card.lastReview != null) {
+            ChronoUnit.DAYS.between(card.lastReview, now).toInt().coerceAtLeast(0)
+        } else 0
+
+        val s = card.stability
+        val d = card.difficulty
+        // 新卡不计算R（stability=0会除零）
+        val r = if (card.lastReview != null && card.stability > 0f) {
+            retrievability(elapsedDays.toFloat(), card.stability)
+        } else 0f
+
+        val (newS, newD, newState, interval, lapses) = when (card.state) {
+            State.NEW -> scheduleNew(card, rating, r)
+            State.LEARNING -> scheduleLearning(card, rating, r)
+            State.REVIEW -> scheduleReview(card, rating, r)
+            State.RELEARNING -> scheduleRelearning(card, rating, r)
+        }
+
+        // 应用模糊因子（仅对≥2.5天的间隔应用，学习阶段短间隔不模糊）
+        val fuzzedInterval = if (enableFuzz && interval >= 2.5f) {
+            applyFuzz(interval)
+        } else {
+            interval
+        }
+
+        // 计算到期时间：
+        // - 学习阶段（interval < 1天）：分钟级精度（Again=1分钟, Hard=5分钟）
+        // - 复习阶段（interval ≥ 1天）：天级精度
+        // scheduledDays=0 表示学习阶段同一天内的分钟级调度，dueDate 仍精确到分钟
+        val isLearningStep = fuzzedInterval < 1f
+        val dueDate: LocalDateTime
+        val scheduledDaysValue: Int
+
+        if (isLearningStep) {
+            val minutes = (fuzzedInterval * 1440f).toLong().coerceAtLeast(1L)
+            dueDate = now.plusMinutes(minutes)
+            scheduledDaysValue = 0
+        } else {
+            scheduledDaysValue = fuzzedInterval.toInt().coerceAtLeast(1)
+            dueDate = now.plusDays(scheduledDaysValue.toLong())
+        }
+
+        val updatedCard = FlashCard(
+            dueDate = dueDate,
+            stability = newS,
+            difficulty = newD.coerceIn(1f, 10f),
+            interval = scheduledDaysValue,
+            reviewCount = card.reviewCount + 1,
+            lastReview = now,
+            state = newState,
+            elapsedDays = elapsedDays,
+            scheduledDays = scheduledDaysValue,
+            reps = card.reps + 1,
+            lapses = lapses
+        )
+
+        val reviewLog = ReviewLog(
+            rating = rating,
+            state = card.state,
+            dueDate = card.dueDate,
+            stability = s,
+            difficulty = d,
+            elapsedDays = elapsedDays,
+            lastElapsedDays = card.scheduledDays,
+            scheduledDays = scheduledDaysValue,
+            reviewTime = now
+        )
+
+        return SchedulingCard(updatedCard, reviewLog)
+    }
+
+    // ---- 状态调度：状态转换规则见设计文档5.4.4 ----
+
+    private fun scheduleNew(c: FlashCard, r: Rating, rR: Float): ScheduleResult {
+        val newS = initStability(r)
+        val newD = initDifficulty(r)
+        return when (r) {
+            Rating.AGAIN -> ScheduleResult(newS, newD, State.LEARNING, learningInterval(Rating.AGAIN), c.lapses)
+            Rating.HARD -> ScheduleResult(newS, newD, State.LEARNING, learningInterval(Rating.HARD), c.lapses)
+            Rating.GOOD -> ScheduleResult(newS, newD, State.REVIEW, nextInterval(newS).toFloat(), c.lapses)
+            Rating.EASY -> ScheduleResult(newS, newD, State.REVIEW, nextInterval(newS).toFloat(), c.lapses)
+        }
+    }
+
+    private fun scheduleLearning(c: FlashCard, r: Rating, rR: Float): ScheduleResult {
+        val newD = nextDifficulty(c.difficulty, r)
+        return when (r) {
+            // 学习阶段答Again：保持LEARNING状态（尚未"记住"，不构成"遗忘"，
+            // 不增加lapses，不进入RELEARNING）
+            Rating.AGAIN -> ScheduleResult(
+                nextForgetStability(c.difficulty, c.stability, rR) * againPenalty,
+                newD, State.LEARNING, learningInterval(Rating.AGAIN), c.lapses
+            )
+            Rating.HARD -> ScheduleResult(
+                nextRecallStability(c.difficulty, c.stability, rR, r),
+                newD, State.LEARNING, learningInterval(Rating.HARD), c.lapses
+            )
+            Rating.GOOD -> {
+                val recallS = nextRecallStability(c.difficulty, c.stability, rR, r)
+                ScheduleResult(recallS, newD, State.REVIEW, nextInterval(recallS).toFloat(), c.lapses)
+            }
+            Rating.EASY -> {
+                val recallS = nextRecallStability(c.difficulty, c.stability, rR, r)
+                ScheduleResult(recallS * easyBonus, newD, State.REVIEW, nextInterval(recallS).toFloat(), c.lapses)
+            }
+        }
+    }
+
+    private fun scheduleReview(c: FlashCard, r: Rating, rR: Float): ScheduleResult {
+        val newD = nextDifficulty(c.difficulty, r)
+        return when (r) {
+            Rating.AGAIN -> ScheduleResult(
+                nextForgetStability(c.difficulty, c.stability, rR) * againPenalty,
+                newD, State.RELEARNING, learningInterval(Rating.AGAIN), c.lapses + 1
+            )
+            Rating.HARD -> {
+                val recallS = nextRecallStability(c.difficulty, c.stability, rR, r)
+                ScheduleResult(recallS, newD, State.REVIEW, nextInterval(recallS).toFloat(), c.lapses)
+            }
+            Rating.GOOD -> {
+                val recallS = nextRecallStability(c.difficulty, c.stability, rR, r)
+                ScheduleResult(recallS, newD, State.REVIEW, nextInterval(recallS).toFloat(), c.lapses)
+            }
+            Rating.EASY -> {
+                val recallS = nextRecallStability(c.difficulty, c.stability, rR, r)
+                ScheduleResult(recallS * easyBonus, newD, State.REVIEW, nextInterval(recallS).toFloat(), c.lapses)
+            }
+        }
+    }
+
+    private fun scheduleRelearning(c: FlashCard, r: Rating, rR: Float): ScheduleResult {
+        val newD = nextDifficulty(c.difficulty, r)
+        return when (r) {
+            Rating.AGAIN -> ScheduleResult(
+                nextForgetStability(c.difficulty, c.stability, rR) * againPenalty,
+                newD, State.RELEARNING, learningInterval(Rating.AGAIN), c.lapses
+            )
+            Rating.HARD -> ScheduleResult(
+                nextForgetStability(c.difficulty, c.stability, rR),
+                newD, State.RELEARNING, learningInterval(Rating.HARD), c.lapses
+            )
+            Rating.GOOD -> {
+                val recallS = nextRecallStability(c.difficulty, c.stability, rR, r)
+                ScheduleResult(recallS, newD, State.REVIEW, nextInterval(recallS).toFloat(), c.lapses)
+            }
+            Rating.EASY -> {
+                val recallS = nextRecallStability(c.difficulty, c.stability, rR, r)
+                ScheduleResult(recallS * easyBonus, newD, State.REVIEW, nextInterval(recallS).toFloat(), c.lapses)
+            }
+        }
+    }
+
+    // ===================== 核心数学公式（对应设计文档5.4.2） =====================
+
+    /**
+     * 可提取性公式：R = (1 + t/(9*S))^(-1)
+     * 对应设计文档第3631行
+     */
+    fun retrievability(elapsedDays: Float, stability: Float): Float {
+        if (stability <= 0f) return 0f
+        return (1f + elapsedDays / (9f * stability)).pow(-1f)
+    }
+
+    /**
+     * 新卡初始稳定性 S0 = w[rating-1]
+     * 对应设计文档第3637行
+     */
+    fun initStability(rating: Rating): Float {
+        return w[rating.value - 1]
+    }
+
+    /**
+     * 新卡初始难度 D0 = w[4] - (rating-3)*w[5]
+     * 对应设计文档第3640行
+     */
+    fun initDifficulty(rating: Rating): Float {
+        return (w[4] - (rating.value - 3) * w[5]).coerceIn(1f, 10f)
+    }
+
+    /**
+     * 难度更新（含均值回归）
+     * D_next = w[6]*D' + (1-w[6])*w[4]
+     * 对应设计文档第3645行
+     */
+    fun nextDifficulty(d: Float, rating: Rating): Float {
+        val dNext = d - w[5] * (rating.value - 3)
+        val meanReverted = w[6] * dNext + (1f - w[6]) * w[4]
+        return meanReverted.coerceIn(1f, 10f)
+    }
+
+    /**
+     * 稳定性更新——回忆成功
+     * 对应设计文档第3652行
+     * 增长 = exp(w[8]) * (11-D) * S^(-w[9]) * (exp((1-R)*w[10]) - 1) * hardPenalty * easyBonus
+     * 最终 S' = S * (1 + growth * stabilityGrowthFactor)
+     */
+    fun nextRecallStability(d: Float, s: Float, r: Float, rating: Rating): Float {
+        val hardPenalty = if (rating == Rating.HARD) w[15] else 1f
+        val easyBonusVal = if (rating == Rating.EASY) w[16] else 1f
+        val growth = (exp(w[8].toDouble()) * (11.0 - d) * s.pow(-w[9]) *
+            (exp((1f - r) * w[10].toDouble()) - 1.0) * hardPenalty * easyBonusVal).toFloat()
+        return s * (1f + growth * stabilityGrowthFactor)
+    }
+
+    /**
+     * 稳定性更新——遗忘
+     * S' = w[11] * D^(-w[12]) * ((S+1)^w[13] - 1) * exp(-w[14]*(1-R))
+     * 对应设计文档第3661行
+     */
+    fun nextForgetStability(d: Float, s: Float, r: Float): Float {
+        val newS = (w[11] * d.pow(-w[12]) *
+            ((s + 1f).pow(w[13]) - 1f) * exp(-w[14] * (1f - r).toDouble())).toFloat()
+        return maxOf(0.1f, newS)
+    }
+
+    /**
+     * 间隔计算：I = 9*S*(1/R_target - 1)
+     * 对应设计文档第3668行
+     * 结果限制在 [1, maximumInterval] 范围内
+     */
+    fun nextInterval(stability: Float): Int {
+        if (stability <= 0f) return 1
+        val interval = 9f * stability * (1f / requestRetention - 1f)
+        return minOf(maxOf(interval.toInt(), 1), maximumInterval)
+    }
+
+    /**
+     * 模糊因子应用（enableFuzz=true时调用）
+     * 对应设计文档第3674行
+     * interval < 2.5: 不模糊
+     * interval < 15: ±1天
+     * else: ±5%
+     */
+    private fun applyFuzz(interval: Float): Float {
+        val fuzzRange = when {
+            interval < 2.5f -> 0f
+            interval < 15f -> 1f
+            else -> interval * 0.05f
+        }
+        val fuzz = Random.nextFloat() * 2f * fuzzRange - fuzzRange
+        return maxOf(1f, interval + fuzz)
+    }
+
+    /**
+     * 学习阶段间隔（Again=1分钟, Hard=5分钟, Good/Easy=1天）
+     * 对应设计文档第3684行
+     */
+    private fun learningInterval(rating: Rating): Float = when (rating) {
+        Rating.AGAIN -> LEARNING_STEP_AGAIN_DAYS
+        Rating.HARD -> LEARNING_STEP_HARD_DAYS
+        else -> 1f
+    }
+
+    /** 内部调度结果数据类 */
+    private data class ScheduleResult(
+        val newStability: Float,
+        val newDifficulty: Float,
+        val newState: State,
+        val interval: Float,
+        val lapses: Int
+    )
+}

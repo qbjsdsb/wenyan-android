@@ -1,0 +1,71 @@
+package com.wenyan.app.core.database.dao
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
+import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import kotlinx.coroutines.flow.Flow
+
+/**
+ * 知识点表 DAO（Task 12）。
+ *
+ * 含按 ocr_status 索引查询（SubTask 12.6）。
+ */
+@Dao
+interface KnowledgePointDao {
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(entity: KnowledgePointEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(entities: List<KnowledgePointEntity>)
+
+    @Update
+    suspend fun update(entity: KnowledgePointEntity)
+
+    @Query("DELETE FROM knowledge_points WHERE id = :id")
+    suspend fun deleteById(id: String)
+
+    @Query("SELECT * FROM knowledge_points WHERE id = :id")
+    suspend fun getById(id: String): KnowledgePointEntity?
+
+    /** 批量查询知识点（用于区分卡对比项标题查询，避免 N+1 问题） */
+    @Query("SELECT * FROM knowledge_points WHERE id IN (:ids)")
+    suspend fun getByIds(ids: List<String>): List<KnowledgePointEntity>
+
+    @Query("SELECT * FROM knowledge_points WHERE id = :id")
+    fun observeById(id: String): Flow<KnowledgePointEntity?>
+
+    @Query("SELECT * FROM knowledge_points WHERE chapter_id = :chapterId ORDER BY created_at ASC")
+    fun observeByChapter(chapterId: String): Flow<List<KnowledgePointEntity>>
+
+    @Query("SELECT * FROM knowledge_points WHERE exam_frequency = :frequency")
+    fun observeByExamFrequency(frequency: String): Flow<List<KnowledgePointEntity>>
+
+    /** 按 OCR 状态查询（索引 ocr_status） */
+    @Query("SELECT * FROM knowledge_points WHERE ocr_status = :status")
+    fun observeByOcrStatus(status: String): Flow<List<KnowledgePointEntity>>
+
+    /** 按内容来源查询 */
+    @Query("SELECT * FROM knowledge_points WHERE content_source = :source")
+    fun observeByContentSource(source: String): Flow<List<KnowledgePointEntity>>
+
+    @Query("SELECT COUNT(*) FROM knowledge_points WHERE chapter_id = :chapterId")
+    suspend fun countByChapter(chapterId: String): Int
+
+    @Query("SELECT * FROM knowledge_points")
+    fun observeAll(): Flow<List<KnowledgePointEntity>>
+
+    /** 查询所有 OCR 已校验（VERIFIED）的知识点，用于 FSRS 复习队列（过滤 PENDING） */
+    @Query("SELECT * FROM knowledge_points WHERE ocr_status = 'VERIFIED' ORDER BY updated_at DESC")
+    fun observeVerifiedForReview(): Flow<List<KnowledgePointEntity>>
+
+    /** 更新知识点的 OCR 状态（PENDING -> VERIFIED 激活），同时刷新 updated_at */
+    @Query(
+        "UPDATE knowledge_points SET ocr_status = :status, " +
+            "updated_at = (CAST(strftime('%s', 'now') AS INTEGER) * 1000) WHERE id = :id",
+    )
+    suspend fun updateOcrStatus(id: String, status: String)
+}

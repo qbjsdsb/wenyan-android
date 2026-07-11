@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 文研App 基础主题，Compose 接管实际 UI，此处仅保留启动主题 -->
+    <style name="Theme.Wenyan" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">@color/wenyan_window_background</item>
+    </style>
+</resources>

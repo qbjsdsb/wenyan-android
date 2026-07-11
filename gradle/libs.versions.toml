@@ -1,0 +1,145 @@
+# 文研App 版本目录，统一管理所有依赖版本
+[versions]
+# 构建工具与 Kotlin
+agp = "8.5.2"
+kotlin = "2.0.20"
+ksp = "2.0.20-1.0.25"
+
+# Compose
+composeBom = "2024.06.00"
+composeCompiler = "1.5.15"
+activityCompose = "1.9.1"
+navigationCompose = "2.7.7"
+
+# AndroidX 基础
+coreKtx = "1.13.1"
+lifecycle = "2.8.4"
+appcompat = "1.7.0"
+material = "1.12.0"
+
+# Hilt 依赖注入
+hilt = "2.51.1"
+hiltNavigationCompose = "1.2.0"
+
+# Room 数据库
+room = "2.6.1"
+
+# Coroutines + Flow
+coroutines = "1.8.1"
+
+# 网络请求 Retrofit + OkHttp
+retrofit = "2.9.0"
+okhttp = "4.12.0"
+
+# Kotlinx Serialization
+kotlinxSerialization = "1.6.3"
+retrofitKotlinxSerialization = "1.0.0"
+
+# DataStore 偏好存储
+datastore = "1.1.1"
+
+# FSRS-Kotlin 间隔重复算法库（JitPack）
+fsrsKotlin = "main-SNAPSHOT"
+
+# AndroidX Security + Keystore 加密存储
+securityCrypto = "1.1.0-alpha06"
+
+# 测试
+junit = "4.13.2"
+androidxTestExtJunit = "1.2.1"
+androidxTestEspresso = "3.6.1"
+androidxTestCore = "1.6.1"
+robolectric = "4.13"
+turbine = "1.1.0"
+coroutinesTest = "1.8.1"
+
+[libraries]
+# Compose BOM
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+
+# AndroidX 基础
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+
+# Navigation Compose
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+
+# Hilt
+hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
+hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
+androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+
+# Room
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+
+# Coroutines
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+
+# Retrofit + OkHttp
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+retrofit-kotlinx-serialization = { group = "com.jakewharton.retrofit", name = "retrofit2-kotlinx-serialization-converter", version.ref = "retrofitKotlinxSerialization" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+okhttp-logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
+
+# Kotlinx Serialization
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+
+# DataStore
+androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
+androidx-datastore-core = { group = "androidx.datastore", name = "datastore", version.ref = "datastore" }
+
+# AndroidX Security + Keystore
+androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+
+# FSRS-Kotlin 间隔重复算法（JitPack，库内部硬编码 enableFuzz=true，封装层需覆盖实现精确间隔）
+fsrs-kotlin = { group = "com.github.open-spaced-repetition", name = "FSRS-Kotlin", version.ref = "fsrsKotlin" }
+
+# 测试
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
+androidx-test-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "androidxTestEspresso" }
+androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
+
+# 项目模块（用于模块间依赖）
+wenyan-core-common = { group = "com.wenyan.app", name = "core-common" }
+wenyan-core-database = { group = "com.wenyan.app", name = "core-database" }
+wenyan-core-data = { group = "com.wenyan.app", name = "core-data" }
+wenyan-core-designsystem = { group = "com.wenyan.app", name = "core-designsystem" }
+wenyan-core-fsrs = { group = "com.wenyan.app", name = "core-fsrs" }
+wenyan-core-ai = { group = "com.wenyan.app", name = "core-ai" }
+wenyan-feature-knowledge = { group = "com.wenyan.app", name = "feature-knowledge" }
+wenyan-feature-quiz = { group = "com.wenyan.app", name = "feature-quiz" }
+wenyan-feature-cards = { group = "com.wenyan.app", name = "feature-cards" }
+wenyan-feature-graph = { group = "com.wenyan.app", name = "feature-graph" }
+wenyan-feature-aiassistant = { group = "com.wenyan.app", name = "feature-aiassistant" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+room = { id = "androidx.room", version.ref = "room" }

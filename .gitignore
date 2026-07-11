@@ -1,0 +1,30 @@
+# 文研App Android 项目忽略规则
+
+# Gradle 构建产物
+build/
+.gradle/
+*/build/
+**/build/
+
+# 本地配置
+local.properties
+
+# Android Studio / IntelliJ
+*.iml
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Kotlin
+.kotlin/
+
+# 日志
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Room schema 导出（保留以便版本追踪，按需取消注释）
+# */schemas/
