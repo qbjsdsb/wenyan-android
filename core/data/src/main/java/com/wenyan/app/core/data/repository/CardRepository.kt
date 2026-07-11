@@ -61,6 +61,7 @@ class CardRepository @Inject constructor(
      */
     suspend fun generateCardsFromKnowledgePoint(knowledgePoint: KnowledgePointEntity): List<CardTemplate> {
         val cards = mutableListOf<CardTemplate>()
+        val pointId = knowledgePoint.id
 
         // 1. 名词解释拆卡（最小信息原则：5-6张）
         val definition = knowledgePoint.fullContent.ifBlank {
@@ -68,7 +69,7 @@ class CardRepository @Inject constructor(
         }
         if (definition.isNotBlank()) {
             cards.addAll(
-                CardSplitter.splitTermExplanation(knowledgePoint.title, definition),
+                CardSplitter.splitTermExplanation(knowledgePoint.title, definition, pointId),
             )
         }
 
@@ -79,6 +80,7 @@ class CardRepository @Inject constructor(
                 EssayPointsCard(
                     front = knowledgePoint.title,
                     back = summary,
+                    pointId = pointId,
                     question = knowledgePoint.title,
                     keyPoints = summary.split('。', '；', '，', '\n')
                         .map { it.trim() }
@@ -93,6 +95,7 @@ class CardRepository @Inject constructor(
             val distinctionCards = buildDistinctionFromContrast(
                 mainTerm = knowledgePoint.title,
                 contrastIds = contrastIds,
+                pointId = pointId,
             )
             cards.addAll(distinctionCards)
         }
@@ -110,6 +113,7 @@ class CardRepository @Inject constructor(
     private suspend fun buildDistinctionFromContrast(
         mainTerm: String,
         contrastIds: List<String>,
+        pointId: String = "",
     ): List<DistinctionCard> {
         val contrastPoints = knowledgePointDao.getByIds(contrastIds)
         val idToTitle = contrastPoints.associateBy { it.id }
@@ -120,6 +124,7 @@ class CardRepository @Inject constructor(
             DistinctionCard(
                 front = "区分：$mainTerm 与 $contrastTitle",
                 back = "$mainTerm 与 $contrastTitle 的区别见要点",
+                pointId = pointId,
                 item1 = mainTerm,
                 item2 = contrastTitle,
                 differences = listOf(
