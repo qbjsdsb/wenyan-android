@@ -22,6 +22,7 @@ import com.wenyan.app.core.database.dao.SubjectDao
 import com.wenyan.app.core.database.dao.TemplateFillDao
 import com.wenyan.app.core.database.dao.WritingMaterialDao
 import com.wenyan.app.core.database.dao.WritingPatternDao
+import com.wenyan.app.core.database.migration.MIGRATION_1_2
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -47,6 +48,10 @@ object DatabaseModule {
      *
      * 使用 ApplicationContext 构建数据库，allowMainThreadQueries 默认不开启，
      * 所有数据库操作须在协程中执行。
+     *
+     * 迁移策略（阶段3新增）：
+     * - [MIGRATION_1_2]：memo_records 补 elapsed_days/scheduled_days/reps 字段
+     * - fallbackToDestructiveMigration：兜底，未来新增未声明的迁移时重建表（仅开发期安全）
      */
     @Provides
     @Singleton
@@ -57,7 +62,10 @@ object DatabaseModule {
             context,
             WenyanDatabase::class.java,
             WenyanDatabase.DATABASE_NAME,
-        ).build()
+        )
+            .addMigrations(MIGRATION_1_2)
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     // ---------------- 各 DAO 的 @Provides ----------------
