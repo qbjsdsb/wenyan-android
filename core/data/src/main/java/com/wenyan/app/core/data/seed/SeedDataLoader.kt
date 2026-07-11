@@ -6,7 +6,19 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
+import com.wenyan.app.core.database.dao.ChapterDao
 import com.wenyan.app.core.database.dao.ExamCodeHistoryDao
+import com.wenyan.app.core.database.dao.ExamQuestionDao
+import com.wenyan.app.core.database.dao.KnowledgePointDao
+import com.wenyan.app.core.database.dao.MemoRecordDao
+import com.wenyan.app.core.database.dao.SubjectDao
+import com.wenyan.app.core.database.dao.WritingMaterialDao
+import com.wenyan.app.core.database.entity.ChapterEntity
+import com.wenyan.app.core.database.entity.ExamQuestionEntity
+import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import com.wenyan.app.core.database.entity.MemoRecordEntity
+import com.wenyan.app.core.database.entity.SubjectEntity
+import com.wenyan.app.core.database.entity.WritingMaterialEntity
 import com.wenyan.app.core.data.repository.GraphRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
@@ -17,21 +29,27 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * 种子数据加载器。
+ * 种子数据加载器（阶段2：数据管线接通）。
  *
  * 职责：
  * - 首次启动时从 assets/seed_data.json 读取种子数据
- * - 导入到 Room 数据库（后续 Task 11-13 添加 Entity 后实现具体导入逻辑）
+ * - 按外键顺序导入到 Room 数据库：subjects → chapters → knowledge_points → memo_records → exam_questions → writing_materials
  * - 使用 DataStore 记录是否已完成初始化，避免重复导入
  *
- * 种子数据结构镜像 Spec 4.3 节，覆盖四类：知识点 / 真题 / 卡片 / 写作素材。
- * 后续 Phase 1 产出的种子数据可直接替换 assets/seed_data.json 即可更新。
+ * 种子数据结构对齐 generate_seed.py 输出格式，覆盖四类：
+ * 知识点 / 真题 / 写作素材（卡片由 [com.wenyan.app.core.data.repository.CardRepository] 动态生成，不入库）。
  */
 @Singleton
 class SeedDataLoader @Inject constructor(
     @ApplicationContext private val context: Context,
     private val examCodeHistoryDao: ExamCodeHistoryDao,
     private val graphRepository: GraphRepository,
+    private val subjectDao: SubjectDao,
+    private val chapterDao: ChapterDao,
+    private val knowledgePointDao: KnowledgePointDao,
+    private val examQuestionDao: ExamQuestionDao,
+    private val writingMaterialDao: WritingMaterialDao,
+    private val memoRecordDao: MemoRecordDao,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -67,18 +85,152 @@ class SeedDataLoader @Inject constructor(
         return json.decodeFromString(SeedData.serializer(), jsonStr)
     }
 
-    // 将种子数据导入 Room 数据库
-    // TODO Task 11-13：在 Entity / DAO 就绪后实现其他种子数据导入逻辑
+    /**
+     * 将种子数据导入 Room 数据库（阶段2）。
+     *
+     * 严格按外键依赖顺序导入：
+     * 1. 科目（subjects）→ 2. 默认章节（chapters）→ 3. 知识点（knowledge_points）
+     *    → 4. 记忆记录（memo_records，初始 state=NEW）→ 5. 真题（exam_questions）
+     *    → 6. 写作素材（writing_materials）
+     * 7. 保留科目代码历史 + 知识图谱骨架导入
+     *
+     * 卡片不入库：由 [com.wenyan.app.core.data.repository.CardRepository] 从知识点动态生成。
+     */
     private suspend fun importToDatabase(seedData: SeedData) {
-        // seedData.knowledgePoints -> knowledgePointDao.insertAll(...)
-        // seedData.examQuestions -> examQuestionDao.insertAll(...)
-        // seedData.cards -> cardDao.insertAll(...)
-        // seedData.writingMaterials -> writingMaterialDao.insertAll(...)
+        val now = System.currentTimeMillis()
 
-        // Task 26：导入科目代码历史数据，支持 610/801 语义翻转判定
+        // 步骤1：导入科目
+        val subjectEntities = seedData.subjects.map { seed ->
+            SubjectEntity(
+                id = seed.id,
+                name = seed.name,
+                shortName = seed.name.take(2),
+                sortOrder = SUBJECT_ORDER[seed.code] ?: 99,
+            )
+        }
+        if (subjectEntities.isNotEmpty()) {
+            subjectDao.insertAll(subjectEntities)
+        }
+
+        // 构建 subjectName → subjectId 映射（供知识点/真题映射）
+        val subjectNameToId = seedData.subjects.associate { it.name to it.id }
+
+        // 步骤2：为每科创建默认章节（知识点外键依赖 chapters）
+        val defaultChapters = seedData.subjects.map { seed ->
+            ChapterEntity(
+                id = "chapter_default_${seed.code}",
+                subjectId = seed.id,
+                parentId = null,
+                title = "${seed.name}·默认章节",
+                sortOrder = 0,
+            )
+        }
+        if (defaultChapters.isNotEmpty()) {
+            chapterDao.insertAll(defaultChapters)
+        }
+
+        // 构建 subjectName → chapterId 映射
+        val subjectNameToChapterId = seedData.subjects.associate {
+            it.name to "chapter_default_${it.code}"
+        }
+
+        // 步骤3：导入知识点（按 subject 字段映射到默认章节）
+        val knowledgePointEntities = seedData.knowledgePoints.map { seed ->
+            val chapterId = subjectNameToChapterId[seed.subject]
+                ?: "chapter_default_misc"
+            KnowledgePointEntity(
+                id = seed.id,
+                chapterId = chapterId,
+                title = seed.title,
+                summary = seed.summary,
+                coreConclusion = seed.coreConclusion,
+                fullContent = seed.fullContent.ifBlank { seed.coreConclusion },
+                multiPerspectives = null,
+                relatedIds = null,
+                contrastIds = null,
+                extensionIds = null,
+                examRecords = null,
+                examFrequency = "NEVER",
+                termTemplate = null,
+                tags = seed.tags,
+                difficulty = seed.difficulty,
+                createdAt = now,
+                updatedAt = now,
+                contentSource = "TEXTBOOK_NATIVE",
+                ocrStatus = "VERIFIED",
+                sourceFile = seed.sourceRef,
+                sourcePage = null,
+                studyText = null,
+            )
+        }
+        if (knowledgePointEntities.isNotEmpty()) {
+            knowledgePointDao.insertAll(knowledgePointEntities)
+        }
+
+        // 步骤4：为每个知识点创建初始 MemoRecord（state=NEW，立即到期可复习）
+        val memoRecords = knowledgePointEntities.map { kp ->
+            MemoRecordEntity(
+                pointId = kp.id,
+                state = "NEW",
+                stability = 0.0,
+                difficulty = 5.0,
+                lastReviewAt = now,
+                nextReviewAt = now, // 立即到期，新知识点可立即进入复习队列
+                reviewCount = 0,
+                failCount = 0,
+                history = null,
+                inPriorityQueue = 0,
+            )
+        }
+        if (memoRecords.isNotEmpty()) {
+            memoRecordDao.insertAll(memoRecords)
+        }
+
+        // 步骤5：导入真题（按 subject 字段映射到 subjectId）
+        val examQuestionEntities = seedData.examQuestions.map { seed ->
+            val subjectId = subjectNameToId[seed.subject] ?: "subj_misc"
+            ExamQuestionEntity(
+                id = seed.id,
+                year = seed.year,
+                subjectId = subjectId,
+                questionType = seed.questionType,
+                content = seed.content,
+                score = seed.score,
+                angle = null,
+                relatedPointIds = null,
+                answerFramework = seed.answerFramework,
+                sampleEssay = seed.sampleEssay,
+                notes = null,
+                createdAt = now,
+                examPaperCode = seed.examPaperCode,
+                answerStatus = if (seed.answerFramework != null) "HAS_ANSWER" else "NO_ANSWER",
+                materialText = null,
+                sourceFile = null,
+                sourcePage = null,
+            )
+        }
+        if (examQuestionEntities.isNotEmpty()) {
+            examQuestionDao.insertAll(examQuestionEntities)
+        }
+
+        // 步骤6：导入写作素材
+        val writingMaterialEntities = seedData.writingMaterials.map { seed ->
+            WritingMaterialEntity(
+                id = seed.id,
+                category = seed.category,
+                subCategory = seed.subCategory,
+                content = seed.content,
+                source = seed.source,
+                tags = seed.tags,
+                createdAt = now,
+            )
+        }
+        if (writingMaterialEntities.isNotEmpty()) {
+            writingMaterialDao.insertAll(writingMaterialEntities)
+        }
+
+        // 步骤7：保留科目代码历史 + 知识图谱骨架导入
         examCodeHistoryDao.insertAll(ExamCodeHistoryData.EXAM_CODE_HISTORY)
-
-        // Task 19：导入知识图谱骨架数据（Spec 第 307-342 行，功能性知识图谱）
         importGraphSkeleton()
     }
 
@@ -103,22 +255,113 @@ class SeedDataLoader @Inject constructor(
         private const val SEED_DATA_FILE = "seed_data.json"
         private const val SEED_PREFERENCES_NAME = "wenyan_seed_prefs"
         private val KEY_SEED_INITIALIZED = booleanPreferencesKey("seed_initialized")
+
+        /** 科目排序顺序（按考研重要性排列：古代→现当代→外国→理论） */
+        private val SUBJECT_ORDER = mapOf(
+            "ancient" to 1,
+            "modern" to 2,
+            "foreign" to 3,
+            "theory" to 4,
+        )
     }
 }
 
 /**
  * 种子数据根结构，对应 assets/seed_data.json。
  *
- * 四个数组分别对应 Spec 4.3 节四类数据，初始为空占位，
- * 后续 Task 9 填充真实种子数据。
+ * 字段对齐 generate_seed.py 输出格式（8个字段）：
+ * metadata / subjects / knowledge_points / exam_questions /
+ * cards / writing_materials / graph_nodes / graph_edges
+ *
+ * 其中 cards / graph_nodes / graph_edges 由 App 侧动态生成或已在
+ * [GraphSkeleton] 中预置，本类只解析前5个业务必需字段。
  */
 @kotlinx.serialization.Serializable
 data class SeedData(
+    val metadata: SeedMetadata = SeedMetadata(),
+    val subjects: List<SubjectSeed> = emptyList(),
     @SerialName("knowledge_points")
-    val knowledgePoints: List<kotlinx.serialization.json.JsonElement> = emptyList(),
+    val knowledgePoints: List<KnowledgePointSeed> = emptyList(),
     @SerialName("exam_questions")
-    val examQuestions: List<kotlinx.serialization.json.JsonElement> = emptyList(),
+    val examQuestions: List<ExamQuestionSeed> = emptyList(),
     val cards: List<kotlinx.serialization.json.JsonElement> = emptyList(),
     @SerialName("writing_materials")
-    val writingMaterials: List<kotlinx.serialization.json.JsonElement> = emptyList(),
+    val writingMaterials: List<WritingMaterialSeed> = emptyList(),
+)
+
+/** 种子数据元信息（版本/生成时间，仅记录用） */
+@kotlinx.serialization.Serializable
+data class SeedMetadata(
+    val version: String = "",
+    @SerialName("generated_at")
+    val generatedAt: String = "",
+    val description: String = "",
+)
+
+/** 科目种子数据（对应 SubjectEntity） */
+@kotlinx.serialization.Serializable
+data class SubjectSeed(
+    val id: String,
+    val name: String,
+    val code: String,
+)
+
+/**
+ * 知识点种子数据（对应 KnowledgePointEntity）。
+ *
+ * generate_seed.py 输出的字段用 subject（科目名）而非 chapter_id，
+ * 导入时需按 subject 映射到对应默认章节。
+ */
+@kotlinx.serialization.Serializable
+data class KnowledgePointSeed(
+    val id: String,
+    val title: String,
+    val summary: String? = null,
+    @SerialName("core_conclusion")
+    val coreConclusion: String,
+    @SerialName("full_content")
+    val fullContent: String = "",
+    /** 科目名：古代文学 / 现当代文学 / 外国文学 / 文学理论 */
+    val subject: String,
+    val tags: List<String>? = null,
+    val difficulty: Int = 3,
+    @SerialName("source_ref")
+    val sourceRef: String? = null,
+    val confidence: Double = 1.0,
+)
+
+/**
+ * 真题种子数据（对应 ExamQuestionEntity）。
+ *
+ * generate_seed.py 用 subject（科目名）而非 subject_id，
+ * 导入时需按 subject 映射到对应 subject_id。
+ */
+@kotlinx.serialization.Serializable
+data class ExamQuestionSeed(
+    val id: String,
+    val year: Int,
+    /** 科目名：古代文学 / 现当代文学 / 外国文学 / 文学理论 */
+    val subject: String,
+    @SerialName("question_type")
+    val questionType: String,
+    val content: String,
+    val score: Int = 0,
+    @SerialName("exam_paper_code")
+    val examPaperCode: String? = null,
+    @SerialName("answer_framework")
+    val answerFramework: String? = null,
+    @SerialName("sample_essay")
+    val sampleEssay: String? = null,
+)
+
+/** 写作素材种子数据（对应 WritingMaterialEntity） */
+@kotlinx.serialization.Serializable
+data class WritingMaterialSeed(
+    val id: String,
+    val category: String,
+    @SerialName("sub_category")
+    val subCategory: String? = null,
+    val content: String,
+    val source: String? = null,
+    val tags: String? = null,
 )
