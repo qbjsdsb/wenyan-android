@@ -100,4 +100,5 @@ fun testEdge(
     sourceId = from,
     targetId = to,
     type = type,
+    label = null,
 )
