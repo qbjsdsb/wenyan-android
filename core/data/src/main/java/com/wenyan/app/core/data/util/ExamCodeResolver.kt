@@ -118,7 +118,7 @@ object ExamCodeResolver {
         return history.find { record ->
             record.examCode == examCode &&
                 year >= record.validFromYear &&
-                (record.validToYear == null || year <= record.validToYear)
+                (record.validToYear == null || year <= record.validToYear!!)
         }?.subjectName
     }
 }
