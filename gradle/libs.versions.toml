@@ -38,8 +38,7 @@ retrofitKotlinxSerialization = "1.0.0"
 # DataStore 偏好存储
 datastore = "1.1.1"
 
-# FSRS-Kotlin 间隔重复算法库（JitPack）
-fsrsKotlin = "main-SNAPSHOT"
+# FSRS-6 算法已由 FsrsWrapper.kt 自行实现，无需外部依赖
 
 # AndroidX Security + Keystore 加密存储
 securityCrypto = "1.1.0-alpha06"
