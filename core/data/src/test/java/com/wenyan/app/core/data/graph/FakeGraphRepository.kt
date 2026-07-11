@@ -1,6 +1,7 @@
 package com.wenyan.app.core.data.graph
 
 import com.wenyan.app.core.data.repository.GraphRepository
+import com.wenyan.app.core.data.repository.NodeWithRetrievability
 import com.wenyan.app.core.database.entity.GraphEdgeEntity
 import com.wenyan.app.core.database.entity.GraphNodeEntity
 import com.wenyan.app.core.database.entity.GraphNodeType
@@ -61,6 +62,21 @@ class FakeGraphRepository(
 
     override fun getRetrievability(nodeId: String): Flow<Float> =
         flowOf(retrievabilityMap[nodeId] ?: 0f)
+
+    /**
+     * 批量返回节点 + R 值（阶段3新增，测试用 Fake 实现）。
+     *
+     * 使用 [retrievabilityMap] 中的预设 R 值；未预设的节点返回 0f。
+     */
+    override fun getNodesWithRetrievability(): Flow<List<NodeWithRetrievability>> =
+        flowOf(
+            nodes.map { node ->
+                NodeWithRetrievability(
+                    node = node,
+                    retrievability = retrievabilityMap[node.id] ?: 0f,
+                )
+            },
+        )
 }
 
 // ── 测试辅助函数 ──────────────────────────────────────────────────
@@ -100,5 +116,4 @@ fun testEdge(
     sourceId = from,
     targetId = to,
     type = type,
-    label = null,
 )
