@@ -33,9 +33,14 @@ object CardSplitter {
      *
      * @param term 名词（如"建安风骨"）
      * @param definition 名词解释全文
+     * @param pointId 关联知识点 ID（阶段3新增，用于 FSRS 调度回写）
      * @return 拆分后的卡片列表（5-6张，遵循最小信息原则）
      */
-    fun splitTermExplanation(term: String, definition: String): List<CardTemplate> {
+    fun splitTermExplanation(
+        term: String,
+        definition: String,
+        pointId: String = "",
+    ): List<CardTemplate> {
         val dimensions = parseStructuredDimensions(term, definition)
 
         // 解析到结构化维度时，推断类别并构建结构化字段
@@ -54,13 +59,13 @@ object CardSplitter {
         val cards = if (dimensions.isNotEmpty()) {
             // 结构化标签命中：每个维度一张卡（附带完整结构化字段供渲染上下文）
             dimensions.map { (question, answer) ->
-                buildTermDimensionCard(term, question, answer, category, societyFields, workFields)
+                buildTermDimensionCard(term, question, answer, pointId, category, societyFields, workFields)
             }
         } else {
             // 无标签：按分句拆分（无结构化字段）
             val sentences = splitSentences(definition)
             sentences.mapIndexed { index, sentence ->
-                buildTermDimensionCard(term, "第${indexToChinese(index + 1)}点", sentence)
+                buildTermDimensionCard(term, "第${indexToChinese(index + 1)}点", sentence, pointId)
             }
         }
 
@@ -69,13 +74,13 @@ object CardSplitter {
             val head = cards.take(TARGET_SPLIT_MAX - 1)
             val tail = cards.drop(TARGET_SPLIT_MAX - 1)
             val mergedBack = tail.joinToString(separator = "\n") { it.back }
-            head + buildTermDimensionCard(term, "其他要点", mergedBack, category, societyFields, workFields)
+            head + buildTermDimensionCard(term, "其他要点", mergedBack, pointId, category, societyFields, workFields)
         } else {
             cards
         }
 
         // 不足5张时不强行拆分（保持信息完整，避免碎片化）
-        return trimmed.ifEmpty { listOf(buildTermDimensionCard(term, "解释", definition)) }
+        return trimmed.ifEmpty { listOf(buildTermDimensionCard(term, "解释", definition, pointId)) }
     }
 
     /**
@@ -92,15 +97,21 @@ object CardSplitter {
      *
      * @param collectionName 集合名（如"唐宋八大家"）
      * @param members 集合成员列表
+     * @param pointId 关联知识点 ID（阶段3新增，用于 FSRS 调度回写）
      * @return 分组枚举卡列表
      */
-    fun splitCollection(collectionName: String, members: List<String>): List<CardTemplate> {
+    fun splitCollection(
+        collectionName: String,
+        members: List<String>,
+        pointId: String = "",
+    ): List<CardTemplate> {
         if (members.isEmpty()) return emptyList()
 
         return members.chunked(COLLECTION_GROUP_SIZE).mapIndexed { groupIndex, groupMembers ->
             EssayPointsCard(
                 front = "「$collectionName」第${indexToChinese(groupIndex + 1)}组包含哪些？",
                 back = groupMembers.joinToString(separator = "、"),
+                pointId = pointId,
                 question = "$collectionName 第${indexToChinese(groupIndex + 1)}组",
                 keyPoints = groupMembers,
             )
@@ -118,9 +129,13 @@ object CardSplitter {
      * - 李白/李贺/李商隐 → 两两对比区分卡
      *
      * @param items 待检测的作家/作品名列表
+     * @param pointId 关联知识点 ID（阶段3新增，用于 FSRS 调度回写）
      * @return 自动生成的区分卡列表
      */
-    fun generateDistinctionCards(items: List<String>): List<DistinctionCard> {
+    fun generateDistinctionCards(
+        items: List<String>,
+        pointId: String = "",
+    ): List<DistinctionCard> {
         if (items.size < 2) return emptyList()
 
         // 按首字（姓氏/前缀）聚类
@@ -134,6 +149,7 @@ object CardSplitter {
                     DistinctionCard(
                         front = "区分：$item1 与 $item2",
                         back = "$item1 与 $item2 的区别见要点",
+                        pointId = pointId,
                         item1 = item1,
                         item2 = item2,
                         differences = buildDefaultDifferences(item1, item2),
@@ -221,12 +237,14 @@ object CardSplitter {
         term: String,
         dimension: String,
         answer: String,
+        pointId: String = "",
         category: TermCategory = TermCategory.SOCIETY,
         society: SocietyTermFields? = null,
         work: WorkTermFields? = null,
     ): CardTemplate = TermExplanationCard(
         front = "$term — $dimension",
         back = answer,
+        pointId = pointId,
         category = category,
         society = society,
         work = work,
