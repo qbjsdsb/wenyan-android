@@ -17,11 +17,13 @@ import com.wenyan.app.core.database.entity.CardTemplateType
  * @property front 卡片正面内容（问题/提示）
  * @property back 卡片背面内容（答案）
  * @property templateType 模板类型，对应 [CardTemplateType]
+ * @property pointId 关联知识点 ID（阶段3新增，用于 FSRS 调度回写 memo_records）
  */
 sealed class CardTemplate {
     abstract val front: String
     abstract val back: String
     abstract val templateType: CardTemplateType
+    abstract val pointId: String
 }
 
 /**
@@ -64,6 +66,7 @@ data class TermExplanationCard(
     override val front: String,
     override val back: String,
     override val templateType: CardTemplateType = CardTemplateType.TERM_EXPLANATION,
+    override val pointId: String = "",
     val category: TermCategory,
     /** 社团类字段（category == SOCIETY 时非空） */
     val society: SocietyTermFields? = null,
@@ -82,6 +85,7 @@ data class ClozeQuoteCard(
     override val front: String,
     override val back: String,
     override val templateType: CardTemplateType = CardTemplateType.CLOZE_QUOTE,
+    override val pointId: String = "",
     val quote: String,
     val blank: String,
     val hint: String,
@@ -97,6 +101,7 @@ data class WorkAuthorBidirectionalCard(
     override val front: String,
     override val back: String,
     override val templateType: CardTemplateType = CardTemplateType.WORK_AUTHOR_BIDIRECTIONAL,
+    override val pointId: String = "",
     val work: String,
     val author: String,
 ) : CardTemplate() {
@@ -105,18 +110,26 @@ data class WorkAuthorBidirectionalCard(
          * 由作品-作者关系生成正反两张卡片。
          * - 正向卡：front=作品名，back=作者
          * - 反向卡：front=作者，back=代表作品
+         *
+         * @param pointId 关联知识点 ID（两张卡共享同一知识点，用于 FSRS 调度回写）
          */
-        fun createBidirectionalPair(work: String, author: String): List<WorkAuthorBidirectionalCard> =
+        fun createBidirectionalPair(
+            work: String,
+            author: String,
+            pointId: String = "",
+        ): List<WorkAuthorBidirectionalCard> =
             listOf(
                 WorkAuthorBidirectionalCard(
                     front = work,
                     back = author,
+                    pointId = pointId,
                     work = work,
                     author = author,
                 ),
                 WorkAuthorBidirectionalCard(
                     front = author,
                     back = work,
+                    pointId = pointId,
                     work = work,
                     author = author,
                 ),
@@ -134,6 +147,7 @@ data class EssayPointsCard(
     override val front: String,
     override val back: String,
     override val templateType: CardTemplateType = CardTemplateType.ESSAY_POINTS,
+    override val pointId: String = "",
     val question: String,
     /** 关键词提示列表（背面展示，非完整答案） */
     val keyPoints: List<String>,
@@ -149,6 +163,7 @@ data class SchoolComparisonCard(
     override val front: String,
     override val back: String,
     override val templateType: CardTemplateType = CardTemplateType.SCHOOL_COMPARISON,
+    override val pointId: String = "",
     val schools: List<SchoolInfo>,
 ) : CardTemplate()
 
@@ -171,6 +186,7 @@ data class DistinctionCard(
     override val front: String,
     override val back: String,
     override val templateType: CardTemplateType = CardTemplateType.DISTINCTION,
+    override val pointId: String = "",
     val item1: String,
     val item2: String,
     /** 区别要点列表 */
