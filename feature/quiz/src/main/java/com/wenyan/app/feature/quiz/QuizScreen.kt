@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ExpandLess
@@ -29,6 +30,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -44,7 +47,7 @@ import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.TonalCard
 import com.wenyan.app.core.designsystem.component.WenyanInfoChip
-import com.wenyan.app.core.designsystem.component.WenyanTopAppBar
+import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 
 /**
  * 真题练习界面（阶段5增强）。
@@ -68,15 +71,22 @@ fun QuizScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val expandedIds by viewModel.expandedQuestionIds.collectAsStateWithLifecycle()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+        state = rememberTopAppBarState(),
+    )
 
     ExpressiveScaffold(
         topBar = {
-            WenyanTopAppBar(title = "真题练习")
+            WenyanLargeTopAppBar(
+                title = "真题练习",
+                scrollBehavior = scrollBehavior,
+            )
         },
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .padding(innerPadding),
         ) {
             // 年份选择行
