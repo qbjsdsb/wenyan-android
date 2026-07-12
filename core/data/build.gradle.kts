@@ -29,6 +29,7 @@ android {
 
 dependencies {
     implementation(project(":core:common"))
+    implementation(project(":core:designsystem"))
     api(project(":core:database"))
     api(project(":core:fsrs"))
     api(project(":core:ai"))
