@@ -114,10 +114,10 @@ class AntiRoteMemorization @Inject constructor(
 
     companion object {
         /** 自身连续正确次数阈值（≥此值视为"始终正确"） */
-        private val STREAK_THRESHOLD = 5
+        private const val STREAK_THRESHOLD = 5
 
         /** 关联卡片错误率阈值（≥此值视为"频繁出错"） */
-        private val RELATED_ERROR_THRESHOLD = 0.4f
+        private const val RELATED_ERROR_THRESHOLD = 0.4f
 
         /** Rating 字段值常量（与 Rating enum 的 name 一致，大写） */
         private const val RATING_AGAIN = "AGAIN"
