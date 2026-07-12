@@ -1,6 +1,10 @@
 // 文研App 顶层项目设置，统一管理所有模块
 pluginManagement {
     repositories {
+        // 国内镜像优先（阿里云），加速依赖下载
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
         google {
             content {
                 includeGroupByRegex("com\\.android.*")
@@ -15,6 +19,9 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        // 国内镜像优先（阿里云），加速依赖下载
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
         google()
         mavenCentral()
         maven { url = uri("https://jitpack.io") }  // JitPack 仓库，用于 FSRS-Kotlin 库
