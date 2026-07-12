@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.wenyan.app.core.designsystem"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26
@@ -39,6 +39,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    // MaterialKolor 动态色彩生成（KSU 同款）
+    api(libs.materialkolor)
     implementation(libs.androidx.compose.material.icons.extended)
     debugImplementation(libs.androidx.compose.ui.tooling)
 

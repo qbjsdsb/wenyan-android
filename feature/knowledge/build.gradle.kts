@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.wenyan.app.feature.knowledge"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26
