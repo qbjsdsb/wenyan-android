@@ -124,9 +124,12 @@ class RagEngine @Inject constructor(
 
     /** 构造引用摘录（coreConclusion 优先，否则取 fullContent 前 200 字） */
     private fun KnowledgePointEntity.buildExcerpt(): String {
-        if (!coreConclusion.isNullOrBlank()) return coreConclusion.take(MAX_EXCERPT_LENGTH)
-        if (!fullContent.isNullOrBlank()) return fullContent.take(MAX_EXCERPT_LENGTH)
-        if (!studyText.isNullOrBlank()) return studyText.take(MAX_EXCERPT_LENGTH)
+        val cc = coreConclusion
+        if (!cc.isNullOrBlank()) return cc.take(MAX_EXCERPT_LENGTH)
+        val fc = fullContent
+        if (!fc.isNullOrBlank()) return fc.take(MAX_EXCERPT_LENGTH)
+        val st = studyText
+        if (!st.isNullOrBlank()) return st.take(MAX_EXCERPT_LENGTH)
         return title
     }
 
