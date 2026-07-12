@@ -51,7 +51,7 @@ fun WenyanApp(
                             icon = { Icon(imageVector = destination.icon, contentDescription = destination.label) },
                             label = { Text(text = destination.label) },
                             colors = NavigationBarItemDefaults.colors(
-                                selectedIndicatorColor = androidx.compose.material3.MaterialTheme.colorScheme.secondaryContainer,
+                                indicatorColor = androidx.compose.material3.MaterialTheme.colorScheme.secondaryContainer,
                                 selectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.onSecondaryContainer,
                                 selectedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.onSecondaryContainer,
                                 unselectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,

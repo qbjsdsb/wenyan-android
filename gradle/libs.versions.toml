@@ -9,10 +9,11 @@ ksp = "2.3.2"
 
 # Compose
 composeBom = "2025.12.00"
-# 显式锁定 material3 到 1.5.0-alpha23（覆盖 BOM 的 1.4.0）
-# 1.5.0-alpha23 中 LargeFlexibleTopAppBar / MediumFlexibleTopAppBar 已 graduated 为 Stable
-# MaterialExpressiveTheme / MotionScheme.expressive() 仍为 @ExperimentalMaterial3ExpressiveApi
-material3 = "1.5.0-alpha23"
+# 显式锁定 material3 到 1.5.0-alpha18（覆盖 BOM 的 1.4.0）
+# alpha18 是 AGP 8.6.0 可用的最新版本（alpha19+ 要求 AGP 9.1.0 + compileSdk 37）
+# alpha18 传递依赖 Compose 1.11.0-beta02，同样兼容 AGP 8.6.0
+# LargeFlexibleTopAppBar / MaterialExpressiveTheme / MotionScheme.expressive() 均为 experimental
+material3 = "1.5.0-alpha18"
 activityCompose = "1.9.1"
 navigationCompose = "2.7.7"
 

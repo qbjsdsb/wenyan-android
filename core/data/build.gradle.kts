@@ -46,7 +46,15 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     // DataStore（记录是否已初始化种子数据）
+    // 注意：dataStoreFile 扩展在 androidx.datastore.core 包，由 datastore-core 提供；
+    //       Color 在 androidx.compose.ui.graphics。两者原先靠 materialkolor 的 api
+    //       传递依赖可见，material3 升级后传递链断裂，必须在此显式声明。
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.datastore.core)
+
+    // Compose（ThemeRepository / ThemeViewModel 的 Color 类型需要）
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui.graphics)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
