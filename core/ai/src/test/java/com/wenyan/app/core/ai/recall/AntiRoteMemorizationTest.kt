@@ -254,30 +254,29 @@ class AntiRoteMemorizationTest {
 
     @Test
     fun constants_streakThreshold_isCorrect() {
-        val companion = AntiRoteMemorization::class.java
-            .getDeclaredField("Companion")
+        // private val（非 const）在 companion object 中，作为 Companion 实例字段存在
+        val companionClass = AntiRoteMemorization::class.java.getDeclaredClasses()
+            .first { it.simpleName == "Companion" }
+        val companionInstance = AntiRoteMemorization::class.java.getDeclaredField("Companion")
             .apply { isAccessible = true }
             .get(null)
-
-        val streakField = companion::class.java
-            .getDeclaredField("STREAK_THRESHOLD")
+        val field = companionClass.getDeclaredField("STREAK_THRESHOLD")
             .apply { isAccessible = true }
-        val streakValue = streakField.get(companion) as Int
+        val streakValue = field.get(companionInstance) as Int
 
         assertEquals("STREAK_THRESHOLD 应为 5", 5, streakValue)
     }
 
     @Test
     fun constants_relatedErrorThreshold_isCorrect() {
-        val companion = AntiRoteMemorization::class.java
-            .getDeclaredField("Companion")
+        val companionClass = AntiRoteMemorization::class.java.getDeclaredClasses()
+            .first { it.simpleName == "Companion" }
+        val companionInstance = AntiRoteMemorization::class.java.getDeclaredField("Companion")
             .apply { isAccessible = true }
             .get(null)
-
-        val errorRateField = companion::class.java
-            .getDeclaredField("RELATED_ERROR_THRESHOLD")
+        val field = companionClass.getDeclaredField("RELATED_ERROR_THRESHOLD")
             .apply { isAccessible = true }
-        val errorRateValue = errorRateField.get(companion) as Float
+        val errorRateValue = field.get(companionInstance) as Float
 
         assertEquals("RELATED_ERROR_THRESHOLD 应为 0.4f", 0.4f, errorRateValue, 0.001f)
     }
