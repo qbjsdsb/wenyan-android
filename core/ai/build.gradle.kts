@@ -29,6 +29,7 @@ android {
 
 dependencies {
     implementation(project(":core:common"))
+    implementation(project(":core:database"))
 
     // Hilt
     implementation(libs.hilt.android)
