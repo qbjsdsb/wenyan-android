@@ -1,115 +1,149 @@
 package com.wenyan.app.core.ai
 
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import app.cash.turbine.test
+import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Task 31 - 知识图谱与AI助手测试
- * RagEngine 单元测试
+ * [RagEngine] 单元测试。
  *
- * 验证 checklist 项：
- * - C5.6: 验证RAG架构（search方法返回Flow）
- * - C5.7: 验证无结果时返回NO_RESULT_MESSAGE
- * - 验证无结果时hasResults=false
- * - 验证无结果时references为空列表
- *
- * Spec 第 53-55 行、第 372-388 行要求：
- * - 基于用户资料库 + 权威教材库做 RAG 检索
- * - 无相关结果时不编造答案，明确告知用户"该问题不在当前资料库覆盖范围内"
+ * 验证：
+ * - 关键词命中返回正确 RagReference
+ * - 无结果时返回 NO_RESULT_MESSAGE
+ * - 疑问句式正确提取关键词
+ * - RagReference 字段映射正确（sourceFile/sourcePage/contentSource/excerpt）
  */
-
 class RagEngineTest {
 
-    private val ragEngine = RagEngine()
-
-    // C5.6: 验证RAG架构（search方法返回Flow）
     @Test
-    fun c5_6_search_returnsFlow() = runBlocking {
-        val result = ragEngine.search("江西诗派的特点").first()
+    fun `search 有关键词命中时返回 RagReference`() = runTest {
+        val entity = sampleEntity(
+            id = "kp1",
+            title = "唐宋八大家",
+            coreConclusion = "韩愈、柳宗元、欧阳修、苏洵、苏轼、苏辙、王安石、曾巩",
+            sourceFile = "中国文学史",
+            sourcePage = 156,
+            contentSource = "TEXTBOOK_NATIVE",
+        )
+        val dao = FakeKnowledgePointDao(searchResults = listOf(entity))
+        val engine = RagEngine(dao)
 
-        assertNotNull("search 方法应返回 Flow<RagResult>", result)
-    }
+        engine.search("什么是唐宋八大家？").test {
+            val result = awaitItem()
+            assertTrue(result.hasResults)
+            assertEquals(1, result.references.size)
 
-    // C5.6 补充：search 方法对不同查询均返回结果
-    @Test
-    fun c5_6_search_acceptsVariousQueries() = runBlocking {
-        val queries = listOf("建安风骨", "黄庭坚", "宋诗特点", "")
-
-        for (query in queries) {
-            val result = ragEngine.search(query).first()
-            assertNotNull("对查询'$query'应返回结果", result)
+            val ref = result.references.first()
+            assertEquals("中国文学史", ref.sourceFile)
+            assertEquals(156, ref.sourcePage)
+            assertEquals("TEXTBOOK_NATIVE", ref.contentSource)
+            assertTrue(ref.excerpt.contains("韩愈"))
+            cancelAndIgnoreRemainingEvents()
         }
     }
 
-    // C5.7: 验证无结果时返回NO_RESULT_MESSAGE
     @Test
-    fun c5_7_noResults_returnsNoResultMessage() = runBlocking {
-        val result = ragEngine.search("任意查询").first()
+    fun `search 无结果时返回 NO_RESULT_MESSAGE`() = runTest {
+        val dao = FakeKnowledgePointDao(searchResults = emptyList())
+        val engine = RagEngine(dao)
 
-        assertEquals(
-            "无结果时应返回 NO_RESULT_MESSAGE",
-            RagEngine.NO_RESULT_MESSAGE,
-            result.message,
+        engine.search("量子力学").test {
+            val result = awaitItem()
+            assertFalse(result.hasResults)
+            assertEquals(RagEngine.NO_RESULT_MESSAGE, result.message)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `search 疑问句式正确提取关键词`() = runTest {
+        val entity = sampleEntity(
+            id = "kp1",
+            title = "苏轼",
+            coreConclusion = "北宋文学家",
+            fullContent = "苏轼的贡献在于词的开创",
         )
+        val dao = FakeKnowledgePointDao(searchResults = listOf(entity))
+        val engine = RagEngine(dao)
+
+        // 各种疑问句式都应能提取"苏轼"或"苏轼的贡献"
+        val queries = listOf("苏轼是什么人", "什么是苏轼", "简述苏轼", "请论述苏轼的贡献", "苏轼？")
+        for (query in queries) {
+            engine.search(query).test {
+                val result = awaitItem()
+                assertTrue("查询 '$query' 应有结果", result.hasResults)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
     }
 
-    // 验证无结果时hasResults=false
     @Test
-    fun noResults_hasResultsIsFalse() = runBlocking {
-        val result = ragEngine.search("任意查询").first()
+    fun `search 空 query 返回无结果`() = runTest {
+        val dao = FakeKnowledgePointDao(searchResults = listOf(sampleEntity(id = "kp1", title = "测试")))
+        val engine = RagEngine(dao)
 
-        assertFalse("无结果时 hasResults 应为 false", result.hasResults)
+        engine.search("").test {
+            val result = awaitItem()
+            assertFalse(result.hasResults)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
-    // 验证无结果时references为空列表
     @Test
-    fun noResults_referencesIsEmpty() = runBlocking {
-        val result = ragEngine.search("任意查询").first()
-
-        assertTrue("无结果时 references 应为空列表", result.references.isEmpty())
-    }
-
-    // 验证 NO_RESULT_MESSAGE 常量值
-    @Test
-    fun noResultMessage_constantIsCorrect() {
-        assertEquals(
-            "该问题不在当前资料库覆盖范围内",
-            RagEngine.NO_RESULT_MESSAGE,
+    fun `RagReference 摘录优先取 coreConclusion`() = runTest {
+        val entity = sampleEntity(
+            id = "kp1",
+            title = "李白",
+            coreConclusion = "诗仙，浪漫主义诗人代表",
+            fullContent = "李白（701-762），字太白，号青莲居士...",
+            studyText = "李白是唐代最伟大的诗人之一",
         )
+        val dao = FakeKnowledgePointDao(searchResults = listOf(entity))
+        val engine = RagEngine(dao)
+
+        engine.search("李白").test {
+            val result = awaitItem()
+            val ref = result.references.first()
+            assertEquals("诗仙，浪漫主义诗人代表", ref.excerpt)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
-    // 验证 RagResult 数据类结构
-    @Test
-    fun ragResult_dataClassStructure() {
-        val result = RagResult(
-            hasResults = false,
-            references = emptyList(),
-            message = RagEngine.NO_RESULT_MESSAGE,
-        )
-
-        assertFalse(result.hasResults)
-        assertTrue(result.references.isEmpty())
-        assertEquals(RagEngine.NO_RESULT_MESSAGE, result.message)
-    }
-
-    // 验证 RagReference 数据类结构
-    @Test
-    fun ragReference_dataClassStructure() {
-        val reference = RagReference(
-            sourceFile = "袁行霈《中国文学史》第二卷",
-            sourcePage = 156,
-            contentSource = "TEXTBOOK_NATIVE",
-            excerpt = "江西诗派是宋代文学流派...",
-        )
-
-        assertEquals("袁行霈《中国文学史》第二卷", reference.sourceFile)
-        assertEquals(156, reference.sourcePage)
-        assertEquals("TEXTBOOK_NATIVE", reference.contentSource)
-        assertTrue(reference.excerpt.isNotBlank())
-    }
+    private fun sampleEntity(
+        id: String,
+        title: String,
+        coreConclusion: String = "",
+        fullContent: String = "",
+        studyText: String? = null,
+        sourceFile: String? = null,
+        sourcePage: Int? = null,
+        contentSource: String? = null,
+    ) = KnowledgePointEntity(
+        id = id,
+        chapterId = "ch1",
+        title = title,
+        summary = null,
+        coreConclusion = coreConclusion,
+        fullContent = fullContent,
+        multiPerspectives = null,
+        relatedIds = null,
+        contrastIds = null,
+        extensionIds = null,
+        examRecords = null,
+        examFrequency = "MEDIUM",
+        termTemplate = null,
+        tags = null,
+        difficulty = 3,
+        createdAt = System.currentTimeMillis(),
+        updatedAt = System.currentTimeMillis(),
+        contentSource = contentSource,
+        ocrStatus = "VERIFIED",
+        sourceFile = sourceFile,
+        sourcePage = sourcePage,
+        studyText = studyText,
+    )
 }

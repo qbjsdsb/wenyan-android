@@ -1,8 +1,11 @@
 package com.wenyan.app.core.ai.recall
 
+import com.wenyan.app.core.ai.AiService
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * 主动回忆检测引擎（三层渐进式方案）。
@@ -11,12 +14,12 @@ import javax.inject.Inject
  *
  * 三层检测机制（阈值对齐设计文档）：
  * - L1 关键词匹配 + 同义词词典（名词解释/术语，本地 <10ms）
- *     覆盖率 < 30% → Again（设计文档第 864 行）
+ *     覆盖率 < 30% → Again
  *     覆盖率 30-60% → Hard
  *     覆盖率 60-85% → Good
  *     覆盖率 ≥ 85% → Easy
- * - L2 语义相似度 BGE-small-zh 模型（论述题/分析题，本地 <100ms）
- *     覆盖率 < 60% → Hard（设计文档第 872 行）
+ * - L2 Jaccard 相似度（论述题/分析题，本地 <10ms）
+ *     覆盖率 < 60% → Hard
  *     覆盖率 60-85% → 部分正确（触发 L3）
  *     覆盖率 ≥ 85% → Easy
  * - L3 LLM 异步评估（L2 判定"部分正确"时触发，在线 3-5 秒）
@@ -24,12 +27,13 @@ import javax.inject.Inject
  *     不阻塞用户复习流程
  *     分数 < 60 → Again, 60-75 → Hard, 75-90 → Good, ≥ 90 → Easy
  *
- * 注意：阈值严格对齐设计文档，非 Spec 错误版本：
- * - L1 是 <30%→Again（非 Spec 错误的"≥70%判正确"）
- * - L2 是 <60%→Hard（非 Spec 错误的">0.85判正确"）
+ * 阶段4实现变更：
+ * - L2 从 BGE-small-zh 模型改为 Jaccard 相似度（Android 端不适合加载嵌入模型）
+ * - L3 接入 AiService.chat() 调用 LLM API
  */
+@Singleton
 class RecallChecker @Inject constructor(
-    private val aiService: com.wenyan.app.core.ai.AiService,
+    private val aiService: AiService,
 ) {
 
     /**
@@ -47,18 +51,13 @@ class RecallChecker @Inject constructor(
     ): Flow<RecallResult> = flow {
         when (questionType) {
             QuestionType.TERM_EXPLANATION -> {
-                // 名词解释/术语：走 L1 关键词匹配
                 emit(checkL1Keyword(userAnswer, correctAnswer))
             }
             QuestionType.ESSAY -> {
-                // 论述题/分析题：走 L2 语义相似度
                 val l2Result = checkL2Semantic(userAnswer, correctAnswer)
                 if (l2Result.rating == RecallRating.HARD && l2Result.coverage in PARTIAL_CORRECT_RANGE) {
-                    // L2 判定"部分正确"（覆盖率 60-85%）时触发 L3 异步评估
-                    // L3 不阻塞用户复习流程：先返回 L2 结果，L3 结果后续更新
+                    // L2 判定"部分正确"（覆盖率 60-85%）时触发 L3 评估
                     emit(l2Result)
-                    // 异步触发 L3，后续可通过单独 Flow 获取 L3 结果
-                    // emit(checkL3Llm(userAnswer, correctAnswer))
                 } else {
                     emit(l2Result)
                 }
@@ -66,19 +65,40 @@ class RecallChecker @Inject constructor(
         }
     }
 
+    /**
+     * L3 LLM 异步评估（单独调用，不阻塞主流程）。
+     *
+     * 在 L2 判定"部分正确"后，可通过此方法获取 L3 精确评估。
+     *
+     * @param userAnswer 用户答案
+     * @param correctAnswer 正确答案
+     * @return L3 检测结果
+     */
+    suspend fun checkL3Llm(userAnswer: String, correctAnswer: String): RecallResult {
+        val prompt = buildL3Prompt(userAnswer, correctAnswer)
+        val response = aiService.chat(prompt).first()
+        val (score, reason) = parseL3Response(response)
+
+        val rating = when {
+            score < L3_THRESHOLD_AGAIN -> RecallRating.AGAIN   // <60
+            score < L3_THRESHOLD_HARD -> RecallRating.HARD     // 60-75
+            score < L3_THRESHOLD_GOOD -> RecallRating.GOOD     // 75-90
+            else -> RecallRating.EASY                           // ≥90
+        }
+
+        return RecallResult(
+            level = RecallLevel.L3,
+            coverage = score / 100f,
+            rating = rating,
+            score = score,
+            reason = reason,
+        )
+    }
+
     // ── L1: 关键词匹配 + 同义词词典 ───────────────────────────────
 
     /**
      * L1 关键词匹配检测（设计文档第 859-864 行）。
-     *
-     * 逻辑：
-     * - 提取正确答案中的关键词 + 同义词词典扩展
-     * - 检测用户答案中关键词覆盖率
-     * - 阈值对齐设计文档第 864 行：
-     *   覆盖率 < 30% → Again
-     *   覆盖率 30-60% → Hard
-     *   覆盖率 60-85% → Good
-     *   覆盖率 ≥ 85% → Easy
      */
     private fun checkL1Keyword(userAnswer: String, correctAnswer: String): RecallResult {
         val keywords = extractKeywords(correctAnswer)
@@ -101,24 +121,22 @@ class RecallChecker @Inject constructor(
         )
     }
 
-    // ── L2: 语义相似度 BGE-small-zh ───────────────────────────────
+    // ── L2: Jaccard 相似度 ───────────────────────────────────────
 
     /**
-     * L2 语义相似度检测（设计文档第 866-872 行 + Spec BGE-small-zh 补充）。
+     * L2 语义相似度检测（阶段4改为 Jaccard 相似度）。
      *
-     * 逻辑：
-     * - 使用 BGE-small-zh 模型计算用户答案与正确答案的语义相似度
-     * - 阈值对齐设计文档第 872 行：
+     * 阈值对齐设计文档第 872 行：
      *   覆盖率 < 60% → Hard
      *   覆盖率 60-85% → 部分正确（触发 L3）
      *   覆盖率 ≥ 85% → Easy
      */
     private fun checkL2Semantic(userAnswer: String, correctAnswer: String): RecallResult {
-        val similarity = calculateSemanticSimilarity(userAnswer, correctAnswer)
+        val similarity = calculateJaccardSimilarity(userAnswer, correctAnswer)
 
         val rating = when {
             similarity < L2_THRESHOLD_HARD -> RecallRating.HARD              // <60%
-            similarity < L2_THRESHOLD_PARTIAL -> RecallRating.HARD           // 60-85% 部分正确，触发L3
+            similarity < L2_THRESHOLD_PARTIAL -> RecallRating.HARD           // 60-85% 部分正确
             else -> RecallRating.EASY                                        // ≥85%
         }
 
@@ -131,55 +149,32 @@ class RecallChecker @Inject constructor(
         )
     }
 
-    // ── L3: LLM 异步评估 ─────────────────────────────────────────
-
-    /**
-     * L3 LLM 异步评估（设计文档第 874-881 行）。
-     *
-     * 逻辑：
-     * - 调用大模型 API，输入参考答案 + 用户复述
-     * - 输出 0-100 分及理由
-     * - 不阻塞用户复习流程
-     * - 阈值映射：
-     *   分数 < 60 → Again
-     *   分数 60-75 → Hard
-     *   分数 75-90 → Good
-     *   分数 ≥ 90 → Easy
-     */
-    private suspend fun checkL3Llm(userAnswer: String, correctAnswer: String): RecallResult {
-        // TODO: 调用 AI 服务进行 LLM 评估
-        // 当前为骨架实现，后续接入实际 LLM API
-        val score = 0
-        val reason = "LLM 评估待接入"
-
-        val rating = when {
-            score < L3_THRESHOLD_AGAIN -> RecallRating.AGAIN   // <60
-            score < L3_THRESHOLD_HARD -> RecallRating.HARD     // 60-75
-            score < L3_THRESHOLD_GOOD -> RecallRating.GOOD     // 75-90
-            else -> RecallRating.EASY                           // ≥90
-        }
-
-        return RecallResult(
-            level = RecallLevel.L3,
-            coverage = score / 100f,
-            rating = rating,
-            score = score,
-            reason = reason,
-        )
-    }
-
     // ── 私有辅助方法 ──────────────────────────────────────────────
 
-    /** 提取正确答案中的关键词（TODO: 接入分词 + 关键词提取） */
+    /**
+     * 提取正确答案中的关键词。
+     *
+     * 按标点分词，过滤停用词，保留 ≥2 字的词。
+     */
     private fun extractKeywords(correctAnswer: String): List<String> {
-        // TODO: 使用分词工具提取关键词
-        return correctAnswer.split("，", "。", "、", "；").filter { it.isNotBlank() }
+        return correctAnswer
+            .split("，", "。", "、", "；", "：", "（", "）", "(", ")", " ", "\n")
+            .map { it.trim() }
+            .filter { it.length >= 2 && it !in STOP_WORDS }
     }
 
-    /** 同义词词典扩展（TODO: 接入同义词词典） */
+    /**
+     * 同义词词典扩展。
+     *
+     * 硬编码常见文学同义词映射（如"苏轼"="苏东坡"="子瞻"）。
+     */
     private fun expandWithSynonyms(keywords: List<String>): List<String> {
-        // TODO: 查同义词词典，扩展关键词列表
-        return keywords
+        val expanded = mutableListOf<String>()
+        for (keyword in keywords) {
+            expanded.add(keyword)
+            SYNONYM_MAP[keyword]?.let { expanded.addAll(it) }
+        }
+        return expanded.distinct()
     }
 
     /** 计算关键词覆盖率 */
@@ -191,11 +186,67 @@ class RecallChecker @Inject constructor(
         return matched.toFloat() / keywords.size
     }
 
-    /** BGE-small-zh 语义相似度计算（TODO: 接入 BGE-small-zh 模型） */
-    private fun calculateSemanticSimilarity(userAnswer: String, correctAnswer: String): Float {
-        // TODO: 接入 BGE-small-zh-v1.5 模型计算语义相似度
-        // 当前返回 0f 作为骨架实现
-        return 0f
+    /**
+     * 计算 Jaccard 相似度（分词后交集/并集）。
+     *
+     * Jaccard = |A ∩ B| / |A ∪ B|
+     *
+     * 使用字符级 bigram（2-gram）作为分词单元，适合中文文本。
+     */
+    private fun calculateJaccardSimilarity(text1: String, text2: String): Float {
+        val set1 = extractBigrams(text1)
+        val set2 = extractBigrams(text2)
+        if (set1.isEmpty() || set2.isEmpty()) return 0f
+
+        val intersection = set1.intersect(set2).size
+        val union = set1.union(set2).size
+        return intersection.toFloat() / union
+    }
+
+    /** 提取字符级 bigram（2-gram） */
+    private fun extractBigrams(text: String): Set<String> {
+        val cleaned = text.filter { !it.isWhitespace() && it !in "，。、；：（）(),." }
+        if (cleaned.length < 2) return setOf(cleaned)
+        return cleaned.windowed(2).toSet()
+    }
+
+    /** 构建 L3 LLM 评估 prompt */
+    private fun buildL3Prompt(userAnswer: String, correctAnswer: String): String {
+        return """请评估用户答案与正确答案的匹配度。
+
+【用户答案】
+$userAnswer
+
+【正确答案】
+$correctAnswer
+
+请返回以下 JSON 格式（不要包含其他内容）：
+{"score": 0-100的整数, "reason": "简短评估理由"}
+
+评分标准：
+- 90-100：完全正确，覆盖所有要点
+- 75-89：基本正确，遗漏少量要点
+- 60-74：部分正确，遗漏重要要点
+- 0-59：大部分错误或偏离"""
+    }
+
+    /**
+     * 解析 L3 LLM 返回的 JSON。
+     *
+     * 用正则提取 score 和 reason，不依赖严格 JSON（LLM 可能加额外文本）。
+     */
+    private fun parseL3Response(response: String): Pair<Int, String> {
+        // 用正则提取 score
+        val scoreRegex = Regex("\"score\"\\s*:\\s*(\\d+)")
+        val scoreMatch = scoreRegex.find(response)
+        val score = scoreMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
+
+        // 用正则提取 reason
+        val reasonRegex = Regex("\"reason\"\\s*:\\s*\"([^\"]+)\"")
+        val reasonMatch = reasonRegex.find(response)
+        val reason = reasonMatch?.groupValues?.get(1) ?: "LLM 评估完成"
+
+        return Pair(score.coerceIn(0, 100), reason)
     }
 
     companion object {
@@ -208,13 +259,39 @@ class RecallChecker @Inject constructor(
         private const val L2_THRESHOLD_HARD = 0.60f    // <60% → Hard
         private const val L2_THRESHOLD_PARTIAL = 0.85f // 60-85% → 部分正确（触发L3）
 
-        // L3 阈值（设计文档第 881 行：L3评分映射为Good/Easy）
+        // L3 阈值（设计文档第 881 行）
         private const val L3_THRESHOLD_AGAIN = 60      // <60 → Again
         private const val L3_THRESHOLD_HARD = 75       // 60-75 → Hard
         private const val L3_THRESHOLD_GOOD = 90       // 75-90 → Good
 
         /** L2 部分正确范围（触发 L3） */
         private val PARTIAL_CORRECT_RANGE = 0.60f..0.85f
+
+        /** 常见停用词（过滤无意义的关键词） */
+        private val STOP_WORDS = setOf(
+            "的是", "是一", "一种", "一个", "可以", "以及", "对于",
+            "在此", "如下", "主要", "通常", "一般", "作为", "称为",
+            "属于", "具有", "包括", "包含", "其中", "其他", "所以",
+            "因为", "如果", "虽然", "但是", "而且", "并且", "或者",
+        )
+
+        /** 常见文学同义词映射 */
+        private val SYNONYM_MAP: Map<String, List<String>> = mapOf(
+            "苏轼" to listOf("苏东坡", "子瞻", "东坡"),
+            "李白" to listOf("诗仙", "太白", "青莲居士"),
+            "杜甫" to listOf("诗圣", "子美", "少陵野老"),
+            "白居易" to listOf("乐天", "香山居士"),
+            "王维" to listOf("摩诘", "诗佛"),
+            "韩愈" to listOf("退之", "昌黎"),
+            "柳宗元" to listOf("子厚", "柳河东"),
+            "欧阳修" to listOf("永叔", "醉翁", "六一居士"),
+            "《诗经》" to listOf("诗经", "诗三百"),
+            "《楚辞》" to listOf("楚辞"),
+            "《红楼梦》" to listOf("红楼梦", "石头记"),
+            "《西游记》" to listOf("西游记"),
+            "《三国演义》" to listOf("三国演义", "三国"),
+            "《水浒传》" to listOf("水浒传", "水浒"),
+        )
     }
 }
 
@@ -233,7 +310,7 @@ enum class QuestionType {
  * 检测层级。
  *
  * @property L1 关键词匹配 + 同义词词典（本地 <10ms）
- * @property L2 语义相似度 BGE-small-zh（本地 <100ms）
+ * @property L2 Jaccard 相似度（本地 <10ms）
  * @property L3 LLM 异步评估（在线 3-5 秒）
  */
 enum class RecallLevel {
@@ -244,11 +321,6 @@ enum class RecallLevel {
 
 /**
  * 回忆评分（对接 FSRS Rating）。
- *
- * @property AGAIN 完全忘记（L1 覆盖率 <30% / L3 分数 <60）
- * @property HARD 困难（L1 覆盖率 30-60% / L2 覆盖率 <60% / L3 分数 60-75）
- * @property GOOD 良好（L1 覆盖率 60-85% / L3 分数 75-90）
- * @property EASY 轻松（L1 覆盖率 ≥85% / L2 覆盖率 ≥85% / L3 分数 ≥90）
  */
 enum class RecallRating {
     AGAIN,
@@ -261,7 +333,7 @@ enum class RecallRating {
  * 回忆检测结果。
  *
  * @param level 检测层级（L1/L2/L3）
- * @param coverage 覆盖率 0-1（L1 关键词覆盖率 / L2 语义相似度 / L3 分数百分比）
+ * @param coverage 覆盖率 0-1（L1 关键词覆盖率 / L2 Jaccard 相似度 / L3 分数百分比）
  * @param rating 评分（对接 FSRS Rating）
  * @param score L3 时为 0-100 分，L1/L2 时为 null
  * @param reason L3 时为评估理由，L1/L2 时为 null

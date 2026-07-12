@@ -1,8 +1,10 @@
 package com.wenyan.app.core.ai
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * 苏格拉底式 AI 导师。
@@ -13,11 +15,12 @@ import javax.inject.Inject
  * - RAG 架构：基于用户资料库 + 权威教材库检索，引用可溯源
  * - 用户答案过短或离题时不强行分析论证漏洞
  *
- * 与设计文档 3.6 节的关系：
- * - 设计文档 AI 直接批改 → 本 Spec 增强为"先引导用户作答再批改"
- * - 设计文档 AI 基于上下文 prompt → 本 Spec 增强为 RAG 检索引用可溯源
- * - 设计文档无"解释我的答案"机制 → 本 Spec 新增
+ * 实现要点（阶段4）：
+ * - 私有方法通过 [aiService].chat() 调用 LLM API
+ * - [PromptTemplates] 统一管理所有 prompt
+ * - RAG 无结果时降级为通用引导
  */
+@Singleton
 class SocraticTutor @Inject constructor(
     private val ragEngine: RagEngine,
     private val aiService: AiService,
@@ -52,42 +55,43 @@ class SocraticTutor @Inject constructor(
         }
 
         // 通过 RAG 检索相关资料
-        ragEngine.search(question).collect { ragResult ->
-            if (!ragResult.hasResults) {
-                // RAG 无结果时不编造答案，告知用户
-                emit(SocraticGuide(
-                    stage = SocraticStage.ANALYZE,
-                    content = ragResult.message + "，建议查阅相关教材后再尝试。",
-                    isSampleEssay = false,
-                    contentSource = CONTENT_SOURCE_AI,
-                ))
-                return@collect
-            }
-
-            // 阶段1：分析论证漏洞
+        val ragResult = ragEngine.search(question).first()
+        if (!ragResult.hasResults) {
+            // RAG 无结果时不编造答案，告知用户
             emit(SocraticGuide(
                 stage = SocraticStage.ANALYZE,
-                content = analyzeArguments(question, userAnswer, ragResult.references),
+                content = ragResult.message + "，建议查阅相关教材后再尝试。",
                 isSampleEssay = false,
                 contentSource = CONTENT_SOURCE_AI,
             ))
-
-            // 阶段2：提供改进建议（而非标准答案）
-            emit(SocraticGuide(
-                stage = SocraticStage.SUGGEST,
-                content = suggestImprovements(question, userAnswer, ragResult.references),
-                isSampleEssay = false,
-                contentSource = CONTENT_SOURCE_AI,
-            ))
-
-            // 阶段3：展示范文供对比（标注"范文，非标准答案"）
-            emit(SocraticGuide(
-                stage = SocraticStage.SHOW_SAMPLE,
-                content = buildSampleEssay(question, ragResult.references),
-                isSampleEssay = true,
-                contentSource = CONTENT_SOURCE_AI,
-            ))
+            return@flow
         }
+
+        val references = ragResult.references
+
+        // 阶段1：分析论证漏洞
+        emit(SocraticGuide(
+            stage = SocraticStage.ANALYZE,
+            content = analyzeArguments(question, userAnswer, references),
+            isSampleEssay = false,
+            contentSource = CONTENT_SOURCE_AI,
+        ))
+
+        // 阶段2：提供改进建议（而非标准答案）
+        emit(SocraticGuide(
+            stage = SocraticStage.SUGGEST,
+            content = suggestImprovements(question, userAnswer, references),
+            isSampleEssay = false,
+            contentSource = CONTENT_SOURCE_AI,
+        ))
+
+        // 阶段3：展示范文供对比（标注"范文，非标准答案"）
+        emit(SocraticGuide(
+            stage = SocraticStage.SHOW_SAMPLE,
+            content = buildSampleEssay(question, references),
+            isSampleEssay = true,
+            contentSource = CONTENT_SOURCE_AI,
+        ))
     }
 
     /**
@@ -109,13 +113,14 @@ class SocraticTutor @Inject constructor(
         correctAnswer: String,
     ): Flow<WrongAnswerExplanation> = flow {
         // 通过 RAG 检索相关知识点
-        ragEngine.search(question).collect { ragResult ->
-            emit(WrongAnswerExplanation(
-                errorAnalysis = analyzeErrorThinking(question, userAnswer, correctAnswer),
-                correctApproach = buildCorrectApproach(question, correctAnswer, ragResult.references),
-                references = ragResult.references,
-            ))
-        }
+        val ragResult = ragEngine.search(question).first()
+        val references = if (ragResult.hasResults) ragResult.references else emptyList()
+
+        emit(WrongAnswerExplanation(
+            errorAnalysis = analyzeErrorThinking(question, userAnswer, correctAnswer),
+            correctApproach = buildCorrectApproach(question, correctAnswer, references),
+            references = references,
+        ))
     }
 
     /**
@@ -141,8 +146,7 @@ class SocraticTutor @Inject constructor(
             )
         }
 
-        // 完全离题检测（简单启发式：答案与题目无关键词重叠时判定为离题）
-        // TODO: 后续可结合 L2 语义相似度做更准确的离题判断
+        // 完全离题检测（简单启发式：答案中无中文字符时判定为离题）
         if (isOffTopic(trimmed)) {
             return AnswerValidation(
                 isValid = false,
@@ -158,75 +162,59 @@ class SocraticTutor @Inject constructor(
         )
     }
 
-    // ── 私有辅助方法 ──────────────────────────────────────────────
+    // ── 私有辅助方法（通过 AiService 调用 LLM） ────────────────────
 
     /** 分析论证漏洞（苏格拉底式：指出问题而非直接给答案） */
-    private fun analyzeArguments(
+    private suspend fun analyzeArguments(
         question: String,
         userAnswer: String,
         references: List<RagReference>,
     ): String {
-        // TODO: 调用 AI 服务分析论证漏洞
-        // 苏格拉底式：指出论证中的薄弱环节，引导用户思考而非直接给出正确答案
-        val refHint = if (references.isNotEmpty()) {
-            "可参考：${references.joinToString("；") { "${it.sourceFile}P${it.sourcePage}" }}"
-        } else {
-            ""
-        }
-        return "你的回答中有以下论证环节可以进一步思考：论点的展开深度、论据的充分性、论证逻辑的严密性。$refHint"
+        val prompt = PromptTemplates.buildAnalyzePrompt(question, userAnswer, references)
+        return aiService.chat(prompt).first()
     }
 
     /** 提供改进建议（而非标准答案） */
-    private fun suggestImprovements(
+    private suspend fun suggestImprovements(
         question: String,
         userAnswer: String,
         references: List<RagReference>,
     ): String {
-        // TODO: 调用 AI 服务生成改进建议
-        // 苏格拉底式：建议方向而非给出完整答案
-        return "建议从以下角度改进：补充时代背景、增加具体作品例证、梳理文学流派的承继关系。注意这不是标准答案，而是改进方向。"
+        val prompt = PromptTemplates.buildSuggestPrompt(question, userAnswer, references)
+        return aiService.chat(prompt).first()
     }
 
     /** 构建范文（标注"范文，非标准答案"） */
-    private fun buildSampleEssay(
+    private suspend fun buildSampleEssay(
         question: String,
         references: List<RagReference>,
     ): String {
-        // TODO: 调用 AI 服务生成范文
-        val refCitations = references.joinToString("\n") { ref ->
-            "— ${ref.sourceFile} P${ref.sourcePage}"
-        }
-        return "【范文，非标准答案】\n\n（此处为基于资料库生成的参考范文，供对比学习使用。）\n\n参考来源：\n$refCitations"
+        val prompt = PromptTemplates.buildSampleEssayPrompt(question, references)
+        return aiService.chat(prompt).first()
     }
 
     /** 分析错误思路 */
-    private fun analyzeErrorThinking(
+    private suspend fun analyzeErrorThinking(
         question: String,
         userAnswer: String,
         correctAnswer: String,
     ): String {
-        // TODO: 调用 AI 服务分析错误思路
-        return "你的答案在以下思路上存在偏差：知识记忆不完整、概念混淆、论证方向偏离。"
+        val prompt = PromptTemplates.buildErrorAnalysisPrompt(question, userAnswer, correctAnswer)
+        return aiService.chat(prompt).first()
     }
 
     /** 构建正确思路 */
-    private fun buildCorrectApproach(
+    private suspend fun buildCorrectApproach(
         question: String,
         correctAnswer: String,
         references: List<RagReference>,
     ): String {
-        val refHint = if (references.isNotEmpty()) {
-            "\n\n依据：${references.joinToString("；") { "${it.sourceFile}P${it.sourcePage}" }}"
-        } else {
-            ""
-        }
-        return "正确思路：$correctAnswer$refHint"
+        val prompt = PromptTemplates.buildCorrectApproachPrompt(question, correctAnswer, references)
+        return aiService.chat(prompt).first()
     }
 
-    /** 简单离题检测（启发式） */
+    /** 简单离题检测（启发式：无中文字符判定为离题） */
     private fun isOffTopic(answer: String): Boolean {
-        // TODO: 后续结合 L2 语义相似度做准确判断
-        // 当前启发式：答案中若完全不含任何中文字符或仅含标点，判定为离题
         val hasChinese = answer.any { it.code in 0x4E00..0x9FFF }
         return !hasChinese
     }
