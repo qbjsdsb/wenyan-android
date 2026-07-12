@@ -30,5 +30,22 @@ jobs:
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon --stacktrace
 
+      - name: Build release APK
+        run: gradle assembleRelease --no-daemon --stacktrace
+
       - name: Run unit tests
         run: gradle test --no-daemon --stacktrace
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: wenyan-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 14
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: wenyan-release-apk
+          path: app/build/outputs/apk/release/*.apk
+          retention-days: 14

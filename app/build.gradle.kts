@@ -25,6 +25,28 @@ android {
         }
     }
 
+    // Release 签名配置
+    // - CI 环境：从环境变量读取 keystore（KEYSTORE_PATH 指向解码后的 .jks 文件）
+    // - 本地环境：若无 keystore 配置，fallback 到 debug 签名（避免本地编译失败）
+    signingConfigs {
+        create("release") {
+            val keystorePath = System.getenv("KEYSTORE_PATH")
+            val keystorePassword = System.getenv("KEYSTORE_PASSWORD")
+            val keyAlias = System.getenv("KEY_ALIAS")
+            val keyPassword = System.getenv("KEY_PASSWORD")
+
+            if (keystorePath != null && java.io.File(keystorePath).exists()) {
+                storeFile = java.io.File(keystorePath)
+                storePassword = keystorePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+                println("✓ Release 签名配置已加载: $keystorePath")
+            } else {
+                println("⚠ 未找到 release keystore，release 构建将使用 debug 签名（本地开发模式）")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -32,6 +54,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // 若 release signingConfig 未配置 keystore（storeFile 为 null），则使用 debug 签名
+            val releaseConfig = signingConfigs.getByName("release")
+            signingConfig = if (releaseConfig.storeFile != null) releaseConfig else signingConfigs.getByName("debug")
         }
     }
 

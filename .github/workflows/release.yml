@@ -1,0 +1,114 @@
+name: Release
+
+# Tag 触发的 Release workflow。
+#
+# 触发方式：git tag v1.0.0 && git push origin v1.0.0
+#
+# 流程：
+# 1. 从 GitHub Secrets 解码 keystore 到临时文件
+# 2. 构建 signed release APK
+# 3. 创建 GitHub Release 并附加 APK
+#
+# 前置条件（一次性配置）：
+# 1. 运行 "Generate Keystore (One-time)" workflow
+# 2. 下载 artifact，将以下内容添加到 GitHub Secrets：
+#    - KEYSTORE_BASE64：keystore-base64.txt 内容
+#    - KEYSTORE_PASSWORD：keystore-password.txt 内容
+#    - KEY_ALIAS：key-alias.txt 内容
+#    - KEY_PASSWORD：key-password.txt 内容
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew || true
+
+      - name: Decode keystore from Secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "⚠ KEYSTORE_BASE64 secret 未配置，将使用 debug 签名（仅测试用）"
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > $RUNNER_TEMP/wenyan-release.jks
+          echo "✓ Keystore 已解码到 $RUNNER_TEMP/wenyan-release.jks"
+          ls -la $RUNNER_TEMP/wenyan-release.jks
+
+      - name: Build signed release APK
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/wenyan-release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Run unit tests
+        run: gradle test --no-daemon --stacktrace
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Rename APK with version
+        run: |
+          mkdir -p release-assets
+          cp app/build/outputs/apk/release/app-release.apk release-assets/wenyan-${{ steps.version.outputs.VERSION }}.apk
+          # 同时保留未版本号的副本
+          cp app/build/outputs/apk/release/app-release.apk release-assets/wenyan-latest.apk
+          ls -la release-assets/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          name: 文研App ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## 文研App ${{ steps.version.outputs.VERSION }}
+
+            ### 下载安装
+
+            1. 下载下方 `wenyan-${{ steps.version.outputs.VERSION }}.apk`
+            2. 手机设置 → 允许安装未知来源应用
+            3. 点击 APK 文件安装
+
+            ### 功能特性
+
+            - 知识点浏览（多教材对照 + 来源溯源）
+            - 真题练习（科目代码历史适配 + 答题框架/范文）
+            - 记忆卡片（FSRS-6 算法 + 三层记忆调度）
+            - 知识图谱（R值可视化 + 薄弱节点高亮）
+            - AI助手（苏格拉底式引导 + RAG + 多服务商配置）
+            - 导师信息（外链南师大文学院官网）
+
+            ### 系统要求
+
+            Android 8.0 (API 26) 及以上
+          files: |
+            release-assets/wenyan-${{ steps.version.outputs.VERSION }}.apk
+            release-assets/wenyan-latest.apk
+          draft: false
+          prerelease: false
