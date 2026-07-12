@@ -13,9 +13,10 @@
 ### Step 2：检查 CI 状态（如有阻塞）
 
 ```bash
-# 用 GitHub API 查最新 Run 状态
-curl -H "Authorization: token <GITHUB_TOKEN>" \
-  https://api.github.com/repos/qbjsdsb/wenyan-android/actions/runs?per_page=1
+# 用 GitHub API 查最新 Run 状态（替换 <GITHUB_TOKEN>）
+curl -s -H "Authorization: token <GITHUB_TOKEN>" \
+  "https://api.github.com/repos/qbjsdsb/wenyan-android/actions/runs?per_page=3" \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); [print(r['id'],'|',r['status'],'|',r['conclusion'],'|',r['head_branch'],'|',r['head_sha'][:7]) for r in d.get('workflow_runs',[])]"
 ```
 
 - 如 `conclusion: failure` → 读 [02-VERSION-MATRIX.md](02-VERSION-MATRIX.md) + [03-FAILED-ATTEMPTS.md](03-FAILED-ATTEMPTS.md)
@@ -23,12 +24,17 @@ curl -H "Authorization: token <GITHUB_TOKEN>" \
 
 ### Step 3：确认工作内容
 
-根据 [00-STATUS.md](00-STATUS.md) 的"下一步优先级"确定本次会话目标。
+根据 [00-STATUS.md](00-STATUS.md) 的"下一步优先级"或 [../AGENTS.md](../AGENTS.md) 第 9 节确定本次会话目标。
 
 ### Step 4：拉取最新代码
 
 ```bash
+# 本地开发（Windows D 盘）
 cd D:\wenyan\wenyan-android
+git pull origin main
+
+# 或在 Trae 沙箱
+cd /workspace
 git pull origin main
 ```
 
@@ -65,9 +71,16 @@ git pull origin main
 ### Step 4：commit + push
 
 ```bash
+# 本地开发（Windows D 盘）
 cd D:\wenyan\wenyan-android
 git add docs/SESSION_LOG.md docs/00-STATUS.md
 # 如有其他避坑文档更新也一起 add
+git commit -m "docs: update session log and status after session"
+git push origin main
+
+# 或在 Trae 沙箱
+cd /workspace
+git add docs/SESSION_LOG.md docs/00-STATUS.md AGENTS.md
 git commit -m "docs: update session log and status after session"
 git push origin main
 ```
@@ -76,23 +89,38 @@ git push origin main
 
 ### 场景 1：修复 CI 编译错误
 
-1. 读 [03-FAILED-ATTEMPTS.md](03-FAILED-ATTEMPTS.md) 看已尝试过的方案
+1. 读 [03-FAILED-ATTEMPTS.md](03-FAILED-ATTEMPTS.md) 看已尝试过的方案（特别注意 #010-#012 CI 相关坑）
 2. 读 [02-VERSION-MATRIX.md](02-VERSION-MATRIX.md) 看版本兼容性
-3. 选择未尝试的方案
-4. 修改 `gradle/libs.versions.toml`
-5. commit + push
-6. 等 CI 运行（约 5-10 分钟）
-7. 如成功 → 更新 00-STATUS.md 解除阻塞
-8. 如失败 → 记录到 03-FAILED-ATTEMPTS.md，换方案
+3. 下载 CI 失败日志：
+   ```bash
+   curl -sL -H "Authorization: token <GITHUB_TOKEN>" \
+     "https://api.github.com/repos/qbjsdsb/wenyan-android/actions/runs/<RUN_ID>/logs" \
+     -o /tmp/ci-logs.zip
+   unzip -p /tmp/ci-logs.zip "build/<N>_<step name>.txt" | grep -E "(FAILURE|FAILED|error|Exception|What went wrong)" | head -30
+   ```
+4. 选择未尝试的方案
+5. 修改 `gradle/libs.versions.toml` 或对应配置
+6. commit + push（建议开 feature 分支 + PR 触发 CI，避免污染 main）
+7. 等 CI 运行（约 15 分钟完整构建）
+8. 如成功 → 更新 00-STATUS.md 解除阻塞 + 合并 PR
+9. 如失败 → 记录到 03-FAILED-ATTEMPTS.md，换方案
 
-### 场景 2：M3 改造（UI 开发）
+**CI 常见失败原因**：
+- plugin marker artifact 解析失败 → 检查 `settings.gradle.kts` 的 pluginManagement 仓库顺序（[#010](03-FAILED-ATTEMPTS.md)）
+- Metaspace OOM → 检查 `gradle.properties` 的 MaxMetaspaceSize ≥ 1g（[#011](03-FAILED-ATTEMPTS.md)）
+- testReleaseUnitTest 失败 → CI 跑 `testDebugUnitTest` 而非 `test`（[#012](03-FAILED-ATTEMPTS.md)）
 
-1. 读 [design/m3-expressive-redesign.md](design/m3-expressive-redesign.md) 了解设计规格
-2. 读 [plans/m3-expressive-implementation.md](plans/m3-expressive-implementation.md) 了解 Task 列表
-3. 按 Phase 顺序执行 Task
-4. 每个 Task 完成后 commit + push
-5. 等待 CI 验证
-6. 全部 Phase 完成后更新 00-STATUS.md
+### 场景 2：KSU 风格 UI 升级后续（UI 开发）
+
+1. 读 [plans/ksu-ui-upgrade.md](plans/ksu-ui-upgrade.md) 了解已完成的 Phase 0-3 与剩余工作
+2. 读 [design/m3-expressive-redesign.md](design/m3-expressive-redesign.md) 了解设计规格
+3. KSU 4 组件位置：`core/designsystem/src/main/java/com/wenyan/app/core/designsystem/component/`
+   - `WenyanLargeTopAppBar.kt` — LargeFlexibleTopAppBar 封装
+   - `WenyanNavigationBar.kt` — 药丸风格导航栏
+   - `GroupedCard.kt` — 分组卡片（待应用到 SettingsScreen）
+   - `HierarchicalListItem.kt` — 层级列表项（待应用到 KnowledgePointDetailScreen）
+4. 9 个 Screen 已迁移到 WenyanLargeTopAppBar（6 个滚动屏 + 3 个固定内容屏）
+5. 剩余工作：用 GroupedCard 改造 SettingsScreen + 用 HierarchicalListItem 改造 KnowledgePointDetailScreen
 
 ### 场景 3：OCR 管线（本地运行）
 
@@ -108,7 +136,17 @@ git push origin main
 - **不修改 route 文件**（中间件重构时）
 - **所有中间件使用 async/await**
 - **使用 Koa 2.x**
-- **PowerShell 不支持 heredoc** — commit 消息用单行
+- **PowerShell 不支持 heredoc** — commit 消息用单行（沙箱 bash 支持 heredoc）
 - **PowerShell profile.ps1 不含 conda 初始化**
 - **OCR 运行时不跑 CPU 密集 Python 任务**
 - **Android 开发不影响 OCR**，可并行
+
+### Trae 沙箱环境（Linux）
+
+- **沙箱路径**：`/workspace`（不是 `D:\wenyan`）
+- **JDK 17 路径**：`/root/.local/share/mise/installs/java/17.0.2`
+- **Android SDK 路径**：`/opt/android-sdk`
+- **Gradle 8.14.4**：通过 mise 安装，命令 `gradle`（无 gradlew wrapper）
+- **JAVA_TOOL_OPTIONS**：必须设置 `-XX:-UseContainerSupport`（JDK 17.0.2 cgroup v2 bug）
+- **沙箱不保留状态**：会话结束即清空，所有改动必须 commit + push 到 GitHub
+- **GitHub token**：由用户提供，不写入仓库（环境变量或临时使用）

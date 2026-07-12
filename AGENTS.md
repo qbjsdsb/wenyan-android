@@ -6,7 +6,7 @@
 
 **文研 App** 是面向南京师范大学文学院现当代文学考研（050106）的深度专业课学习与背诵工具。核心理念：以真题为纲、以知识网络为本、以深度背诵为用。
 
-**技术栈**：Kotlin 2.0.20 / Jetpack Compose（BOM 2025.12.00）/ Material 3 Expressive / Hilt / Room / FSRS-6 自实现 / 多模块架构（参考 Google Now in Android）
+**技术栈**：Kotlin 2.3.10 / Jetpack Compose（BOM 2025.12.00）/ Material 3 Expressive（material3 1.5.0-alpha18）/ Hilt 2.57.1 / Room 2.7.0 / FSRS-6 自实现 / 多模块架构（参考 Google Now in Android）
 
 **仓库**：`qbjsdsb/wenyan-android`（private）
 
@@ -16,7 +16,7 @@
 2. **读 [docs/01-QUICK-RECOVERY.md](docs/01-QUICK-RECOVERY.md)** — 了解会话开始/结束标准流程
 3. **按需查阅**：
    - 有 CI 编译失败 → [docs/02-VERSION-MATRIX.md](docs/02-VERSION-MATRIX.md) + [docs/03-FAILED-ATTEMPTS.md](docs/03-FAILED-ATTEMPTS.md)
-   - 要改 UI → [docs/design/m3-expressive-redesign.md](docs/design/m3-expressive-redesign.md)
+   - 要改 UI → [docs/design/m3-expressive-redesign.md](docs/design/m3-expressive-redesign.md) + [docs/plans/ksu-ui-upgrade.md](docs/plans/ksu-ui-upgrade.md)
    - 要跑 OCR 管线 → [docs/reference/OCR_PIPELINE.md](docs/reference/OCR_PIPELINE.md)
    - 不懂术语 → [docs/reference/GLOSSARY.md](docs/reference/GLOSSARY.md)
    - 上次进度 → [docs/SESSION_LOG.md](docs/SESSION_LOG.md) 最后一节
@@ -37,7 +37,8 @@ docs/
 │   └── code-fix-history.md      # 代码修复历史
 │
 ├── plans/                       # 实现计划
-│   ├── m3-expressive-implementation.md # M3 改造 26 Task
+│   ├── ksu-ui-upgrade.md              # KSU 风格 UI 升级计划（已完成 Phase 0-3）
+│   ├── m3-expressive-implementation.md # M3 改造 26 Task（旧版）
 │   ├── code-fix-implementation.md      # 代码修复计划
 │   └── early-phase-plan.md             # 早期 Phase 1-7 计划
 │
@@ -83,6 +84,14 @@ tools/                           # Python 管线脚本
 - **OCR 运行时不要跑 CPU 密集型 Python 任务** — 会拖慢 OCR
 - **Android 开发是纯静态代码工作** — 不影响 OCR，可并行
 
+### CI 相关硬约束（2026-07-12 新增）
+
+- **pluginManagement 仓库顺序**：gradlePluginPortal / mavenCentral / google 优先，Aliyun 作 fallback — CI runner（美/欧）从 Aliyun 解析 plugin marker artifact 会失败（详见 [03-FAILED-ATTEMPTS.md #010](docs/03-FAILED-ATTEMPTS.md)）
+- **MaxMetaspaceSize ≥ 1g** — Release 构建（R8 + Kotlin + Compose）需加载大量类，512m 会 OOM（详见 [#011](docs/03-FAILED-ATTEMPTS.md)）
+- **CI 跑 testDebugUnitTest 而非 test** — `debugImplementation` 依赖只在 debug 变体可用，release 测试会因缺 ComponentActivity 声明失败（详见 [#012](docs/03-FAILED-ATTEMPTS.md)）
+- **CI Gradle 版本与本地对齐** — 用 8.14.4（旧版 8.7 在解析 KSP 2.3.x 时有 bug）
+- **KSP 2.3.2 而非 2.3.10** — KSP 2.3.10 调用 `AndroidComponentsExtension.addKspConfigurations`（AGP 8.8+ 才有），与 AGP 8.6.0 不兼容
+
 ## 5. 敏感信息（不入仓库）
 
 | 信息 | 获取方式 |
@@ -104,13 +113,14 @@ tools/                           # Python 管线脚本
 - commit message 说清"为什么改"，不只是"改了什么"
 - 用户偏好：中文交流、严谨验证、反复检查、有趣的教学风格、M3 谷歌味道 UI
 
-## 7. 当前阻塞（2026-07-12）
+## 7. 当前状态（2026-07-12）
 
-**CI 编译失败**：materialkolor 4.1.1 用 Kotlin 2.3.0 编译，与项目 Kotlin 2.0.20 不兼容。
+**✅ 无阻塞** — CI 全绿，KSU 风格 UI 升级 Phase 0-3 已合并到 main。
 
-详见 [docs/02-VERSION-MATRIX.md](docs/02-VERSION-MATRIX.md) 和 [docs/03-FAILED-ATTEMPTS.md](docs/03-FAILED-ATTEMPTS.md)。
-
-修复方案：升级 Kotlin 到 2.3.0 + KSP 2.3.x，或降级 materialkolor 到兼容版本。
+- 最新 commit：`4461eba`（main）
+- PR #1 已合并（squash merge `3efe678`）
+- CI run 29211066998 全绿（11/11 步骤）
+- 详见 [docs/00-STATUS.md](docs/00-STATUS.md)
 
 ## 8. 项目阶段总览
 
@@ -122,4 +132,12 @@ tools/                           # Python 管线脚本
 | Phase 4 AI 服务 | ✅ 完成 | OpenAI 兼容协议 |
 | Phase 5 UI 增强 | ✅ 完成 | 9 个 Screen + M3 组件 |
 | Release 配置 | ✅ 完成 | 签名 + GitHub Release v0.1.0 |
-| M3 Expressive 改造 | Phase 0 阻塞 | CI 失败，待修复版本兼容 |
+| KSU 风格 UI 升级 | ✅ 完成 | Phase 0-3 + CI 修复，已合并 main |
+
+## 9. 下一步优先级
+
+1. **P0**：跑 emulator 实测 LargeFlexibleTopAppBar 滚动折叠效果
+2. **P1**：用 GroupedCard 改造 SettingsScreen（当前仍是 TonalCard 平铺）
+3. **P2**：用 HierarchicalListItem 改造 KnowledgePointDetailScreen 关联知识点区域
+4. **P3**：为 GroupedCard / HierarchicalListItem 写测试
+5. **P4**：OCR 完成后跑知识提取管线 → 生成 seed_data.json

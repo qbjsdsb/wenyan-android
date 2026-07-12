@@ -131,3 +131,72 @@
   - 用 HierarchicalListItem 改造 KnowledgePointDetailScreen 关联知识点区域
   - 为 GroupedCard / HierarchicalListItem 写测试
   - OCR 完成后跑知识提取管线
+
+---
+
+## 2026-07-12 会话：交接文档完善
+
+- **完成**：
+  - 推送文档更新到 main（commit `4461eba`）
+  - 清理已合并的远端 feature 分支 `trae/agent-cKcjcc`
+  - 系统性更新交接文档，确保沙箱清空后 AI 可无缝接手
+
+- **文档更新内容**：
+  - **AGENTS.md**：
+    - 技术栈更新为实际版本（Kotlin 2.3.10 / material3 1.5.0-alpha18 / Hilt 2.57.1 / Room 2.7.0）
+    - 第 7 节"当前阻塞"改为"当前状态"（无阻塞）
+    - 第 8 节"项目阶段总览"更新 KSU UI 升级为已完成
+    - 新增第 9 节"下一步优先级"
+    - 新增"CI 相关硬约束"小节（5 条 CI 相关规则）
+    - 文档地图新增 ksu-ui-upgrade.md
+  - **01-QUICK-RECOVERY.md**：
+    - CI 检查命令更新为 python3 解析 JSON 格式
+    - 新增"下载 CI 失败日志"命令模板
+    - 新增"CI 常见失败原因"快速诊断列表
+    - 场景 2 从"M3 改造"改为"KSU 风格 UI 升级后续"
+    - 新增"Trae 沙箱环境"小节（路径/JDK/Android SDK/Gradle/JAVA_TOOL_OPTIONS）
+    - 会话结束 Step 4 同时给出本地和沙箱两条命令
+  - **00-STATUS.md**：已在 `4461eba` 中更新
+  - **03-FAILED-ATTEMPTS.md**：已在 `4461eba` 中新增 #010-#012
+
+- **关键交接信息**（新会话必读）：
+  - **main 最新 commit**：`4461eba`（文档更新，PR #1 后）
+  - **PR #1 squash merge**：`3efe678`（KSU UI 升级 Phase 0-3 全部代码）
+  - **CI 状态**：run 29211066998 全绿（PR 分支），main 上 2 个 run 运行中
+  - **无阻塞**：可直接开始下一步工作
+  - **下一步**：跑 emulator 实测 / GroupedCard 改造 / HierarchicalListItem 改造
+
+- **commit**：
+  - `4461eba` — 文档更新（00-STATUS + SESSION_LOG + 03-FAILED-ATTEMPTS）
+  - 本次交接：AGENTS.md + 01-QUICK-RECOVERY.md + SESSION_LOG.md（待 commit）
+
+- **下次继续**：
+  - 跑 emulator 实测 LargeFlexibleTopAppBar 滚动折叠效果
+  - 用 GroupedCard 改造 SettingsScreen
+  - 用 HierarchicalListItem 改造 KnowledgePointDetailScreen 关联知识点区域
+  - 为 GroupedCard / HierarchicalListItem 写测试
+  - OCR 完成后跑知识提取管线
+
+### 新会话快速恢复 Checklist
+
+新沙箱会话开始时，按以下顺序操作（5 分钟内进入工作状态）：
+
+1. **读 [AGENTS.md](../AGENTS.md)** — 项目入口，了解技术栈、硬约束、当前状态
+2. **读 [00-STATUS.md](00-STATUS.md)** — 10 秒了解当前状态（无阻塞，CI 全绿）
+3. **读本文档最后一节** — 上次进度（本次会话）
+4. **拉取最新代码**：
+   ```bash
+   cd /workspace && git pull origin main
+   ```
+5. **配置环境变量**：
+   ```bash
+   export JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2
+   export ANDROID_HOME=/opt/android-sdk
+   export JAVA_TOOL_OPTIONS="-XX:-UseContainerSupport"
+   export PATH=$JAVA_HOME/bin:/root/.local/share/mise/shims:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+   ```
+6. **验证构建**：
+   ```bash
+   gradle :app:assembleDebug --no-daemon 2>&1 | tail -5
+   ```
+7. **开始工作**：根据 [00-STATUS.md](00-STATUS.md) 的"下一步优先级"选择任务
