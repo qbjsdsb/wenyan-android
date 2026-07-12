@@ -11,18 +11,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -31,7 +26,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wenyan.app.core.designsystem.component.ChipVariant
 import com.wenyan.app.core.designsystem.component.ContentSourceBadge
+import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
+import com.wenyan.app.core.designsystem.component.Spacing
+import com.wenyan.app.core.designsystem.component.TonalCard
+import com.wenyan.app.core.designsystem.component.WenyanInfoChip
+import com.wenyan.app.core.designsystem.component.WenyanTopAppBar
 import com.wenyan.app.core.database.entity.DataSourceEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 
@@ -53,18 +54,11 @@ fun KnowledgePointDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold(
+    ExpressiveScaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(uiState.point?.title ?: "知识点详情") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回",
-                        )
-                    }
-                },
+            WenyanTopAppBar(
+                title = uiState.point?.title ?: "知识点详情",
+                onBack = onBack,
             )
         },
     ) { innerPadding ->
@@ -101,8 +95,8 @@ fun KnowledgePointDetailScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(scrollState)
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                            .padding(Spacing.lg),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.lg),
                     ) {
                         // ── 标题区 ──
                         HeaderSection(point)
@@ -142,7 +136,7 @@ fun KnowledgePointDetailScreen(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun HeaderSection(point: KnowledgePointEntity) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         Text(
             text = point.title,
             style = MaterialTheme.typography.headlineSmall,
@@ -151,8 +145,8 @@ private fun HeaderSection(point: KnowledgePointEntity) {
 
         // 考频 + 难度 + 内容来源标签
         FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             // 内容来源标签（五级+1特殊状态）
             ContentSourceBadge(
@@ -160,33 +154,18 @@ private fun HeaderSection(point: KnowledgePointEntity) {
                 stageLabel = null,
             )
 
-            // 考频标签
-            val freqLabel = when (point.examFrequency) {
-                "HIGH" -> "高频"
-                "MEDIUM" -> "中频"
-                "LOW" -> "低频"
-                else -> "未考"
+            // 考频标签（高频/中频/低频用 PRIMARY 突出）
+            val (freqLabel, freqVariant) = when (point.examFrequency) {
+                "HIGH" -> "高频" to ChipVariant.PRIMARY
+                "MEDIUM" -> "中频" to ChipVariant.SECONDARY
+                "LOW" -> "低频" to ChipVariant.TERTIARY
+                else -> "未考" to ChipVariant.NEUTRAL
             }
-            InfoChip(text = freqLabel)
+            WenyanInfoChip(text = freqLabel, variant = freqVariant)
 
             // 难度标签
-            InfoChip(text = "难度 ${point.difficulty}/5")
+            WenyanInfoChip(text = "难度 ${point.difficulty}/5")
         }
-    }
-}
-
-@Composable
-private fun InfoChip(text: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = MaterialTheme.shapes.small,
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-        )
     }
 }
 
@@ -197,7 +176,7 @@ private fun InfoSection(
     title: String,
     content: @Composable () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
@@ -219,7 +198,7 @@ private fun MultiPerspectiveSection(point: KnowledgePointEntity) {
     if (!hasCoreConclusion && !hasStudyText && !hasMultiPerspectives) return
 
     InfoSection(title = "多教材对照") {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
             // 答题基准（马工程版）
             if (hasCoreConclusion) {
                 PerspectiveCard(
@@ -258,37 +237,41 @@ private fun PerspectiveCard(
     content: String,
     isOfficial: Boolean,
 ) {
+    val containerColor = if (isOfficial) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerLow
+    }
+    val labelColor = if (isOfficial) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val contentColor = if (isOfficial) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
     Surface(
-        color = if (isOfficial) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceVariant
-        },
+        color = containerColor,
+        contentColor = contentColor,
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.padding(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = if (isOfficial) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
+                color = labelColor,
             )
             Text(
                 text = content,
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (isOfficial) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
+                color = contentColor,
             )
         }
     }
@@ -299,10 +282,13 @@ private fun PerspectiveCard(
 @Composable
 private fun SourcesSection(sources: List<DataSourceEntity>) {
     InfoSection(title = "资料来源（${sources.size}）") {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             sources.forEach { source ->
                 SourceRow(source)
-                HorizontalDivider(thickness = 0.5.dp)
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                )
             }
         }
     }
@@ -313,7 +299,7 @@ private fun SourceRow(source: DataSourceEntity) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         ContentSourceBadge(
             contentSource = source.contentSource,
@@ -352,7 +338,7 @@ private fun RelatedPointsSection(
     if (!hasRelated && !hasContrast && !hasExtension) return
 
     InfoSection(title = "关联知识点") {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
             if (hasRelated) {
                 RelatedGroup(
                     title = "关联",
@@ -384,23 +370,22 @@ private fun RelatedGroup(
     points: List<KnowledgePointEntity>,
     onNavigateToDetail: (String) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(
             text = title,
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         points.forEach { point ->
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = MaterialTheme.shapes.small,
-                onClick = { onNavigateToDetail(point.id) },
-                modifier = Modifier.fillMaxWidth(),
+            TonalCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onNavigateToDetail(point.id) },
             ) {
                 Text(
                     text = point.title,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
                 )
             }
         }
