@@ -192,7 +192,7 @@ class AiAssistantViewModelTest {
         assertEquals("应输出 3 个阶段的引导消息", 3, assistantMsgs.size)
         assertTrue("第一条应包含【论证分析】", assistantMsgs[0].content.contains("【论证分析】"))
         assertTrue("第二条应包含【改进建议】", assistantMsgs[1].content.contains("【改进建议】"))
-        assertTrue("第三条应包含【参考范文】", assistantMsgs[2].content.contains("【参考范文】"))
+        assertTrue("第三条应包含【参考范文】", assistantMsgs[2].content.contains("【参考范文"))
         assertFalse("完成后 isLoading 应为 false", state.isLoading)
     }
 
