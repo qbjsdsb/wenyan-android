@@ -1,10 +1,9 @@
 // 文研App 顶层项目设置，统一管理所有模块
 pluginManagement {
     repositories {
-        // 国内镜像优先（阿里云），加速依赖下载
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
-        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
+        // 全局仓库优先（CI runner 在美/欧，Aliyun 镜像可能不可达）
+        gradlePluginPortal()
+        mavenCentral()
         google {
             content {
                 includeGroupByRegex("com\\.android.*")
@@ -12,8 +11,10 @@ pluginManagement {
                 includeGroupByRegex("androidx.*")
             }
         }
-        mavenCentral()
-        gradlePluginPortal()
+        // 国内镜像作为 fallback（本地开发加速）
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
     }
 }
 dependencyResolutionManagement {
