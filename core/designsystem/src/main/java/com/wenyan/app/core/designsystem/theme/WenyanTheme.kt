@@ -1,66 +1,75 @@
 package com.wenyan.app.core.designsystem.theme
 
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MotionScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import com.materialkolor.ColorSpec
+import com.materialkolor.rememberDynamicColorScheme
 
-// 文研App 浅色配色方案
-private val WenyanLightColorScheme = lightColorScheme(
-    primary = WenyanPrimary,
-    onPrimary = WenyanOnPrimary,
-    primaryContainer = WenyanPrimaryContainer,
-    onPrimaryContainer = WenyanOnPrimaryContainer,
-    secondary = WenyanSecondary,
-    onSecondary = WenyanOnSecondary,
-    secondaryContainer = WenyanSecondaryContainer,
-    onSecondaryContainer = WenyanOnSecondaryContainer,
-    tertiary = WenyanTertiary,
-    onTertiary = WenyanOnTertiary,
-    background = WenyanBackground,
-    onBackground = WenyanOnBackground,
-    surface = WenyanSurface,
-    onSurface = WenyanOnSurface,
-    surfaceVariant = WenyanSurfaceVariant,
-    onSurfaceVariant = WenyanOnSurfaceVariant,
-    error = WenyanError,
-    onError = WenyanOnError,
-)
-
-// 文研App 深色配色方案
-private val WenyanDarkColorScheme = darkColorScheme(
-    primary = WenyanOnPrimary,
-    onPrimary = WenyanPrimary,
-    primaryContainer = WenyanOnPrimaryContainer,
-    onPrimaryContainer = WenyanPrimaryContainer,
-    secondary = WenyanSecondary,
-    onSecondary = WenyanOnSecondary,
-    secondaryContainer = WenyanSecondaryContainer,
-    onSecondaryContainer = WenyanOnSecondaryContainer,
-    tertiary = WenyanTertiary,
-    onTertiary = WenyanOnTertiary,
-    background = Color(0xFF1A1A1A),
-    onBackground = WenyanOnPrimary,
-    surface = Color(0xFF242424),
-    onSurface = WenyanOnPrimary,
-    surfaceVariant = Color(0xFF3A3A3A),
-    onSurfaceVariant = Color(0xFFD0D0D0),
-    error = WenyanError,
-    onError = WenyanOnError,
-)
-
-// 文研App 主题入口
+/**
+ * 文研App 主题入口（Material 3 Expressive）。
+ *
+ * 使用 [MaterialExpressiveTheme] + [MotionScheme.expressive] 实现 M3 Expressive 设计语言。
+ * 颜色方案由以下优先级生成：
+ * 1. Android 12+ 且 [ThemeConfig.dynamicColor] 开启 → 系统壁纸动态色彩
+ * 2. 其他情况 → materialkolor 从种子色生成（SPEC_2025 规范）
+ *
+ * AMOLED 模式在深色模式下将底层表面替换为纯黑，节省 OLED 电量。
+ *
+ * @param config 主题配置
+ * @param content 可组合内容
+ */
 @Composable
 fun WenyanTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    config: ThemeConfig = ThemeConfig(),
     content: @Composable () -> Unit,
 ) {
-    val colorScheme = if (darkTheme) WenyanDarkColorScheme else WenyanLightColorScheme
-    MaterialTheme(
-        colorScheme = colorScheme,
+    val context = LocalContext.current
+    val isDark = when (config.colorMode) {
+        ColorMode.SYSTEM -> isSystemInDarkTheme()
+        ColorMode.LIGHT -> false
+        ColorMode.DARK -> true
+    }
+
+    // 生成基础 ColorScheme
+    val baseScheme = if (config.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        // Android 12+：使用系统壁纸提取的动态色彩
+        if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    } else {
+        // Android 11- 或手动种子色：用 materialkolor 生成
+        rememberDynamicColorScheme(
+            seedColor = config.seedColor,
+            isDark = isDark,
+            style = config.paletteStyle.toMaterialKolorStyle(),
+            specVersion = ColorSpec.SpecVersion.SPEC_2025,
+        )
+    }
+
+    // AMOLED 模式：将底层表面替换为纯黑
+    val finalScheme = if (isDark && config.amoledMode) {
+        baseScheme.copy(
+            background = Color.Black,
+            surface = Color.Black,
+            surfaceDim = Color.Black,
+            surfaceContainerLowest = Color.Black,
+            surfaceContainerLow = Color.Black,
+            surfaceContainer = Color.Black,
+        )
+    } else {
+        baseScheme
+    }
+
+    MaterialExpressiveTheme(
+        colorScheme = finalScheme,
+        motionScheme = MotionScheme.expressive(),
         typography = WenyanTypography,
+        shapes = WenyanShapes,
         content = content,
     )
 }
