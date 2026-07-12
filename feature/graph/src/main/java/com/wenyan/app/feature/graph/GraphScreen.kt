@@ -34,7 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.Spacing
-import com.wenyan.app.core.designsystem.component.WenyanTopAppBar
+import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.feature.graph.ui.GraphCanvas
 import kotlinx.coroutines.launch
 
@@ -62,7 +62,8 @@ fun GraphScreen(
 
     ExpressiveScaffold(
         topBar = {
-            WenyanTopAppBar(title = "知识图谱")
+            // 图谱 Canvas 固定布局不滚动，仅享受 Large 标题样式
+            WenyanLargeTopAppBar(title = "知识图谱")
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding ->

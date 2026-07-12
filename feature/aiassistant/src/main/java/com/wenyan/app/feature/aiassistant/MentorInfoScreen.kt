@@ -18,7 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.Spacing
-import com.wenyan.app.core.designsystem.component.WenyanTopAppBar
+import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -44,7 +44,8 @@ fun MentorInfoScreen() {
 
     ExpressiveScaffold(
         topBar = {
-            WenyanTopAppBar(title = "导师信息")
+            // 固定内容页，仅享受 Large 标题样式
+            WenyanLargeTopAppBar(title = "导师信息")
         },
     ) { innerPadding ->
         Box(

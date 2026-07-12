@@ -7,15 +7,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -28,7 +32,7 @@ import com.wenyan.app.core.data.ThemeViewModel
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.SectionHeader
 import com.wenyan.app.core.designsystem.component.Spacing
-import com.wenyan.app.core.designsystem.component.WenyanTopAppBar
+import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.designsystem.theme.ColorMode
 import com.wenyan.app.core.designsystem.theme.WenyanPaletteStyle
 
@@ -37,6 +41,7 @@ import com.wenyan.app.core.designsystem.theme.WenyanPaletteStyle
  *
  * 包含：外观（主题模式/AMOLED）、动态色彩（开关/种子色/调色板风格）、AI 服务、关于。
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
@@ -44,18 +49,23 @@ fun SettingsScreen(
     viewModel: ThemeViewModel = hiltViewModel(),
 ) {
     val themeConfig by viewModel.themeConfig.collectAsStateWithLifecycle()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+        state = rememberTopAppBarState(),
+    )
 
     ExpressiveScaffold(
         topBar = {
-            WenyanTopAppBar(
+            WenyanLargeTopAppBar(
                 title = "设置",
                 onBack = onBack,
+                scrollBehavior = scrollBehavior,
             )
         },
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .padding(padding),
         ) {
             // 外观
