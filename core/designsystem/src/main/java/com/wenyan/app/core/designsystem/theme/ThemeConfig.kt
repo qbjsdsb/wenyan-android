@@ -48,3 +48,15 @@ fun WenyanPaletteStyle.toMaterialKolorStyle(): PaletteStyle = when (this) {
     WenyanPaletteStyle.VIBRANT -> PaletteStyle.Vibrant
     WenyanPaletteStyle.EXPRESSIVE -> PaletteStyle.Expressive
 }
+
+/**
+ * 判断当前 PaletteStyle 是否支持 SPEC_2025 色彩规范。
+ *
+ * 参考 KernelSU Theme.kt 实现：只有 TonalSpot / Neutral / Vibrant / Expressive
+ * 四种风格支持 SPEC_2025，其它风格自动降级到 SPEC_2021。
+ */
+val PaletteStyle.supportsSpec2025: Boolean
+    get() = this == PaletteStyle.TonalSpot ||
+        this == PaletteStyle.Neutral ||
+        this == PaletteStyle.Vibrant ||
+        this == PaletteStyle.Expressive
