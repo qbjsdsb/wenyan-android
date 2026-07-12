@@ -5,70 +5,79 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
+import com.wenyan.app.core.designsystem.theme.WenyanTheme
 import com.wenyan.app.navigation.TopLevelDestination
 import com.wenyan.app.navigation.WenyanNavHost
 
 /**
  * 文研App 顶层 Composable。
  *
- * 采用 Scaffold + NavigationBar + NavHost 的标准结构：
- * - Scaffold 提供整体布局槽位
- * - NavigationBar 渲染 5 个顶级目的地的底部导航
- * - NavHost 承载各目的地 composable
- *
- * 当前界面根据当前路由高亮对应底部导航项。
+ * 接入 [ThemeViewModel] 获取主题配置，包裹 [WenyanTheme]。
+ * 使用 [ExpressiveScaffold] 提供色调表面背景。
  */
 @Composable
-fun WenyanApp() {
-    val navController = rememberNavController()
-    val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = backStackEntry?.destination
+fun WenyanApp(
+    themeViewModel: ThemeViewModel = hiltViewModel(),
+) {
+    val themeConfig by themeViewModel.themeConfig.collectAsStateWithLifecycle()
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        bottomBar = {
-            NavigationBar {
-                TopLevelDestination.destinations.forEach { destination ->
-                    val selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = { navigateToTopLevelDestination(navController, destination.route) },
-                        icon = { Icon(imageVector = destination.icon, contentDescription = destination.label) },
-                        label = { Text(text = destination.label) },
-                    )
+    WenyanTheme(config = themeConfig) {
+        val navController = rememberNavController()
+        val backStackEntry by navController.currentBackStackEntryAsState()
+        val currentDestination = backStackEntry?.destination
+
+        ExpressiveScaffold(
+            modifier = Modifier.fillMaxSize(),
+            bottomBar = {
+                NavigationBar {
+                    TopLevelDestination.destinations.forEach { destination ->
+                        val selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true
+                        NavigationBarItem(
+                            selected = selected,
+                            onClick = { navigateToTopLevelDestination(navController, destination.route) },
+                            icon = { Icon(imageVector = destination.icon, contentDescription = destination.label) },
+                            label = { Text(text = destination.label) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIndicatorColor = androidx.compose.material3.MaterialTheme.colorScheme.secondaryContainer,
+                                selectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.onSecondaryContainer,
+                                selectedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.onSecondaryContainer,
+                                unselectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
+                        )
+                    }
                 }
-            }
-        },
-    ) { innerPadding ->
-        WenyanNavHost(
-            navController = navController,
-            modifier = Modifier.padding(innerPadding),
-        )
+            },
+        ) { innerPadding ->
+            WenyanNavHost(
+                navController = navController,
+                modifier = Modifier.padding(innerPadding),
+            )
+        }
     }
 }
 
-// 底部导航切换：恢复状态、弹出至起始目的地、避免重复实例
 private fun navigateToTopLevelDestination(
     navController: androidx.navigation.NavHostController,
     route: String,
 ) {
     navController.navigate(route) {
-        // 弹出至起始目的地，避免回退栈堆积
         popUpTo(navController.graph.findStartDestination().id) {
             saveState = true
         }
-        // 避免重复创建同一目的地
         launchSingleTop = true
-        // 切换时恢复状态
         restoreState = true
     }
 }
