@@ -48,7 +48,7 @@ fun ContentSourceBadge(
     stageLabel: String? = null,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val config = when {
+    val config: BadgeConfig? = when {
         stageLabel != null -> BadgeConfig(
             text = stageLabel,
             containerColor = colorScheme.tertiaryContainer,
@@ -91,8 +91,9 @@ fun ContentSourceBadge(
             contentColor = colorScheme.onErrorContainer,
             showWarning = true,
         )
-        else -> return
+        else -> null
     }
+    if (config == null) return
 
     Surface(
         color = config.containerColor,
