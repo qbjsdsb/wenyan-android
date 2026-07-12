@@ -76,8 +76,19 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          echo "Verifying keystore..."
-          keytool -list -keystore "$KEYSTORE_PATH" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" -v || echo "Keystore verification failed"
+          echo "Verifying keystore (storepass)..."
+          keytool -list -keystore "$KEYSTORE_PATH" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" -v || echo "Storepass verification failed"
+
+          echo ""
+          echo "Verifying key (keypass)..."
+          # 尝试用 keypass 读取私钥（如果 keypass 错误会抛出异常）
+          keytool -importkeystore -srckeystore "$KEYSTORE_PATH" -srcstorepass "$KEYSTORE_PASSWORD" -srcalias "$KEY_ALIAS" -srckeypass "$KEY_PASSWORD" -destkeystore /tmp/test-keystore.jks -deststorepass test123 -destalias test -noprompt 2>&1 || echo "Keypass verification failed"
+
+          echo ""
+          echo "Password fingerprint check..."
+          # 打印密码的 md5（不泄露密码本身，但能对比是否与本地一致）
+          echo -n "$KEYSTORE_PASSWORD" | md5sum
+          echo -n "$KEY_PASSWORD" | md5sum
 
       - name: Build signed release APK
         env:
