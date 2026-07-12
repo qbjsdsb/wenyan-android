@@ -9,8 +9,9 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `3efe678`（main，squash merge） |
-| CI 状态 | ✅ run 29211066998 全绿（11/11 步骤） |
+| 最新 commit | `75f65db`（main，交接文档完善） |
+| 代码最新 commit | `3efe678`（PR #1 squash merge，KSU UI 升级） |
+| CI 状态 | ✅ run 29211066998 全绿（11/11 步骤，PR 分支） |
 | PR | [#1](https://github.com/qbjsdsb/wenyan-android/pull/1) 已合并 |
 | 阻塞 | 无 |
 | 详情 | [02-VERSION-MATRIX.md](02-VERSION-MATRIX.md) |
