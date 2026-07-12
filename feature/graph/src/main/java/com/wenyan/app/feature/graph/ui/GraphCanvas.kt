@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -23,12 +24,6 @@ import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
 
-// R 值颜色映射（Spec C4.12）
-private val COLOR_GREEN = Color(0xFF4CAF50)   // R ≥ 0.8 已掌握
-private val COLOR_YELLOW = Color(0xFFFFC107)  // 0.5 ≤ R < 0.8 需巩固
-private val COLOR_RED = Color(0xFFF44336)     // 0 < R < 0.5 薄弱
-private val COLOR_GRAY = Color(0xFF9E9E9E)    // R ≤ 0 未学习
-
 // 节点半径
 private val NODE_RADIUS_DP = 12f
 private val NODE_TOUCH_RADIUS_DP = 24f
@@ -38,9 +33,9 @@ private val NODE_TOUCH_RADIUS_DP = 24f
  *
  * 功能：
  * - 圆形布局排列节点
- * - R 值颜色映射（绿/黄/红/灰）
- * - 边连线（薄弱子图红色加粗）
- * - 节点标签
+ * - R 值颜色映射（已掌握 primary / 需巩固 tertiary / 薄弱 error / 未学习 outline）
+ * - 边连线（薄弱子图 error 加粗）
+ * - 节点标签（onSurface）
  * - 点击节点触发回调
  *
  * @param nodes 图谱节点列表（含 R 值）
@@ -60,6 +55,17 @@ fun GraphCanvas(
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
 
+    // 从主题获取颜色角色（避免在 DrawScope 中访问 MaterialTheme）
+    val colorScheme = MaterialTheme.colorScheme
+    val masteredColor = colorScheme.primary
+    val consolidatingColor = colorScheme.tertiary
+    val weakColor = colorScheme.error
+    val unlearnedColor = colorScheme.outline
+    val labelColor = colorScheme.onSurface
+    val edgeColor = colorScheme.outlineVariant
+    val weakHaloColor = colorScheme.error.copy(alpha = 0.2f)
+    val weakEdgeColor = colorScheme.error.copy(alpha = 0.6f)
+
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val canvasWidth = constraints.maxWidth.toFloat()
         val canvasHeight = constraints.maxHeight.toFloat()
@@ -75,11 +81,11 @@ fun GraphCanvas(
         }
 
         // 预测量标签文本（避免每帧重复测量）
-        val textLayouts = remember(nodes) {
+        val textLayouts = remember(nodes, labelColor) {
             nodes.associate { node ->
                 node.id to textMeasurer.measure(
                     AnnotatedString(node.label),
-                    TextStyle(fontSize = 9.sp, color = Color(0xFF333333)),
+                    TextStyle(fontSize = 9.sp, color = labelColor),
                 )
             }
         }
@@ -110,7 +116,7 @@ fun GraphCanvas(
                 if (from != null && to != null) {
                     val isWeak = edge.fromId in weakNodeIds || edge.toId in weakNodeIds
                     drawLine(
-                        color = if (isWeak) Color(0x99F44336) else Color(0x559E9E9E),
+                        color = if (isWeak) weakEdgeColor else edgeColor,
                         start = from,
                         end = to,
                         strokeWidth = if (isWeak) 3f else 1.5f,
@@ -121,12 +127,18 @@ fun GraphCanvas(
             // ── 绘制节点 ──
             nodes.forEach { node ->
                 val pos = positions[node.id] ?: return@forEach
-                val color = colorForRetrievability(node.retrievability)
+                val color = colorForRetrievability(
+                    r = node.retrievability,
+                    masteredColor = masteredColor,
+                    consolidatingColor = consolidatingColor,
+                    weakColor = weakColor,
+                    unlearnedColor = unlearnedColor,
+                )
 
                 // 外圈光晕（薄弱节点）
                 if (node.id in weakNodeIds) {
                     drawCircle(
-                        color = Color(0x33F44336),
+                        color = weakHaloColor,
                         radius = nodeRadiusPx + 6f,
                         center = pos,
                     )
@@ -187,10 +199,16 @@ private fun calculateCircularLayout(
     }
 }
 
-/** R 值 → 颜色映射 */
-private fun colorForRetrievability(r: Float): Color = when {
-    r >= 0.8f -> COLOR_GREEN
-    r >= 0.5f -> COLOR_YELLOW
-    r > 0f -> COLOR_RED
-    else -> COLOR_GRAY
+/** R 值 → 颜色映射（基于主题角色色） */
+private fun colorForRetrievability(
+    r: Float,
+    masteredColor: Color,
+    consolidatingColor: Color,
+    weakColor: Color,
+    unlearnedColor: Color,
+): Color = when {
+    r >= 0.8f -> masteredColor
+    r >= 0.5f -> consolidatingColor
+    r > 0f -> weakColor
+    else -> unlearnedColor
 }

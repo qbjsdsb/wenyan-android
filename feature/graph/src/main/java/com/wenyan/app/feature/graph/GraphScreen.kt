@@ -10,15 +10,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -31,14 +31,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wenyan.app.core.designsystem.component.EmptyState
+import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
+import com.wenyan.app.core.designsystem.component.Spacing
+import com.wenyan.app.core.designsystem.component.WenyanTopAppBar
 import com.wenyan.app.feature.graph.ui.GraphCanvas
 import kotlinx.coroutines.launch
 
-// 图例颜色（与 GraphCanvas 一致）
-private val LEGEND_GREEN = Color(0xFF4CAF50)
-private val LEGEND_YELLOW = Color(0xFFFFC107)
-private val LEGEND_RED = Color(0xFFF44336)
-private val LEGEND_GRAY = Color(0xFF9E9E9E)
+// 图例颜色（从主题获取，与 GraphCanvas 一致）
 
 /**
  * 知识图谱界面（阶段5增强）。
@@ -60,9 +60,9 @@ fun GraphScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    Scaffold(
+    ExpressiveScaffold(
         topBar = {
-            TopAppBar(title = { Text("知识图谱") })
+            WenyanTopAppBar(title = "知识图谱")
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding ->
@@ -90,7 +90,10 @@ fun GraphScreen(
                         }
                     }
                     uiState.nodes.isEmpty() -> {
-                        EmptyState("暂无图谱数据，请先导入知识点")
+                        EmptyState(
+                            icon = Icons.Filled.Inbox,
+                            title = "暂无图谱数据，请先导入知识点",
+                        )
                     }
                     else -> {
                         GraphCanvas(
@@ -129,21 +132,22 @@ fun GraphScreen(
 
 @Composable
 private fun LegendBar() {
+    val colorScheme = MaterialTheme.colorScheme
     Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = colorScheme.surfaceContainerLow,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            LegendItem(LEGEND_GREEN, "已掌握")
-            LegendItem(LEGEND_YELLOW, "需巩固")
-            LegendItem(LEGEND_RED, "薄弱")
-            LegendItem(LEGEND_GRAY, "未学习")
+            LegendItem(colorScheme.primary, "已掌握")
+            LegendItem(colorScheme.tertiary, "需巩固")
+            LegendItem(colorScheme.error, "薄弱")
+            LegendItem(colorScheme.outline, "未学习")
         }
     }
 }
@@ -161,7 +165,7 @@ private fun LegendItem(color: Color, label: String) {
             text = label,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 4.dp),
+            modifier = Modifier.padding(start = Spacing.xs),
         )
     }
 }
@@ -175,13 +179,13 @@ private fun StatsBar(
     avgRetrievability: Float,
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             StatItem("节点", "$totalNodes")
@@ -210,16 +214,4 @@ private fun StatItem(label: String, value: String) {
 
 // ── 空状态 ────────────────────────────────────────────────────
 
-@Composable
-private fun EmptyState(text: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
+// EmptyState 已迁移至共享 EmptyState 组件
