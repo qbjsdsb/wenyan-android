@@ -14,6 +14,7 @@ import com.wenyan.app.feature.graph.GraphScreen
 import com.wenyan.app.feature.knowledge.KnowledgePointDetailScreen
 import com.wenyan.app.feature.knowledge.KnowledgeScreen
 import com.wenyan.app.feature.quiz.QuizScreen
+import com.wenyan.app.feature.settings.SettingsScreen
 
 /**
  * 文研App 主导航图。
@@ -64,10 +65,19 @@ fun WenyanNavHost(
             onNavigateToApiConfig = {
                 navController.navigate(ROUTE_API_CONFIG)
             },
+            onNavigateToSettings = {
+                navController.navigate(ROUTE_SETTINGS)
+            },
         )
         mentorDestination()
         apiConfigDestination(
             onBack = { navController.popBackStack() },
+        )
+        settingsDestination(
+            onBack = { navController.popBackStack() },
+            onNavigateToApiConfig = {
+                navController.navigate(ROUTE_API_CONFIG)
+            },
         )
         knowledgeDetailDestination(
             onBack = { navController.popBackStack() },
@@ -117,9 +127,13 @@ private fun NavGraphBuilder.graphDestination() {
 
 private fun NavGraphBuilder.aiAssistantDestination(
     onNavigateToApiConfig: () -> Unit,
+    onNavigateToSettings: () -> Unit,
 ) {
     composable(TopLevelDestination.ROUTE_AI_ASSISTANT) {
-        AiAssistantScreen(onNavigateToApiConfig = onNavigateToApiConfig)
+        AiAssistantScreen(
+            onNavigateToApiConfig = onNavigateToApiConfig,
+            onNavigateToSettings = onNavigateToSettings,
+        )
     }
 }
 
@@ -139,6 +153,19 @@ private fun NavGraphBuilder.apiConfigDestination(
     }
 }
 
+// 设置子路由（主题/动态色彩/关于）
+private fun NavGraphBuilder.settingsDestination(
+    onBack: () -> Unit,
+    onNavigateToApiConfig: () -> Unit,
+) {
+    composable(ROUTE_SETTINGS) {
+        SettingsScreen(
+            onBack = onBack,
+            onNavigateToApiConfig = onNavigateToApiConfig,
+        )
+    }
+}
+
 // 知识点详情子路由（Spec C1.27 多教材对照 + C7.2 来源溯源）
 private fun NavGraphBuilder.knowledgeDetailDestination(
     onBack: () -> Unit,
@@ -155,4 +182,5 @@ private fun NavGraphBuilder.knowledgeDetailDestination(
 // 子路由常量
 private const val ROUTE_MENTOR = "mentor"
 private const val ROUTE_API_CONFIG = "api_config"
+private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_KNOWLEDGE_DETAIL = "knowledge_detail"

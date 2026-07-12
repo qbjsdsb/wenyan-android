@@ -93,6 +93,7 @@ dependencies {
     implementation(project(":feature:cards"))
     implementation(project(":feature:graph"))
     implementation(project(":feature:aiassistant"))
+    implementation(project(":feature:settings"))
 
     // AndroidX 基础
     implementation(libs.androidx.core.ktx)

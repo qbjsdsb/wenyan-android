@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
@@ -62,6 +63,7 @@ import com.wenyan.app.core.designsystem.component.ContentSourceBadge
 @Composable
 fun AiAssistantScreen(
     onNavigateToApiConfig: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     viewModel: AiAssistantViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -88,6 +90,12 @@ fun AiAssistantScreen(
             TopAppBar(
                 title = { Text("AI助手") },
                 actions = {
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "设置",
+                        )
+                    }
                     IconButton(onClick = onNavigateToApiConfig) {
                         Icon(
                             imageVector = Icons.Default.Settings,
