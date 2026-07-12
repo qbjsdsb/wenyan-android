@@ -5,12 +5,13 @@
 
 ## ✅ 当前状态
 
-**CI 编译阻塞已解除** — KSU 风格 UI 升级 Phase 0-2 已完成
+**CI 全绿，KSU 风格 UI 升级已合并到 main** — Phase 0-3 完成 + CI 修复
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `a85cc68` |
-| 编译状态 | ✅ assembleDebug + testDebugUnitTest 全通过 |
+| 最新 commit | `3efe678`（main，squash merge） |
+| CI 状态 | ✅ run 29211066998 全绿（11/11 步骤） |
+| PR | [#1](https://github.com/qbjsdsb/wenyan-android/pull/1) 已合并 |
 | 阻塞 | 无 |
 | 详情 | [02-VERSION-MATRIX.md](02-VERSION-MATRIX.md) |
 
@@ -25,7 +26,7 @@
 | Phase 4 AI 服务 | ✅ 完成 | OpenAI 兼容协议适配 |
 | Phase 5 UI 增强 | ✅ 完成 | 9 个 Screen + M3 基础组件 |
 | Release 配置 | ✅ 完成 | 签名 APK + GitHub Release v0.1.0 |
-| KSU 风格 UI 升级 | ✅ Phase 0-2 完成 | 4 个 KSU 组件 + 9 个 Screen 迁移 |
+| KSU 风格 UI 升级 | ✅ Phase 0-3 完成 + 已合并 main | 4 个 KSU 组件 + 9 个 Screen 迁移 + CI 全绿 |
 
 ### KSU 风格 UI 升级（方案 C）
 
@@ -35,6 +36,8 @@
 | Phase 1 | ✅ 完成 | 4 个 KSU 组件（WenyanLargeTopAppBar/WenyanNavigationBar/GroupedCard/HierarchicalListItem）+ 首个 Compose UI 测试 |
 | Phase 2 | ✅ 完成 | WenyanApp.kt + 9 个 Screen 全部迁移到 WenyanLargeTopAppBar |
 | Phase 3 | ✅ 完成 | 文档更新（SESSION_LOG/VERSION-MATRIX/FAILED-ATTEMPTS/STATUS） |
+| CI 修复 | ✅ 完成 | 仓库顺序 + Gradle 8.14.4 + Metaspace 1g + testDebugUnitTest |
+| 合并 main | ✅ 完成 | PR #1 squash merge → `3efe678`，CI run 29211066998 全绿 |
 
 ### OCR 资料数字化
 
@@ -47,14 +50,14 @@
 
 ## 🎯 下一步优先级
 
-1. **P0**：推送到远端 GitHub，等 CI 全绿
-2. **P1**：跑 emulator 实测 LargeFlexibleTopAppBar 滚动折叠效果
-3. **P2**：用 GroupedCard 改造 SettingsScreen（当前仍是 TonalCard 平铺）
-4. **P3**：用 HierarchicalListItem 改造 KnowledgePointDetailScreen 关联知识点区域
+1. **P0**：跑 emulator 实测 LargeFlexibleTopAppBar 滚动折叠效果
+2. **P1**：用 GroupedCard 改造 SettingsScreen（当前仍是 TonalCard 平铺）
+3. **P2**：用 HierarchicalListItem 改造 KnowledgePointDetailScreen 关联知识点区域
+4. **P3**：为 GroupedCard / HierarchicalListItem 写测试
 5. **P4**：OCR 完成后跑知识提取管线 → 生成 seed_data.json
 
 ## 📦 已交付
 
 - GitHub Release v0.1.0（2026-07-12）
 - 签名 APK：`wenyan-v0.1.0.apk` + `wenyan-latest.apk`（14.7 MB）
-- KSU 风格 UI 升级 Phase 0-2（4 个组件 + 9 个 Screen 迁移）
+- KSU 风格 UI 升级 Phase 0-3（4 个组件 + 9 个 Screen 迁移，已合并 main + CI 全绿）

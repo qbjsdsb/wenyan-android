@@ -122,6 +122,81 @@
 
 ---
 
+## #010 CI plugin 解析失败（Aliyun 镜像从美/欧不可达）
+
+- **日期**：2026-07-12
+- **CI Run**：#29208020552, #29208718911
+- **现象**：
+  ```
+  Plugin [id: 'com.google.devtools.ksp', version: '2.3.2', apply: false] was not found
+  Plugin [id: 'org.jetbrains.kotlin.plugin.compose', version: '2.3.10', apply: false] was not found
+  ```
+- **根因**：`settings.gradle.kts` 的 `pluginManagement.repositories` 把 Aliyun 镜像放
+  在最前面。Aliyun 镜像从 GitHub Actions runner（美/欧数据中心）访问时可能不可达
+  或返回错误响应，导致 plugin marker artifact 解析失败。本地（中国）访问正常。
+- **排查**：
+  - 验证 Maven Central + Aliyun 均有 POM 文件（HTTP 200 OK）
+  - 验证 maven-metadata.xml 包含 2.3.2 / 2.3.10 版本
+  - 本地 Gradle 8.14.4 构建成功，CI Gradle 8.7 / 8.14.4 均失败
+  - setup-gradle@v3 cache restoration 失败（400 错误），但 Gradle 用空 home 运行
+- **修复**：commit `22b1a7e` — `pluginManagement.repositories` 重排：
+  gradlePluginPortal/mavenCentral/google 移到前面，Aliyun 作 fallback。
+  `dependencyResolutionManagement` 保持 Aliyun 优先（依赖体积大，加速明显）。
+- **教训**：
+  - 镜像仓库的可达性受地理位置影响，CI runner 与开发环境位置不同时需注意
+  - plugin 解析失败影响大（整个构建无法启动），故 plugin 仓库应用全局仓库优先
+  - 依赖下载体积大，镜像加速明显，可保持 Aliyun 优先
+- **相关文件**：`settings.gradle.kts`
+
+---
+
+## #011 CI Release 构建 Metaspace OOM
+
+- **日期**：2026-07-12
+- **CI Run**：#29209388461
+- **现象**：
+  ```
+  e: java.lang.OutOfMemoryError: Metaspace
+  > Task :feature:aiassistant:compileReleaseKotlin FAILED
+  Caused by: OOMErrorException: Not enough memory to run compilation.
+  ```
+- **根因**：`gradle.properties` 中 `MaxMetaspaceSize=512m` 太小。Release 构建
+  包含 R8 + Kotlin + Compose 编译，需加载大量类。Kotlin 编译器 in-process 模式下
+  共享 Gradle daemon 的 metaspace，所有模块编译累积压力，512m 不足。
+- **修复**：commit `dcba036` — `MaxMetaspaceSize` 512m → 1g。
+  本地验证 `:feature:aiassistant:compileReleaseKotlin` 在 1g metaspace 下通过。
+- **教训**：
+  - Release 构建（含 R8）比 Debug 构建需更多 metaspace
+  - in-process 编译模式下所有模块共享 metaspace，需预留足够空间
+  - 512m 适合小型项目，多模块 + Compose + R8 需 1g+
+- **相关文件**：`gradle.properties`
+
+---
+
+## #012 testReleaseUnitTest 缺 ComponentActivity 声明
+
+- **日期**：2026-07-12
+- **CI Run**：#29210251616
+- **现象**：
+  ```
+  WenyanLargeTopAppBarTest > backButton_isNotDisplayed_whenOnBackIsNull FAILED
+      java.lang.RuntimeException at RoboMonitoringInstrumentation.java:102
+  ```
+  4 个测试全挂。
+- **根因**：`debugImplementation(libs.androidx.compose.ui.test.manifest)` 提供的
+  ComponentActivity 声明只在 debug 变体可用。CI 跑 `gradle test` 会触发
+  testReleaseUnitTest，release 变体没有 manifest，Robolectric 找不到 Activity
+  声明导致 RuntimeException。
+- **修复**：commit `9e1723d` — CI workflow `gradle test` → `gradle testDebugUnitTest`。
+  Release 测试通常跳过（开发标准实践）。
+- **教训**：
+  - `debugImplementation` 依赖只在 debug 变体可用
+  - Compose UI 测试需 ComponentActivity 声明（通过 compose-ui-test-manifest）
+  - CI 应跑 `testDebugUnitTest` 而非 `test`（避免 release 变体测试失败）
+- **相关文件**：`.github/workflows/android.yml`、`core/designsystem/build.gradle.kts`
+
+---
+
 ## 模板（新失败方案按此格式记录）
 
 ```markdown

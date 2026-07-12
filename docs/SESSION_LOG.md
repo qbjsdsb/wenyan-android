@@ -79,10 +79,53 @@
   - `0e086ba` — Phase 0：解除 M3 Expressive 改造阻塞
   - `6bbbb29` — Phase 1：4 个 KSU 组件 + 首个 Compose UI 测试
   - `a85cc68` — Phase 2：9 个 Screen 迁移到 WenyanLargeTopAppBar
-  - 本次 Phase 3：文档更新（待 commit）
+  - `c0e2cf1` — Phase 3：文档更新
 
 - **下次继续**：
-  - 推送到远端 GitHub，等 CI 全绿
+  - 跑 emulator 实测滚动折叠效果
+  - 用 GroupedCard 改造 SettingsScreen
+  - 用 HierarchicalListItem 改造 KnowledgePointDetailScreen 关联知识点区域
+  - 为 GroupedCard / HierarchicalListItem 写测试
+  - OCR 完成后跑知识提取管线
+
+---
+
+## 2026-07-12 会话：CI 修复 + PR 合并
+
+- **完成**：
+  - 推送 10 个 commit 到 `trae/agent-cKcjcc` 分支
+  - 创建 PR #1 触发 CI
+  - 修复 3 个 CI 失败问题，最终 CI run 29211066998 全绿（11/11 步骤成功）
+  - 合并 PR #1 到 main（squash merge → `3efe678`）
+
+- **CI 失败修复过程**：
+  - **失败 1**：`Plugin [id: 'com.google.devtools.ksp', version: '2.3.2'] was not found`
+    - 排查：Aliyun 镜像 metadata 显示 2.3.2 存在，POM HTTP 200 OK，但 CI 找不到
+    - 修复 `22b1a7e`：pluginManagement 仓库顺序调整，gradlePluginPortal/mavenCentral/google 移到前面，Aliyun 作 fallback
+  - **失败 2**：`Plugin [id: 'org.jetbrains.kotlin.plugin.compose', version: '2.3.10'] was not found`
+    - 同上，仓库顺序修复后解决
+  - **失败 3**：`java.lang.OutOfMemoryError: Metaspace` 在 `:feature:aiassistant:compileReleaseKotlin`
+    - 修复 `dcba036`：MaxMetaspaceSize 512m → 1g（Release 构建 R8 + Kotlin + Compose 需加载大量类）
+  - **失败 4**：`java.lang.RuntimeException at RoboMonitoringInstrumentation.java:102` 4 个测试全挂
+    - 根因：testReleaseUnitTest 不含 debugImplementation 依赖（ComponentActivity manifest 缺失）
+    - 修复 `9e1723d`：CI `gradle test` → `gradle testDebugUnitTest`（release 测试通常跳过）
+  - 另有 `64b8894`：CI Gradle 8.7 → 8.14.4 与本地环境对齐
+
+- **关键发现**：
+  - Aliyun 镜像从 GitHub Actions runner（美/欧）访问时可能不可达或返回错误响应，plugin marker artifact 解析失败
+  - dependencyResolutionManagement（依赖）保持 Aliyun 优先（体积大，加速明显），pluginManagement（插件）改为全局仓库优先
+  - Kotlin 编译器 in-process 模式下共享 Gradle daemon 的 metaspace，所有模块编译累积压力，512m 对 Release 构建不足
+  - `debugImplementation(libs.androidx.compose.ui.test.manifest)` 只在 debug 变体可用，release 变体测试时 Robolectric 找不到 Activity 声明
+  - setup-gradle@v3 的 cache-read-only 模式下 cache restoration 可能失败（400 错误），但 Gradle 仍能正常运行
+
+- **commit**：
+  - `22b1a7e` — pluginManagement 仓库顺序调整
+  - `64b8894` — CI Gradle 8.7 → 8.14.4
+  - `dcba036` — MaxMetaspaceSize 512m → 1g
+  - `9e1723d` — test → testDebugUnitTest
+  - `3efe678` — PR #1 squash merge 到 main
+
+- **下次继续**：
   - 跑 emulator 实测滚动折叠效果
   - 用 GroupedCard 改造 SettingsScreen
   - 用 HierarchicalListItem 改造 KnowledgePointDetailScreen 关联知识点区域
