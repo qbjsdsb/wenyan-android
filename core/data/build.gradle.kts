@@ -38,6 +38,9 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
+    // Lifecycle ViewModel（ThemeViewModel 需要）
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)

@@ -1,4 +1,4 @@
-package com.wenyan.app
+package com.wenyan.app.core.data
 
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
@@ -18,6 +18,8 @@ import javax.inject.Inject
  * 主题状态 ViewModel。
  *
  * 将 [ThemeRepository] 的 [ThemeConfig] Flow 转换为 [StateFlow] 供 Compose 消费。
+ *
+ * 放在 core:data 模块中以避免 :app → :feature:settings → :app 循环依赖。
  */
 @HiltViewModel
 class ThemeViewModel @Inject constructor(

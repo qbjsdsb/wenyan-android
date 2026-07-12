@@ -1,4 +1,4 @@
-package com.wenyan.app
+package com.wenyan.app.core.data
 
 import app.cash.turbine.test
 import com.wenyan.app.core.data.repository.ThemeRepository
