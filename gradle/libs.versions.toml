@@ -43,6 +43,9 @@ datastore = "1.1.1"
 # AndroidX Security + Keystore 加密存储
 securityCrypto = "1.1.0-alpha06"
 
+# MaterialKolor 动态色彩生成库（KSU 同款）
+materialKolor = "4.1.1"
+
 # 测试
 junit = "4.13.2"
 androidxTestExtJunit = "1.2.1"
