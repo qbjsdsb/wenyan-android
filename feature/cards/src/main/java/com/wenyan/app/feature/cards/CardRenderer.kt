@@ -296,7 +296,7 @@ private fun SchoolComparisonContent(card: SchoolComparisonCard, isFlipped: Boole
         } else {
             card.schools.forEach { school ->
                 SchoolRow(school)
-                HorizontalDivider()
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
         }
     }
