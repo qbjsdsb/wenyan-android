@@ -8,12 +8,13 @@
 
 **Tech Stack:**
 - Kotlin 2.3.10（从 2.0.20 升级，最新稳定 bug fix）
-- KSP 2.3.10（新版本号格式，不再是 `<kotlin>-<ksp>`）
+- KSP 2.3.2（新版本号格式，不再是 `<kotlin>-<ksp>`；注意 KSP 版本号不需要和 Kotlin 完全一致）
 - Hilt 2.57.1（2.51.1 不支持 Kotlin 2.3 元数据；2.59+ 需 AGP 9 故不可用）
 - Room 2.7.0（首个支持 KSP2 的稳定版）
-- material3 1.5.0-alpha23（含 graduated 为 Stable 的 LargeFlexibleTopAppBar）
+- material3 1.5.0-alpha18（**实际使用版本**，非计划中的 alpha23。原因：alpha19+ 需 AGP 9.1.0 + compileSdk 37，与 AGP 8.6.0 不兼容。alpha18 中 `LargeFlexibleTopAppBar` 仍为 `@ExperimentalMaterial3ExpressiveApi`，封装组件需显式 `@OptIn`）
 - materialkolor 4.1.1（保持不变）
 - AGP 8.6.0 / Compose BOM 2025.12.00（保持不变）
+- Gradle 8.14.4（系统安装 via mise）
 
 ---
 
@@ -1100,12 +1101,13 @@ ExpressiveScaffold(
 }
 ```
 
-注：`nestedScroll` 需要 `import androidx.compose.input.nestedscroll.nestedScroll`。
+注：`nestedScroll` 需要 `import androidx.compose.ui.input.nestedscroll.nestedScroll`
+（注意是 `ui.input`，不是 `input`）。
 
 - [ ] **Step 2: 添加 import**
 
 ```kotlin
-import androidx.compose.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar

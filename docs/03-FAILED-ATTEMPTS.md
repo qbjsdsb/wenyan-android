@@ -31,6 +31,19 @@
   - `gradle/libs.versions.toml`（版本配置）
   - `core/designsystem/.../WenyanTheme.kt`（materialkolor 调用处）
 
+---
+
+**✅ 已解决（2026-07-12）**：通过升级 Kotlin 2.0.20 → 2.3.10 + KSP 2.3.2
++ Hilt 2.57.1 + Room 2.7.0 + material3 1.5.0-alpha18 解决。
+方案 B（降级 materialkolor 4.0.x）不可行——4.0.x 也用 Kotlin 2.2.20 编译，
+元数据版本 2.2 与 Kotlin 2.0.20 同样不兼容。
+详见 docs/02-VERSION-MATRIX.md 的"已验证可行组合"小节。
+
+> **注意**：计划中写的 material3 版本是 1.5.0-alpha23，实际使用 1.5.0-alpha18。
+> 原因：alpha19+ 要求 AGP 9.1.0 + compileSdk 37，与当前 AGP 8.6.0 不兼容。
+> alpha18 中 `LargeFlexibleTopAppBar` 仍为 `@ExperimentalMaterial3ExpressiveApi`，
+> `WenyanLargeTopAppBar` 封装内需显式 `@OptIn`。
+
 ## #002 PowerShell 不支持 heredoc 语法
 
 - **日期**：2026-07-12
@@ -93,6 +106,19 @@
 - **根因**：libs.versions.toml 中的引用格式错误
 - **修复**：修正 Version Catalog 引用
 - **教训**：仔细检查 toml 文件格式
+
+## #009 nestedScroll import 路径错误
+
+- **日期**：2026-07-12（KSU UI 升级 Phase 2）
+- **现象**：`Unresolved reference 'nestedScroll'` + `Unresolved reference 'input'`
+- **根因**：误写成 `import androidx.compose.input.nestedscroll.nestedScroll`，
+  正确路径是 `import androidx.compose.ui.input.nestedscroll.nestedScroll`
+  （少了 `.ui`）
+- **修复**：6 个 Screen 文件的 import 全部改为 `androidx.compose.ui.input.nestedscroll.nestedScroll`
+- **教训**：`nestedScroll` 修饰符在 `androidx.compose.ui.input.nestedscroll` 包中，
+  不是 `androidx.compose.input.nestedscroll`。写 import 时注意 `ui` 层级
+- **相关文件**：6 个 Screen（KnowledgeScreen / QuizScreen / AiAssistantScreen /
+  ApiConfigScreen / SettingsScreen / KnowledgePointDetailScreen）
 
 ---
 
