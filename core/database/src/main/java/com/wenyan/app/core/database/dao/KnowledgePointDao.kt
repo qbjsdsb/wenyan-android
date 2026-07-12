@@ -68,4 +68,23 @@ interface KnowledgePointDao {
             "updated_at = (CAST(strftime('%s', 'now') AS INTEGER) * 1000) WHERE id = :id",
     )
     suspend fun updateOcrStatus(id: String, status: String)
+
+    /**
+     * 全文关键词搜索（阶段4新增，RAG 检索用）。
+     *
+     * 在 title / core_conclusion / full_content / study_text 四个字段中做 LIKE 搜索。
+     * SQLite LIKE 对中文友好，无需分词。
+     *
+     * @param keyword 搜索关键词
+     * @return 匹配的知识点列表，按 updated_at DESC 排序
+     */
+    @Query(
+        "SELECT * FROM knowledge_points WHERE " +
+            "title LIKE '%' || :keyword || '%' OR " +
+            "core_conclusion LIKE '%' || :keyword || '%' OR " +
+            "full_content LIKE '%' || :keyword || '%' OR " +
+            "study_text LIKE '%' || :keyword || '%' " +
+            "ORDER BY updated_at DESC LIMIT :limit",
+    )
+    suspend fun searchByKeyword(keyword: String, limit: Int = 5): List<KnowledgePointEntity>
 }
