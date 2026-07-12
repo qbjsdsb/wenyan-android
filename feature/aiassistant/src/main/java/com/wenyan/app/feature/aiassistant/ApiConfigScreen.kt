@@ -1,5 +1,6 @@
 package com.wenyan.app.feature.aiassistant
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,30 +12,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,6 +47,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.database.entity.ApiConfigEntity
+import com.wenyan.app.core.designsystem.component.EmptyState
+import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
+import com.wenyan.app.core.designsystem.component.Spacing
+import com.wenyan.app.core.designsystem.component.TonalCard
+import com.wenyan.app.core.designsystem.component.WenyanTopAppBar
 
 /**
  * API 配置界面（Spec C5.7a 设计文档 3.6.4 API 多服务商配置）。
@@ -83,18 +85,11 @@ fun ApiConfigScreen(
         }
     }
 
-    Scaffold(
+    ExpressiveScaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("API 配置") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回",
-                        )
-                    }
-                },
+            WenyanTopAppBar(
+                title = "API 配置",
+                onBack = onBack,
             )
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -119,7 +114,16 @@ fun ApiConfigScreen(
                     }
                 }
                 uiState.configs.isEmpty() -> {
-                    EmptyState()
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        EmptyState(
+                            icon = Icons.Default.Inbox,
+                            title = "暂无 API 配置",
+                            description = "点击右下角 + 添加服务商配置\n支持 DeepSeek / 通义 / 智谱 / 月之暗面",
+                        )
+                    }
                 }
                 else -> {
                     ConfigList(
@@ -128,7 +132,7 @@ fun ApiConfigScreen(
                         onSetCurrent = viewModel::setCurrent,
                         onEdit = viewModel::showEditForm,
                         onDelete = { config -> deletingConfig = config },
-                        contentPadding = PaddingValues(16.dp),
+                        contentPadding = PaddingValues(Spacing.lg),
                     )
                 }
             }
@@ -157,6 +161,8 @@ fun ApiConfigScreen(
             onDismissRequest = { deletingConfig = null },
             title = { Text("删除配置") },
             text = { Text("确定删除「${config.displayName}」吗？此操作不可撤销。") },
+            shape = MaterialTheme.shapes.extraLarge,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -190,7 +196,7 @@ private fun ConfigList(
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = contentPadding,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         items(configs, key = { it.id }) { config ->
             ConfigCard(
@@ -212,15 +218,16 @@ private fun ConfigCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onSetCurrent, // 点击卡片设为当前
+    TonalCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onSetCurrent), // 点击卡片设为当前
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+                .padding(Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs + Spacing.xs),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -273,14 +280,14 @@ private fun ConfigCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 4.dp),
+                    .padding(top = Spacing.xs),
                 horizontalArrangement = Arrangement.End,
             ) {
                 TextButton(onClick = onEdit) {
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = null,
-                        modifier = Modifier.padding(end = 4.dp),
+                        modifier = Modifier.padding(end = Spacing.xs),
                     )
                     Text("编辑")
                 }
@@ -288,7 +295,7 @@ private fun ConfigCard(
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = null,
-                        modifier = Modifier.padding(end = 4.dp),
+                        modifier = Modifier.padding(end = Spacing.xs),
                         tint = MaterialTheme.colorScheme.error,
                     )
                     Text("删除", color = MaterialTheme.colorScheme.error)
@@ -304,33 +311,6 @@ private fun maskApiKey(key: String): String {
     val prefix = key.take(4)
     val suffix = key.takeLast(4)
     return "$prefix****$suffix"
-}
-
-// ── 空状态 ────────────────────────────────────────────────────
-
-@Composable
-private fun EmptyState() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = "暂无 API 配置",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = "点击右下角 + 添加服务商配置\n支持 DeepSeek / 通义 / 智谱 / 月之暗面",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            )
-        }
-    }
 }
 
 // ── 表单弹窗 ──────────────────────────────────────────────────
@@ -350,6 +330,8 @@ private fun ApiConfigFormDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         title = { Text("API 配置") },
         text = {
             Column(
@@ -438,26 +420,11 @@ private fun ProviderChip(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    Surface(
-        color = if (selected) {
-            MaterialTheme.colorScheme.primary
-        } else {
-            MaterialTheme.colorScheme.surfaceVariant
-        },
-        shape = RoundedCornerShape(16.dp),
+    FilterChip(
+        selected = selected,
         onClick = onClick,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            color = if (selected) {
-                MaterialTheme.colorScheme.onPrimary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-        )
-    }
+        label = { Text(label) },
+    )
 }
 
 @Composable

@@ -11,13 +11,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
+import com.wenyan.app.core.designsystem.component.Spacing
+import com.wenyan.app.core.designsystem.component.WenyanTopAppBar
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -41,16 +42,16 @@ private const val MENTOR_INFO_URL = "https://wxy.njnu.edu.cn/szdw/jsfc.htm"
 fun MentorInfoScreen() {
     val context = LocalContext.current
 
-    Scaffold(
+    ExpressiveScaffold(
         topBar = {
-            TopAppBar(title = { Text("导师信息") })
+            WenyanTopAppBar(title = "导师信息")
         },
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(24.dp),
+                .padding(Spacing.xl),
             contentAlignment = Alignment.Center,
         ) {
             Column(
@@ -65,7 +66,7 @@ fun MentorInfoScreen() {
                     color = MaterialTheme.colorScheme.onSurface,
                 )
 
-                Button(
+                FilledTonalButton(
                     onClick = { openOfficialWebsite(context) },
                     modifier = Modifier.fillMaxWidth(),
                 ) {

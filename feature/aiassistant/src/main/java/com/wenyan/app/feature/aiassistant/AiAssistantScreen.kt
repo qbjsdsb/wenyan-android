@@ -29,11 +29,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,6 +46,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.ai.SocraticStage
 import com.wenyan.app.core.designsystem.component.ContentSourceBadge
+import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
+import com.wenyan.app.core.designsystem.component.Spacing
+import com.wenyan.app.core.designsystem.component.WenyanTopAppBar
 
 /**
  * AI 助手界面（阶段4增强）。
@@ -85,10 +87,10 @@ fun AiAssistantScreen(
         }
     }
 
-    Scaffold(
+    ExpressiveScaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("AI助手") },
+            WenyanTopAppBar(
+                title = "AI助手",
                 actions = {
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(
@@ -106,7 +108,7 @@ fun AiAssistantScreen(
                         Icon(
                             imageVector = Icons.Default.CloudOff,
                             contentDescription = "离线",
-                            modifier = Modifier.padding(end = 4.dp),
+                            modifier = Modifier.padding(end = Spacing.xs),
                             tint = MaterialTheme.colorScheme.error,
                         )
                     }
@@ -160,8 +162,8 @@ fun AiAssistantScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     state = listState,
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(Spacing.lg),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
                     items(uiState.messages) { message ->
                         MessageBubble(message)
@@ -194,9 +196,9 @@ private fun InputBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(12.dp),
+            .padding(Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         OutlinedTextField(
             value = text,
@@ -204,6 +206,9 @@ private fun InputBar(
             modifier = Modifier.weight(1f),
             placeholder = { Text("输入你的问题……") },
             maxLines = 3,
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            ),
         )
         IconButton(
             onClick = onSend,
@@ -222,6 +227,9 @@ private fun InputBar(
 @Composable
 private fun MessageBubble(message: AiMessage) {
     val isUser = message.role == AiRole.USER
+    val colorScheme = MaterialTheme.colorScheme
+    val containerColor = if (isUser) colorScheme.primaryContainer else colorScheme.surfaceContainerHigh
+    val contentColor = if (isUser) colorScheme.onPrimaryContainer else colorScheme.onSurface
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
@@ -236,31 +244,14 @@ private fun MessageBubble(message: AiMessage) {
                         start = if (isUser) 48.dp else 0.dp,
                         end = if (isUser) 0.dp else 48.dp,
                     )
-                    .clip(
-                        RoundedCornerShape(
-                            topStart = 16.dp,
-                            topEnd = 16.dp,
-                            bottomStart = if (isUser) 16.dp else 4.dp,
-                            bottomEnd = if (isUser) 4.dp else 16.dp,
-                        ),
-                    )
-                    .background(
-                        if (isUser) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.surfaceVariant
-                        },
-                    )
-                    .padding(12.dp),
+                    .clip(MaterialTheme.shapes.large)
+                    .background(containerColor)
+                    .padding(Spacing.md),
             ) {
                 Text(
                     text = message.content,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (isUser) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
+                    color = contentColor,
                 )
             }
         }
@@ -270,7 +261,7 @@ private fun MessageBubble(message: AiMessage) {
             ContentSourceBadge(
                 contentSource = message.contentSource,
                 stageLabel = formatStageLabel(message.stage),
-                modifier = Modifier.padding(start = 4.dp, top = 4.dp),
+                modifier = Modifier.padding(start = Spacing.xs, top = Spacing.xs),
             )
             ReferencesList(message)
         }
@@ -295,8 +286,11 @@ private fun ReferencesList(message: AiMessage) {
 
     Column(
         modifier = Modifier
-            .padding(start = 4.dp, top = 4.dp)
-            .fillMaxWidth(0.8f),
+            .padding(start = Spacing.xs, top = Spacing.xs)
+            .fillMaxWidth(0.8f)
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .padding(Spacing.sm),
     ) {
         Text(
             text = "引用来源：",
@@ -312,8 +306,9 @@ private fun ReferencesList(message: AiMessage) {
             )
         }
         HorizontalDivider(
-            modifier = Modifier.padding(top = 4.dp),
+            modifier = Modifier.padding(top = Spacing.xs),
             thickness = 0.5.dp,
+            color = MaterialTheme.colorScheme.outlineVariant,
         )
     }
 }
@@ -329,9 +324,9 @@ private fun RoteWarningBanner(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.errorContainer)
-            .padding(12.dp),
+            .padding(Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         Icon(
             imageVector = Icons.Default.Warning,
@@ -354,7 +349,7 @@ private fun RoteWarningBanner(
                 .clip(RoundedCornerShape(4.dp))
                 .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f))
                 .clickable(onClick = onDismiss)
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
         )
     }
 }
