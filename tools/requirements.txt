@@ -1,0 +1,48 @@
+# 文研App资料数字化管线 Python 依赖清单
+# 对应 Task 1.1：conda 环境 ocr（Python 3.11）
+
+# ===== OCR 引擎 =====
+# MinerU 3.x：扫描件PDF和图片的主OCR引擎，CLI命令 mineru -p <input> -o <output> -m auto -b pipeline
+# 注意：原设计用PaddleOCR，但3.x与paddlepaddle存在DLL冲突（WinError 127），2026-07-10改用MinerU CLI统一处理
+# paddlepaddle和paddlex已卸载（MinerU pipeline后端只用torch+onnxruntime，不依赖paddle）
+mineru>=3.0
+
+# ===== PDF 处理 =====
+# pdfplumber：NATIVE/OCR_LAYER类型PDF文本提取
+pdfplumber>=0.11
+
+# PyMuPDF：PDF转图片（Phase 2超分辨率功能预留，当前Phase 1管线未实际使用）
+PyMuPDF>=1.24
+
+# ===== 文档处理 =====
+# python-docx：提取.docx文本和表格（仅支持.docx，不支持.doc）
+python-docx>=1.1
+
+# pywin32：win32com调用MS Word COM接口，.doc→.docx转换（需本机安装MS Word）
+pywin32>=306
+
+# ===== 表格处理 =====
+# openpyxl：提取.xlsx表格数据（仅支持.xlsx，不支持.xls）
+openpyxl>=3.1
+
+# xlrd 2.0+：提取.xls表格数据（2.0+移除了.xlsx支持，仍支持.xls）
+xlrd>=2.0
+
+# ===== 文本处理 =====
+# opencc：繁简转换（OCR校对闭环预留，当前Phase 1管线未实际使用）
+opencc>=1.1
+
+# ===== LLM API调用 =====
+# requests：HTTP客户端，用于调用LLM API进行OCR纠错和知识提取
+requests>=2.31
+
+# ===== 语义模型 =====
+# sentence-transformers：加载BGE-small-zh-v1.5模型，Android端主动回忆检测用，Python管线未实际使用
+sentence-transformers>=3.0
+
+# ===== 图像处理 =====
+# Pillow：图片处理（Phase 2超分辨率功能预留，当前Phase 1管线未实际使用）
+Pillow>=10.0
+
+# real-esrgan：Phase 2可选功能，超分辨率增强。安装失败（Tsinghua源403/编译错误），当前不实现
+# real-esrgan>=0.3  # 已注释：Phase 2视OCR校对结果决定是否需要
