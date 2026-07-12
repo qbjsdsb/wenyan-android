@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -53,6 +54,7 @@ class ApiConfigViewModel @Inject constructor(
      * 但 UI 层不展示完整 apiKey（仅显示掩码），避免泄露。
      */
     val uiState: StateFlow<ApiConfigUiState> = apiConfigRepository.observeAllConfigs()
+        .map { configs -> ApiConfigUiState(isLoading = false, configs = configs) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
