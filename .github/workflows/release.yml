@@ -58,6 +58,17 @@ jobs:
           echo "✓ Keystore 已解码到 $RUNNER_TEMP/wenyan-release.jks"
           ls -la $RUNNER_TEMP/wenyan-release.jks
 
+      - name: Debug secret lengths
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "KEYSTORE_PASSWORD length: ${#KEYSTORE_PASSWORD}"
+          echo "KEY_ALIAS length: ${#KEY_ALIAS}"
+          echo "KEY_PASSWORD length: ${#KEY_PASSWORD}"
+          echo "KEY_ALIAS value: $KEY_ALIAS"
+
       - name: Build signed release APK
         env:
           KEYSTORE_PATH: ${{ runner.temp }}/wenyan-release.jks
