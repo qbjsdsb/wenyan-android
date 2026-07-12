@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.ai.SocraticStage
+import com.wenyan.app.core.designsystem.component.ContentSourceBadge
 
 /**
  * AI 助手界面（阶段4增强）。
@@ -59,6 +61,7 @@ import com.wenyan.app.core.ai.SocraticStage
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiAssistantScreen(
+    onNavigateToApiConfig: () -> Unit = {},
     viewModel: AiAssistantViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -85,6 +88,12 @@ fun AiAssistantScreen(
             TopAppBar(
                 title = { Text("AI助手") },
                 actions = {
+                    IconButton(onClick = onNavigateToApiConfig) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "API 配置",
+                        )
+                    }
                     if (!uiState.isAvailable) {
                         Icon(
                             imageVector = Icons.Default.CloudOff,
@@ -250,7 +259,11 @@ private fun MessageBubble(message: AiMessage) {
 
         // 内容来源标注 + 引用列表（仅 AI 消息）
         if (!isUser) {
-            ContentSourceLabel(message)
+            ContentSourceBadge(
+                contentSource = message.contentSource,
+                stageLabel = formatStageLabel(message.stage),
+                modifier = Modifier.padding(start = 4.dp, top = 4.dp),
+            )
             ReferencesList(message)
         }
     }
@@ -258,36 +271,12 @@ private fun MessageBubble(message: AiMessage) {
 
 // ── 内容来源标注 ────────────────────────────────────────────────
 
-@Composable
-private fun ContentSourceLabel(message: AiMessage) {
-    val label = formatContentSource(message.contentSource, message.stage)
-    if (label != null) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 4.dp, top = 4.dp),
-        )
-    }
-}
-
-/** 格式化内容来源标签 */
-private fun formatContentSource(contentSource: String?, stage: SocraticStage?): String? {
-    if (stage != null) {
-        return when (stage) {
-            SocraticStage.ANALYZE -> "论证分析 · AI引导"
-            SocraticStage.SUGGEST -> "改进建议 · AI引导"
-            SocraticStage.SHOW_SAMPLE -> "参考范文 · AI生成"
-        }
-    }
-    return when (contentSource) {
-        "AI_GENERATED" -> "AI生成"
-        "TEXTBOOK_NATIVE" -> "教材原文"
-        "TEXTBOOK_OCR" -> "OCR识别"
-        "USER_NOTE" -> "用户笔记"
-        "MISSING" -> "内容缺失"
-        else -> null
-    }
+/** 将苏格拉底阶段映射为标签文本（阶段优先于 contentSource） */
+private fun formatStageLabel(stage: SocraticStage?): String? = when (stage) {
+    SocraticStage.ANALYZE -> "论证分析 · AI引导"
+    SocraticStage.SUGGEST -> "改进建议 · AI引导"
+    SocraticStage.SHOW_SAMPLE -> "参考范文 · AI生成"
+    null -> null
 }
 
 // ── 引用来源列表 ────────────────────────────────────────────────

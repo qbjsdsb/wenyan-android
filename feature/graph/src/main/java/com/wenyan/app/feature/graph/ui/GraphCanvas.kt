@@ -1,0 +1,196 @@
+package com.wenyan.app.feature.graph.ui
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.wenyan.app.feature.graph.GraphEdgeItem
+import com.wenyan.app.feature.graph.GraphNodeItem
+import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.sin
+
+// R 值颜色映射（Spec C4.12）
+private val COLOR_GREEN = Color(0xFF4CAF50)   // R ≥ 0.8 已掌握
+private val COLOR_YELLOW = Color(0xFFFFC107)  // 0.5 ≤ R < 0.8 需巩固
+private val COLOR_RED = Color(0xFFF44336)     // 0 < R < 0.5 薄弱
+private val COLOR_GRAY = Color(0xFF9E9E9E)    // R ≤ 0 未学习
+
+// 节点半径
+private val NODE_RADIUS_DP = 12f
+private val NODE_TOUCH_RADIUS_DP = 24f
+
+/**
+ * 知识图谱 Canvas 可视化组件（Spec C4.12）。
+ *
+ * 功能：
+ * - 圆形布局排列节点
+ * - R 值颜色映射（绿/黄/红/灰）
+ * - 边连线（薄弱子图红色加粗）
+ * - 节点标签
+ * - 点击节点触发回调
+ *
+ * @param nodes 图谱节点列表（含 R 值）
+ * @param edges 图谱边列表
+ * @param onNodeClick 节点点击回调（参数为节点 ID）
+ * @param modifier 修饰符
+ */
+@Composable
+fun GraphCanvas(
+    nodes: List<GraphNodeItem>,
+    edges: List<GraphEdgeItem>,
+    onNodeClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (nodes.isEmpty()) return
+
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val canvasWidth = constraints.maxWidth.toFloat()
+        val canvasHeight = constraints.maxHeight.toFloat()
+
+        if (canvasWidth <= 0f || canvasHeight <= 0f) return@BoxWithConstraints
+
+        val nodeRadiusPx = with(density) { NODE_RADIUS_DP.dp.toPx() }
+        val touchRadiusPx = with(density) { NODE_TOUCH_RADIUS_DP.dp.toPx() }
+
+        // 计算节点位置（圆形布局）
+        val positions = remember(nodes, canvasWidth, canvasHeight) {
+            calculateCircularLayout(nodes, canvasWidth, canvasHeight)
+        }
+
+        // 预测量标签文本（避免每帧重复测量）
+        val textLayouts = remember(nodes) {
+            nodes.associate { node ->
+                node.id to textMeasurer.measure(
+                    AnnotatedString(node.label),
+                    TextStyle(fontSize = 9.sp, color = Color(0xFF333333)),
+                )
+            }
+        }
+
+        // 弱节点 ID 集合（R < 0.5）
+        val weakNodeIds = remember(nodes) {
+            nodes.filter { it.retrievability > 0f && it.retrievability < 0.5f }
+                .map { it.id }
+                .toSet()
+        }
+
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(nodes) {
+                    detectTapGestures { tapOffset ->
+                        nodes.find { node ->
+                            val pos = positions[node.id]
+                            pos != null && (tapOffset - pos).getDistance() <= touchRadiusPx
+                        }?.let { onNodeClick(it.id) }
+                    }
+                },
+        ) {
+            // ── 绘制边 ──
+            edges.forEach { edge ->
+                val from = positions[edge.fromId]
+                val to = positions[edge.toId]
+                if (from != null && to != null) {
+                    val isWeak = edge.fromId in weakNodeIds || edge.toId in weakNodeIds
+                    drawLine(
+                        color = if (isWeak) Color(0x99F44336) else Color(0x559E9E9E),
+                        start = from,
+                        end = to,
+                        strokeWidth = if (isWeak) 3f else 1.5f,
+                    )
+                }
+            }
+
+            // ── 绘制节点 ──
+            nodes.forEach { node ->
+                val pos = positions[node.id] ?: return@forEach
+                val color = colorForRetrievability(node.retrievability)
+
+                // 外圈光晕（薄弱节点）
+                if (node.id in weakNodeIds) {
+                    drawCircle(
+                        color = Color(0x33F44336),
+                        radius = nodeRadiusPx + 6f,
+                        center = pos,
+                    )
+                }
+
+                // 节点圆
+                drawCircle(
+                    color = color,
+                    radius = nodeRadiusPx,
+                    center = pos,
+                )
+
+                // 节点标签
+                val textLayout = textLayouts[node.id] ?: return@forEach
+                drawText(
+                    textLayoutResult = textLayout,
+                    topLeft = Offset(
+                        pos.x - textLayout.size.width / 2f,
+                        pos.y + nodeRadiusPx + 4f,
+                    ),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 圆形布局：节点均匀分布在圆周上。
+ *
+ * - 1 个节点：居中
+ * - 2 个节点：水平对称
+ * - 3+ 个节点：圆周等分
+ */
+private fun calculateCircularLayout(
+    nodes: List<GraphNodeItem>,
+    width: Float,
+    height: Float,
+): Map<String, Offset> {
+    val centerX = width / 2f
+    val centerY = height / 2f
+    val radius = min(width, height) * 0.35f
+
+    return when {
+        nodes.size == 1 -> mapOf(nodes[0].id to Offset(centerX, centerY))
+        nodes.size == 2 -> mapOf(
+            nodes[0].id to Offset(centerX - radius, centerY),
+            nodes[1].id to Offset(centerX + radius, centerY),
+        )
+        else -> {
+            nodes.mapIndexed { index, node ->
+                val angle = (2 * Math.PI * index / nodes.size).toFloat()
+                node.id to Offset(
+                    x = centerX + radius * cos(angle),
+                    y = centerY + radius * sin(angle),
+                )
+            }.toMap()
+        }
+    }
+}
+
+/** R 值 → 颜色映射 */
+private fun colorForRetrievability(r: Float): Color = when {
+    r >= 0.8f -> COLOR_GREEN
+    r >= 0.5f -> COLOR_YELLOW
+    r > 0f -> COLOR_RED
+    else -> COLOR_GRAY
+}

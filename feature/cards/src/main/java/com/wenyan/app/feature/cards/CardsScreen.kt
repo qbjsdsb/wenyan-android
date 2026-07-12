@@ -143,13 +143,19 @@ private fun FlipCard(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            // 简化处理：根据翻转状态显示正/反面
-            Text(
-                text = if (isFlipped) card.back else card.front,
-                style = MaterialTheme.typography.headlineMedium,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(24.dp),
-            )
+            // 阶段5：优先使用 CardContent 结构化渲染（6种模板专属样式）
+            // template 为 null 时降级为 front/back 纯文本（向后兼容）
+            val template = card.template
+            if (template != null) {
+                CardContent(card = template, isFlipped = isFlipped)
+            } else {
+                Text(
+                    text = if (isFlipped) card.back else card.front,
+                    style = MaterialTheme.typography.headlineMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(24.dp),
+                )
+            }
         }
     }
 }

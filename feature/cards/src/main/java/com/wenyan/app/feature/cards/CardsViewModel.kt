@@ -126,6 +126,7 @@ class CardsViewModel @Inject constructor(
         back = back,
         cardType = templateType.name,
         pointId = pointId,
+        template = this,
     )
 }
 
@@ -147,6 +148,11 @@ data class CardItem(
     val cardType: String,
     /** 关联知识点 ID（阶段3新增，用于 FSRS 调度回写） */
     val pointId: String = "",
+    /**
+     * 原始卡片模板（阶段5新增，用于 [CardContent] 结构化渲染）。
+     * 为 null 时降级为 front/back 纯文本展示。
+     */
+    val template: CardTemplate? = null,
 )
 
 // FSRS 评分等级
