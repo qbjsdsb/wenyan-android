@@ -16,31 +16,35 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wenyan.app.core.designsystem.component.ChipVariant
 import com.wenyan.app.core.designsystem.component.ContentSource
 import com.wenyan.app.core.designsystem.component.ContentSourceBadge
+import com.wenyan.app.core.designsystem.component.EmptyState
+import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
+import com.wenyan.app.core.designsystem.component.Spacing
+import com.wenyan.app.core.designsystem.component.TonalCard
+import com.wenyan.app.core.designsystem.component.WenyanInfoChip
+import com.wenyan.app.core.designsystem.component.WenyanTopAppBar
 
 /**
  * 真题练习界面（阶段5增强）。
@@ -65,9 +69,9 @@ fun QuizScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val expandedIds by viewModel.expandedQuestionIds.collectAsStateWithLifecycle()
 
-    Scaffold(
+    ExpressiveScaffold(
         topBar = {
-            TopAppBar(title = { Text("真题练习") })
+            WenyanTopAppBar(title = "真题练习")
         },
     ) { innerPadding ->
         Column(
@@ -91,7 +95,8 @@ fun QuizScreen(
                 }
             } else if (uiState.questions.isEmpty()) {
                 EmptyState(
-                    text = if (uiState.selectedYear == null) {
+                    icon = Icons.Filled.Inbox,
+                    title = if (uiState.selectedYear == null) {
                         "请选择年份查看真题"
                     } else {
                         "该年份暂无真题数据"
@@ -104,7 +109,7 @@ fun QuizScreen(
                     onToggleExpanded = viewModel::toggleExpanded,
                     onNavigateToAiAssistant = onNavigateToAiAssistant,
                     onNavigateToDetail = onNavigateToDetail,
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(Spacing.lg),
                 )
             }
         }
@@ -120,11 +125,12 @@ private fun YearSelector(
 ) {
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         items(years) { year ->
-            AssistChip(
+            FilterChip(
+                selected = selectedYear == year,
                 onClick = { onYearSelected(year) },
                 label = { Text("${year}年") },
                 leadingIcon = if (selectedYear == year) {
@@ -150,7 +156,7 @@ private fun QuestionList(
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = contentPadding,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         items(questions) { question ->
             QuestionCard(
@@ -188,8 +194,8 @@ private fun QuestionCard(
     onNavigateToAiAssistant: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
+    TonalCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(Spacing.lg)) {
             // 1. 顶部信息行：年份 + 科目显示名称
             Text(
                 text = "${question.year}年 · ${question.subjectDisplayName}",
@@ -199,12 +205,12 @@ private fun QuestionCard(
 
             // 2. 标签行：题型 + 分值 + 答案状态
             Row(
-                modifier = Modifier.padding(top = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(top = Spacing.xs),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                InfoChip(text = formatQuestionType(question.questionType))
-                InfoChip(text = "${question.score}分")
+                WenyanInfoChip(text = formatQuestionType(question.questionType), variant = ChipVariant.SECONDARY)
+                WenyanInfoChip(text = "${question.score}分", variant = ChipVariant.SECONDARY)
                 ContentSourceBadge(
                     contentSource = mapAnswerStatus(question.answerStatus),
                 )
@@ -216,7 +222,7 @@ private fun QuestionCard(
                     text = warning,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = 4.dp),
+                    modifier = Modifier.padding(top = Spacing.xs),
                 )
             }
 
@@ -224,12 +230,12 @@ private fun QuestionCard(
             Text(
                 text = question.content,
                 style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier.padding(top = Spacing.sm),
             )
 
             // 5. 材料题原文（如有）
             question.materialText?.takeIf { it.isNotBlank() }?.let { material ->
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.sm))
                 Text(
                     text = "材料：",
                     style = MaterialTheme.typography.labelMedium,
@@ -240,7 +246,7 @@ private fun QuestionCard(
                     text = material,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
+                    modifier = Modifier.padding(top = Spacing.xs),
                 )
             }
 
@@ -250,7 +256,7 @@ private fun QuestionCard(
                     text = "考查角度：$angle",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
+                    modifier = Modifier.padding(top = Spacing.xs),
                 )
             }
 
@@ -261,12 +267,12 @@ private fun QuestionCard(
                 onToggleExpanded = onToggleExpanded,
             )
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.sm))
 
             // 8. 底部操作行：关联知识点入口 + AI助手入口
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // 关联知识点入口（如有）
@@ -280,7 +286,7 @@ private fun QuestionCard(
                         Icon(
                             imageVector = Icons.Default.MenuBook,
                             contentDescription = null,
-                            modifier = Modifier.padding(end = 4.dp),
+                            modifier = Modifier.padding(end = Spacing.xs),
                         )
                         Text("关联知识点 ($relatedCount)")
                     }
@@ -291,13 +297,13 @@ private fun QuestionCard(
                     Icon(
                         imageVector = Icons.Default.Lightbulb,
                         contentDescription = null,
-                        modifier = Modifier.padding(end = 4.dp),
+                        modifier = Modifier.padding(end = Spacing.xs),
                     )
                     Text("问AI")
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = null,
-                        modifier = Modifier.padding(start = 4.dp),
+                        modifier = Modifier.padding(start = Spacing.xs),
                     )
                 }
             }
@@ -329,13 +335,13 @@ private fun AnswerSection(
             shape = MaterialTheme.shapes.small,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp),
+                .padding(top = Spacing.sm),
         ) {
             Text(
                 text = "该真题暂无参考答案，可使用AI助手辅助分析（AI生成内容标注为AI_GENERATED）",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.padding(8.dp),
+                modifier = Modifier.padding(Spacing.sm),
             )
         }
         return
@@ -346,19 +352,19 @@ private fun AnswerSection(
     // 展开/收起按钮
     TextButton(
         onClick = onToggleExpanded,
-        modifier = Modifier.padding(top = 4.dp),
+        modifier = Modifier.padding(top = Spacing.xs),
     ) {
         Icon(
             imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
             contentDescription = null,
-            modifier = Modifier.padding(end = 4.dp),
+            modifier = Modifier.padding(end = Spacing.xs),
         )
         Text(if (isExpanded) "收起答案" else "查看答题框架")
     }
 
     // 展开内容：答题框架 + 范文
     AnimatedVisibility(visible = isExpanded) {
-        Column(modifier = Modifier.padding(top = 4.dp)) {
+        Column(modifier = Modifier.padding(top = Spacing.xs)) {
             // 答题框架
             if (hasFramework) {
                 Text(
@@ -370,16 +376,19 @@ private fun AnswerSection(
                 Text(
                     text = question.answerFramework!!,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 4.dp),
+                    modifier = Modifier.padding(top = Spacing.xs),
                 )
             }
 
             // 范文（标注"范文，非标准答案"）
             if (hasEssay) {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = Spacing.sm),
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     Text(
                         text = "范文",
@@ -399,7 +408,7 @@ private fun AnswerSection(
                 Text(
                     text = question.sampleEssay!!,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 4.dp),
+                    modifier = Modifier.padding(top = Spacing.xs),
                 )
             }
         }
@@ -408,36 +417,8 @@ private fun AnswerSection(
 
 // ── 辅助组件 ────────────────────────────────────────────────────
 
-/** 小型信息标签（题型/分值等） */
-@Composable
-private fun InfoChip(text: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = MaterialTheme.shapes.small,
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-        )
-    }
-}
-
-// 空状态占位
-@Composable
-private fun EmptyState(text: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
+// InfoChip 已迁移至共享 WenyanInfoChip 组件（ChipVariant.SECONDARY）
+// EmptyState 已迁移至共享 EmptyState 组件
 
 // ── 映射工具 ────────────────────────────────────────────────────
 
