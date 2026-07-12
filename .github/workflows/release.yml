@@ -6,8 +6,10 @@ name: Release
 #
 # 流程：
 # 1. 从 GitHub Secrets 解码 keystore 到临时文件
-# 2. 构建 signed release APK
-# 3. 创建 GitHub Release 并附加 APK
+# 2. 验证 keystore（storepass）
+# 3. 构建 signed release APK
+# 4. 运行单元测试
+# 5. 创建 GitHub Release 并附加 APK
 #
 # 前置条件（一次性配置）：
 # 1. 运行 "Generate Keystore (One-time)" workflow
@@ -15,7 +17,7 @@ name: Release
 #    - KEYSTORE_BASE64：keystore-base64.txt 内容
 #    - KEYSTORE_PASSWORD：keystore-password.txt 内容
 #    - KEY_ALIAS：key-alias.txt 内容
-#    - KEY_PASSWORD：key-password.txt 内容
+#    - KEY_PASSWORD：key-password.txt 内容（与 KEYSTORE_PASSWORD 相同，PKCS12 规范要求）
 
 on:
   push:
@@ -58,37 +60,14 @@ jobs:
           echo "✓ Keystore 已解码到 $RUNNER_TEMP/wenyan-release.jks"
           ls -la $RUNNER_TEMP/wenyan-release.jks
 
-      - name: Debug secret lengths
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          echo "KEYSTORE_PASSWORD length: ${#KEYSTORE_PASSWORD}"
-          echo "KEY_ALIAS length: ${#KEY_ALIAS}"
-          echo "KEY_PASSWORD length: ${#KEY_PASSWORD}"
-          echo "KEY_ALIAS value: $KEY_ALIAS"
-
-      - name: Verify keystore with keytool
+      - name: Verify keystore
         env:
           KEYSTORE_PATH: ${{ runner.temp }}/wenyan-release.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          echo "Verifying keystore (storepass)..."
-          keytool -list -keystore "$KEYSTORE_PATH" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" -v || echo "Storepass verification failed"
-
-          echo ""
-          echo "Verifying key (keypass)..."
-          # 尝试用 keypass 读取私钥（如果 keypass 错误会抛出异常）
-          keytool -importkeystore -srckeystore "$KEYSTORE_PATH" -srcstorepass "$KEYSTORE_PASSWORD" -srcalias "$KEY_ALIAS" -srckeypass "$KEY_PASSWORD" -destkeystore /tmp/test-keystore.jks -deststorepass test123 -destalias test -noprompt 2>&1 || echo "Keypass verification failed"
-
-          echo ""
-          echo "Password fingerprint check..."
-          # 打印密码的 md5（不泄露密码本身，但能对比是否与本地一致）
-          echo -n "$KEYSTORE_PASSWORD" | md5sum
-          echo -n "$KEY_PASSWORD" | md5sum
+          echo "Verifying keystore with storepass..."
+          keytool -list -keystore "$KEYSTORE_PATH" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" -v
 
       - name: Build signed release APK
         env:
@@ -109,7 +88,6 @@ jobs:
         run: |
           mkdir -p release-assets
           cp app/build/outputs/apk/release/app-release.apk release-assets/wenyan-${{ steps.version.outputs.VERSION }}.apk
-          # 同时保留未版本号的副本
           cp app/build/outputs/apk/release/app-release.apk release-assets/wenyan-latest.apk
           ls -la release-assets/
 
