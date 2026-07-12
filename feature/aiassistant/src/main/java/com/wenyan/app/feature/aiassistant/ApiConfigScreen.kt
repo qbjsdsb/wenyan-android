@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
@@ -32,6 +33,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,7 +54,7 @@ import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.TonalCard
-import com.wenyan.app.core.designsystem.component.WenyanTopAppBar
+import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 
 /**
  * API 配置界面（Spec C5.7a 设计文档 3.6.4 API 多服务商配置）。
@@ -76,6 +79,9 @@ fun ApiConfigScreen(
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var deletingConfig by remember { mutableStateOf<ApiConfigEntity?>(null) }
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+        state = rememberTopAppBarState(),
+    )
 
     // 错误提示 → Snackbar
     LaunchedEffect(errorMessage) {
@@ -87,9 +93,10 @@ fun ApiConfigScreen(
 
     ExpressiveScaffold(
         topBar = {
-            WenyanTopAppBar(
+            WenyanLargeTopAppBar(
                 title = "API 配置",
                 onBack = onBack,
+                scrollBehavior = scrollBehavior,
             )
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -102,6 +109,7 @@ fun ApiConfigScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .padding(innerPadding),
         ) {
             when {

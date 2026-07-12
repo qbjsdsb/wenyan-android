@@ -12,12 +12,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -32,7 +35,7 @@ import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.TonalCard
 import com.wenyan.app.core.designsystem.component.WenyanInfoChip
-import com.wenyan.app.core.designsystem.component.WenyanTopAppBar
+import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.database.entity.DataSourceEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 
@@ -53,18 +56,35 @@ fun KnowledgePointDetailScreen(
     viewModel: KnowledgePointDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+        state = rememberTopAppBarState(),
+    )
+
+    // 副标题：考频 + 难度组合（point 为 null 时不显示）
+    val subtitle = uiState.point?.let { point ->
+        val freqLabel = when (point.examFrequency) {
+            "HIGH" -> "高频"
+            "MEDIUM" -> "中频"
+            "LOW" -> "低频"
+            else -> "未考"
+        }
+        "$freqLabel · 难度${point.difficulty}/5"
+    }
 
     ExpressiveScaffold(
         topBar = {
-            WenyanTopAppBar(
+            WenyanLargeTopAppBar(
                 title = uiState.point?.title ?: "知识点详情",
+                subtitle = subtitle,
                 onBack = onBack,
+                scrollBehavior = scrollBehavior,
             )
         },
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .padding(innerPadding),
         ) {
             when {

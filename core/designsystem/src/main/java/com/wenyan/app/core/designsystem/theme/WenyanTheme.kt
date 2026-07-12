@@ -9,7 +9,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import com.materialkolor.ColorSpec
+import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.rememberDynamicColorScheme
 
 /**
@@ -43,11 +43,16 @@ fun WenyanTheme(
         if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
     } else {
         // Android 11- 或手动种子色：用 materialkolor 生成
+        val paletteStyle = config.paletteStyle.toMaterialKolorStyle()
         rememberDynamicColorScheme(
             seedColor = config.seedColor,
             isDark = isDark,
-            style = config.paletteStyle.toMaterialKolorStyle(),
-            specVersion = ColorSpec.SpecVersion.SPEC_2025,
+            style = paletteStyle,
+            specVersion = if (paletteStyle.supportsSpec2025) {
+                ColorSpec.SpecVersion.SPEC_2025
+            } else {
+                ColorSpec.SpecVersion.SPEC_2021
+            },
         )
     }
 

@@ -27,7 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.Spacing
-import com.wenyan.app.core.designsystem.component.WenyanTopAppBar
+import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 
 /**
  * 记忆卡片界面骨架。
@@ -47,7 +47,8 @@ fun CardsScreen(
 
     ExpressiveScaffold(
         topBar = {
-            WenyanTopAppBar(title = "记忆卡片")
+            // 卡片翻转界面内容固定不滚动，仅享受 Large 标题样式（不传 scrollBehavior）
+            WenyanLargeTopAppBar(title = "记忆卡片")
         },
     ) { innerPadding ->
         Column(

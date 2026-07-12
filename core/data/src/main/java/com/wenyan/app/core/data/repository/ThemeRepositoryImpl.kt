@@ -1,6 +1,7 @@
 package com.wenyan.app.core.data.repository
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -59,7 +60,7 @@ class ThemeRepositoryImpl @Inject constructor(
     }
 
     override suspend fun setSeedColor(color: Color) {
-        dataStore.edit { it[SEED_COLOR_KEY] = color.value.toInt() }
+        dataStore.edit { it[SEED_COLOR_KEY] = color.toArgb() }
     }
 
     private companion object {

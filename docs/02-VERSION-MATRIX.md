@@ -7,13 +7,13 @@
 | 依赖 | 当前版本 | 状态 | 说明 |
 |------|----------|------|------|
 | AGP | 8.6.0 | ✅ | 支持 compileSdk 35 |
-| Kotlin | 2.0.20 | ⚠️ | 与 materialkolor 4.1.1 不兼容 |
-| KSP | 2.0.20-1.0.25 | ⚠️ | 需随 Kotlin 升级 |
-| Compose BOM | 2025.12.00 | ✅ | 含 Material3 1.4.x（MaterialExpressiveTheme） |
-| Compose Compiler | 1.5.15 | ⚠️ | 可能需随 Kotlin 升级 |
-| materialkolor | 4.1.1 | ❌ | 用 Kotlin 2.3.0 编译，元数据版本不匹配 |
-| Hilt | 2.51.1 | ✅ | |
-| Room | 2.6.1 | ✅ | |
+| Kotlin | 2.3.10 | ✅ | 升级后兼容 materialkolor 4.1.1 |
+| KSP | 2.3.2 | ✅ | 新版本号格式（不再 `<kotlin>-<ksp>`） |
+| Compose BOM | 2025.12.00 | ✅ | 含 Material3 1.4.x stable |
+| material3 | 1.5.0-alpha18 | ✅ | 显式锁定，覆盖 BOM 的 1.4.0，含 M3 Expressive API |
+| materialkolor | 4.1.1 | ✅ | 用 Kotlin 2.3.0 编译，与 Kotlin 2.3.10 兼容 |
+| Hilt | 2.57.1 | ✅ | kotlin-metadata-jvm unshaded，支持 Kotlin 2.3 |
+| Room | 2.7.0 | ✅ | 首个支持 KSP2 的稳定版 |
 | Coroutines | 1.8.1 | ✅ | |
 | Retrofit | 2.9.0 | ✅ | |
 | OkHttp | 4.12.0 | ✅ | |
@@ -42,18 +42,24 @@
 | Compose BOM | Material3 版本 | 关键 API |
 |-------------|----------------|----------|
 | 2024.06.00 | 1.2.x | 基础 M3 |
-| 2025.12.00 | 1.4.x | `MaterialExpressiveTheme` + `MotionScheme.expressive()` |
+| 2025.12.00 | 1.4.x（stable） | `MaterialExpressiveTheme` + `MotionScheme.expressive()`（通过 materialkolor 传递依赖拉入 alpha） |
+| 2025.12.00 + 显式锁定 | 1.5.0-alpha18 | ✅ 当前使用。`LargeFlexibleTopAppBar`（仍 @ExperimentalMaterial3ExpressiveApi） |
+
+> **重要**：material3 1.5.0-alpha19+ 要求 AGP 9.1.0 + compileSdk 37，与当前
+> AGP 8.6.0 不兼容。alpha18 是兼容 AGP 8.6.0 的最后一个 alpha 版本。
+> `LargeFlexibleTopAppBar` 在 alpha18 中仍为 `@ExperimentalMaterial3ExpressiveApi`，
+> 需在封装组件中显式 `@OptIn`。计划中提到的 "alpha23 graduated Stable" 未使用。
 
 ### Kotlin ↔ KSP
 
 | Kotlin 版本 | KSP 版本 | 说明 |
 |-------------|----------|------|
-| 2.0.20 | 2.0.20-1.0.25 | 当前 |
-| 2.3.0 | 2.3.0-2.0.0（待确认） | 升级方案 |
+| 2.0.20 | 2.0.20-1.0.25 | 旧格式 `<kotlin>-<ksp>` |
+| 2.3.10 | 2.3.2 | ✅ 当前使用，新格式（单一版本号） |
 
-KSP 版本格式：`<kotlin-version>-<ksp-version>`，如 `2.0.20-1.0.25`。
-
-KSP2（新版）可能直接用 `<ksp-version>`，如 `2.3.10`。需查 [KSP releases](https://github.com/google/ksp/releases) 确认。
+KSP 2.3.x 起放弃旧的 `<kotlin-version>-<ksp-version>` 格式，改用与 Kotlin 对齐的
+单一版本号（如 `2.3.2`）。注意 KSP 版本号不需要和 Kotlin 完全一致（Kotlin 2.3.10
+配 KSP 2.3.2 即可）。
 
 ### Kotlin ↔ Compose Compiler
 
@@ -119,7 +125,19 @@ materialKolor = "4.0.0"  # 待确认具体版本
 
 ## 已验证可行组合
 
-（待补充。每次成功验证后在此记录。）
+经实际编译验证（gradle assembleDebug + gradle testDebugUnitTest 全通过），以下组合可用：
+
+| 依赖 | 版本 | 备注 |
+|------|------|------|
+| Kotlin | 2.3.10 | 最新稳定 bug fix |
+| KSP | 2.3.2 | 新版本号格式（不再 `<kotlin>-<ksp>`） |
+| AGP | 8.6.0 | 保持不变，在 Kotlin 2.3.0 兼容范围 |
+| Hilt | 2.57.1 | 必须 ≥ 2.57（kotlin-metadata-jvm unshaded），不可用 2.59+（需 AGP 9） |
+| Room | 2.7.0 | 必须 ≥ 2.7（KSP2 支持），不可用 3.0.0（包名 breaking change） |
+| Compose BOM | 2025.12.00 | 保持不变 |
+| material3 | 1.5.0-alpha18 | 显式锁定，覆盖 BOM 的 1.4.0。alpha19+ 需 AGP 9 不可用 |
+| materialkolor | 4.1.1 | 保持不变，用 Kotlin 2.3.0 编译，与 Kotlin 2.3.10 兼容 |
+| Gradle | 8.14.4 | 系统安装（mise），兼容 AGP 8.6.0 |
 
 ## CI 环境版本
 

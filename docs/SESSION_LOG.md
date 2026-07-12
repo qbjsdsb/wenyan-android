@@ -36,3 +36,55 @@
   - `77d34e7` — 升级 AGP
   - `684e6a2` — 重写 ContentSourceBadge when 表达式
   - 本次会话：AGENTS.md + docs/ + tools/ 迁移（待 commit）
+
+---
+
+## 2026-07-12 会话：KSU 风格 UI 升级 Phase 0-3
+
+- **完成**：
+  - **Phase 0**（commit `0e086ba`）：解除 materialkolor 4.1.1 + Kotlin 2.0.20 元数据阻塞
+    - Kotlin 2.0.20 → 2.3.10
+    - KSP 2.0.20-1.0.25 → 2.3.2（新版本号格式）
+    - Hilt 2.51.1 → 2.57.1（Kotlin 2.3 元数据兼容）
+    - Room 2.6.1 → 2.7.0（KSP2 支持）
+    - material3 显式锁定 1.5.0-alpha18（覆盖 BOM 1.4.0）
+    - 修复 WenyanTheme.kt ColorSpec import 路径 + PaletteStyle.supportsSpec2025 校验
+  - **Phase 1**（commit `6bbbb29`）：新增 4 个 KSU 风格组件
+    - WenyanLargeTopAppBar（LargeFlexibleTopAppBar 封装，含 @OptIn）
+    - WenyanNavigationBar（药丸风格底部导航，用 indicatorColor 参数）
+    - GroupedCard + GroupedCardItem（分组卡片）
+    - HierarchicalListItem（层级列表项）
+    - 为 core:designsystem 模块添加首个 Compose UI 测试（Robolectric + createComposeRule）
+    - 搭建 Robolectric 测试基础设施（m2 settings.xml 阿里云镜像 + 预下载 SDK jar）
+  - **Phase 2**（commit `a85cc68`）：9 个 Screen 迁移到 WenyanLargeTopAppBar
+    - WenyanApp.kt 替换为 WenyanNavigationBar（保留 hierarchy 高亮逻辑）
+    - 6 个滚动屏接入 exitUntilCollapsedScrollBehavior + nestedScroll
+    - 3 个固定内容屏仅享受 Large 标题样式
+    - KnowledgePointDetailScreen 动态 title + subtitle（考频+难度）
+    - 修复 6 个文件的 nestedScroll import 路径错误
+
+- **关键发现**：
+  - material3 1.5.0-alpha19+ 要求 AGP 9.1.0 + compileSdk 37，与 AGP 8.6.0 不兼容
+  - alpha18 中 LargeFlexibleTopAppBar 仍为 @ExperimentalMaterial3ExpressiveApi（非 Stable）
+  - MaterialExpressiveTheme 标记为 Material3ExpressiveApi（非 @RequiresOptIn），WenyanTheme 编译无需 OptIn
+  - NavigationBarItemDefaults.colors() 参数名从 selectedIndicatorColor 改为 indicatorColor（alpha18）
+  - nestedScroll 正确 import 路径：androidx.compose.ui.input.nestedscroll（不是 androidx.compose.input.nestedscroll）
+  - Robolectric Maven Resolver 不读 Gradle 配置，需单独 ~/.m2/settings.xml
+  - createComposeRule() 需 ComponentActivity 声明（debugImplementation compose-ui-test-manifest）
+  - assertIsDisplayed 是顶层扩展函数需 import；assertDoesNotExist 是成员函数不需 import
+  - onNodeWithText 只匹配 Text 组件；onNodeWithContentDescription 匹配 Icon contentDescription
+  - releaseUnitTest 不含 debugImplementation 依赖，需运行 testDebugUnitTest
+
+- **commit**：
+  - `0e086ba` — Phase 0：解除 M3 Expressive 改造阻塞
+  - `6bbbb29` — Phase 1：4 个 KSU 组件 + 首个 Compose UI 测试
+  - `a85cc68` — Phase 2：9 个 Screen 迁移到 WenyanLargeTopAppBar
+  - 本次 Phase 3：文档更新（待 commit）
+
+- **下次继续**：
+  - 推送到远端 GitHub，等 CI 全绿
+  - 跑 emulator 实测滚动折叠效果
+  - 用 GroupedCard 改造 SettingsScreen
+  - 用 HierarchicalListItem 改造 KnowledgePointDetailScreen 关联知识点区域
+  - 为 GroupedCard / HierarchicalListItem 写测试
+  - OCR 完成后跑知识提取管线

@@ -20,12 +20,14 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
     }
 }
 
@@ -43,8 +45,18 @@ dependencies {
     api(libs.materialkolor)
     implementation(libs.androidx.compose.material.icons.extended)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    // Compose UI 测试所需的 ComponentActivity 声明（合并到 debug/test manifest）
+    // 不加这个，createComposeRule() 在 Robolectric 下会报
+    // "Unable to resolve activity for Intent ... ComponentActivity"
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     implementation(libs.androidx.core.ktx)
 
     testImplementation(libs.junit)
+    // Compose UI 测试（Robolectric + createComposeRule，JVM 跑无需 emulator）
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.androidx.compose.ui.tooling)
 }
