@@ -6,6 +6,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import com.wenyan.app.feature.aiassistant.AiAssistantScreen
 import com.wenyan.app.feature.aiassistant.ApiConfigScreen
 import com.wenyan.app.feature.cards.CardsScreen
@@ -41,6 +42,11 @@ fun WenyanNavHost(
         navController = navController,
         startDestination = TopLevelDestination.ROUTE_KNOWLEDGE,
         modifier = modifier,
+        // 顶级 Tab 切换：纯 fade，避免与 NavigationBar indicator 动画冲突产生抖动
+        enterTransition = { WenyanMotion.TabEnterTransition },
+        exitTransition = { WenyanMotion.TabExitTransition },
+        popEnterTransition = { WenyanMotion.TabEnterTransition },
+        popExitTransition = { WenyanMotion.TabExitTransition },
     ) {
         knowledgeDestination(
             onNavigateToAiAssistant = {
@@ -148,10 +154,17 @@ private fun NavGraphBuilder.aiAssistantDestination(
 }
 
 // API 配置子路由（Spec C5.7a 设计文档 3.6.4 多服务商配置）
+// 子路由用 Push/Pop slide transition（覆盖 NavHost 默认的 Tab fade）
 private fun NavGraphBuilder.apiConfigDestination(
     onBack: () -> Unit,
 ) {
-    composable(ROUTE_API_CONFIG) {
+    composable(
+        route = ROUTE_API_CONFIG,
+        enterTransition = { WenyanMotion.PushEnterTransition },
+        exitTransition = { WenyanMotion.PushExitTransition },
+        popEnterTransition = { WenyanMotion.PopEnterTransition },
+        popExitTransition = { WenyanMotion.PopExitTransition },
+    ) {
         ApiConfigScreen(onBack = onBack)
     }
 }
@@ -161,7 +174,13 @@ private fun NavGraphBuilder.settingsDestination(
     onBack: () -> Unit,
     onNavigateToApiConfig: () -> Unit,
 ) {
-    composable(ROUTE_SETTINGS) {
+    composable(
+        route = ROUTE_SETTINGS,
+        enterTransition = { WenyanMotion.PushEnterTransition },
+        exitTransition = { WenyanMotion.PushExitTransition },
+        popEnterTransition = { WenyanMotion.PopEnterTransition },
+        popExitTransition = { WenyanMotion.PopExitTransition },
+    ) {
         SettingsScreen(
             onBack = onBack,
             onNavigateToApiConfig = onNavigateToApiConfig,
@@ -174,7 +193,13 @@ private fun NavGraphBuilder.knowledgeDetailDestination(
     onBack: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
 ) {
-    composable("$ROUTE_KNOWLEDGE_DETAIL/{pointId}") {
+    composable(
+        route = "$ROUTE_KNOWLEDGE_DETAIL/{pointId}",
+        enterTransition = { WenyanMotion.PushEnterTransition },
+        exitTransition = { WenyanMotion.PushExitTransition },
+        popEnterTransition = { WenyanMotion.PopEnterTransition },
+        popExitTransition = { WenyanMotion.PopExitTransition },
+    ) {
         KnowledgePointDetailScreen(
             onBack = onBack,
             onNavigateToDetail = onNavigateToDetail,
