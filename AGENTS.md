@@ -92,6 +92,32 @@ tools/                           # Python 管线脚本
 - **CI Gradle 版本与本地对齐** — 用 8.14.4（旧版 8.7 在解析 KSP 2.3.x 时有 bug）
 - **KSP 2.3.2 而非 2.3.10** — KSP 2.3.10 调用 `AndroidComponentsExtension.addKspConfigurations`（AGP 8.8+ 才有），与 AGP 8.6.0 不兼容
 
+### CI 验证策略（2026-07-13 新增）
+
+**原则**：AI 自主判断每次改动是否需要 CI 验证，不冗余等待。
+
+**必须等 CI 验证的场景**（push 后主动等结果）：
+- 改了 `.github/workflows/*.yml` / `build.gradle.kts` / `gradle/libs.versions.toml` / `settings.gradle.kts`
+- 改了签名配置或 keystore 相关
+- 跨平台/跨 SDK 版本兼容性改动
+- 准备发 Release tag 前（必须 CI 全绿才能 tag）
+
+**不需要等 CI 的场景**（本地验证通过即可 push，CI 异步跑）：
+- 纯 Kotlin/Compose 业务逻辑改动（ViewModel / Repository / Screen / Entity）
+- 纯测试代码改动（新增/修改测试）
+- 纯文档改动（docs/ 或 AGENTS.md）
+
+**本地验证最低标准**（push 前必须通过）：
+- `assembleDebug` SUCCESSFUL
+- `testDebugUnitTest` 全绿（若有测试改动）
+
+**Release tag 流程**：
+1. 确认本地 `assembleDebug` + `testDebugUnitTest` 全绿
+2. 确认最近一次 CI 全绿（gh run list 查看）
+3. 删除旧 orphan tag（如有）：`git push origin :refs/tags/vX.Y.Z`
+4. 打新 tag：`git tag vX.Y.Z && git push origin vX.Y.Z`
+5. 等 Release workflow 完成，下载 APK 验证
+
 ## 5. 敏感信息（不入仓库）
 
 | 信息 | 获取方式 |
