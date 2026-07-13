@@ -11,7 +11,7 @@
 |----|-----|
 | 最新 commit | `07c3a6d`（main，接通 SeedDataLoader） |
 | P0 双修 | 2 个 commit（`ff19231` CI 修复 + `07c3a6d` SeedDataLoader 接通） |
-| CI 状态 | 待 push 后验证（android.yml 触发） |
+| CI 状态 | ✅ run 29272102909 全绿（12/12 步骤，20m13s） |
 | PR | [#1](https://github.com/qbjsdsb/wenyan-android/pull/1) 已合并（KSU UI 升级 Phase 0-3） |
 | 阻塞 | 无 |
 | 详情 | [02-VERSION-MATRIX.md](02-VERSION-MATRIX.md) |
