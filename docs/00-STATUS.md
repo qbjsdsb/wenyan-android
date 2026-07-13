@@ -11,7 +11,7 @@
 |----|-----|
 | 最新 commit | `2f83ac3`（main，删除 4 个死组件） |
 | UI 统一与清理 | 2 个 commit（`ebad848` Phase 1 + `2f83ac3` Phase 2） |
-| CI 状态 | ⏳ 待推送后触发验证 |
+| CI 状态 | ✅ run 29267618339 全绿（14/14 步骤，19m36s） |
 | PR | [#1](https://github.com/qbjsdsb/wenyan-android/pull/1) 已合并（KSU UI 升级 Phase 0-3） |
 | 阻塞 | 无 |
 | 详情 | [02-VERSION-MATRIX.md](02-VERSION-MATRIX.md) |
