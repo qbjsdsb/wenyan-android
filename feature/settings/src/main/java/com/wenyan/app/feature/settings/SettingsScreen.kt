@@ -9,12 +9,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -25,12 +23,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.data.ThemeViewModel
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
-import com.wenyan.app.core.designsystem.component.SectionHeader
+import com.wenyan.app.core.designsystem.component.GroupedCard
+import com.wenyan.app.core.designsystem.component.GroupedCardDivider
+import com.wenyan.app.core.designsystem.component.GroupedCardItem
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.designsystem.theme.ColorMode
@@ -67,24 +66,26 @@ fun SettingsScreen(
                 .fillMaxWidth()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .padding(padding),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xl),
         ) {
             // 外观
-            item { SectionHeader(title = "外观") }
-
-            // 主题模式选择
             item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Spacing.lg),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                ) {
-                    Text(
-                        text = "主题模式",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
+                GroupedCard(title = "外观") {
+                    // 主题模式
+                    GroupedCardItem(
+                        title = "主题模式",
+                        subtitle = when (themeConfig.colorMode) {
+                            ColorMode.SYSTEM -> "跟随系统"
+                            ColorMode.LIGHT -> "浅色"
+                            ColorMode.DARK -> "深色"
+                        },
                     )
+                    GroupedCardDivider()
+                    // 主题模式选择 chips（在卡片内独立一行）
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         ColorMode.entries.forEach { mode ->
@@ -103,54 +104,55 @@ fun SettingsScreen(
                             )
                         }
                     }
+                    GroupedCardDivider()
+                    // AMOLED 开关
+                    GroupedCardItem(
+                        title = "AMOLED 纯黑模式",
+                        description = "深色模式下使用纯黑背景，节省 OLED 电量",
+                        trailing = {
+                            Switch(
+                                checked = themeConfig.amoledMode,
+                                onCheckedChange = { viewModel.setAmoledMode(it) },
+                            )
+                        },
+                    )
                 }
             }
 
-            // AMOLED 开关
-            item {
-                SwitchItem(
-                    title = "AMOLED 纯黑模式",
-                    description = "深色模式下使用纯黑背景，节省 OLED 电量",
-                    checked = themeConfig.amoledMode,
-                    onCheckedChange = { viewModel.setAmoledMode(it) },
-                )
-            }
-
             // 动态色彩
-            item { SectionHeader(title = "动态色彩") }
-
-            // 动态色彩开关
             item {
-                SwitchItem(
-                    title = "动态色彩",
-                    description = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        "跟随系统壁纸自动生成色彩"
-                    } else {
-                        "需要 Android 12 及以上"
-                    },
-                    checked = themeConfig.dynamicColor,
-                    onCheckedChange = { viewModel.setDynamicColor(it) },
-                    enabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
-                )
-            }
-
-            // 种子色选择（动态色彩关闭时可用）
-            if (!themeConfig.dynamicColor) {
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = Spacing.lg),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    ) {
-                        Text(
-                            text = "种子色",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
+                GroupedCard(title = "动态色彩") {
+                    GroupedCardItem(
+                        title = "动态色彩",
+                        description = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            "跟随系统壁纸自动生成色彩"
+                        } else {
+                            "需要 Android 12 及以上"
+                        },
+                        trailing = {
+                            Switch(
+                                checked = themeConfig.dynamicColor,
+                                onCheckedChange = { viewModel.setDynamicColor(it) },
+                                enabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
+                            )
+                        },
+                    )
+                    // 种子色 + 调色板风格（动态色彩关闭时显示）
+                    if (!themeConfig.dynamicColor) {
+                        GroupedCardDivider()
+                        // 种子色选择
                         Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            Text(
+                                text = "种子色",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                             val seedColors = listOf(
                                 Color(0xFF6750A4), // 紫
                                 Color(0xFF0061A4), // 蓝
@@ -173,27 +175,20 @@ fun SettingsScreen(
                                 )
                             }
                         }
-                    }
-                }
-            }
-
-            // 调色板风格
-            if (!themeConfig.dynamicColor) {
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = Spacing.lg),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    ) {
-                        Text(
-                            text = "调色板风格",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
+                        GroupedCardDivider()
+                        // 调色板风格
                         Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            Text(
+                                text = "风格",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                             WenyanPaletteStyle.entries.forEach { style ->
                                 FilterChip(
                                     selected = themeConfig.paletteStyle == style,
@@ -216,91 +211,25 @@ fun SettingsScreen(
             }
 
             // AI 服务
-            item { SectionHeader(title = "AI 服务") }
-
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "API 配置",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
+                GroupedCard(title = "AI 服务") {
+                    GroupedCardItem(
+                        title = "API 配置",
+                        subtitle = "DeepSeek / 通义 / 智谱 / 月之暗面",
+                        onClick = onNavigateToApiConfig,
                     )
-                    IconButton(onClick = onNavigateToApiConfig) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "API 配置",
-                        )
-                    }
                 }
             }
 
             // 关于
-            item { SectionHeader(title = "关于") }
-
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "版本",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        text = "v0.1.0",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                GroupedCard(title = "关于") {
+                    GroupedCardItem(
+                        title = "版本",
+                        subtitle = "v0.1.0",
                     )
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun SwitchItem(
-    title: String,
-    description: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    enabled: Boolean = true,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            enabled = enabled,
-        )
     }
 }
