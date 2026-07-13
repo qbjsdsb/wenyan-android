@@ -115,10 +115,10 @@ tools/                           # Python 管线脚本
 
 ## 7. 当前状态（2026-07-13）
 
-**✅ 无阻塞** — UI 统一与死组件清理完成，KSU 风格 UI 升级 + UI 闭环 + 死组件清理均已合并到 main。
+**✅ 无阻塞** — P0 双修完成（release.yml CI 修复 + SeedDataLoader 接通），App 从"能编译"变成"能用"。
 
-- 最新 commit：`2f83ac3`（main，删除 4 个死组件）
-- UI 统一与清理：2 个 commit（`ebad848` Phase 1 + `2f83ac3` Phase 2）
+- 最新 commit：`07c3a6d`（main，接通 SeedDataLoader）
+- P0 双修：2 个 commit（`ff19231` CI 修复 + `07c3a6d` SeedDataLoader 接通）
 - 验证：`assembleDebug` SUCCESSFUL（412 tasks）+ `testDebugUnitTest` 174 tests 0 failures
 - 详见 [docs/00-STATUS.md](docs/00-STATUS.md)
 
@@ -135,9 +135,12 @@ tools/                           # Python 管线脚本
 | KSU 风格 UI 升级 | ✅ 完成 | Phase 0-3 + CI 修复，已合并 main |
 | UI 改造闭环 | ✅ 完成 | GroupedCard 增强 + 2 Screen 重构 + 4 Preview + 15 组件测试 |
 | UI 统一与死组件清理 | ✅ 完成 | KnowledgePointDetailScreen 统一 + 删除 4 个死组件（174 tests） |
+| P0 双修 | ✅ 完成 | release.yml CI 修复 + SeedDataLoader 接通（App 启动自动导入种子数据） |
 
 ## 9. 下一步优先级
 
-1. **P0**：跑 emulator 实测 LargeFlexibleTopAppBar 滚动折叠效果（组件已就绪，缺真机视觉验证）
-2. **P1**：OCR 完成后跑知识提取管线 → 生成 seed_data.json
-3. **P2**：可选 — 用 GroupedCard 改造其他 Screen（如 ApiConfigScreen）保持视觉一致性（注意：ApiConfigScreen 的 ConfigCard 有 4 行元信息 + 2 操作按钮，GroupedCardItem API 无法承载，需先扩展组件或保留现状）
+1. **P0**：跑 emulator 实测 — 验证 SeedDataLoader 启动时导入数据（Logcat 无异常 + 各 Tab 有数据 + 重启不重复导入）+ LargeFlexibleTopAppBar 滚动折叠效果
+2. **P1**：KnowledgeViewModel 2 个 bug（filterByCategory 不筛选 + subject 显示 "TEXTBOOK_NATIVE" 而非"古代文学"）
+3. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+4. **P3**：可选 — 用 GroupedCard 改造其他 Screen（如 ApiConfigScreen）保持视觉一致性（注意：ApiConfigScreen 的 ConfigCard 有 4 行元信息 + 2 操作按钮，GroupedCardItem API 无法承载，需先扩展组件或保留现状）
+5. **P4**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）

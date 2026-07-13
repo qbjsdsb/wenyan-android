@@ -354,3 +354,70 @@
    $JAVA_HOME/bin/java -Dorg.gradle.daemon=false -cp /root/.local/share/mise/installs/gradle/8.14.4/gradle-8.14.4/lib/gradle-launcher-8.14.4.jar org.gradle.launcher.GradleMain :app:assembleDebug --no-daemon 2>&1 | tail -5
    ```
 8. **开始工作**：根据 [00-STATUS.md](00-STATUS.md) 的"下一步优先级"选择任务
+
+---
+
+## Session 2026-07-13（第三条）：P0 双修 — SeedDataLoader 接通 + release.yml CI 修复
+
+### 目标
+
+执行 [docs/plans/p0-seed-loader-ci-fix.md](plans/p0-seed-loader-ci-fix.md) — 修复 release.yml 的 2 个 CI bug（避免下次发布失败）+ 接通 SeedDataLoader 调用点（让 App 从空壳 UI 变成可用工具）。
+
+### 深度调查发现的关键约束
+
+计划制定阶段经过多轮深度审查，发现并修订了 3 个关键问题：
+
+1. **SupervisorJob 不能防崩溃（CRITICAL 修正）**：原计划误以为 `SupervisorJob` 能防止 App 崩溃。经 Kotlin 官方文档核实：`SupervisorJob` 只阻断异常向父 Job 传播，**不阻止异常本身被抛出**。`launch` 根协程的未捕获异常会经 `Thread.uncaughtExceptionHandler` 处理，Android 默认是 `RuntimeInit$KillApplicationHandler`（崩溃）。**修订**：必须显式加 `CoroutineExceptionHandler`，捕获异常并 Log.e，降级为 EmptyState。
+
+2. **Hilt 注入链完整性核实**：SeedDataLoader 有 9 个构造依赖（Context + 7 DAO + GraphRepository）。逐一核实可注入性：7 DAO 由 `DatabaseModule` `@Provides`，GraphRepository 由 `DataModule` `@Binds` 到 `GraphRepositoryImpl @Inject constructor`，Context 由 `@ApplicationContext` 提供。**结论**：全部可注入，无需补充 @Provides/@Binds。
+
+3. **属性初始化顺序**：`exceptionHandler`（val）必须在 `applicationScope`（val 引用 exceptionHandler）之前声明。Kotlin 按声明顺序初始化属性，反过来会 NPE。最终代码中 exceptionHandler 在前，applicationScope 在后，安全。
+
+### 已知限制（本次接受，记录供后续优化）
+
+1. **强杀重启可能丢失复习数据**：`MemoRecordEntity` 外键 `onDelete = CASCADE` + DAO 用 `OnConflictStrategy.REPLACE`。首次导入中途被强杀时，下次启动 REPLACE 会先 DELETE（触发 CASCADE 删 memo_records）再 INSERT，覆盖用户复习进度。MVP 阶段无真实数据可丢失，接受。
+2. **importToDatabase 无 @Transaction**：7 步导入无外层事务，中途 OOM 会留部分数据。但用 REPLACE，下次启动覆盖，风险可控。
+3. **mapNotNull 静默跳过**：subject 字段不匹配的知识点/真题会被跳过，但仍执行 `markInitialized()`。当前 stage2-sample 数据匹配，无影响。
+4. **release.yml "Verify keystore" 隐藏 bug（Line 63-70，本次不动）**：该步骤无条件执行 `keytool -list`，但前一步在 `KEYSTORE_BASE64` 未配置时 `exit 0` 跳过解码。结果 Verify 步骤对不存在的文件执行 keytool 失败。当前仓库已配置 Secrets，不会触发；修复需重构 keystore 处理逻辑，超出 P0 范围。记录到 `03-FAILED-ATTEMPTS.md` 供后续修复。
+
+### 完成内容
+
+**Phase 1：修复 release.yml CI bug**（commit `ff19231`）
+- Line 46：`gradle-version: '8.7'` → `'8.14.4'`（AGENTS.md 硬约束：旧版 8.7 在解析 KSP 2.3.x 时有 bug）
+- Line 81：`gradle test` → `gradle testDebugUnitTest`（AGENTS.md 硬约束：debugImplementation 依赖只在 debug 变体可用）
+- yaml 语法验证通过（PyYAML safe_load）
+
+**Phase 2：接通 SeedDataLoader**（commit `07c3a6d`）
+- `WenyanApplication.kt` 注入 `SeedDataLoader`（`@Inject lateinit var`）
+- `onCreate` 用 `CoroutineScope(SupervisorJob() + Dispatchers.IO + exceptionHandler).launch` 异步调用 `ensureSeedDataLoaded()`
+- `CoroutineExceptionHandler` 捕获异常并 `Log.e`，避免 App 崩溃
+- 不阻塞 onCreate：各 ViewModel 用 `stateIn(WhileSubscribed(5000))` 订阅，数据加载完后自动刷新
+
+**Phase 3：验证 + 文档**
+- `:app:compileDebugKotlin` SUCCESSFUL（`:app:kspDebugKotlin` 执行，证明 Hilt 代码生成成功）
+- `assembleDebug` SUCCESSFUL（412 tasks）
+- `testDebugUnitTest` SUCCESSFUL（174 tests 0 failures，无回归）
+- 更新文档：00-STATUS.md、SESSION_LOG.md、AGENTS.md、plans/p0-seed-loader-ci-fix.md
+
+### 环境问题
+
+- **沙箱 Java 版本切换**：会话开始时 `JAVA_HOME` 指向 Java 25.0.2，但 Kotlin 编译器的 `JavaVersion.parse` 无法解析 "25.0.2"（抛 `IllegalArgumentException`）。切换到 Java 17.0.2 后正常。**记录**：本项目要求 Java 17（AGP 8.6.0 + Kotlin 2.3.10 兼容），新沙箱需 `export JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2`。
+
+### 关键技术决策
+
+1. **CoroutineExceptionHandler 而非 try-catch** — `launch` 根协程的异常无法用 try-catch 捕获（异常发生在 lambda 内部，但 launch 不向调用者传播）。`CoroutineExceptionHandler` 是 Kotlin 协程官方的根协程异常处理机制。
+2. **独立 CoroutineScope 而非 GlobalScope** — `GlobalScope` 引发 lint 警告且生命周期不受控。Application 进程级单例，用独立 CoroutineScope 即可。
+3. **Dispatchers.IO** — SeedDataLoader 涉及 assets 读取 + Room 数据库写入，IO 密集型。
+4. **不阻塞 onCreate** — 异步加载，App 启动流畅。各 Screen 先显示 loading/EmptyState，数据加载完后 Flow 自动刷新。
+
+### commit 列表
+
+- `ff19231` — Phase 1: release.yml CI 修复（gradle-version 8.7→8.14.4, gradle test→testDebugUnitTest）
+- `07c3a6d` — Phase 2: 接通 SeedDataLoader（WenyanApplication 注入 + onCreate 异步调用）
+- 本次 — Phase 3: 文档更新
+
+### 下次继续
+
+- 跑 emulator 实测 SeedDataLoader（P0）：Logcat 无异常 + 各 Tab 有数据 + 重启不重复导入
+- KnowledgeViewModel 2 个 bug（P1）：filterByCategory 不筛选 + subject 显示 "TEXTBOOK_NATIVE"
+- OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（P2）

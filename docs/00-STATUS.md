@@ -5,13 +5,13 @@
 
 ## ✅ 当前状态
 
-**UI 统一与死组件清理完成** — KSU 风格 UI 升级 + UI 闭环 + 死组件清理全部完成
+**P0 双修完成** — release.yml CI bug 修复 + SeedDataLoader 接通（App 从"能编译"变成"能用"）
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `2f83ac3`（main，删除 4 个死组件） |
-| UI 统一与清理 | 2 个 commit（`ebad848` Phase 1 + `2f83ac3` Phase 2） |
-| CI 状态 | ✅ run 29267618339 全绿（14/14 步骤，19m36s） |
+| 最新 commit | `07c3a6d`（main，接通 SeedDataLoader） |
+| P0 双修 | 2 个 commit（`ff19231` CI 修复 + `07c3a6d` SeedDataLoader 接通） |
+| CI 状态 | 待 push 后验证（android.yml 触发） |
 | PR | [#1](https://github.com/qbjsdsb/wenyan-android/pull/1) 已合并（KSU UI 升级 Phase 0-3） |
 | 阻塞 | 无 |
 | 详情 | [02-VERSION-MATRIX.md](02-VERSION-MATRIX.md) |
@@ -70,9 +70,11 @@
 
 ## 🎯 下一步优先级
 
-1. **P0**：跑 emulator 实测 LargeFlexibleTopAppBar 滚动折叠效果（组件已就绪，缺真机/模拟器视觉验证）
-2. **P1**：OCR 完成后跑知识提取管线 → 生成 seed_data.json
-3. **P2**：可选 — 用 GroupedCard 改造其他 Screen（如 ApiConfigScreen）保持视觉一致性
+1. **P0**：跑 emulator 实测 — 验证 SeedDataLoader 启动时导入数据（Logcat 无异常 + 各 Tab 有数据显示 + 重启不重复导入）+ LargeFlexibleTopAppBar 滚动折叠效果
+2. **P1**：KnowledgeViewModel 2 个 bug（filterByCategory 不筛选 + subject 显示 "TEXTBOOK_NATIVE" 而非"古代文学"）
+3. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+4. **P3**：可选 — 用 GroupedCard 改造其他 Screen（如 ApiConfigScreen）保持视觉一致性
+5. **P4**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
 
 ## 📦 已交付
 
@@ -81,3 +83,4 @@
 - KSU 风格 UI 升级 Phase 0-3（4 个组件 + 9 个 Screen 迁移，已合并 main + CI 全绿）
 - UI 改造闭环 Phase 1-5（GroupedCard 增强 + 2 Screen 重构 + 4 Preview + 15 个组件测试）
 - UI 统一与死组件清理（KnowledgePointDetailScreen 统一 + 删除 4 个死组件，174 tests 0 failures）
+- P0 双修（release.yml CI 修复 + SeedDataLoader 接通，App 启动自动导入 stage2-sample 数据）

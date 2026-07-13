@@ -1,5 +1,12 @@
 # P0 双修：SeedDataLoader 接通 + release.yml CI 修复 实施计划
 
+> **状态：✅ 已完成（2026-07-13）**
+>
+> - Phase 1 commit `ff19231`：release.yml Line 46 + Line 81 修复
+> - Phase 2 commit `07c3a6d`：WenyanApplication 注入 SeedDataLoader + onCreate 异步调用
+> - 验证：`assembleDebug` SUCCESSFUL（412 tasks）+ `testDebugUnitTest` 174 tests 0 failures
+> - 详见 [SESSION_LOG.md](../SESSION_LOG.md) Session 2026-07-13（第三条）
+
 > **For agentic workers:** 本计划基于 writing-plans skill 编写。Step 使用 `- [ ]` 复选框跟踪进度。每个 Task 应独立可执行、可验证、可回滚。
 
 **Goal:** 修复 release.yml 的 2 个 CI bug（避免下次发布失败）+ 接通 SeedDataLoader 调用点（让 App 从空壳 UI 变成可用工具，可用 stage2-sample 数据立即验证数据流）。
