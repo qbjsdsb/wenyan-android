@@ -1,6 +1,11 @@
 package com.wenyan.app.feature.settings
 
 import android.os.Build
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -138,72 +143,78 @@ fun SettingsScreen(
                         },
                     )
                     // 种子色 + 调色板风格（动态色彩关闭时显示）
-                    if (!themeConfig.dynamicColor) {
-                        GroupedCardDivider()
-                        // 种子色选择
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = "种子色",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            val seedColors = listOf(
-                                Color(0xFF6750A4), // 紫
-                                Color(0xFF0061A4), // 蓝
-                                Color(0xFF006C4C), // 绿
-                                Color(0xFF9C4146), // 红
-                                Color(0xFF7C5800), // 棕
-                            )
-                            seedColors.forEach { color ->
-                                FilterChip(
-                                    selected = themeConfig.seedColor == color,
-                                    onClick = { viewModel.setSeedColor(color) },
-                                    label = {},
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Default.Palette,
-                                            contentDescription = null,
-                                            tint = color,
-                                        )
-                                    },
+                    AnimatedVisibility(
+                        visible = !themeConfig.dynamicColor,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically(),
+                    ) {
+                        Column {
+                            GroupedCardDivider()
+                            // 种子色选择
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = "种子色",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
+                                val seedColors = listOf(
+                                    Color(0xFF6750A4), // 紫
+                                    Color(0xFF0061A4), // 蓝
+                                    Color(0xFF006C4C), // 绿
+                                    Color(0xFF9C4146), // 红
+                                    Color(0xFF7C5800), // 棕
+                                )
+                                seedColors.forEach { color ->
+                                    FilterChip(
+                                        selected = themeConfig.seedColor == color,
+                                        onClick = { viewModel.setSeedColor(color) },
+                                        label = {},
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Default.Palette,
+                                                contentDescription = null,
+                                                tint = color,
+                                            )
+                                        },
+                                    )
+                                }
                             }
-                        }
-                        GroupedCardDivider()
-                        // 调色板风格
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = "风格",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            WenyanPaletteStyle.entries.forEach { style ->
-                                FilterChip(
-                                    selected = themeConfig.paletteStyle == style,
-                                    onClick = { viewModel.setPaletteStyle(style) },
-                                    label = {
-                                        Text(
-                                            text = when (style) {
-                                                WenyanPaletteStyle.TONAL_SPOT -> "Tonal Spot"
-                                                WenyanPaletteStyle.NEUTRAL -> "Neutral"
-                                                WenyanPaletteStyle.VIBRANT -> "Vibrant"
-                                                WenyanPaletteStyle.EXPRESSIVE -> "Expressive"
-                                            },
-                                        )
-                                    },
+                            GroupedCardDivider()
+                            // 调色板风格
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = "风格",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
+                                WenyanPaletteStyle.entries.forEach { style ->
+                                    FilterChip(
+                                        selected = themeConfig.paletteStyle == style,
+                                        onClick = { viewModel.setPaletteStyle(style) },
+                                        label = {
+                                            Text(
+                                                text = when (style) {
+                                                    WenyanPaletteStyle.TONAL_SPOT -> "Tonal Spot"
+                                                    WenyanPaletteStyle.NEUTRAL -> "Neutral"
+                                                    WenyanPaletteStyle.VIBRANT -> "Vibrant"
+                                                    WenyanPaletteStyle.EXPRESSIVE -> "Expressive"
+                                                },
+                                            )
+                                        },
+                                    )
+                                }
                             }
                         }
                     }

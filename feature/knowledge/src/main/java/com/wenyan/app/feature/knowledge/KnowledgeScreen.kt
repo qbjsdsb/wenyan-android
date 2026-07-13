@@ -154,8 +154,12 @@ private fun KnowledgeList(
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        items(items) { item ->
-            KnowledgePointCard(item, onClick = { onNavigateToDetail(item.id) })
+        items(items = items, key = { it.id }) { item ->
+            KnowledgePointCard(
+                item = item,
+                onClick = { onNavigateToDetail(item.id) },
+                modifier = Modifier.animateItem(),
+            )
         }
     }
 }
@@ -165,9 +169,10 @@ private fun KnowledgeList(
 private fun KnowledgePointCard(
     item: KnowledgePointItem,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     TonalCard(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
     ) {

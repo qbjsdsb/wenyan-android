@@ -192,13 +192,14 @@ private fun QuestionList(
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        items(questions) { question ->
+        items(items = questions, key = { it.id }) { question ->
             QuestionCard(
                 question = question,
                 isExpanded = question.id in expandedIds,
                 onToggleExpanded = { onToggleExpanded(question.id) },
                 onNavigateToAiAssistant = onNavigateToAiAssistant,
                 onNavigateToDetail = onNavigateToDetail,
+                modifier = Modifier.animateItem(),
             )
         }
     }
@@ -227,8 +228,9 @@ private fun QuestionCard(
     onToggleExpanded: () -> Unit,
     onNavigateToAiAssistant: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    TonalCard(modifier = Modifier.fillMaxWidth()) {
+    TonalCard(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(Spacing.lg)) {
             // 1. 顶部信息行：年份 + 科目显示名称
             Text(

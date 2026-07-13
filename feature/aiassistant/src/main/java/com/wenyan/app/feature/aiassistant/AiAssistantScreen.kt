@@ -182,8 +182,8 @@ fun AiAssistantScreen(
                         contentPadding = PaddingValues(Spacing.lg),
                         verticalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
-                        items(uiState.messages) { message ->
-                            MessageBubble(message)
+                        items(items = uiState.messages, key = { it.id }) { message ->
+                            MessageBubble(message, modifier = Modifier.animateItem())
                         }
                         if (uiState.isLoading) {
                             item {
@@ -244,13 +244,16 @@ private fun InputBar(
 // ── 消息气泡 ────────────────────────────────────────────────────
 
 @Composable
-private fun MessageBubble(message: AiMessage) {
+private fun MessageBubble(
+    message: AiMessage,
+    modifier: Modifier = Modifier,
+) {
     val isUser = message.role == AiRole.USER
     val colorScheme = MaterialTheme.colorScheme
     val containerColor = if (isUser) colorScheme.primaryContainer else colorScheme.surfaceContainerHigh
     val contentColor = if (isUser) colorScheme.onPrimaryContainer else colorScheme.onSurface
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
     ) {
         Row(

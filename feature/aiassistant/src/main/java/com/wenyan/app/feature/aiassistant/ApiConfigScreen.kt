@@ -223,6 +223,7 @@ private fun ConfigList(
                 onSetCurrent = { onSetCurrent(config.id) },
                 onEdit = { onEdit(config) },
                 onDelete = { onDelete(config) },
+                modifier = Modifier.animateItem(),
             )
         }
     }
@@ -235,11 +236,12 @@ private fun ConfigCard(
     onSetCurrent: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     TonalCard(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onSetCurrent), // 点击卡片设为当前
+            .clickable(onClick = onSetCurrent),
     ) {
         Column(
             modifier = Modifier
