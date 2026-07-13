@@ -1,5 +1,15 @@
 # P1：KnowledgeViewModel 科目筛选 + 科目名显示修复 实施计划
 
+> **状态：✅ 已完成（2026-07-13）**
+>
+> - commit `d1b9cd5`：DAO JOIN + ViewModel 修复 + 10 测试 + 2 Fake 补全
+> - 验证：`assembleDebug` SUCCESSFUL + `testDebugUnitTest` 184 tests 0 failures（基线 174 + 新增 10）
+> - 详见 [SESSION_LOG.md](../SESSION_LOG.md) Session 2026-07-13（第四条）
+>
+> **执行中发现并修复的 2 个计划外问题：**
+> 1. Room JOIN POJO 不自动转换 snake_case → camelCase（计划假设错误，加 @ColumnInfo 显式映射修复）
+> 2. 2 个 FakeKnowledgePointDao（core/ai + feature/aiassistant）未实现新方法（补全默认实现修复）
+
 > **For agentic workers:** 本计划基于 writing-plans skill 编写。Step 使用 `- [ ]` 复选框跟踪进度。每个 Task 应独立可执行、可验证、可回滚。
 
 **Goal:** 修复 KnowledgeViewModel 的 2 个 bug（filterByCategory 不筛选 + subject 显示 "TEXTBOOK_NATIVE"），让知识点列表的分类标签真正生效、卡片显示真实科目名（"中国古代文学"等）。

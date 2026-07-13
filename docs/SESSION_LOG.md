@@ -421,3 +421,91 @@
 - 跑 emulator 实测 SeedDataLoader（P0）：Logcat 无异常 + 各 Tab 有数据 + 重启不重复导入
 - KnowledgeViewModel 2 个 bug（P1）：filterByCategory 不筛选 + subject 显示 "TEXTBOOK_NATIVE"
 - OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（P2）
+
+---
+
+## Session 2026-07-13（第四条）：P1 修复 — KnowledgeViewModel 科目筛选 + 科目名显示
+
+### 目标
+
+执行 [docs/plans/p1-knowledge-viewmap-subject-fix.md](plans/p1-knowledge-viewmap-subject-fix.md) — 修复 KnowledgeViewModel 的 2 个 bug：filterByCategory 不筛选 + subject 显示 "TEXTBOOK_NATIVE"。
+
+### 深度调查发现的关键事实
+
+1. **数据模型断层**：KnowledgePointEntity 无 subjectId 字段，唯一关联路径是 `chapterId → ChapterEntity.subjectId → SubjectEntity.name`，但整条通道上没有任何 DAO JOIN 查询、@Relation、KnowledgePointWith* 数据类实现它。
+2. **三套互不相通的"科目"机制**：SubjectEntity（subjects 表，孤儿表）/ ExamCodeHistoryEntity + ExamCodeResolver（仅 Quiz 模块用）/ KnowledgeCategory 枚举（仅 Knowledge 列表页 FilterChip 标签，筛选逻辑空壳）。
+3. **seed_data.json 科目名是全名**（"中国古代文学"），枚举 label 是简称（"古代文学"），4 个中 2 个不匹配。用 `subjectName.contains(keyword)` 匹配兼容两者。
+4. **SubjectEntity.shortName 是死字段**且 `SeedDataLoader.kt:107` 的 `take(2)` 实现错误（"中国古代文学"→"中国"而非"古文"）。本次不动（YAGNI）。
+5. **KnowledgeViewModel 无测试**（test/ 目录不存在），修复时补测试。
+
+### 计划打磨中发现并修复的问题（3 轮深度审查）
+
+| # | 严重度 | 问题 | 修复 |
+|---|--------|------|------|
+| 1 | CRITICAL | Task 4 和 Task 5 对 filterByCategory/toUiItem 位置说法矛盾 | Task 4 一步到位包含 companion object 完整代码 |
+| 2 | CRITICAL | 测试代码用 Google Truth，但项目无 truth 依赖 | 全部改为 JUnit 原生断言 |
+| 3 | Minor | 测试代码 `"..." .repeat(5)` 有空格，Kotlin 语法错误 | 改为 `"...".repeat(5)` |
+| 4 | 一致性 | 文件结构表包含 build.gradle.kts，但实际已有依赖 | 删除该行 |
+| 5 | 设计混乱 | Task 5 "配套改动"与 Task 4 重复 | 改为"无需再改 ViewModel" |
+| 6 | 测试不足 | 缺少边界场景（空列表/不匹配/summary 有值不截断） | 新增 3 个测试（7→10） |
+| 7 | 架构思考未记录 | getVerifiedWithSubject 放在 ReviewRepository 职责不完美 | 记录为已知限制 #6 |
+| 8 | INNER JOIN 风险未记录 | 数据异常时知识点被过滤掉 | 记录为已知限制 #5 |
+| 9 | 断言不够严格 | summary 回退测试只验证长度 | 加 `assertEquals(longCoreConclusion.take(100), ...)` |
+
+### 执行中发现并修复的问题
+
+| # | 问题 | 修复 |
+|---|------|------|
+| 10 | **Room JOIN POJO 不自动转换 snake_case → camelCase**（计划假设错误） | `KnowledgePointWithSubject.subjectName` 加 `@ColumnInfo(name = "subject_name")` 显式映射 |
+| 11 | **2 个 FakeKnowledgePointDao 未实现新方法**（core/ai + feature/aiassistant） | 补全 `observeVerifiedWithSubject` 默认实现（`flowOf(emptyList())`） |
+
+### 完成内容
+
+**Phase 1：DAO 层** — 新增 JOIN 查询
+- 新建 `KnowledgePointWithSubject.kt`（@Embedded + @ColumnInfo）
+- `KnowledgePointDao` 新增 `observeVerifiedWithSubject()`（INNER JOIN chapters + subjects）
+
+**Phase 2：Repository 层** — 暴露新方法
+- `ReviewRepository` 新增 `getVerifiedWithSubject()` 委托方法
+
+**Phase 3：ViewModel 层** — 修复筛选 + 显示
+- 数据源从 `getAllVerifiedKnowledgePoints()` 改为 `getVerifiedWithSubject()`
+- `filterByCategory` 从空壳改为 `points.filter { it.subjectName.contains(category.keyword) }`
+- `toUiItem` 的 `subject` 从 `contentSource` 改为 `subjectName`
+- `KnowledgeCategory` 枚举新增 `keyword` 字段
+- `filterByCategory` + `toUiItem` 移到 companion object（internal 可见性）供测试调用
+
+**Phase 4：测试** — 新增 KnowledgeViewModelTest
+- 10 个测试：5 正常路径（ALL/ANCIENT/MODERN/FOREIGN/THEORY）+ 4 边界（空列表/不匹配/summary有值/summary为null）+ 1 回归（subject 不取 contentSource）
+
+**Phase 5：全量验证** — `assembleDebug` SUCCESSFUL + `testDebugUnitTest` 184 tests 0 failures（基线 174 + 新增 10）
+
+**Phase 6：文档 + Push** — 更新 4 个文档（00-STATUS、SESSION_LOG、AGENTS、plan）
+
+### commit
+
+- `d1b9cd5` — fix(knowledge): 修复科目筛选不生效 + subject 显示 TEXTBOOK_NATIVE（8 files, 292 insertions, 32 deletions）
+
+### 关键技术决策
+
+1. **DAO JOIN 而非 @Relation 或 @Embedded**：@Relation 触发 N+1 查询，@Embedded 不能跨表，@Query JOIN 一次查询完成最高效。
+2. **INNER JOIN 而非 LEFT JOIN**：数据异常时强制数据完整性（不显示无科目的知识点），MVP 阶段 SeedDataLoader 已保证外键完整性，风险极低。
+3. **contains 匹配而非精确匹配**：兼容 seed_data 全名与枚举简称，当前 4 科目无歧义。
+4. **新增方法而非修改现有**：`getAllVerifiedKnowledgePoints` 保留向后兼容（虽已成事实死代码，记录到 P5 重构）。
+5. **companion object 而非提取 mapper 类**：为可测试性的最小妥协，YAGNI。
+
+### 已知限制（本次接受，记录供后续优化）
+
+1. **KnowledgePointEntity 无 subjectId 字段**：通过 JOIN 绕过，不改表结构（避免数据库迁移）。
+2. **SubjectEntity.shortName 死字段**：本次不动（YAGNI）。
+3. **contains 匹配的脆弱性**：若未来出现"古代文论"会误匹配。当前 4 科目无歧义。
+4. **filterByCategory + toUiItem 移到 companion object**：更优方案是提取到 KnowledgePointMapper 类，YAGNI。
+5. **INNER JOIN 数据完整性风险**：若 chapterId 指向不存在的 chapter，知识点会被过滤掉。MVP 阶段无用户添加知识点功能，风险极低。
+6. **架构职责不完美（既有问题）**：`getVerifiedWithSubject()` 放在 ReviewRepository 职责不完美——知识点浏览更应在 KnowledgeRepository。但当前 `getAllVerifiedKnowledgePoints()` 也在 ReviewRepository，是既有设计问题。本次不改（P1 是修 bug，不是重构）。
+7. **ReviewRepository.getAllVerifiedKnowledgePoints 将变成事实上的死代码**：本次不删除（保留 API 向后兼容），记录到 P5 重构。
+
+### 下次继续
+
+- 跑 emulator 实测（P0）：SeedDataLoader + 知识点分类标签筛选 + LargeFlexibleTopAppBar
+- OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（P2）
+- 架构重构（P5）：ReviewRepository 死代码清理 + getVerifiedWithSubject 迁移到 KnowledgeRepository

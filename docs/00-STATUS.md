@@ -5,13 +5,13 @@
 
 ## ✅ 当前状态
 
-**P0 双修完成** — release.yml CI bug 修复 + SeedDataLoader 接通（App 从"能编译"变成"能用"）
+**P1 修复完成** — KnowledgeViewModel 科目筛选 + 科目名显示修复（分类标签生效 + 卡片显示真实科目名）
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `07c3a6d`（main，接通 SeedDataLoader） |
-| P0 双修 | 2 个 commit（`ff19231` CI 修复 + `07c3a6d` SeedDataLoader 接通） |
-| CI 状态 | ✅ run 29272102909 全绿（12/12 步骤，20m13s） |
+| 最新 commit | `d1b9cd5`（main，修复 KnowledgeViewModel 2 个 bug） |
+| P1 修复 | 1 个 commit（`d1b9cd5` DAO JOIN + ViewModel 修复 + 10 测试） |
+| CI 状态 | 待 push 后验证 |
 | PR | [#1](https://github.com/qbjsdsb/wenyan-android/pull/1) 已合并（KSU UI 升级 Phase 0-3） |
 | 阻塞 | 无 |
 | 详情 | [02-VERSION-MATRIX.md](02-VERSION-MATRIX.md) |
@@ -70,11 +70,11 @@
 
 ## 🎯 下一步优先级
 
-1. **P0**：跑 emulator 实测 — 验证 SeedDataLoader 启动时导入数据（Logcat 无异常 + 各 Tab 有数据显示 + 重启不重复导入）+ LargeFlexibleTopAppBar 滚动折叠效果
-2. **P1**：KnowledgeViewModel 2 个 bug（filterByCategory 不筛选 + subject 显示 "TEXTBOOK_NATIVE" 而非"古代文学"）
-3. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
-4. **P3**：可选 — 用 GroupedCard 改造其他 Screen（如 ApiConfigScreen）保持视觉一致性
-5. **P4**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
+1. **P0**：跑 emulator 实测 — 验证 SeedDataLoader 启动时导入数据（Logcat 无异常 + 各 Tab 有数据 + 重启不重复导入）+ LargeFlexibleTopAppBar 滚动折叠效果 + 知识点分类标签筛选生效
+2. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+3. **P3**：可选 — 用 GroupedCard 改造其他 Screen（如 ApiConfigScreen）保持视觉一致性
+4. **P4**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
+5. **P5**：架构重构 — ReviewRepository.getAllVerifiedKnowledgePoints 已成事实死代码；getVerifiedWithSubject 职责应在 KnowledgeRepository（详见 SESSION_LOG 第三条/第四条）
 
 ## 📦 已交付
 
@@ -84,3 +84,4 @@
 - UI 改造闭环 Phase 1-5（GroupedCard 增强 + 2 Screen 重构 + 4 Preview + 15 个组件测试）
 - UI 统一与死组件清理（KnowledgePointDetailScreen 统一 + 删除 4 个死组件，174 tests 0 failures）
 - P0 双修（release.yml CI 修复 + SeedDataLoader 接通，App 启动自动导入 stage2-sample 数据）
+- P1 修复（KnowledgeViewModel 科目筛选 + 科目名显示修复，DAO JOIN + 10 测试，184 tests 0 failures）
