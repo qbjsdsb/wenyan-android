@@ -1,6 +1,9 @@
 package com.wenyan.app.feature.quiz
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -106,31 +109,42 @@ fun QuizScreen(
                 onYearSelected = viewModel::selectYear,
             )
 
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
+            Crossfade(
+                targetState = uiState.isLoading to uiState.questions.isEmpty(),
+                animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
+                label = "quiz_state",
+                modifier = Modifier.fillMaxSize(),
+            ) { (isLoading, isEmpty) ->
+                when {
+                    isLoading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    isEmpty -> {
+                        EmptyState(
+                            icon = Icons.Filled.Inbox,
+                            title = if (uiState.selectedYear == null) {
+                                "请选择年份查看真题"
+                            } else {
+                                "该年份暂无真题数据"
+                            },
+                        )
+                    }
+                    else -> {
+                        QuestionList(
+                            questions = uiState.questions,
+                            expandedIds = expandedIds,
+                            onToggleExpanded = viewModel::toggleExpanded,
+                            onNavigateToAiAssistant = onNavigateToAiAssistant,
+                            onNavigateToDetail = onNavigateToDetail,
+                            contentPadding = PaddingValues(Spacing.lg),
+                        )
+                    }
                 }
-            } else if (uiState.questions.isEmpty()) {
-                EmptyState(
-                    icon = Icons.Filled.Inbox,
-                    title = if (uiState.selectedYear == null) {
-                        "请选择年份查看真题"
-                    } else {
-                        "该年份暂无真题数据"
-                    },
-                )
-            } else {
-                QuestionList(
-                    questions = uiState.questions,
-                    expandedIds = expandedIds,
-                    onToggleExpanded = viewModel::toggleExpanded,
-                    onNavigateToAiAssistant = onNavigateToAiAssistant,
-                    onNavigateToDetail = onNavigateToDetail,
-                    contentPadding = PaddingValues(Spacing.lg),
-                )
             }
         }
     }

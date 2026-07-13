@@ -1,5 +1,8 @@
 package com.wenyan.app.feature.graph
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -95,38 +98,45 @@ fun GraphScreen(
                     .fillMaxWidth()
                     .weight(1f),
             ) {
-                when {
-                    uiState.isLoading -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircularProgressIndicator()
+                Crossfade(
+                    targetState = uiState.isLoading to uiState.nodes.isEmpty(),
+                    animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
+                    label = "graph_state",
+                    modifier = Modifier.fillMaxSize(),
+                ) { (isLoading, isEmpty) ->
+                    when {
+                        isLoading -> {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                CircularProgressIndicator()
+                            }
                         }
-                    }
-                    uiState.nodes.isEmpty() -> {
-                        EmptyState(
-                            icon = Icons.Filled.Inbox,
-                            title = "暂无图谱数据，请先导入知识点",
-                        )
-                    }
-                    else -> {
-                        GraphCanvas(
-                            nodes = uiState.nodes,
-                            edges = uiState.edges,
-                            onNodeClick = { nodeId ->
-                                // 阶段5：Snackbar 提示；后续 5.3 接通详情页跳转
-                                val node = uiState.nodes.find { it.id == nodeId }
-                                val message = if (node != null) {
-                                    "${node.label}（R=%.2f）".format(node.retrievability)
-                                } else {
-                                    "未知节点"
-                                }
-                                scope.launch {
-                                    snackbarHostState.showSnackbar(message)
-                                }
-                            },
-                        )
+                        isEmpty -> {
+                            EmptyState(
+                                icon = Icons.Filled.Inbox,
+                                title = "暂无图谱数据，请先导入知识点",
+                            )
+                        }
+                        else -> {
+                            GraphCanvas(
+                                nodes = uiState.nodes,
+                                edges = uiState.edges,
+                                onNodeClick = { nodeId ->
+                                    // 阶段5：Snackbar 提示；后续 5.3 接通详情页跳转
+                                    val node = uiState.nodes.find { it.id == nodeId }
+                                    val message = if (node != null) {
+                                        "${node.label}（R=%.2f）".format(node.retrievability)
+                                    } else {
+                                        "未知节点"
+                                    }
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar(message)
+                                    }
+                                },
+                            )
+                        }
                     }
                 }
             }

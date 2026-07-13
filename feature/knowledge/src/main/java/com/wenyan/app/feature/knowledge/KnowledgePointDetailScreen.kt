@@ -1,5 +1,8 @@
 package com.wenyan.app.feature.knowledge
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -87,69 +90,77 @@ fun KnowledgePointDetailScreen(
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .padding(innerPadding),
         ) {
-            when {
-                uiState.isLoading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator()
+            Crossfade(
+                targetState = uiState.isLoading to (uiState.notFound || uiState.point == null),
+                animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
+                label = "knowledge_detail_state",
+                modifier = Modifier.fillMaxSize(),
+            ) { (isLoading, isNotFound) ->
+                when {
+                    isLoading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
-                }
-                uiState.notFound || uiState.point == null -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = "知识点不存在",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                    isNotFound -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = "知识点不存在",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
-                }
-                else -> {
-                    val point = uiState.point!!
-                    val scrollState = rememberScrollState()
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(scrollState)
-                            .padding(Spacing.lg),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.lg),
-                    ) {
-                        // ── 标题区 ──
-                        HeaderSection(point)
+                    else -> {
+                        uiState.point?.let { point ->
+                            val scrollState = rememberScrollState()
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(scrollState)
+                                    .padding(Spacing.lg),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+                            ) {
+                                // ── 标题区 ──
+                                HeaderSection(point)
 
-                        // ── 摘要 ──
-                        point.summary?.takeIf { it.isNotBlank() }?.let { summary ->
-                            GroupedCard(title = "摘要") {
-                                Text(
-                                    text = summary,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.padding(
-                                        start = Spacing.lg,
-                                        end = Spacing.lg,
-                                        top = Spacing.md,
-                                        bottom = Spacing.md,
-                                    ),
+                                // ── 摘要 ──
+                                point.summary?.takeIf { it.isNotBlank() }?.let { summary ->
+                                    GroupedCard(title = "摘要") {
+                                        Text(
+                                            text = summary,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.padding(
+                                                start = Spacing.lg,
+                                                end = Spacing.lg,
+                                                top = Spacing.md,
+                                                bottom = Spacing.md,
+                                            ),
+                                        )
+                                    }
+                                }
+
+                                // ── 多教材对照 ──
+                                MultiPerspectiveSection(point)
+
+                                // ── 来源溯源 ──
+                                if (uiState.sources.isNotEmpty()) {
+                                    SourcesSection(uiState.sources)
+                                }
+
+                                // ── 关联知识点 ──
+                                RelatedPointsSection(
+                                    detail = uiState.detail,
+                                    onNavigateToDetail = onNavigateToDetail,
                                 )
                             }
                         }
-
-                        // ── 多教材对照 ──
-                        MultiPerspectiveSection(point)
-
-                        // ── 来源溯源 ──
-                        if (uiState.sources.isNotEmpty()) {
-                            SourcesSection(uiState.sources)
-                        }
-
-                        // ── 关联知识点 ──
-                        RelatedPointsSection(
-                            detail = uiState.detail,
-                            onNavigateToDetail = onNavigateToDetail,
-                        )
                     }
                 }
             }

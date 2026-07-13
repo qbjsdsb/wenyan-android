@@ -1,5 +1,8 @@
 package com.wenyan.app.feature.aiassistant
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -112,36 +115,43 @@ fun ApiConfigScreen(
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .padding(innerPadding),
         ) {
-            when {
-                uiState.isLoading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator()
+            Crossfade(
+                targetState = uiState.isLoading to uiState.configs.isEmpty(),
+                animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
+                label = "api_config_state",
+                modifier = Modifier.fillMaxSize(),
+            ) { (isLoading, isEmpty) ->
+                when {
+                    isLoading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
-                }
-                uiState.configs.isEmpty() -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        EmptyState(
-                            icon = Icons.Default.Inbox,
-                            title = "暂无 API 配置",
-                            description = "点击右下角 + 添加服务商配置\n支持 DeepSeek / 通义 / 智谱 / 月之暗面",
+                    isEmpty -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            EmptyState(
+                                icon = Icons.Default.Inbox,
+                                title = "暂无 API 配置",
+                                description = "点击右下角 + 添加服务商配置\n支持 DeepSeek / 通义 / 智谱 / 月之暗面",
+                            )
+                        }
+                    }
+                    else -> {
+                        ConfigList(
+                            configs = uiState.configs,
+                            currentConfigId = uiState.currentConfigId,
+                            onSetCurrent = viewModel::setCurrent,
+                            onEdit = viewModel::showEditForm,
+                            onDelete = { config -> deletingConfig = config },
+                            contentPadding = PaddingValues(Spacing.lg),
                         )
                     }
-                }
-                else -> {
-                    ConfigList(
-                        configs = uiState.configs,
-                        currentConfigId = uiState.currentConfigId,
-                        onSetCurrent = viewModel::setCurrent,
-                        onEdit = viewModel::showEditForm,
-                        onDelete = { config -> deletingConfig = config },
-                        contentPadding = PaddingValues(Spacing.lg),
-                    )
                 }
             }
         }

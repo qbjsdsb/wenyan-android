@@ -1,6 +1,7 @@
 package com.wenyan.app.feature.cards
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -41,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
+import com.wenyan.app.core.designsystem.motion.WenyanMotion
 
 /**
  * 记忆卡片界面骨架。
@@ -75,75 +77,83 @@ fun CardsScreen(
             )
         },
     ) { innerPadding ->
-        Column(
+        Crossfade(
+            targetState = uiState.isLoading to (uiState.currentCard == null),
+            animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
+            label = "cards_state",
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(Spacing.lg),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
-        ) {
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
+        ) { (isLoading, isEmpty) ->
+            when {
+                isLoading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
-                return@Column
-            }
-
-            val card = uiState.currentCard
-            if (card == null) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "今日复习已完成，暂无待复习卡片",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                isEmpty -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "今日复习已完成，暂无待复习卡片",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
-                return@Column
-            }
+                else -> {
+                    uiState.currentCard?.let { card ->
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+                        ) {
+                            // 进度提示（animateContentSize 让数字变化平滑）
+                            Text(
+                                text = "${uiState.currentIndex + 1} / ${uiState.cards.size}",
+                                style = MaterialTheme.typography.labelLarge,
+                                modifier = Modifier.animateContentSize(),
+                            )
 
-            // 进度提示（animateContentSize 让数字变化平滑）
-            Text(
-                text = "${uiState.currentIndex + 1} / ${uiState.cards.size}",
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.animateContentSize(),
-            )
+                            // 可翻转卡片
+                            FlipCard(
+                                card = card,
+                                isFlipped = uiState.isFlipped,
+                                onClick = viewModel::flipCard,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f),
+                            )
 
-            // 可翻转卡片
-            FlipCard(
-                card = card,
-                isFlipped = uiState.isFlipped,
-                onClick = viewModel::flipCard,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-            )
-
-            // 评分按钮（翻转后显示）+ 提示文案（翻转前显示）
-            // 两者用 AnimatedVisibility 替代 if/else 硬切
-            AnimatedVisibility(
-                visible = uiState.isFlipped,
-                enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 }),
-                exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 4 }),
-            ) {
-                RatingButtons(onRate = viewModel::rateCard)
-            }
-            AnimatedVisibility(
-                visible = !uiState.isFlipped,
-                enter = fadeIn(),
-                exit = fadeOut(),
-            ) {
-                Text(
-                    text = "点击卡片查看答案",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                            // 评分按钮（翻转后显示）+ 提示文案（翻转前显示）
+                            // 两者用 AnimatedVisibility 替代 if/else 硬切
+                            AnimatedVisibility(
+                                visible = uiState.isFlipped,
+                                enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 }),
+                                exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 4 }),
+                            ) {
+                                RatingButtons(onRate = viewModel::rateCard)
+                            }
+                            AnimatedVisibility(
+                                visible = !uiState.isFlipped,
+                                enter = fadeIn(),
+                                exit = fadeOut(),
+                            ) {
+                                Text(
+                                    text = "点击卡片查看答案",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }

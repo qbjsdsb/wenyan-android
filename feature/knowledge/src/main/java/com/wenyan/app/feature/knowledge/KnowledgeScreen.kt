@@ -1,5 +1,8 @@
 package com.wenyan.app.feature.knowledge
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -84,24 +87,35 @@ fun KnowledgeScreen(
                 onCategorySelected = viewModel::selectCategory,
             )
 
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
+            Crossfade(
+                targetState = uiState.isLoading to uiState.knowledgePoints.isEmpty(),
+                animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
+                label = "knowledge_state",
+                modifier = Modifier.fillMaxSize(),
+            ) { (isLoading, isEmpty) ->
+                when {
+                    isLoading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    isEmpty -> {
+                        EmptyState(
+                            icon = Icons.Filled.Inbox,
+                            title = "暂无知识点，等待种子数据加载",
+                        )
+                    }
+                    else -> {
+                        KnowledgeList(
+                            items = uiState.knowledgePoints,
+                            onNavigateToDetail = onNavigateToDetail,
+                            contentPadding = PaddingValues(Spacing.lg),
+                        )
+                    }
                 }
-            } else if (uiState.knowledgePoints.isEmpty()) {
-                EmptyState(
-                    icon = Icons.Filled.Inbox,
-                    title = "暂无知识点，等待种子数据加载",
-                )
-            } else {
-                KnowledgeList(
-                    items = uiState.knowledgePoints,
-                    onNavigateToDetail = onNavigateToDetail,
-                    contentPadding = PaddingValues(Spacing.lg),
-                )
             }
         }
     }
