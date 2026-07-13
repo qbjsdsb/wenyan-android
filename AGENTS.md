@@ -141,12 +141,12 @@ tools/                           # Python 管线脚本
 
 ## 7. 当前状态（2026-07-13）
 
-**✅ 无阻塞** — Release v0.2.0 已发布，签名 APK 可下载。
+**✅ 无阻塞** — UI 精修 v0.3 完成（卡片镜像修复 + AI 入口调整 + 动画优化），尚未发版。
 
-- 最新 commit：`ce50e77`（main，CI 验证策略写入 AGENTS.md）
-- 最新 Release：[v0.2.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.2.0)（2026-07-13）
-- Release workflow：run 29278178988 全绿（14/14 步骤，14m54s）
-- 验证：`assembleDebug` SUCCESSFUL + `testDebugUnitTest` 184 tests 0 failures
+- 最新 commit：`add1f43`（main，LazyColumn animateItem + Settings Switch AnimatedVisibility）
+- 最新 Release：[v0.2.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.2.0)（2026-07-13，v0.3 改动尚未发版）
+- 验证：`assembleDebug` SUCCESSFUL + `testDebugUnitTest` 190 tests 0 failures
+- v0.3 改动：5 个 commit（70cf54a 卡片镜像 → 267d3ff AI 入口 → 1a244ef NavHost transition → deb7515 Crossfade → add1f43 animateItem）
 - 详见 [docs/00-STATUS.md](docs/00-STATUS.md)
 
 ## 8. 项目阶段总览
@@ -165,11 +165,13 @@ tools/                           # Python 管线脚本
 | P0 双修 | ✅ 完成 | release.yml CI 修复 + SeedDataLoader 接通（App 启动自动导入种子数据） |
 | P1 修复 | ✅ 完成 | KnowledgeViewModel 科目筛选 + 科目名显示修复（DAO JOIN + 10 测试，184 tests） |
 | Release v0.2.0 | ✅ 完成 | 签名 APK 发布，包含自 v0.1.0 以来所有改动 |
+| UI 精修 v0.3 | ✅ 完成 | 卡片镜像修复 + 导师信息删除 + AI 入口调整 + 全面动画优化（190 tests） |
 
 ## 9. 下一步优先级
 
-1. **P0**：跑 emulator 实测 — 下载 [v0.2.0 APK](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.2.0) 或本地 `assembleDebug`，验证 SeedDataLoader 启动时导入数据（Logcat 无异常 + 各 Tab 有数据 + 重启不重复导入）+ LargeFlexibleTopAppBar 滚动折叠效果 + 知识点分类标签筛选生效
-2. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
-3. **P3**：可选 — 用 GroupedCard 改造其他 Screen（如 ApiConfigScreen）保持视觉一致性（注意：ApiConfigScreen 的 ConfigCard 有 4 行元信息 + 2 操作按钮，GroupedCardItem API 无法承载，需先扩展组件或保留现状）
-4. **P4**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
-5. **P5**：架构重构 — ReviewRepository.getAllVerifiedKnowledgePoints 已成事实死代码；getVerifiedWithSubject 职责应在 KnowledgeRepository（详见 SESSION_LOG 第四条）
+1. **P0**：跑 emulator 实测 v0.3 改动 — 本地 `assembleDebug`，验证：①记忆卡片翻转无镜像 ②4 主屏 TopBar 右上角 AI 入口可跳转 ③Tab 切换有 fade transition ④loading→content 平滑 Crossfade ⑤列表项增删有 animateItem 过渡 ⑥Settings 动态色彩开关时种子色区块平滑展开/收起
+2. **P1**：可选 — 发 Release v0.3.0（确认 CI 全绿后 `git tag v0.3.0 && git push origin v0.3.0`）
+3. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+4. **P3**：可选 — 用 GroupedCard 改造其他 Screen（如 ApiConfigScreen）保持视觉一致性（注意：ApiConfigScreen 的 ConfigCard 有 4 行元信息 + 2 操作按钮，GroupedCardItem API 无法承载，需先扩展组件或保留现状）
+5. **P4**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
+6. **P5**：架构重构 — ReviewRepository.getAllVerifiedKnowledgePoints 已成事实死代码；getVerifiedWithSubject 职责应在 KnowledgeRepository（详见 SESSION_LOG 第四条）

@@ -633,3 +633,122 @@
    $JAVA_HOME/bin/java -Dorg.gradle.daemon=false -cp /root/.local/share/mise/installs/gradle/8.14.4/gradle-8.14.4/lib/gradle-launcher-8.14.4.jar org.gradle.launcher.GradleMain :app:assembleDebug --no-daemon 2>&1 | tail -5
    ```
 8. **开始工作**：根据 [00-STATUS.md](00-STATUS.md) 的"下一步优先级"选择任务
+
+---
+
+## Session 2026-07-13（第六条）：UI 精修 v0.3
+
+### 目标
+
+执行 [docs/plans/ui-refinement-v0.3.md](plans/ui-refinement-v0.3.md) — 修复用户反馈的 4 个 UI 问题：①记忆卡片翻转后呈现镜像内容 ②删除右上角导师信息 ③AI 入口放到右上角 ④整体动画不够干净利落。
+
+### 完成内容
+
+**Phase 1：卡片镜像修复**（commit `70cf54a`）
+- FlipCard 修复：cameraDistance 提升到 30×depth（避免大角度翻转时镜像扭曲）
+- shouldShowBack 阈值切换（0.5 而非 0.0）+ graphicsLayer rotationY 严格控制
+- 容器色用 animateColorAsState 平滑过渡（避免翻转中色彩硬切）
+- 评分按钮 + "点击卡片查看答案" 提示用 AnimatedVisibility（fadeIn/fadeOut + slideVertically）
+- 进度文本 "1 / N" 用 animateContentSize（数字变化时平滑过渡）
+- 新增 FlipCardLogicTest（6 个纯函数测试，覆盖 shouldShowBack/shouldShowRating 阈值逻辑）
+
+**Phase 2：导师信息删除 + AI 入口调整**（commit `267d3ff`）
+- 删除 MentorInfoScreen + ROUTE_MENTOR 路由 + 导航入口
+- 4 个主屏（Knowledge/Quiz/Cards/Graph）TopBar 右上角新增 AI IconButton（SmartToy 图标），点击跳转 AiAssistantScreen
+
+**Phase 3：WenyanMotion tokens + NavHost transition**（commit `1a244ef`）
+- 新增 `core/designsystem/motion/WenyanMotion.kt` 统一动画 token：
+  - Duration: Short=150ms / Medium=300ms / Long=450ms
+  - Easing: EmphasizedEasing / DecelerateEasing / AccelerateEasing（CubicBezier）
+- NavHost 全局：Tab 间用 fade transition（DurationShort + DecelerateEasing）
+- NavHost 子路由：Push 用 slideIn from right / Pop 用 slideOut to right（DurationMedium + EmphasizedEasing）
+
+**Phase 4：7 屏状态切换 Crossfade**（commit `deb7515`）
+- 7 个 Screen 的 loading/empty/content 三态切换从 if/else 硬切改为 Crossfade：
+  - KnowledgeScreen / QuizScreen（之前的 commit）
+  - CardsScreen / GraphScreen / AiAssistantScreen / ApiConfigScreen / KnowledgePointDetailScreen
+- targetState 用 Pair<Boolean, Boolean>（isLoading to isEmpty）避免每个 uiState 字段变化都触发 crossfade
+- CardsScreen 的 `return@Column` 早退模式重构为 Crossfade + when 三态
+- KnowledgePointDetailScreen 的 `point!!` 不安全强转改为 `?.let { point -> ... }` 安全访问
+
+**Phase 5：LazyColumn animateItem + Settings AnimatedVisibility**（commit `add1f43`）
+- 4 个 LazyColumn 列表项增删时用 animateItem() 平滑过渡：
+  - KnowledgeScreen / QuizScreen / AiAssistantScreen / ApiConfigScreen
+  - 所有 items 添加 `key = { it.id }` 让 Compose 跟踪项的身份
+- 4 个 Card composable 新增 `modifier: Modifier = Modifier` 参数（KnowledgePointCard / QuestionCard / MessageBubble / ConfigCard）
+- SettingsScreen 动态色彩开关关闭时，"种子色 + 调色板风格" 区块用 AnimatedVisibility 平滑展开/收起（fadeIn + expandVertically / fadeOut + shrinkVertically）
+
+**Phase 6：全量验证 + 文档更新**（本次）
+- `assembleDebug` BUILD SUCCESSFUL
+- `testDebugUnitTest` 190 tests 0 failures（184 原有 + 6 FlipCardLogic）
+- 更新文档：AGENTS.md、00-STATUS.md、SESSION_LOG.md、plans/ui-refinement-v0.3.md
+
+### 关键技术决策
+
+1. **WenyanMotion 单一 token 源** — 所有动画时长/缓动从 `WenyanMotion` object 取，避免散落硬编码。CubicBezier 控制点参照 Material3 Expressive 运动规格（0.2, 0.0, 0.0, 1.0）。
+2. **Crossfade targetState 用 Pair** — 用 `isLoading to isEmpty` 作 targetState 而非整个 uiState，避免 uiState 任意字段变化都触发 crossfade 重启。
+3. **CardsScreen 三态 when 而非 if/else** — 把 `return@Column` 早退模式改为 `when { isLoading; isEmpty; else }`，让 CrossFade 能管理所有三个状态的过渡。
+4. **KnowledgePointDetailScreen 安全访问** — 把 `val point = uiState.point!!` 改为 `uiState.point?.let { point -> ... }`，避免在 Crossfade 切换瞬间空指针。
+5. **LazyColumn items 必须有 key** — `key = { it.id }` 让 Compose 跟踪列表项身份，animateItem() 才能正确识别增删位置并播放过渡动画。
+
+### commit 列表
+
+- `70cf54a` — Phase 1: 卡片镜像修复 + 6 个纯函数测试
+- `267d3ff` — Phase 2: 删除导师信息 + 4 主屏 TopBar 加 AI 入口
+- `1a244ef` — Phase 3: WenyanMotion tokens + NavHost transition
+- `deb7515` — Phase 4: 7 屏状态切换 Crossfade 替代 if/else 硬切
+- `add1f43` — Phase 5: LazyColumn animateItem + Settings Switch AnimatedVisibility
+- 本次 — Phase 6: 文档更新
+
+### 下次继续
+
+- **P0**：跑 emulator 实测 v0.3 改动 — 6 项验证（卡片翻转无镜像 / AI 入口可跳转 / Tab fade transition / Crossfade loading→content / animateItem 列表过渡 / Settings 种子色区块展开收起）
+- **P1**：可选 — 发 Release v0.3.0（确认 CI 全绿后 `git tag v0.3.0 && git push origin v0.3.0`）
+- **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+
+### 新会话快速恢复 Checklist
+
+新沙箱会话开始时，按以下顺序操作（5 分钟内进入工作状态）：
+
+1. **读 [AGENTS.md](../AGENTS.md)** — 项目入口，了解技术栈、硬约束、CI 验证策略、当前状态
+2. **读 [00-STATUS.md](00-STATUS.md)** — 10 秒了解当前状态（无阻塞，UI 精修 v0.3 完成）
+3. **读本文档最后一节** — 上次进度（本次会话：UI 精修 v0.3）
+4. **拉取最新代码**：
+   ```bash
+   cd /workspace && git pull origin main
+   ```
+5. **配置 Gradle 代理**（沙箱特有，新沙箱必做）：
+   ```bash
+   # /root/.gradle/gradle.properties
+   cat > /root/.gradle/gradle.properties <<'EOF'
+   systemProp.http.proxyHost=127.0.0.1
+   systemProp.http.proxyPort=18080
+   systemProp.https.proxyHost=127.0.0.1
+   systemProp.https.proxyPort=18080
+   systemProp.http.nonProxyHosts=localhost|127.0.0.1
+   EOF
+
+   # /root/.gradle/init.d/proxy.gradle（Robolectric 测试需要）
+   mkdir -p /root/.gradle/init.d
+   cat > /root/.gradle/init.d/proxy.gradle <<'EOF'
+   allprojects {
+       tasks.withType(Test).configureEach {
+           jvmArgs('-Dhttp.proxyHost=127.0.0.1','-Dhttp.proxyPort=18080',
+                   '-Dhttps.proxyHost=127.0.0.1','-Dhttps.proxyPort=18080',
+                   '-Dhttp.nonProxyHosts=localhost|127.0.0.1')
+       }
+   }
+   EOF
+   ```
+6. **配置环境变量**：
+   ```bash
+   export JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2
+   export ANDROID_HOME=/opt/android-sdk
+   export JAVA_TOOL_OPTIONS="-XX:-UseContainerSupport"
+   export PATH=$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+   ```
+7. **验证构建**（注意：不能用 `gradle` shim，它用 mise 默认 JDK 25 与 AGP 8.6.0 不兼容）：
+   ```bash
+   $JAVA_HOME/bin/java -Dorg.gradle.daemon=false -cp /root/.local/share/mise/installs/gradle/8.14.4/gradle-8.14.4/lib/gradle-launcher-8.14.4.jar org.gradle.launcher.GradleMain :app:assembleDebug --no-daemon 2>&1 | tail -5
+   ```
+8. **开始工作**：根据 [00-STATUS.md](00-STATUS.md) 的"下一步优先级"选择任务

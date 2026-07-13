@@ -1125,39 +1125,39 @@ git commit -m "feat(animation): LazyColumn animateItem + Settings Switch Animate
 
 ### Task 6.1：全量构建 + 测试
 
-- [ ] **Step 1：assembleDebug**
+- [x] **Step 1：assembleDebug**
 
 ```bash
 $JAVA_HOME/bin/java -Dorg.gradle.daemon=false -cp /root/.local/share/mise/installs/gradle/8.14.4/gradle-8.14.4/lib/gradle-launcher-8.14.4.jar org.gradle.launcher.GradleMain :app:assembleDebug --no-daemon 2>&1 | tail -5
 ```
 
-预期：BUILD SUCCESSFUL
+预期：BUILD SUCCESSFUL ✅（Phase 4 + Phase 5 各验证一次）
 
-- [ ] **Step 2：testDebugUnitTest 全量**
+- [x] **Step 2：testDebugUnitTest 全量**
 
 ```bash
 $JAVA_HOME/bin/java -Dorg.gradle.daemon=false -cp /root/.local/share/mise/installs/gradle/8.14.4/gradle-8.14.4/lib/gradle-launcher-8.14.4.jar org.gradle.launcher.GradleMain testDebugUnitTest --no-daemon 2>&1 | tail -5
 ```
 
-预期：184 + 6（FlipCardLogic）= 190 tests 0 failures
+预期：184 + 6（FlipCardLogic）= 190 tests 0 failures ✅
 
 ### Task 6.2：更新文档
 
-- [ ] **Step 1：更新 AGENTS.md 第 7-9 节**
+- [x] **Step 1：更新 AGENTS.md 第 7-9 节**
 
 第 7 节"当前状态"更新为：UI 精修 v0.3 完成（卡片镜像修复 + AI 入口调整 + 动画优化）。
 第 8 节阶段总览加一行：UI 精修 v0.3 ✅ 完成。
 第 9 节下一步优先级：删除原 P0（已部分完成），新增"emulator 实测 v0.3 改动"。
 
-- [ ] **Step 2：更新 docs/00-STATUS.md**
+- [x] **Step 2：更新 docs/00-STATUS.md**
 
 最新 commit、最新改动描述、下一步优先级。
 
-- [ ] **Step 3：更新 docs/SESSION_LOG.md**
+- [x] **Step 3：更新 docs/SESSION_LOG.md**
 
 追加一节：Session 2026-07-13（第六条）：UI 精修 v0.3。
 
-- [ ] **Step 4：commit + push**
+- [x] **Step 4：commit + push**
 
 ```bash
 git add AGENTS.md docs/00-STATUS.md docs/SESSION_LOG.md docs/plans/ui-refinement-v0.3.md
