@@ -159,14 +159,19 @@ ORDER BY kp.updated_at DESC
 
 ### 决策 5：测试策略
 
-**选择**：补 `KnowledgeViewModelTest`，覆盖 7 个场景：
-1. ALL 分类返回全部知识点
-2. ANCIENT 分类只返回古代文学
-3. MODERN 分类只返回现当代文学
-4. FOREIGN 分类只返回外国文学
-5. THEORY 分类只返回文学理论
-6. toUiItem 的 subject 字段取 subjectName 而非 contentSource
-7. toUiItem 的 summary 为 null 时回退到 coreConclusion.take(100)
+**选择**：补 `KnowledgeViewModelTest`，覆盖 11 个场景：
+
+**正常路径（5 个）**：ALL/ANCIENT/MODERN/FOREIGN/THEORY 分类各自返回正确结果
+
+**边界场景（4 个）**：
+1. 空列表输入 — filterByCategory 对空列表返回空列表，不报错
+2. subjectName 不匹配任何 category — 返回空列表（验证 contains 不误匹配）
+3. summary 有值时直接用 summary，不截断（验证不误截断人工摘要）
+4. summary 为 null 时回退到 coreConclusion.take(100)（验证截断 + 内容正确）
+
+**回归场景（2 个）**：
+1. toUiItem 的 subject 字段取 subjectName 而非 contentSource（核心 bug 回归）
+2. toUiItem 的 summary 为 null 时回退到 coreConclusion（验证 fallback 逻辑）
 
 **断言库**：JUnit 原生 `org.junit.Assert.*`（项目无 Google Truth 依赖，参考 AiAssistantViewModelTest）
 
@@ -575,17 +580,55 @@ class KnowledgeViewModelTest {
 
     @Test
     fun toUiItem_summaryFallsBackToCoreConclusion() {
+        val longCoreConclusion = "这是一段很长的核心结论，超过一百字需要被截断。".repeat(5)
         val pointWithSubject = KnowledgePointWithSubject(
             point = makePoint(
                 id = "kp1",
                 summary = null,
-                coreConclusion = "这是一段很长的核心结论，超过一百字需要被截断。".repeat(5),
+                coreConclusion = longCoreConclusion,
             ),
             subjectName = "中国古代文学",
         )
         val uiItem = KnowledgeViewModel.toUiItem(pointWithSubject)
         assertNotNull(uiItem.summary)
         assertTrue("summary should be at most 100 chars", uiItem.summary.length <= 100)
+        assertEquals(longCoreConclusion.take(100), uiItem.summary)
+    }
+
+    @Test
+    fun toUiItem_summaryNotNullUsesSummaryDirectly() {
+        val pointWithSubject = KnowledgePointWithSubject(
+            point = makePoint(
+                id = "kp1",
+                summary = "人工编写的简短摘要",
+                coreConclusion = "这是很长的核心结论，不应该被使用".repeat(10),
+            ),
+            subjectName = "中国古代文学",
+        )
+        val uiItem = KnowledgeViewModel.toUiItem(pointWithSubject)
+        assertEquals("人工编写的简短摘要", uiItem.summary)
+    }
+
+    @Test
+    fun filterByCategory_emptyList_returnsEmptyList() {
+        val points = emptyList<KnowledgePointWithSubject>()
+        val result = KnowledgeViewModel.filterByCategory(points, KnowledgeCategory.ANCIENT)
+        assertTrue("empty list should return empty", result.isEmpty())
+    }
+
+    @Test
+    fun filterByCategory_subjectNameNotMatchingAnyCategory_returnsEmpty() {
+        val points = listOf(
+            makePointWithSubject("kp1", "未知科目"),
+        )
+        // 逐个测试非 ALL 分类
+        KnowledgeCategory.entries.filter { it != KnowledgeCategory.ALL }.forEach { category ->
+            val result = KnowledgeViewModel.filterByCategory(points, category)
+            assertTrue(
+                "subjectName '未知科目' should not match category $category",
+                result.isEmpty(),
+            )
+        }
     }
 
     private fun makePointWithSubject(
@@ -643,7 +686,7 @@ class KnowledgeViewModelTest {
 ### Task 6: 全量编译 + 测试
 
 - [ ] **Step 1: 全量编译** `assembleDebug`
-- [ ] **Step 2: 全量测试** `testDebugUnitTest` — 预期 174 + 7 = 181 tests（原 174 + 新增 7 个 ViewModel 测试）
+- [ ] **Step 2: 全量测试** `testDebugUnitTest` — 预期 174 + 11 = 185 tests（原 174 + 新增 11 个 ViewModel 测试）
 - [ ] **Step 3: 若测试失败，修复并重新验证**
 
 ### Task 7: Commit
@@ -673,7 +716,9 @@ Bug 2 (subject 显示 TEXTBOOK_NATIVE):
   - KnowledgeCategory 枚举新增 keyword 字段（'古代'/'现当代'/'外国'/'理论'），
     用于 contains 匹配，兼容 seed_data 全名与枚举简称。
   - ReviewRepository 新增 getVerifiedWithSubject() 委托方法。
-  - 新增 KnowledgeViewModelTest（7 tests）覆盖筛选 + 显示逻辑。
+  - 新增 KnowledgeViewModelTest（11 tests）覆盖筛选 + 显示逻辑：
+    5 正常路径（ALL/ANCIENT/MODERN/FOREIGN/THEORY）+ 4 边界场景（空列表/
+    不匹配/summary有值不截断/summary为null回退）+ 2 回归场景。
   - filterByCategory + toUiItem 移到 companion object（internal）供测试调用。
 
 为什么：SeedDataLoader 接通后，App 启动会导入 12 个知识点（4 科目 × 3），
@@ -739,7 +784,7 @@ Bug 2 (subject 显示 TEXTBOOK_NATIVE):
 - CI 全绿
 - 知识点列表的分类标签点击后正确筛选（"古代文学" 只显示古代文学知识点）
 - 卡片显示 "中国古代文学" 而非 "TEXTBOOK_NATIVE"
-- 新增 7 个测试（基线 174 → 181）
+- 新增 11 个测试（基线 174 → 185）：5 正常路径 + 4 边界场景 + 2 回归场景
 
 ### 后续验证（需真机/模拟器）
 - 启动 App 后进入知识点 Tab
@@ -748,7 +793,17 @@ Bug 2 (subject 显示 TEXTBOOK_NATIVE):
 - 切换其他分类标签验证筛选生效
 
 ### 已知限制（本次接受）
+
 1. **KnowledgePointEntity 无 subjectId 字段**：通过 JOIN 查询绕过，不改表结构（避免数据库迁移）。后续若性能瓶颈可考虑加 subjectId 冗余字段。
-2. **SubjectEntity.shortName 死字段**：本次不动（YAGNI），记录到 SESSION_LOG 供后续清理。
-3. **contains 匹配的脆弱性**：`subjectName.contains("古代")` 在"中国古代文学"上匹配成功，但若未来出现"古代文论"会误匹配。当前 4 科目无歧义，接受。
-4. **filterByCategory + toUiItem 移到 companion object**：为可测试性的最小妥协。更优方案是提取到独立 mapper 类，但 YAGNI。
+
+2. **SubjectEntity.shortName 死字段**：本次不动（YAGNI），记录到 SESSION_LOG 供后续清理。`SeedDataLoader.kt:107` 的 `take(2)` 实现也不正确（"中国古代文学"→"中国"而非"古文"），但既然无人读取，不影响。
+
+3. **contains 匹配的脆弱性**：`subjectName.contains("古代")` 在"中国古代文学"上匹配成功，但若未来出现"古代文论"会误匹配。当前 4 科目无歧义，接受。测试 `filterByCategory_subjectNameNotMatchingAnyCategory_returnsEmpty` 覆盖了不匹配场景。
+
+4. **filterByCategory + toUiItem 移到 companion object**：为可测试性的最小妥协。更优方案是提取到独立 mapper 类（如 `KnowledgePointMapper`），但 YAGNI。
+
+5. **INNER JOIN 数据完整性风险**：若知识点的 `chapterId` 指向不存在的 chapter（数据异常），INNER JOIN 会过滤掉该知识点，用户看不到。与旧方案（`observeVerifiedForReview` 单表查询）相比，这是行为变更。**风险评估**：MVP 阶段无用户添加知识点功能，且 SeedDataLoader 导入时已保证外键完整性（chapter 和 knowledge_point 在同一事务中按顺序导入），风险极低。若未来允许用户手动添加知识点，需考虑用 LEFT JOIN + 空科目名降级显示。
+
+6. **架构职责不完美（既有问题，本次不改）**：`getVerifiedWithSubject()` 放在 ReviewRepository（复习仓库）职责不完美——知识点浏览更应在 KnowledgeRepository（知识点仓库）。但当前 `getAllVerifiedKnowledgePoints()` 也在 ReviewRepository，这是既有设计问题。**本次不改的理由**：P1 是修 bug，不是重构；改 ViewModel 依赖（ReviewRepository → KnowledgeRepository）会扩大改动范围，且让 `getAllVerifiedKnowledgePoints()` 变成死代码。记录到 SESSION_LOG 供后续重构。
+
+7. **ReviewRepository.getAllVerifiedKnowledgePoints 将变成事实上的死代码**：KnowledgeViewModel 改用 `getVerifiedWithSubject()` 后，`getAllVerifiedKnowledgePoints()` 不再有调用者（Grep 验证仅 KnowledgeViewModel 引用）。本次不删除（保留 API 向后兼容，未来可能有其他调用者），但记录到 SESSION_LOG。
