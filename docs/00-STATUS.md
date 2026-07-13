@@ -5,13 +5,13 @@
 
 ## ✅ 当前状态
 
-**UI 改造闭环完成** — KSU 风格 UI 升级 Phase 0-3 + UI 闭环计划 Phase 1-5 全部完成
+**UI 统一与死组件清理完成** — KSU 风格 UI 升级 + UI 闭环 + 死组件清理全部完成
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `f311a31`（main，UI 闭环 Phase 4：Preview + 测试） |
-| 代码最新 commit | `f311a31`（UI 闭环计划 Phase 1-4） |
-| CI 状态 | ✅ run 29248941044 全绿（14/14 步骤，19m41s） |
+| 最新 commit | `2f83ac3`（main，删除 4 个死组件） |
+| UI 统一与清理 | 2 个 commit（`ebad848` Phase 1 + `2f83ac3` Phase 2） |
+| CI 状态 | ⏳ 待推送后触发验证 |
 | PR | [#1](https://github.com/qbjsdsb/wenyan-android/pull/1) 已合并（KSU UI 升级 Phase 0-3） |
 | 阻塞 | 无 |
 | 详情 | [02-VERSION-MATRIX.md](02-VERSION-MATRIX.md) |
@@ -40,6 +40,14 @@
 | Phase 4 | ✅ 完成 | 4 个 @Preview（三态覆盖）+ 2 个组件测试（8 tests） | `f311a31` |
 | Phase 5 | ✅ 完成 | assembleDebug + testDebugUnitTest（117 tests 0 failures）+ 文档更新 | 本次 |
 
+### UI 统一与死组件清理（2026-07-13）
+
+| 阶段 | 状态 | 内容 | Commit |
+|------|------|------|--------|
+| Phase 1 | ✅ 完成 | KnowledgePointDetailScreen 摘要+资料来源→GroupedCard，PerspectiveCard→TonalCardLow | `ebad848` |
+| Phase 2 | ✅ 完成 | 删除 4 个死组件（WenyanTopAppBar/SectionHeader/LoadingState/HierarchicalListItem）| `2f83ac3` |
+| Phase 3 | ✅ 完成 | assembleDebug（412 tasks）+ testDebugUnitTest（174 tests 0 failures）+ 文档更新 | 本次 |
+
 ### KSU 风格 UI 升级（方案 C）
 
 | 阶段 | 状态 | 内容 |
@@ -63,9 +71,8 @@
 ## 🎯 下一步优先级
 
 1. **P0**：跑 emulator 实测 LargeFlexibleTopAppBar 滚动折叠效果（组件已就绪，缺真机/模拟器视觉验证）
-2. **P1**：用 HierarchicalListItem 改造 KnowledgePointDetailScreen 多教材对照区域（可选优化，当前已用 GroupedCard）
-3. **P2**：OCR 完成后跑知识提取管线 → 生成 seed_data.json
-4. **P3**：考虑用 GroupedCard 改造其他 Screen（如 ApiConfigScreen）保持视觉一致性
+2. **P1**：OCR 完成后跑知识提取管线 → 生成 seed_data.json
+3. **P2**：可选 — 用 GroupedCard 改造其他 Screen（如 ApiConfigScreen）保持视觉一致性
 
 ## 📦 已交付
 
@@ -73,3 +80,4 @@
 - 签名 APK：`wenyan-v0.1.0.apk` + `wenyan-latest.apk`（14.7 MB）
 - KSU 风格 UI 升级 Phase 0-3（4 个组件 + 9 个 Screen 迁移，已合并 main + CI 全绿）
 - UI 改造闭环 Phase 1-5（GroupedCard 增强 + 2 Screen 重构 + 4 Preview + 15 个组件测试）
+- UI 统一与死组件清理（KnowledgePointDetailScreen 统一 + 删除 4 个死组件，174 tests 0 failures）

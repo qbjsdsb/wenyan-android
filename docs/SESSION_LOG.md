@@ -244,6 +244,70 @@
 - 可选：用 HierarchicalListItem 改造 KnowledgePointDetailScreen 多教材对照区域
 - OCR 完成后跑知识提取管线 → 生成 seed_data.json
 
+---
+
+## Session 2026-07-13（第二条）：UI 统一与死组件清理
+
+### 目标
+
+执行 [docs/plans/ui-consolidation-cleanup.md](plans/ui-consolidation-cleanup.md) — 把 KnowledgePointDetailScreen 的 InfoSection/PerspectiveCard/SourcesSection 统一到 designsystem 组件，并清理 4 个零引用死组件。
+
+### 深度调查发现的关键约束
+
+在制定计划阶段，通过两轮深度调查发现 3 个关键问题，修订了原计划：
+
+1. **AMOLED 嵌套卡片视觉反转**：调查 `WenyanTheme.kt` line 60-68 发现，AMOLED 模式覆盖了 `surfaceContainerLow = Color.Black`，但**未覆盖 `surfaceBright`**。若在 GroupedCard（surfaceBright）内嵌套 TonalCardLow（surfaceContainerLow），会形成"深灰卡套纯黑卡"的视觉反转。**结论**：MultiPerspectiveSection 保留 InfoSection 无容器模式，避免嵌套。
+
+2. **padding 一致性**：GroupedCardItem 的水平 padding 是 `Spacing.lg`（16dp）。GroupedCard 内的所有内容必须用 `horizontal = Spacing.lg` 保持左边缘对齐。原计划摘要 Text 用 `Spacing.md`（12dp）会导致 4dp 不对齐。**结论**：统一为 `horizontal=lg, vertical=md`。
+
+3. **HierarchicalListItem API 不匹配**：原 AGENTS.md P1 计划"用 HierarchicalListItem 改造多教材对照"——经源码核实，该组件 API 只有 `title + trailing`，无法承载教材正文段落（多行长文本），且多教材对照是扁平列表非树形层级。**结论**：删除该死组件，修订 P1 计划。
+
+### 完成内容
+
+**Phase 1：KnowledgePointDetailScreen 统一**（commit `ebad848`）
+- 摘要 `InfoSection` → `GroupedCard`（纯文本，无嵌套风险，padding `horizontal=lg, vertical=md`）
+- 资料来源 `InfoSection` → `GroupedCard` + `HorizontalDivider` → `GroupedCardDivider`
+- `SourceRow` 加 `padding(horizontal=lg, vertical=md)` 与 GroupedCardItem 对齐
+- `PerspectiveCard` 非 official 分支 → `TonalCardLow`（走 designsystem，独立卡片不嵌套）
+- 多教材对照**保留 InfoSection**（避免 AMOLED 嵌套卡片视觉反转），加 KDoc 注释说明原因
+- 清理不再使用的 imports（`HorizontalDivider`、`dp`）
+
+**Phase 2：删除 4 个死组件**（commit `2f83ac3`）
+- 删除 `WenyanTopAppBar`（KSU 升级后 9/9 Screen 用 WenyanLargeTopAppBar，0 引用）
+- 删除 `SectionHeader`（GroupedCard 标题区已覆盖，0 引用）
+- 删除 `LoadingState`（9 个 Screen 都手写 Box{CircularProgressIndicator()}，0 引用）
+- 删除 `HierarchicalListItem`（API 只有 title+trailing，不匹配任何现有列表，0 生产引用）
+  + 同步删除 `HierarchicalListItemPreview`（3 个 @Preview）
+  + 同步删除 `HierarchicalListItemTest`（5 个测试）
+- 更新 `WenyanLargeTopAppBar.kt` 注释：删除对 WenyanTopAppBar 的 2 处引用
+
+**Phase 3：全量验证 + 文档更新**（本次）
+- `assembleDebug` BUILD SUCCESSFUL（3m 59s，412 tasks）
+- `testDebugUnitTest` BUILD SUCCESSFUL（174 tests 0 failures：designsystem 14 + data 52 + fsrs 25 + ai 62 + aiassistant 21）
+- 更新文档：00-STATUS.md、SESSION_LOG.md、AGENTS.md、01-QUICK-RECOVERY.md、plans/ui-consolidation-cleanup.md
+
+### 关键技术决策
+
+1. **MultiPerspectiveSection 保留 InfoSection** — AMOLED 模式下 `surfaceContainerLow` 被覆盖为 Black 而 `surfaceBright` 未覆盖，GroupedCard 套 TonalCardLow 会形成视觉反转。加 KDoc 注释说明保留原因，避免后续误删。
+2. **PerspectiveCard 分 isOfficial 两分支** — official 保留 `Surface(primaryContainer)`（designsystem 无 primaryContainer 变体），非 official 用 `TonalCardLow`（color/shape 完全一致）。
+3. **删除 HierarchicalListItem 而非扩展 API** — 经调查证实无任何现有列表适合用该组件（所有列表都有多字段元信息，title+trailing 无法承载）。扩展 API 会增加复杂度但无实际收益，YAGNI。
+
+### 环境问题
+
+- **沙箱重置导致环境丢失**：会话中途沙箱被重置，`/root/.gradle/gradle.properties`、`/root/.gradle/init.d/proxy.gradle`、`/opt/android-sdk`、`/workspace/local.properties` 全部丢失。重新创建代理配置 + 重装 Android SDK（cmdline-tools + platform-tools + platforms;android-35 + build-tools;35.0.0）后恢复。
+
+### commit 列表
+
+- `ebad848` — Phase 1: KnowledgePointDetailScreen 摘要+资料来源统一到 GroupedCard
+- `2f83ac3` — Phase 2: 删除 4 个零引用死组件
+- 本次 — Phase 3: 文档更新
+
+### 下次继续
+
+- 跑 emulator 实测 LargeFlexibleTopAppBar 滚动折叠效果（P0）
+- OCR 完成后跑知识提取管线 → 生成 seed_data.json（P1）
+- 可选：用 GroupedCard 改造其他 Screen（如 ApiConfigScreen，但需先扩展 GroupedCardItem API）
+
 ### 新会话快速恢复 Checklist
 
 新沙箱会话开始时，按以下顺序操作（5 分钟内进入工作状态）：

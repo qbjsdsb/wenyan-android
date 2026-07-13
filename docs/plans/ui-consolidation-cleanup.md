@@ -1,5 +1,10 @@
 # 文研 App UI 统一与死组件清理实施计划
 
+> **状态：✅ 已完成（2026-07-13）** — Phase 1-3 全部完成，3 个 commit 已推送 main。
+> Commits: `ebad848`（Phase 1）→ `2f83ac3`（Phase 2）+ 文档更新 commit。
+> 验证：`assembleDebug` SUCCESSFUL（412 tasks）、`testDebugUnitTest` 174 tests 0 failures。
+> 深度调查发现 3 个关键问题并修订计划：AMOLED 嵌套卡片视觉反转、padding 一致性、HierarchicalListItem API 不匹配。
+
 > **For agentic workers:** 本计划基于 writing-plans skill 编写。Step 使用 `- [ ]` 复选框跟踪进度。每个 Task 应独立可执行、可验证、可回滚。
 
 **Goal:** 把 KnowledgePointDetailScreen 的 InfoSection/PerspectiveCard/SourcesSection 统一到 GroupedCard/TonalCard/GroupedCardDivider 设计系统组件，并清理 4 个零引用的死组件（WenyanTopAppBar/SectionHeader/LoadingState/HierarchicalListItem），让 UI 层无重复造轮子、无死代码。

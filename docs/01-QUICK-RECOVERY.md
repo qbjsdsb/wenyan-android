@@ -114,13 +114,13 @@ git push origin main
 
 1. 读 [plans/ksu-ui-upgrade.md](plans/ksu-ui-upgrade.md) 了解已完成的 Phase 0-3 与剩余工作
 2. 读 [design/m3-expressive-redesign.md](design/m3-expressive-redesign.md) 了解设计规格
-3. KSU 4 组件位置：`core/designsystem/src/main/java/com/wenyan/app/core/designsystem/component/`
+3. KSU 组件位置：`core/designsystem/src/main/java/com/wenyan/app/core/designsystem/component/`
    - `WenyanLargeTopAppBar.kt` — LargeFlexibleTopAppBar 封装
    - `WenyanNavigationBar.kt` — 药丸风格导航栏
-   - `GroupedCard.kt` — 分组卡片（待应用到 SettingsScreen）
-   - `HierarchicalListItem.kt` — 层级列表项（待应用到 KnowledgePointDetailScreen）
+   - `GroupedCard.kt` — 分组卡片（已应用到 SettingsScreen + KnowledgePointDetailScreen）
+   - `TonalCard.kt` / `TonalCardLow.kt` — 色调卡片组件
 4. 9 个 Screen 已迁移到 WenyanLargeTopAppBar（6 个滚动屏 + 3 个固定内容屏）
-5. 剩余工作：用 GroupedCard 改造 SettingsScreen + 用 HierarchicalListItem 改造 KnowledgePointDetailScreen
+5. UI 改造已完成：SettingsScreen + KnowledgePointDetailScreen 均用 GroupedCard，4 个死组件已删除
 
 ### 场景 3：OCR 管线（本地运行）
 

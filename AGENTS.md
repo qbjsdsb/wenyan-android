@@ -115,12 +115,11 @@ tools/                           # Python 管线脚本
 
 ## 7. 当前状态（2026-07-13）
 
-**✅ 无阻塞** — UI 改造闭环计划 Phase 1-5 全部完成，KSU 风格 UI 升级 Phase 0-3 + UI 闭环已合并到 main。
+**✅ 无阻塞** — UI 统一与死组件清理完成，KSU 风格 UI 升级 + UI 闭环 + 死组件清理均已合并到 main。
 
-- 最新 commit：`f311a31`（main，UI 闭环 Phase 4：Preview + 测试）
-- PR #1 已合并（squash merge `3efe678`，KSU UI 升级 Phase 0-3）
-- UI 闭环计划：4 个 commit（`da3f369` → `68e5946` → `c918411` → `f311a31`）
-- 验证：`assembleDebug` SUCCESSFUL + `testDebugUnitTest` 117 tests 0 failures
+- 最新 commit：`2f83ac3`（main，删除 4 个死组件）
+- UI 统一与清理：2 个 commit（`ebad848` Phase 1 + `2f83ac3` Phase 2）
+- 验证：`assembleDebug` SUCCESSFUL（412 tasks）+ `testDebugUnitTest` 174 tests 0 failures
 - 详见 [docs/00-STATUS.md](docs/00-STATUS.md)
 
 ## 8. 项目阶段总览
@@ -135,10 +134,10 @@ tools/                           # Python 管线脚本
 | Release 配置 | ✅ 完成 | 签名 + GitHub Release v0.1.0 |
 | KSU 风格 UI 升级 | ✅ 完成 | Phase 0-3 + CI 修复，已合并 main |
 | UI 改造闭环 | ✅ 完成 | GroupedCard 增强 + 2 Screen 重构 + 4 Preview + 15 组件测试 |
+| UI 统一与死组件清理 | ✅ 完成 | KnowledgePointDetailScreen 统一 + 删除 4 个死组件（174 tests） |
 
 ## 9. 下一步优先级
 
 1. **P0**：跑 emulator 实测 LargeFlexibleTopAppBar 滚动折叠效果（组件已就绪，缺真机视觉验证）
-2. **P1**：可选 — 用 HierarchicalListItem 改造 KnowledgePointDetailScreen 多教材对照区域
-3. **P2**：OCR 完成后跑知识提取管线 → 生成 seed_data.json
-4. **P3**：考虑用 GroupedCard 改造其他 Screen（如 ApiConfigScreen）保持视觉一致性
+2. **P1**：OCR 完成后跑知识提取管线 → 生成 seed_data.json
+3. **P2**：可选 — 用 GroupedCard 改造其他 Screen（如 ApiConfigScreen）保持视觉一致性（注意：ApiConfigScreen 的 ConfigCard 有 4 行元信息 + 2 操作按钮，GroupedCardItem API 无法承载，需先扩展组件或保留现状）
