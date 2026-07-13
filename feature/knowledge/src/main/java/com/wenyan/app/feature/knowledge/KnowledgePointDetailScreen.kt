@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.clickable
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,8 +31,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.designsystem.component.ChipVariant
 import com.wenyan.app.core.designsystem.component.ContentSourceBadge
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
+import com.wenyan.app.core.designsystem.component.GroupedCard
+import com.wenyan.app.core.designsystem.component.GroupedCardDivider
+import com.wenyan.app.core.designsystem.component.GroupedCardItem
 import com.wenyan.app.core.designsystem.component.Spacing
-import com.wenyan.app.core.designsystem.component.TonalCard
 import com.wenyan.app.core.designsystem.component.WenyanInfoChip
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.database.entity.DataSourceEntity
@@ -357,29 +358,27 @@ private fun RelatedPointsSection(
 
     if (!hasRelated && !hasContrast && !hasExtension) return
 
-    InfoSection(title = "关联知识点") {
-        Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-            if (hasRelated) {
-                RelatedGroup(
-                    title = "关联",
-                    points = detail.relatedPoints,
-                    onNavigateToDetail = onNavigateToDetail,
-                )
-            }
-            if (hasContrast) {
-                RelatedGroup(
-                    title = "对比",
-                    points = detail.contrastPoints,
-                    onNavigateToDetail = onNavigateToDetail,
-                )
-            }
-            if (hasExtension) {
-                RelatedGroup(
-                    title = "延伸",
-                    points = detail.extensionPoints,
-                    onNavigateToDetail = onNavigateToDetail,
-                )
-            }
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
+        if (hasRelated) {
+            RelatedGroup(
+                title = "关联",
+                points = detail.relatedPoints,
+                onNavigateToDetail = onNavigateToDetail,
+            )
+        }
+        if (hasContrast) {
+            RelatedGroup(
+                title = "对比",
+                points = detail.contrastPoints,
+                onNavigateToDetail = onNavigateToDetail,
+            )
+        }
+        if (hasExtension) {
+            RelatedGroup(
+                title = "延伸",
+                points = detail.extensionPoints,
+                onNavigateToDetail = onNavigateToDetail,
+            )
         }
     }
 }
@@ -390,23 +389,14 @@ private fun RelatedGroup(
     points: List<KnowledgePointEntity>,
     onNavigateToDetail: (String) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        points.forEach { point ->
-            TonalCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onNavigateToDetail(point.id) },
-            ) {
-                Text(
-                    text = point.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
-                )
+    GroupedCard(title = title) {
+        points.forEachIndexed { index, point ->
+            GroupedCardItem(
+                title = point.title,
+                onClick = { onNavigateToDetail(point.id) },
+            )
+            if (index < points.size - 1) {
+                GroupedCardDivider()
             }
         }
     }
