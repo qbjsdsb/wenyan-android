@@ -11,7 +11,7 @@
 |----|-----|
 | 最新 commit | `d1b9cd5`（main，修复 KnowledgeViewModel 2 个 bug） |
 | P1 修复 | 1 个 commit（`d1b9cd5` DAO JOIN + ViewModel 修复 + 10 测试） |
-| CI 状态 | 待 push 后验证 |
+| CI 状态 | ✅ run 29275987334 全绿（14/14 步骤，18m48s）+ run 29274942006 全绿（20m13s） |
 | PR | [#1](https://github.com/qbjsdsb/wenyan-android/pull/1) 已合并（KSU UI 升级 Phase 0-3） |
 | 阻塞 | 无 |
 | 详情 | [02-VERSION-MATRIX.md](02-VERSION-MATRIX.md) |
