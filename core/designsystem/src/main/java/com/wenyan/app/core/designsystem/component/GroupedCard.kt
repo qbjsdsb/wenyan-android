@@ -7,11 +7,15 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 
 /**
  * 文研分组卡片。
@@ -72,17 +76,29 @@ fun GroupedCard(
 /**
  * 分组卡片内的列表项。
  *
- * 简单的标题 + 可选副标题行，左侧标题、右侧副标题或自定义 trailing，点击有回调。
+ * - [title]：标题（必填）
+ * - [subtitle]：右侧简短值（如"v0.1.0"），与 [trailing] 互斥
+ * - [description]：标题下方说明文字（如"深色模式下使用纯黑背景"），可多行
+ * - [leadingIcon]：左侧图标，可选
+ * - [leadingIconContentDescription]：左侧图标内容描述，为 null 时图标为装饰性（不读屏），
+ *   避免 title 被读屏重复；仅当图标有额外语义时才显式设置
+ * - [trailing]：右侧自定义内容（如 Switch），优先级高于 [subtitle]
  *
  * @param title 标题
- * @param subtitle 副标题，可选（如设置值）
+ * @param subtitle 右侧简短值，可选
+ * @param description 标题下方说明文字，可选
+ * @param leadingIcon 左侧图标，可选
+ * @param leadingIconContentDescription 左侧图标内容描述，为 null 时图标为装饰性（不读屏）
  * @param onClick 点击回调，为 null 时不可点击
- * @param trailing 右侧自定义内容（如 Switch），优先级高于 subtitle
+ * @param trailing 右侧自定义内容，优先级高于 subtitle
  */
 @Composable
 fun GroupedCardItem(
     title: String,
     subtitle: String? = null,
+    description: String? = null,
+    leadingIcon: ImageVector? = null,
+    leadingIconContentDescription: String? = null,
     onClick: (() -> Unit)? = null,
     trailing: @Composable (() -> Unit)? = null,
 ) {
@@ -98,12 +114,31 @@ fun GroupedCardItem(
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
+        if (leadingIcon != null) {
+            Icon(
+                imageVector = leadingIcon,
+                contentDescription = leadingIconContentDescription,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = Spacing.md),
+            )
+        }
+        Column(
             modifier = Modifier.weight(1f),
-        )
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            if (description != null) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         if (trailing != null) {
             trailing()
         } else if (subtitle != null) {
@@ -114,4 +149,20 @@ fun GroupedCardItem(
             )
         }
     }
+}
+
+/**
+ * 分组卡片内项之间的分割线。
+ *
+ * KSU 设置页标准做法：在两个 [GroupedCardItem] 之间手动插入此分割线。
+ * 使用 [MaterialTheme.colorScheme.outlineVariant] 色，0.5dp 厚度，
+ * 左右各留 [Spacing.lg] 边距，与 item 内容区对齐。
+ */
+@Composable
+fun GroupedCardDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = Spacing.lg),
+        thickness = 0.5.dp,
+        color = MaterialTheme.colorScheme.outlineVariant,
+    )
 }
