@@ -2,6 +2,7 @@ package com.wenyan.app.core.ai
 
 import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
@@ -28,6 +29,7 @@ class FakeKnowledgePointDao(
     override suspend fun countByChapter(chapterId: String): Int = 0
     override fun observeAll(): Flow<List<KnowledgePointEntity>> = flowOf(searchResults)
     override fun observeVerifiedForReview(): Flow<List<KnowledgePointEntity>> = flowOf(emptyList())
+    override fun observeVerifiedWithSubject(): Flow<List<KnowledgePointWithSubject>> = flowOf(emptyList())
     override suspend fun updateOcrStatus(id: String, status: String) {}
 
     override suspend fun searchByKeyword(keyword: String, limit: Int): List<KnowledgePointEntity> {
@@ -40,3 +42,4 @@ class FakeKnowledgePointDao(
         }.take(limit)
     }
 }
+

@@ -3,7 +3,7 @@ package com.wenyan.app.feature.knowledge
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.repository.ReviewRepository
-import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,7 +18,7 @@ import javax.inject.Inject
  * 知识点模块 ViewModel。
  *
  * 注入 [ReviewRepository] 加载真实知识点数据。
- * 分类筛选在内存中执行（通过 [KnowledgePointEntity.contentSource] 间接分类）。
+ * 分类筛选通过 [KnowledgePointWithSubject.subjectName] 匹配 [KnowledgeCategory] 实现。
  */
 @HiltViewModel
 class KnowledgeViewModel @Inject constructor(
@@ -31,19 +31,17 @@ class KnowledgeViewModel @Inject constructor(
     /**
      * 知识点列表：合并 Repository 数据流与分类筛选流。
      *
-     * 使用 [ReviewRepository.getAllVerifiedKnowledgePoints] 获取全部已验证知识点
-     * （含未到期，供浏览）。复习队列请使用 [ReviewRepository.getReviewQueue]。
-     *
-     * 使用 stateIn 订阅，ViewModelScope 销毁时自动取消。
+     * 使用 [ReviewRepository.getVerifiedWithSubject] 获取知识点 + 科目名，
+     * 按 [KnowledgeCategory] 筛选后映射为 UI 项。
      */
     val uiState: StateFlow<KnowledgeUiState> = combine(
-        reviewRepository.getAllVerifiedKnowledgePoints(),
+        reviewRepository.getVerifiedWithSubject(),
         _selectedCategory,
-    ) { points, category ->
-        val filtered = filterByCategory(points, category)
+    ) { pointsWithSubject, category ->
+        val filtered = filterByCategory(pointsWithSubject, category)
         KnowledgeUiState(
             isLoading = false,
-            knowledgePoints = filtered.map { it.toUiItem() },
+            knowledgePoints = filtered.map { toUiItem(it) },
             selectedCategory = category,
         )
     }.stateIn(
@@ -57,22 +55,35 @@ class KnowledgeViewModel @Inject constructor(
         _selectedCategory.update { category }
     }
 
-    // 按科目筛选（当前通过 contentSource 粗略分类，后续接入 chapter→subject 关联后精确筛选）
-    private fun filterByCategory(
-        points: List<KnowledgePointEntity>,
-        category: KnowledgeCategory,
-    ): List<KnowledgePointEntity> {
-        if (category == KnowledgeCategory.ALL) return points
-        // 暂时返回全部，后续通过 chapter_id → subject 关联实现精确筛选
-        return points
-    }
+    companion object {
+        /**
+         * 按科目筛选知识点。
+         *
+         * 用 [KnowledgeCategory.keyword] 在 [KnowledgePointWithSubject.subjectName] 中做 contains 匹配。
+         * seed_data.json 的科目名是全名（"中国古代文学"），枚举 label 是简称（"古代文学"），
+         * contains 匹配可兼容两者。
+         *
+         * 注意：ALL.keyword 为空字符串，任意字符串.contains("") 返回 true，
+         * 但为明确语义，ALL 分支显式返回全部。
+         */
+        internal fun filterByCategory(
+            points: List<KnowledgePointWithSubject>,
+            category: KnowledgeCategory,
+        ): List<KnowledgePointWithSubject> {
+            if (category == KnowledgeCategory.ALL) return points
+            return points.filter { it.subjectName.contains(category.keyword) }
+        }
 
-    private fun KnowledgePointEntity.toUiItem() = KnowledgePointItem(
-        id = id,
-        title = title,
-        subject = contentSource ?: "未知",
-        summary = summary ?: coreConclusion.take(100),
-    )
+        /** 将关联数据映射为 UI 项（供测试调用） */
+        internal fun toUiItem(pointWithSubject: KnowledgePointWithSubject): KnowledgePointItem =
+            KnowledgePointItem(
+                id = pointWithSubject.point.id,
+                title = pointWithSubject.point.title,
+                subject = pointWithSubject.subjectName,
+                summary = pointWithSubject.point.summary
+                    ?: pointWithSubject.point.coreConclusion.take(100),
+            )
+    }
 }
 
 // 知识点 UI 状态
@@ -91,10 +102,11 @@ data class KnowledgePointItem(
 )
 
 // 知识点分类（四科 + 全部）
-enum class KnowledgeCategory(val label: String) {
-    ALL("全部"),
-    ANCIENT("古代文学"),
-    MODERN("现当代文学"),
-    FOREIGN("外国文学"),
-    THEORY("文学理论"),
+// keyword 用于 subjectName.contains(keyword) 匹配，兼容 seed_data 全名与枚举简称
+enum class KnowledgeCategory(val label: String, val keyword: String) {
+    ALL("全部", ""),
+    ANCIENT("古代文学", "古代"),
+    MODERN("现当代文学", "现当代"),
+    FOREIGN("外国文学", "外国"),
+    THEORY("文学理论", "理论"),
 }

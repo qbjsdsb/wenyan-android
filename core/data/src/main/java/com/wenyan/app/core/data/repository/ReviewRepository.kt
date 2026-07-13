@@ -3,6 +3,7 @@ package com.wenyan.app.core.data.repository
 import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.dao.MemoRecordDao
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -52,6 +53,15 @@ class ReviewRepository @Inject constructor(
      */
     fun getAllVerifiedKnowledgePoints(): Flow<List<KnowledgePointEntity>> =
         knowledgePointDao.observeVerifiedForReview()
+
+    /**
+     * 获取所有已 VERIFIED 的知识点，附带科目名（P1 修复）。
+     *
+     * 供知识点浏览界面的分类筛选使用（如 [com.wenyan.app.feature.knowledge.KnowledgeViewModel]），
+     * 与 [getAllVerifiedKnowledgePoints] 区别：此方法返回科目名，支持按科目过滤。
+     */
+    fun getVerifiedWithSubject(): Flow<List<KnowledgePointWithSubject>> =
+        knowledgePointDao.observeVerifiedWithSubject()
 
     /**
      * 今日待复习数量：已 VERIFIED 且到期（next_review_at <= 当前时间）的知识点数。

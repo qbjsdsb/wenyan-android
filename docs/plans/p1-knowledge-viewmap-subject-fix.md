@@ -222,6 +222,7 @@ Room `@Query` JOIN 返回的 POJO。用 `@Embedded` 嵌入 KnowledgePointEntity�
 ```kotlin
 package com.wenyan.app.core.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Embedded
 
 /**
@@ -232,12 +233,15 @@ import androidx.room.Embedded
  *
  * 关联路径：knowledge_points.chapter_id → chapters.subject_id → subjects.name
  *
+ * 注意：subjectName 需显式 @ColumnInfo(name = "subject_name") 映射，
+ * Room 对 JOIN 查询的 POJO 不自动转换 snake_case → camelCase（已实测验证）。
+ *
  * @property point 知识点实体（@Embedded 展开所有字段）
  * @property subjectName 科目全名（如"中国古代文学"），来自 subjects.name
  */
 data class KnowledgePointWithSubject(
     @Embedded val point: KnowledgePointEntity,
-    val subjectName: String,
+    @ColumnInfo(name = "subject_name") val subjectName: String,
 )
 ```
 

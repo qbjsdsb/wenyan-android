@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -87,4 +88,25 @@ interface KnowledgePointDao {
             "ORDER BY updated_at DESC LIMIT :limit",
     )
     suspend fun searchByKeyword(keyword: String, limit: Int = 5): List<KnowledgePointEntity>
+
+    /**
+     * 查询所有 VERIFIED 知识点，附带科目名（P1 修复）。
+     *
+     * 通过 JOIN chapters + subjects 一次查询获取科目名，避免 N+1。
+     * 用 INNER JOIN：若知识点无对应科目（数据异常），不显示在列表中
+     * （强制数据完整性，比显示"未知科目"更好）。
+     *
+     * 关联路径：knowledge_points.chapter_id → chapters.subject_id → subjects.id
+     *
+     * @return 知识点 + 科目名的关联列表，按 updated_at DESC 排序
+     */
+    @Query(
+        "SELECT kp.*, s.name AS subject_name " +
+            "FROM knowledge_points kp " +
+            "INNER JOIN chapters c ON kp.chapter_id = c.id " +
+            "INNER JOIN subjects s ON c.subject_id = s.id " +
+            "WHERE kp.ocr_status = 'VERIFIED' " +
+            "ORDER BY kp.updated_at DESC",
+    )
+    fun observeVerifiedWithSubject(): Flow<List<KnowledgePointWithSubject>>
 }
