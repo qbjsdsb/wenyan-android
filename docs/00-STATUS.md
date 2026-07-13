@@ -11,7 +11,7 @@
 |----|-----|
 | 最新 commit | `f311a31`（main，UI 闭环 Phase 4：Preview + 测试） |
 | 代码最新 commit | `f311a31`（UI 闭环计划 Phase 1-4） |
-| CI 状态 | ⏳ 待推送后触发验证 |
+| CI 状态 | ✅ run 29248941044 全绿（14/14 步骤，19m41s） |
 | PR | [#1](https://github.com/qbjsdsb/wenyan-android/pull/1) 已合并（KSU UI 升级 Phase 0-3） |
 | 阻塞 | 无 |
 | 详情 | [02-VERSION-MATRIX.md](02-VERSION-MATRIX.md) |
