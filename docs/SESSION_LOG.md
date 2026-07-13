@@ -177,6 +177,73 @@
   - 为 GroupedCard / HierarchicalListItem 写测试
   - OCR 完成后跑知识提取管线
 
+---
+
+## Session 2026-07-13：UI 改造闭环计划（Phase 1-5 全部完成）
+
+### 目标
+
+执行 [docs/plans/ui-closure-plan.md](plans/ui-closure-plan.md) — 把 KSU 风格 UI 改造从"骨架已立"推进到"闭环可用"。
+
+### 完成内容
+
+**Phase 1：GroupedCard 组件增强**（commit `da3f369`）
+- 增强 `GroupedCardItem`：新增 `leadingIcon` / `leadingIconContentDescription` / `description` 参数
+- 新增 `GroupedCardDivider` 函数（`HorizontalDivider` + outlineVariant + 0.5dp）
+- 新增 7 个 Robolectric 测试（GroupedCardTest.kt）覆盖 title/subtitle/description/leadingIcon/trailing
+
+**Phase 2：SettingsScreen 重构**（commit `68e5946`）
+- 4 个分组（外观/动态色彩/AI服务/关于）全部从 `SectionHeader` + 手写 Row 迁移到 `GroupedCard` + `GroupedCardItem`
+- LazyColumn 添加 `verticalArrangement = Arrangement.spacedBy(Spacing.xl)` 避免卡片粘连
+- 删除私有 `SwitchItem` 函数（GroupedCardItem.trailing 已覆盖）
+
+**Phase 3：KnowledgePointDetailScreen 重构**（commit `c918411`）
+- `RelatedGroup`（关联/对比/延伸知识点）从 `TonalCard` + 简单 `Text` 重构为 `GroupedCard` + `GroupedCardItem` + `GroupedCardDivider`
+- `forEachIndexed` 在项间插入分割线（除最后一项）
+
+**Phase 4：@Preview + 组件测试**（commit `f311a31`）
+- 4 个 @Preview 文件（全部 `dynamicColor=false`，三态覆盖 light/dark/AMOLED）：
+  - `WenyanLargeTopAppBarPreview`：Light-Simple / Light-WithSubtitle / AMOLED-WithSubtitle
+  - `WenyanNavigationBarPreview`：Light / Dark / AMOLED（5 个示例导航项）
+  - `GroupedCardPreview`：settings-style / about-style / knowledge-related-style
+  - `HierarchicalListItemPreview`：Light-Tree / Dark-WithTrailing / AMOLED-NoOnClick
+- 2 个组件测试文件（8 tests 全绿）：
+  - `WenyanNavigationBarTest`（3 tests）：labels 显示 / items 有点击行为 / onNavigate 回调
+  - `HierarchicalListItemTest`（5 tests）：root/child title / trailing / onClick / 无 trailing 时不显示箭头
+
+**Phase 5：全量验证 + 文档更新**（本次）
+- `assembleDebug` BUILD SUCCESSFUL（3m 59s，412 tasks）
+- `testDebugUnitTest` BUILD SUCCESSFUL（1m 4s，117 tests 0 failures：designsystem 19 + fsrs 25 + data 52 + aiassistant 21）
+- 更新文档：00-STATUS.md、SESSION_LOG.md、plans/ui-closure-plan.md（标记完成）
+
+### 关键技术决策
+
+1. **leadingIconContentDescription 默认 null**（装饰性图标）— 避免 TalkBack 重复朗读 title。仅在图标含义与 title 不同时才需显式设置。
+2. **@Preview 全部 `dynamicColor=false`** — 动态色彩依赖系统壁纸，Preview 环境无壁纸会导致渲染异常。
+3. **`icons_haveContentDescription_withLabel` 测试失败 → 改为 `items_haveClickAction_forAccessibility`** — Material3 NavigationBarItem 在 `label != null` 时对 icon 应用 `clearAndSetSemantics`，icon 的 contentDescription 节点不可见。正确做法是验证合并语义后 label 节点有 `ClickAction`（供 TalkBack 触发）。
+4. **`GroupedCardDivider` 用 `outlineVariant` + 0.5dp** — 与 KSU 视觉规格一致，比 `outline` 更柔和。
+
+### 环境问题与解决（沙箱特有）
+
+- **Gradle 代理**：沙箱有 HTTP 代理 `127.0.0.1:18080`，但 Gradle 不读 `http_proxy` 环境变量。需在 `/root/.gradle/gradle.properties` 配置 `systemProp.http.proxyHost` 等。
+- **Robolectric 代理**：Robolectric 的 `MavenArtifactFetcher` 不读 Gradle 的 `systemProp.*`。需在 `/root/.gradle/init.d/proxy.gradle` 用 `jvmArgs('-Dhttp.proxyHost=...')` 注入到 Test 任务。
+- **JDK 版本**：mise 默认 `java=25`，但 `gradle` shim 用 mise 默认 JDK。需用 `$JAVA_HOME/bin/java -cp .../gradle-launcher.jar org.gradle.launcher.GradleMain` 直接调用强制 JDK 17。
+- **Android SDK**：新沙箱未预装，需用 cmdline-tools 安装 `platform-tools;35.0.0` + `platforms;android-35` + `build-tools;35.0.0`。
+
+### commit 列表
+
+- `da3f369` — Phase 1: GroupedCard 增强 + 7 tests
+- `68e5946` — Phase 2: SettingsScreen GroupedCard 重构（4 分组）
+- `c918411` — Phase 3: KnowledgePointDetailScreen RelatedGroup 重构
+- `f311a31` — Phase 4: 4 @Preview + 2 组件测试（8 tests）
+- 本次 — Phase 5: 文档更新（00-STATUS + SESSION_LOG + plan 标记完成）
+
+### 下次继续
+
+- 跑 emulator 实测 LargeFlexibleTopAppBar 滚动折叠效果（P0）
+- 可选：用 HierarchicalListItem 改造 KnowledgePointDetailScreen 多教材对照区域
+- OCR 完成后跑知识提取管线 → 生成 seed_data.json
+
 ### 新会话快速恢复 Checklist
 
 新沙箱会话开始时，按以下顺序操作（5 分钟内进入工作状态）：
@@ -188,15 +255,38 @@
    ```bash
    cd /workspace && git pull origin main
    ```
-5. **配置环境变量**：
+5. **配置 Gradle 代理**（沙箱特有，新沙箱必做）：
+   ```bash
+   # /root/.gradle/gradle.properties
+   cat > /root/.gradle/gradle.properties <<'EOF'
+   systemProp.http.proxyHost=127.0.0.1
+   systemProp.http.proxyPort=18080
+   systemProp.https.proxyHost=127.0.0.1
+   systemProp.https.proxyPort=18080
+   systemProp.http.nonProxyHosts=localhost|127.0.0.1
+   EOF
+
+   # /root/.gradle/init.d/proxy.gradle（Robolectric 测试需要）
+   mkdir -p /root/.gradle/init.d
+   cat > /root/.gradle/init.d/proxy.gradle <<'EOF'
+   allprojects {
+       tasks.withType(Test).configureEach {
+           jvmArgs('-Dhttp.proxyHost=127.0.0.1','-Dhttp.proxyPort=18080',
+                   '-Dhttps.proxyHost=127.0.0.1','-Dhttps.proxyPort=18080',
+                   '-Dhttp.nonProxyHosts=localhost|127.0.0.1')
+       }
+   }
+   EOF
+   ```
+6. **配置环境变量**：
    ```bash
    export JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2
    export ANDROID_HOME=/opt/android-sdk
    export JAVA_TOOL_OPTIONS="-XX:-UseContainerSupport"
-   export PATH=$JAVA_HOME/bin:/root/.local/share/mise/shims:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+   export PATH=$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
    ```
-6. **验证构建**：
+7. **验证构建**（注意：不能用 `gradle` shim，它用 mise 默认 JDK 25 与 AGP 8.6.0 不兼容）：
    ```bash
-   gradle :app:assembleDebug --no-daemon 2>&1 | tail -5
+   $JAVA_HOME/bin/java -Dorg.gradle.daemon=false -cp /root/.local/share/mise/installs/gradle/8.14.4/gradle-8.14.4/lib/gradle-launcher-8.14.4.jar org.gradle.launcher.GradleMain :app:assembleDebug --no-daemon 2>&1 | tail -5
    ```
-7. **开始工作**：根据 [00-STATUS.md](00-STATUS.md) 的"下一步优先级"选择任务
+8. **开始工作**：根据 [00-STATUS.md](00-STATUS.md) 的"下一步优先级"选择任务

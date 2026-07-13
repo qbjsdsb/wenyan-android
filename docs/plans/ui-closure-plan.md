@@ -1,5 +1,9 @@
 # 文研 App UI 改造闭环实施计划
 
+> **状态：✅ 已完成（2026-07-13）** — Phase 1-5 全部完成，4 个 commit 已推送 main，CI 全绿。
+> Commits: `da3f369`（Phase 1）→ `68e5946`（Phase 2）→ `c918411`（Phase 3）→ `f311a31`（Phase 4）+ 文档更新 commit。
+> 验证：`assembleDebug` SUCCESSFUL（412 tasks）、`testDebugUnitTest` 117 tests 0 failures。
+
 > **For agentic workers:** 本计划基于 writing-plans skill 编写。Step 使用 `- [ ]` 复选框跟踪进度。每个 Task 应独立可执行、可验证、可回滚。
 
 **Goal:** 把 KSU 风格 UI 改造从"骨架已立"推进到"闭环可用"——增强 GroupedCard 组件、重构 SettingsScreen 和 KnowledgePointDetailScreen 使组件真正被使用、为 4 个 KSU 组件补齐 @Preview 和 Robolectric 测试，让 UI 改造形成完整闭环。

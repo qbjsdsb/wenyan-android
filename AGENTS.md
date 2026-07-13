@@ -113,13 +113,14 @@ tools/                           # Python 管线脚本
 - commit message 说清"为什么改"，不只是"改了什么"
 - 用户偏好：中文交流、严谨验证、反复检查、有趣的教学风格、M3 谷歌味道 UI
 
-## 7. 当前状态（2026-07-12）
+## 7. 当前状态（2026-07-13）
 
-**✅ 无阻塞** — CI 全绿，KSU 风格 UI 升级 Phase 0-3 已合并到 main。
+**✅ 无阻塞** — UI 改造闭环计划 Phase 1-5 全部完成，KSU 风格 UI 升级 Phase 0-3 + UI 闭环已合并到 main。
 
-- 最新 commit：`4461eba`（main）
-- PR #1 已合并（squash merge `3efe678`）
-- CI run 29211066998 全绿（11/11 步骤）
+- 最新 commit：`f311a31`（main，UI 闭环 Phase 4：Preview + 测试）
+- PR #1 已合并（squash merge `3efe678`，KSU UI 升级 Phase 0-3）
+- UI 闭环计划：4 个 commit（`da3f369` → `68e5946` → `c918411` → `f311a31`）
+- 验证：`assembleDebug` SUCCESSFUL + `testDebugUnitTest` 117 tests 0 failures
 - 详见 [docs/00-STATUS.md](docs/00-STATUS.md)
 
 ## 8. 项目阶段总览
@@ -133,11 +134,11 @@ tools/                           # Python 管线脚本
 | Phase 5 UI 增强 | ✅ 完成 | 9 个 Screen + M3 组件 |
 | Release 配置 | ✅ 完成 | 签名 + GitHub Release v0.1.0 |
 | KSU 风格 UI 升级 | ✅ 完成 | Phase 0-3 + CI 修复，已合并 main |
+| UI 改造闭环 | ✅ 完成 | GroupedCard 增强 + 2 Screen 重构 + 4 Preview + 15 组件测试 |
 
 ## 9. 下一步优先级
 
-1. **P0**：跑 emulator 实测 LargeFlexibleTopAppBar 滚动折叠效果
-2. **P1**：用 GroupedCard 改造 SettingsScreen（当前仍是 TonalCard 平铺）
-3. **P2**：用 HierarchicalListItem 改造 KnowledgePointDetailScreen 关联知识点区域
-4. **P3**：为 GroupedCard / HierarchicalListItem 写测试
-5. **P4**：OCR 完成后跑知识提取管线 → 生成 seed_data.json
+1. **P0**：跑 emulator 实测 LargeFlexibleTopAppBar 滚动折叠效果（组件已就绪，缺真机视觉验证）
+2. **P1**：可选 — 用 HierarchicalListItem 改造 KnowledgePointDetailScreen 多教材对照区域
+3. **P2**：OCR 完成后跑知识提取管线 → 生成 seed_data.json
+4. **P3**：考虑用 GroupedCard 改造其他 Screen（如 ApiConfigScreen）保持视觉一致性
