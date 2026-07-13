@@ -8,7 +8,7 @@
 
 **Tech Stack:**
 - Kotlin 2.3.10 / Hilt 2.57.1（`@HiltAndroidApp` + `@Inject lateinit var`）
-- Coroutines（`CoroutineScope(Dispatchers.IO).launch`）
+- Coroutines（`CoroutineScope(SupervisorJob() + Dispatchers.IO + CoroutineExceptionHandler).launch`）
 - Gradle 8.14.4 / AGP 8.6.0
 - GitHub Actions（`gradle/actions/setup-gradle@v3`）
 
@@ -28,7 +28,7 @@
 - 详见 [03-FAILED-ATTEMPTS.md #012](file:///workspace/docs/03-FAILED-ATTEMPTS.md) — `debugImplementation` 依赖只在 debug 变体可用，release 测试会因缺 ComponentActivity 声明失败
 - 后果：即使 Gradle 版本修对了，`gradle test` 会跑 release 测试变体，因缺 ComponentActivity 声明失败
 
-**参考**：android.yml 已正确用 Gradle 8.14.4 + `testDebugUnitTest`（见调查项 8），release.yml 应对齐。
+**参考**：android.yml 已正确用 Gradle 8.14.4 + `testDebugUnitTest`（已核实 `.github/workflows/android.yml:25,37`），release.yml 应对齐。`generate-keystore.yml` 是 `workflow_dispatch` 手动触发，不用 Gradle，无需改动。
 
 ### 调查项 2：SeedDataLoader 从未被调用
 
@@ -53,9 +53,14 @@ Hilt 支持用 `@Inject lateinit var` 注入到 `@HiltAndroidApp` 标注的 Appl
 class WenyanApplication : Application() {
     @Inject lateinit var seedDataLoader: SeedDataLoader
 
+    private val exceptionHandler = CoroutineExceptionHandler { _, e ->
+        Log.e("WenyanApplication", "Seed data load failed", e)
+    }
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + exceptionHandler)
+
     override fun onCreate() {
         super.onCreate()
-        CoroutineScope(Dispatchers.IO).launch {
+        applicationScope.launch {
             seedDataLoader.ensureSeedDataLoaded()
         }
     }
@@ -67,9 +72,32 @@ class WenyanApplication : Application() {
 - Application 进程级单例，用独立 CoroutineScope 即可（Application 不会被销毁）
 - `Dispatchers.IO` 适合磁盘/数据库操作
 
+**为什么必须加 CoroutineExceptionHandler（深度审查修订）：**
+
+原计划误以为 `SupervisorJob` 能防止 App 崩溃，这是事实性错误。经 Kotlin 官方文档和多方技术资料核实：
+- `SupervisorJob` 只阻断异常向父 Job 传播（不让父协程被取消），**但不阻止异常本身被抛出**
+- `launch` 创建的根协程，未捕获异常会经 `Thread.uncaughtExceptionHandler` 处理
+- Android 默认的 `UncaughtExceptionHandler` 是 `RuntimeInit$KillApplicationHandler`，**会导致 App 崩溃**
+- 因此 seed_data.json 解析失败（`SerializationException`）或 assets 读取失败（`IOException`）会让 App 直接崩溃
+
+加 `CoroutineExceptionHandler` 后：异常被捕获并记录到 Logcat，App 不崩溃，用户看到 EmptyState（可接受降级）。
+
 **为什么不阻塞 onCreate：**
 - 阻塞 onCreate 会导致 App 启动卡顿
 - 异步加载时各 Screen 的 ViewModel 会先收到空数据（显示 loading 或 EmptyState），数据加载完后 Flow 自动刷新
+
+### 已知限制（深度审查发现，本次计划接受）
+
+1. **强杀重启可能丢失复习数据**：`MemoRecordEntity` 外键 `onDelete = CASCADE` + DAO 用 `OnConflictStrategy.REPLACE`。如果 App 在首次导入中途被强杀（DataStore 未标记已初始化），下次启动重新导入时，`REPLACE` 会先 DELETE 旧行（触发 CASCADE 删除 memo_records），再 INSERT 新行。用户已复习的进度会被初始值覆盖。
+   - **发生概率**：低（仅在首次启动 + 中途被杀时）
+   - **本次接受理由**：MVP 阶段，用户尚未有真实复习数据可丢失；后续可用 `INSERT OR IGNORE` 或 `@Transaction` 优化
+   - **后续优化**：将 `importToDatabase` 改为先检查是否存在再决定插入，或用 `@Insert(onConflict = ABORT)` + try-catch
+
+2. **importToDatabase 无 @Transaction**：7 步导入之间无外层事务包裹，如果中途 OOM 会被杀，可能留下部分数据。但所有 insertAll 用 `REPLACE`，下次启动会覆盖，风险可控。
+
+3. **mapNotNull 静默跳过**：seed_data.json 中 subject 字段不匹配 subjects.name 的知识点会被静默跳过，且 `markInitialized()` 仍执行。当前 stage2-sample 数据匹配，无影响。
+
+4. **release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，本次不动）**：该步骤无条件执行 `keytool -list`，但前一步 "Decode keystore" 在 `KEYSTORE_BASE64` 未配置时 `exit 0` 跳过解码（不生成 .jks 文件）。结果 Verify 步骤会对不存在的文件执行 keytool 而失败。**触发条件**：仓库未配置 Secrets 时打 tag 触发 release。**本次不动理由**：当前仓库已配置 Secrets，不会触发；修复需重构 keystore 处理逻辑，超出 P0 范围。记录到 `docs/03-FAILED-ATTEMPTS.md` 供后续修复。
 
 ---
 
@@ -86,7 +114,7 @@ class WenyanApplication : Application() {
 
 - `SeedDataLoader.kt` — 实现完整，无需改动
 - `seed_data.json` — stage2-sample 已存在
-- `app/build.gradle.kts` — 已依赖 `core:data`，无需改
+- `app/build.gradle.kts` — 已依赖 `core:data`（line 83）+ `kotlinx.coroutines.android`（line 125），无需改
 - 其他 Screen / ViewModel — 数据加载后 Flow 自动刷新
 
 ---
@@ -179,8 +207,10 @@ class WenyanApplication : Application()
 package com.wenyan.app
 
 import android.app.Application
+import android.util.Log
 import com.wenyan.app.core.data.seed.SeedDataLoader
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -196,6 +226,11 @@ import javax.inject.Inject
  * 启动时异步加载种子数据（首次启动从 assets/seed_data.json 导入到 Room）。
  * 加载在 IO 调度器执行，不阻塞 onCreate；各 ViewModel 通过 Flow 观察数据库，
  * 数据导入完成后自动刷新 UI。
+ *
+ * 异常处理：用 CoroutineExceptionHandler 捕获种子加载异常，避免 App 崩溃。
+ * SupervisorJob 只阻断异常向父 Job 传播，但不阻止异常本身被抛出；
+ * launch 根协程未捕获异常会经 Thread.uncaughtExceptionHandler 处理，
+ * Android 默认会导致 App 崩溃，因此必须显式加异常处理器。
  */
 @HiltAndroidApp
 class WenyanApplication : Application() {
@@ -203,7 +238,13 @@ class WenyanApplication : Application() {
     @Inject
     lateinit var seedDataLoader: SeedDataLoader
 
-    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val exceptionHandler = CoroutineExceptionHandler { _, e ->
+        Log.e("WenyanApplication", "Seed data load failed", e)
+    }
+
+    private val applicationScope = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO + exceptionHandler,
+    )
 
     override fun onCreate() {
         super.onCreate()
@@ -216,9 +257,9 @@ class WenyanApplication : Application() {
 
 **关键设计决策：**
 
-1. **`SupervisorJob()` 而非默认 Job**：子协程异常不会取消父协程。如果 SeedDataLoader 抛异常（如 seed_data.json 解析失败），不会导致 Application 崩溃。
+1. **`SupervisorJob()` 而非默认 Job**：阻断异常向父 Job 传播（不让父协程被取消）。
 2. **`Dispatchers.IO`**：SeedDataLoader 涉及 assets 读取 + Room 数据库写入，IO 密集型。
-3. **不捕获异常**：让异常自然传播到全局异常处理器。如果 SeedDataLoader 失败，App 不会崩溃（SupervisorJob 隔离），但数据库可能为空——这是可接受的降级（用户看到 EmptyState，比崩溃好）。
+3. **`CoroutineExceptionHandler`（深度审查新增）**：捕获种子加载异常，记录到 Logcat，避免 App 崩溃。SupervisorJob 不阻止异常本身被抛出，未捕获异常会经 `Thread.uncaughtExceptionHandler` 导致 Android App 崩溃。加异常处理器后，用户看到 EmptyState（可接受降级），比崩溃好。
 4. **不阻塞 onCreate**：异步加载，App 启动流畅。各 ViewModel 用 `stateIn(WhileSubscribed(5000))` 订阅，数据加载完后自动刷新。
 
 - [ ] **Step 1: 修改 WenyanApplication.kt — 注入 SeedDataLoader + onCreate 异步调用**
@@ -231,9 +272,12 @@ class WenyanApplication : Application() {
   git commit -m "feat: 接通 SeedDataLoader — App 启动时异步导入种子数据
 
   - WenyanApplication 注入 SeedDataLoader（@Inject lateinit var）
-  - onCreate 用 CoroutineScope(SupervisorJob() + Dispatchers.IO).launch 异步调用 ensureSeedDataLoaded()
-  - SupervisorJob 隔离异常：SeedDataLoader 失败不会导致 Application 崩溃
-  - 不阻塞 onCreate：数据加载时各 Screen 显示 loading/EmptyState，加载完后 Flow 自动刷新
+  - onCreate 用 CoroutineScope(SupervisorJob() + Dispatchers.IO + exceptionHandler).launch
+    异步调用 ensureSeedDataLoaded()，不阻塞启动
+  - CoroutineExceptionHandler 捕获种子加载异常（如 JSON 解析失败、assets 读取失败），
+    记录到 Logcat，避免 App 崩溃（降级为 EmptyState）
+  - 注意：SupervisorJob 只阻断异常向父 Job 传播，不阻止异常本身被抛出；
+    真正防崩溃的是 CoroutineExceptionHandler，不是 SupervisorJob
 
   为什么：SeedDataLoader 实现完整（6 步导入）但从未被调用，App 启动时数据库为空，
   所有 Screen 显示 EmptyState。接通后可用 stage2-sample seed_data.json 立即验证数据流。
@@ -279,12 +323,14 @@ class WenyanApplication : Application() {
 - [x] release.yml 2 个 bug 的具体行号（Line 46 + Line 81）已核实
 - [x] SeedDataLoader 实现完整（6 步导入）已读取确认
 - [x] seed_data.json 已存在（stage2-sample）已 Glob 确认
-- [x] app 模块已依赖 core:data（build.gradle.kts line 83）已读取确认
+- [x] app 模块已依赖 core:data（build.gradle.kts line 83）+ kotlinx.coroutines.android（line 125）已读取确认
 - [x] Hilt 注入 Application 的标准模式（@Inject lateinit var）已确认
+- [x] SeedDataLoader 的 9 个构造依赖全部可注入（7 DAO 由 DatabaseModule @Provides，GraphRepository 由 DataModule @Binds 到 GraphRepositoryImpl @Inject constructor，Context 由 @ApplicationContext 提供）已核实
+- [x] android.yml 已用 8.14.4 + testDebugUnitTest（line 25,37），generate-keystore.yml 不用 Gradle，均无需改动
 
 ### 风险评估
 - **Phase 1 风险：极低** — 2 行 yaml 改动，不涉及代码逻辑，yaml 语法验证后即安全
-- **Phase 2 风险：低** — 标准 Hilt 模式（@Inject lateinit var 在 Application 中是官方推荐用法），SupervisorJob 隔离异常，不阻塞 onCreate
+- **Phase 2 风险：低** — 标准 Hilt 模式（@Inject lateinit var 在 Application 中是官方推荐用法），CoroutineExceptionHandler 捕获异常防崩溃，不阻塞 onCreate
 - **回滚方案** — 每个 Phase 独立 commit，可 `git revert` 单个 Phase
 
 ### 预期结果
