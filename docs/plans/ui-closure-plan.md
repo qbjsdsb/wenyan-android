@@ -122,14 +122,15 @@ import androidx.compose.ui.unit.dp
  * - [subtitle]：右侧简短值（如"v0.1.0"），与 [trailing] 互斥
  * - [description]：标题下方说明文字（如"深色模式下使用纯黑背景"），可多行
  * - [leadingIcon]：左侧图标，可选
- * - [leadingIconContentDescription]：左侧图标内容描述，为 null 时用 title
+ * - [leadingIconContentDescription]：左侧图标内容描述，为 null 时图标为装饰性（不读屏），
+ *   避免 title 被读屏重复；仅当图标有额外语义时才显式设置
  * - [trailing]：右侧自定义内容（如 Switch），优先级高于 [subtitle]
  *
  * @param title 标题
  * @param subtitle 右侧简短值，可选
  * @param description 标题下方说明文字，可选
  * @param leadingIcon 左侧图标，可选
- * @param leadingIconContentDescription 左侧图标内容描述，为 null 时用 title
+ * @param leadingIconContentDescription 左侧图标内容描述，为 null 时图标为装饰性（不读屏）
  * @param onClick 点击回调，为 null 时不可点击
  * @param trailing 右侧自定义内容，优先级高于 subtitle
  */
@@ -158,7 +159,7 @@ fun GroupedCardItem(
         if (leadingIcon != null) {
             Icon(
                 imageVector = leadingIcon,
-                contentDescription = leadingIconContentDescription ?: title,
+                contentDescription = leadingIconContentDescription,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(end = Spacing.md),
             )
@@ -348,7 +349,7 @@ class GroupedCardTest {
     }
 
     @Test
-    fun itemLeadingIcon_isDisplayed_whenProvided() {
+    fun itemLeadingIcon_isDecorative_byDefault() {
         composeRule.setContent {
             MaterialTheme {
                 Surface {
@@ -361,8 +362,29 @@ class GroupedCardTest {
                 }
             }
         }
-        // contentDescription 默认用 title
-        composeRule.onNodeWithContentDescription("主题模式").assertIsDisplayed()
+        // title 文字显示
+        composeRule.onNodeWithText("主题模式").assertIsDisplayed()
+        // leadingIcon 默认为装饰性（contentDescription = null），不应有 "主题模式" 的 contentDescription
+        composeRule.onNodeWithContentDescription("主题模式").assertDoesNotExist()
+    }
+
+    @Test
+    fun itemLeadingIcon_hasContentDescription_whenExplicitlySet() {
+        composeRule.setContent {
+            MaterialTheme {
+                Surface {
+                    GroupedCard(title = "外观") {
+                        GroupedCardItem(
+                            title = "主题模式",
+                            leadingIcon = Icons.Default.Palette,
+                            leadingIconContentDescription = "调色板",
+                        )
+                    }
+                }
+            }
+        }
+        composeRule.onNodeWithText("主题模式").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("调色板").assertIsDisplayed()
     }
 
     @Test
@@ -392,7 +414,7 @@ Run:
 ```bash
 cd /workspace && export JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2 && export ANDROID_HOME=/opt/android-sdk && export JAVA_TOOL_OPTIONS="-XX:-UseContainerSupport" && export PATH=$JAVA_HOME/bin:/root/.local/share/mise/shims:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH && gradle :core:designsystem:testDebugUnitTest --tests "com.wenyan.app.core.designsystem.component.GroupedCardTest" --no-daemon 2>&1 | tail -15
 ```
-Expected: 6 个测试全部通过。
+Expected: 7 个测试全部通过。
 
 - [ ] **Step 3: 提交 Phase 1**
 
@@ -406,7 +428,7 @@ description 参数，支持 KSU 风格的"左侧图标 + 标题 + 说明文字 +
 
 新增 GroupedCardDivider 组件用于项间分割线（outlineVariant 0.5dp）。
 
-新增 GroupedCardTest（6 个测试用例）：标题/子标题/描述/图标/trailing。
+新增 GroupedCardTest（7 个测试用例）：标题/子标题/描述/图标装饰性/图标显式描述/trailing。
 EOF
 )"
 ```
@@ -436,7 +458,21 @@ import com.wenyan.app.core.designsystem.component.GroupedCardDivider
 import com.wenyan.app.core.designsystem.component.GroupedCardItem
 ```
 
-- [ ] **Step 2: 替换"外观"区块**
+- [ ] **Step 2: 给 LazyColumn 加 verticalArrangement**
+
+改造后每个 `item { GroupedCard(...) }` 是独立卡片，卡片之间需要间距。当前 LazyColumn 无 `verticalArrangement`，卡片会紧贴。将第 65-69 行的 LazyColumn 修改为：
+
+```kotlin
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .padding(padding),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xl),
+        ) {
+```
+
+- [ ] **Step 3: 替换"外观"区块**
 
 将第 71-117 行（从 `// 外观` 到 AMOLED 开关 item 结束的 `}`）替换为：
 
@@ -493,7 +529,7 @@ import com.wenyan.app.core.designsystem.component.GroupedCardItem
             }
 ```
 
-- [ ] **Step 3: 验证编译**
+- [ ] **Step 4: 验证编译**
 
 Run:
 ```bash
@@ -827,6 +863,11 @@ EOF
 
 ## Phase 4: 补 @Preview 和测试
 
+> **重要**：所有 @Preview 中的 `ThemeConfig` 都显式设置 `dynamicColor = false`。
+> 原因：`WenyanTheme` 在 `dynamicColor=true` 且 `SDK≥31` 时调用 `dynamicLightColorScheme(context)` / `dynamicDarkColorScheme(context)`，
+> 这些 API 依赖系统壁纸服务。IDE Preview 环境没有壁纸服务，会导致色彩不可预测或渲染异常。
+> 用 `dynamicColor = false` 改走 materialkolor 种子色生成路径，确保 Preview 在任何环境都显示可预测的色彩。
+
 ### Task 4.1: 为 WenyanLargeTopAppBar 补 @Preview
 
 **Files:**
@@ -850,7 +891,7 @@ import com.wenyan.app.core.designsystem.theme.WenyanTheme
 @Preview(name = "Light - Simple", showBackground = true)
 @Composable
 private fun WenyanLargeTopAppBarSimplePreview() {
-    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT)) {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT, dynamicColor = false)) {
         Surface {
             WenyanLargeTopAppBar(title = "知识点")
         }
@@ -860,7 +901,7 @@ private fun WenyanLargeTopAppBarSimplePreview() {
 @Preview(name = "Light - With Subtitle + Back", showBackground = true)
 @Composable
 private fun WenyanLargeTopAppBarWithSubtitlePreview() {
-    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT)) {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT, dynamicColor = false)) {
         Surface {
             WenyanLargeTopAppBar(
                 title = "鲁迅《狂人日记》",
@@ -874,7 +915,7 @@ private fun WenyanLargeTopAppBarWithSubtitlePreview() {
 @Preview(name = "AMOLED - With Subtitle", showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun WenyanLargeTopAppBarAmoledPreview() {
-    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.DARK, amoledMode = true)) {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.DARK, amoledMode = true, dynamicColor = false)) {
         Surface {
             WenyanLargeTopAppBar(
                 title = "鲁迅《狂人日记》",
@@ -934,7 +975,7 @@ private val sampleItems = listOf(
 @Preview(name = "Light - Knowledge selected", showBackground = true)
 @Composable
 private fun WenyanNavigationBarLightPreview() {
-    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT)) {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT, dynamicColor = false)) {
         Surface {
             WenyanNavigationBar(
                 items = sampleItems,
@@ -948,7 +989,7 @@ private fun WenyanNavigationBarLightPreview() {
 @Preview(name = "Dark - AI selected", showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun WenyanNavigationBarDarkPreview() {
-    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.DARK)) {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.DARK, dynamicColor = false)) {
         Surface {
             WenyanNavigationBar(
                 items = sampleItems,
@@ -962,7 +1003,7 @@ private fun WenyanNavigationBarDarkPreview() {
 @Preview(name = "AMOLED - Cards selected", showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun WenyanNavigationBarAmoledPreview() {
-    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.DARK, amoledMode = true)) {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.DARK, amoledMode = true, dynamicColor = false)) {
         Surface {
             WenyanNavigationBar(
                 items = sampleItems,
@@ -1010,7 +1051,7 @@ import com.wenyan.app.core.designsystem.theme.WenyanTheme
 @Preview(name = "Light - Settings style", showBackground = true)
 @Composable
 private fun GroupedCardSettingsLightPreview() {
-    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT)) {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT, dynamicColor = false)) {
         Surface {
             GroupedCard(title = "外观") {
                 GroupedCardItem(
@@ -1032,7 +1073,7 @@ private fun GroupedCardSettingsLightPreview() {
 @Preview(name = "Dark - About style", showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun GroupedCardAboutDarkPreview() {
-    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.DARK)) {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.DARK, dynamicColor = false)) {
         Surface {
             GroupedCard(title = "关于") {
                 GroupedCardItem(title = "版本", subtitle = "v0.1.0")
@@ -1048,7 +1089,7 @@ private fun GroupedCardAboutDarkPreview() {
 @Preview(name = "AMOLED - Knowledge related", showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun GroupedCardRelatedAmoledPreview() {
-    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.DARK, amoledMode = true)) {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.DARK, amoledMode = true, dynamicColor = false)) {
         Surface {
             GroupedCard(title = "关联") {
                 GroupedCardItem(title = "鲁迅《狂人日记》", onClick = {})
@@ -1097,7 +1138,7 @@ import com.wenyan.app.core.designsystem.theme.WenyanTheme
 @Preview(name = "Light - Tree structure", showBackground = true)
 @Composable
 private fun HierarchicalListItemLightPreview() {
-    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT)) {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT, dynamicColor = false)) {
         Surface {
             Column {
                 HierarchicalListItem(title = "中国现代文学史", depth = 0, onClick = {})
@@ -1113,7 +1154,7 @@ private fun HierarchicalListItemLightPreview() {
 @Preview(name = "Dark - With trailing", showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun HierarchicalListItemDarkPreview() {
-    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.DARK)) {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.DARK, dynamicColor = false)) {
         Surface {
             Column {
                 HierarchicalListItem(
@@ -1131,7 +1172,7 @@ private fun HierarchicalListItemDarkPreview() {
 @Preview(name = "AMOLED - No onClick", showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun HierarchicalListItemAmoledPreview() {
-    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.DARK, amoledMode = true)) {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.DARK, amoledMode = true, dynamicColor = false)) {
         Surface {
             Column {
                 HierarchicalListItem(title = "知识点树（只读）", depth = 0)
@@ -1413,7 +1454,7 @@ Run:
 ```bash
 cd /workspace && export JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2 && export ANDROID_HOME=/opt/android-sdk && export JAVA_TOOL_OPTIONS="-XX:-UseContainerSupport" && export PATH=$JAVA_HOME/bin:/root/.local/share/mise/shims:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH && gradle testDebugUnitTest --no-daemon 2>&1 | tail -20
 ```
-Expected: 所有测试通过（原有测试 + 新增的 GroupedCardTest 6 个 + WenyanNavigationBarTest 3 个 + HierarchicalListItemTest 5 个 = 14 个新测试）。
+Expected: 所有测试通过（原有测试 + 新增的 GroupedCardTest 7 个 + WenyanNavigationBarTest 3 个 + HierarchicalListItemTest 5 个 = 15 个新测试）。
 
 - [ ] **Step 3: 检查 Preview 编译**
 
@@ -1468,7 +1509,7 @@ sleep 60 && curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.
 
 | 阶段 | 状态 | 内容 |
 |------|------|------|
-| Phase 1 | ✅ 完成 | GroupedCard 增强（leadingIcon/description/分割线）+ 6 测试 |
+| Phase 1 | ✅ 完成 | GroupedCard 增强（leadingIcon/description/分割线）+ 7 测试 |
 | Phase 2 | ✅ 完成 | SettingsScreen 用 GroupedCard 重构 4 个分组 |
 | Phase 3 | ✅ 完成 | KnowledgePointDetailScreen 关联知识点用 GroupedCard 重构 |
 | Phase 4 | ✅ 完成 | 4 个 KSU 组件 @Preview + 8 个测试 |
@@ -1497,7 +1538,7 @@ sleep 60 && curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.
   - Phase 1（commit `<填入实际 hash>`）：GroupedCard 增强
     - GroupedCardItem 新增 leadingIcon / description 参数
     - 新增 GroupedCardDivider 组件
-    - 新增 GroupedCardTest（6 测试）
+    - 新增 GroupedCardTest（7 测试）
   - Phase 2（commit `<填入实际 hash>`）：SettingsScreen 重构
     - 4 个分组用 GroupedCard 重构
     - 删除 SwitchItem 私有函数和 3 个旧 import
@@ -1544,7 +1585,10 @@ EOF
 |------|----------|
 | GroupedCard API 变更破坏现有调用 | GroupedCard 之前无人使用，无破坏性。新参数都有默认值，向下兼容 |
 | SettingsScreen FilterChip 在 GroupedCard 内布局异常 | FilterChip Row 放在 GroupedCardItem 之间作为独立行，不塞进 Item 的 trailing |
+| SettingsScreen GroupedCard 之间紧贴无间距 | Task 2.1 Step 2 给 LazyColumn 加 `verticalArrangement = Arrangement.spacedBy(Spacing.xl)` |
 | KnowledgePointDetailScreen 去掉 InfoSection 后视觉层级不够 | GroupedCard 的 title 用 primary 色，本身有足够视觉层级 |
+| @Preview 中 WenyanTheme 默认 dynamicColor=true 导致渲染异常 | 所有 Preview 的 ThemeConfig 显式设置 `dynamicColor = false`，用种子色生成可预测的色彩 |
+| leadingIcon contentDescription 与 title 重复读屏 | contentDescription 默认为 null（装饰性图标），仅当图标有额外语义时才显式设置 |
 | Robolectric 测试因 SDK 版本失败 | 锁定 `@Config(sdk = [34])`，与现有 WenyanLargeTopAppBarTest 一致 |
 | @Preview 在 CI 编译失败 | Preview 函数用 `@Preview` 注解，debug 编译时会编译但不影响 release |
 | SettingsScreen 删除 import 后编译失败 | Task 2.3 Step 4 已逐个列出需删除的 import，并说明保留哪些。编译验证在 Step 5 |
@@ -1552,13 +1596,13 @@ EOF
 ## 验证清单
 
 - [ ] GroupedCard 编译通过
-- [ ] GroupedCardTest 6 个测试通过
+- [ ] GroupedCardTest 7 个测试通过
 - [ ] SettingsScreen 编译通过
 - [ ] KnowledgePointDetailScreen 编译通过
 - [ ] 12 个 @Preview 编译通过
 - [ ] WenyanNavigationBarTest 3 个测试通过
 - [ ] HierarchicalListItemTest 5 个测试通过
 - [ ] 全量 assembleDebug 通过
-- [ ] 全量 testDebugUnitTest 通过（原有 + 14 新增）
+- [ ] 全量 testDebugUnitTest 通过（原有 + 15 新增）
 - [ ] CI 全绿
 - [ ] 文档更新完成
