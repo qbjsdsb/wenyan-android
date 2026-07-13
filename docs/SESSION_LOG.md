@@ -509,3 +509,127 @@
 - 跑 emulator 实测（P0）：SeedDataLoader + 知识点分类标签筛选 + LargeFlexibleTopAppBar
 - OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（P2）
 - 架构重构（P5）：ReviewRepository 死代码清理 + getVerifiedWithSubject 迁移到 KnowledgeRepository
+
+---
+
+## Session 2026-07-13（第五条）：Release v0.2.0 发布
+
+### 目标
+
+用户要求"发一个 release，让我看看软件长什么样子"。在 P1 修复完成的基础上发布 v0.2.0，让用户能下载到包含最新修复的签名 APK。
+
+### 前置：CI 验证策略写入 AGENTS.md（commit `ce50e77`）
+
+用户问"这个 ci 验证是必须的吗，本地会不会快一点"，并要求"你自己判断需不需要 ci 验证，在每次改动结束之后，并且把这个写入记忆里面"。
+
+在 AGENTS.md 第 4 节硬约束下新增 `### CI 验证策略（2026-07-13 新增）` 小节：
+- **原则**：AI 自主判断每次改动是否需要 CI 验证，不冗余等待
+- **必须等 CI**：改 workflow / build.gradle.kts / libs.versions.toml / settings.gradle.kts / 签名 / 跨平台兼容性 / 发版前
+- **不需要等 CI**：纯 Kotlin/Compose 业务逻辑 / 纯测试 / 纯文档
+- **本地验证最低标准**：`assembleDebug` SUCCESSFUL + `testDebugUnitTest` 全绿
+- **Release tag 流程** 5 步（本地验证 → CI 绿 → 删旧 orphan tag → 打新 tag → 等 workflow）
+
+### Release v0.2.0 发布
+
+**Release tag 流程执行**（严格遵循 AGENTS.md 第 4 节）：
+
+1. **确认本地验证**：P1 修复已通过 `assembleDebug` + `testDebugUnitTest` 184 tests 0 failures（第四条会话已完成）
+2. **确认最近 CI 全绿**：`gh run list` 确认最后一次代码 commit CI（run 29275987334，P1 修复）全绿 18m53s。另有 2 个 docs-only CI 在跑（29277763880 + 29277520877），docs 改动不影响发布
+3. **检查 orphan tag**：`git ls-remote --tags origin` 确认只有 v0.1.0，无 v0.2.0 旧 tag，无需删除
+4. **检查现有 release**：`gh release list` 确认只有 v0.1.0
+5. **打 tag 并 push**：`git tag -a v0.2.0 -m "..." && git push origin v0.2.0`
+6. **等 Release workflow**：run 29278178988，14m54s，14/14 步骤全绿
+
+### Release workflow 执行详情
+
+**关键步骤全部通过**：
+- ✓ Decode keystore from Secrets（KEYSTORE_BASE64 已配置）
+- ✓ Verify keystore（keytool 验证通过 — P4 担心的隐藏 bug 没触发，secrets 完整）
+- ✓ Build signed release APK（R8 混淆 + 签名）
+- ✓ Run unit tests（184 tests 全绿）
+- ✓ Create GitHub Release（自动创建，附加 2 个 APK）
+
+**已知警告（不影响发布）**：
+- Node.js 20 deprecation warning（actions/checkout@v4 等仍在用 Node 20，被强制运行在 Node 24）
+- Gradle cache restoration 400 错误（setup-gradle@v3 cache-read-only 模式偶发，Gradle 仍正常运行）
+
+### 交付物
+
+**GitHub Release v0.2.0**：
+- URL：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.2.0
+- Tag：v0.2.0（指向 commit `ce50e77`）
+- Assets：`wenyan-v0.2.0.apk` + `wenyan-latest.apk`（内容相同）
+- 系统要求：Android 8.0 (API 26) 及以上
+
+**v0.2.0 包含自 v0.1.0 以来的全部改动**：
+- KSU 风格 UI 升级 Phase 0-3（4 个新组件 + 9 个 Screen 迁移）
+- UI 改造闭环（GroupedCard 增强 + 2 Screen 重构 + 4 Preview + 15 测试）
+- UI 统一与死组件清理（删除 4 个零引用组件）
+- P0 双修（release.yml CI 修复 + SeedDataLoader 接通，App 启动自动导入种子数据）
+- P1 修复（KnowledgeViewModel 科目筛选生效 + 卡片显示真实科目名，DAO JOIN + 10 测试）
+
+### 关键技术决策
+
+1. **不等 docs-only CI 就发版**：发版前检查发现 2 个 docs commit 的 CI 还在跑。根据新写入的 CI 验证策略，docs 改动不需要等 CI。最后一次**代码** commit 的 CI（run 29275987334）已全绿，满足发版前置条件。结果证明判断正确：Release workflow 全绿。
+2. **用 `git tag -a` 而非 `git tag`**：带 annotated message，记录 v0.2.0 包含的关键改动，方便后续回溯。
+3. **Verify keystore 隐藏 bug 未触发**：P4 记录的 release.yml Line 63-70 bug（KEYSTORE_BASE64 未配置时失败）在 secrets 完整时不触发。本次发版通过，证明 secrets 配置完好。P4 修复仍待办（防御性修复，避免未来 secrets 丢失时 workflow 给出误导性错误）。
+
+### commit 列表
+
+- `ce50e77` — docs: 写入 CI 验证策略到 AGENTS.md — AI 自主判断是否等 CI
+- `v0.2.0` tag — Release v0.2.0（指向 `ce50e77`）
+
+### 下次继续
+
+- **P0**：跑 emulator 实测 — 下载 v0.2.0 APK 或本地 assembleDebug，验证 SeedDataLoader 启动时导入数据 + 知识点分类标签筛选生效 + LargeFlexibleTopAppBar 滚动折叠
+- **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+- **P3**：可选 — 用 GroupedCard 改造其他 Screen（如 ApiConfigScreen，需先扩展 GroupedCardItem API）
+- **P4**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，防御性修复）
+- **P5**：架构重构 — ReviewRepository.getAllVerifiedKnowledgePoints 死代码清理 + getVerifiedWithSubject 迁移到 KnowledgeRepository
+
+### 新会话快速恢复 Checklist
+
+新沙箱会话开始时，按以下顺序操作（5 分钟内进入工作状态）：
+
+1. **读 [AGENTS.md](../AGENTS.md)** — 项目入口，了解技术栈、硬约束、CI 验证策略、当前状态
+2. **读 [00-STATUS.md](00-STATUS.md)** — 10 秒了解当前状态（无阻塞，v0.2.0 已发布，CI 全绿）
+3. **读本文档最后一节** — 上次进度（本次会话：Release v0.2.0 发布）
+4. **拉取最新代码**：
+   ```bash
+   cd /workspace && git pull origin main
+   ```
+5. **配置 Gradle 代理**（沙箱特有，新沙箱必做）：
+   ```bash
+   # /root/.gradle/gradle.properties
+   cat > /root/.gradle/gradle.properties <<'EOF'
+   systemProp.http.proxyHost=127.0.0.1
+   systemProp.http.proxyPort=18080
+   systemProp.https.proxyHost=127.0.0.1
+   systemProp.https.proxyPort=18080
+   systemProp.http.nonProxyHosts=localhost|127.0.0.1
+   EOF
+
+   # /root/.gradle/init.d/proxy.gradle（Robolectric 测试需要）
+   mkdir -p /root/.gradle/init.d
+   cat > /root/.gradle/init.d/proxy.gradle <<'EOF'
+   allprojects {
+       tasks.withType(Test).configureEach {
+           jvmArgs('-Dhttp.proxyHost=127.0.0.1','-Dhttp.proxyPort=18080',
+                   '-Dhttps.proxyHost=127.0.0.1','-Dhttps.proxyPort=18080',
+                   '-Dhttp.nonProxyHosts=localhost|127.0.0.1')
+       }
+   }
+   EOF
+   ```
+6. **配置环境变量**：
+   ```bash
+   export JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2
+   export ANDROID_HOME=/opt/android-sdk
+   export JAVA_TOOL_OPTIONS="-XX:-UseContainerSupport"
+   export PATH=$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+   ```
+7. **验证构建**（注意：不能用 `gradle` shim，它用 mise 默认 JDK 25 与 AGP 8.6.0 不兼容）：
+   ```bash
+   $JAVA_HOME/bin/java -Dorg.gradle.daemon=false -cp /root/.local/share/mise/installs/gradle/8.14.4/gradle-8.14.4/lib/gradle-launcher-8.14.4.jar org.gradle.launcher.GradleMain :app:assembleDebug --no-daemon 2>&1 | tail -5
+   ```
+8. **开始工作**：根据 [00-STATUS.md](00-STATUS.md) 的"下一步优先级"选择任务

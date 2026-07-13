@@ -141,10 +141,11 @@ tools/                           # Python 管线脚本
 
 ## 7. 当前状态（2026-07-13）
 
-**✅ 无阻塞** — P1 修复完成（KnowledgeViewModel 科目筛选 + 科目名显示），App 功能闭环。
+**✅ 无阻塞** — Release v0.2.0 已发布，签名 APK 可下载。
 
-- 最新 commit：`d1b9cd5`（main，修复 KnowledgeViewModel 2 个 bug）
-- P1 修复：1 个 commit（DAO JOIN + ViewModel 修复 + 10 测试）
+- 最新 commit：`ce50e77`（main，CI 验证策略写入 AGENTS.md）
+- 最新 Release：[v0.2.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.2.0)（2026-07-13）
+- Release workflow：run 29278178988 全绿（14/14 步骤，14m54s）
 - 验证：`assembleDebug` SUCCESSFUL + `testDebugUnitTest` 184 tests 0 failures
 - 详见 [docs/00-STATUS.md](docs/00-STATUS.md)
 
@@ -157,16 +158,17 @@ tools/                           # Python 管线脚本
 | Phase 3 FSRS 调度 | ✅ 完成 | FSRS-6 自实现 + 三层记忆 |
 | Phase 4 AI 服务 | ✅ 完成 | OpenAI 兼容协议 |
 | Phase 5 UI 增强 | ✅ 完成 | 9 个 Screen + M3 组件 |
-| Release 配置 | ✅ 完成 | 签名 + GitHub Release v0.1.0 |
+| Release 配置 | ✅ 完成 | 签名 + GitHub Release v0.1.0 + v0.2.0 |
 | KSU 风格 UI 升级 | ✅ 完成 | Phase 0-3 + CI 修复，已合并 main |
 | UI 改造闭环 | ✅ 完成 | GroupedCard 增强 + 2 Screen 重构 + 4 Preview + 15 组件测试 |
 | UI 统一与死组件清理 | ✅ 完成 | KnowledgePointDetailScreen 统一 + 删除 4 个死组件（174 tests） |
 | P0 双修 | ✅ 完成 | release.yml CI 修复 + SeedDataLoader 接通（App 启动自动导入种子数据） |
 | P1 修复 | ✅ 完成 | KnowledgeViewModel 科目筛选 + 科目名显示修复（DAO JOIN + 10 测试，184 tests） |
+| Release v0.2.0 | ✅ 完成 | 签名 APK 发布，包含自 v0.1.0 以来所有改动 |
 
 ## 9. 下一步优先级
 
-1. **P0**：跑 emulator 实测 — 验证 SeedDataLoader 启动时导入数据（Logcat 无异常 + 各 Tab 有数据 + 重启不重复导入）+ LargeFlexibleTopAppBar 滚动折叠效果 + 知识点分类标签筛选生效
+1. **P0**：跑 emulator 实测 — 下载 [v0.2.0 APK](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.2.0) 或本地 `assembleDebug`，验证 SeedDataLoader 启动时导入数据（Logcat 无异常 + 各 Tab 有数据 + 重启不重复导入）+ LargeFlexibleTopAppBar 滚动折叠效果 + 知识点分类标签筛选生效
 2. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
 3. **P3**：可选 — 用 GroupedCard 改造其他 Screen（如 ApiConfigScreen）保持视觉一致性（注意：ApiConfigScreen 的 ConfigCard 有 4 行元信息 + 2 操作按钮，GroupedCardItem API 无法承载，需先扩展组件或保留现状）
 4. **P4**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）

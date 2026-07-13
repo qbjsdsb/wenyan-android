@@ -5,13 +5,15 @@
 
 ## ✅ 当前状态
 
-**P1 修复完成** — KnowledgeViewModel 科目筛选 + 科目名显示修复（分类标签生效 + 卡片显示真实科目名）
+**Release v0.2.0 已发布** — 签名 APK 可下载，包含 P1 修复（科目筛选 + 真实科目名显示）。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `d1b9cd5`（main，修复 KnowledgeViewModel 2 个 bug） |
-| P1 修复 | 1 个 commit（`d1b9cd5` DAO JOIN + ViewModel 修复 + 10 测试） |
-| CI 状态 | ✅ run 29275987334 全绿（14/14 步骤，18m48s）+ run 29274942006 全绿（20m13s） |
+| 最新 commit | `ce50e77`（main，CI 验证策略写入 AGENTS.md） |
+| 最新 Release | [v0.2.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.2.0)（2026-07-13，签名 APK） |
+| Release workflow | ✅ run 29278178988 全绿（14/14 步骤，14m54s） |
+| 最近代码 CI | ✅ run 29275987334 全绿（P1 修复，18m48s） |
+| 测试 | 184 tests 0 failures |
 | PR | [#1](https://github.com/qbjsdsb/wenyan-android/pull/1) 已合并（KSU UI 升级 Phase 0-3） |
 | 阻塞 | 无 |
 | 详情 | [02-VERSION-MATRIX.md](02-VERSION-MATRIX.md) |
@@ -78,8 +80,8 @@
 
 ## 📦 已交付
 
-- GitHub Release v0.1.0（2026-07-12）
-- 签名 APK：`wenyan-v0.1.0.apk` + `wenyan-latest.apk`（14.7 MB）
+- GitHub Release v0.1.0（2026-07-12）+ v0.2.0（2026-07-13）
+- 签名 APK：`wenyan-v0.2.0.apk` + `wenyan-latest.apk`（v0.2.0，包含 P1 修复）
 - KSU 风格 UI 升级 Phase 0-3（4 个组件 + 9 个 Screen 迁移，已合并 main + CI 全绿）
 - UI 改造闭环 Phase 1-5（GroupedCard 增强 + 2 Screen 重构 + 4 Preview + 15 个组件测试）
 - UI 统一与死组件清理（KnowledgePointDetailScreen 统一 + 删除 4 个死组件，174 tests 0 failures）
