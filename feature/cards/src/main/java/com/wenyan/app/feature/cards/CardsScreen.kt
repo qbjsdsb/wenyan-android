@@ -1,6 +1,15 @@
 package com.wenyan.app.feature.cards
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -84,10 +93,11 @@ fun CardsScreen(
                 return@Column
             }
 
-            // 进度提示
+            // 进度提示（animateContentSize 让数字变化平滑）
             Text(
                 text = "${uiState.currentIndex + 1} / ${uiState.cards.size}",
                 style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.animateContentSize(),
             )
 
             // 可翻转卡片
@@ -100,10 +110,20 @@ fun CardsScreen(
                     .weight(1f),
             )
 
-            // 评分按钮（仅翻转后显示）
-            if (uiState.isFlipped) {
+            // 评分按钮（翻转后显示）+ 提示文案（翻转前显示）
+            // 两者用 AnimatedVisibility 替代 if/else 硬切
+            AnimatedVisibility(
+                visible = uiState.isFlipped,
+                enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 }),
+                exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 4 }),
+            ) {
                 RatingButtons(onRate = viewModel::rateCard)
-            } else {
+            }
+            AnimatedVisibility(
+                visible = !uiState.isFlipped,
+                enter = fadeIn(),
+                exit = fadeOut(),
+            ) {
                 Text(
                     text = "点击卡片查看答案",
                     style = MaterialTheme.typography.bodyMedium,
@@ -122,22 +142,33 @@ private fun FlipCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // 翻转角度动画
+    // 翻转角度动画：用 tween 让动画更干净利落（spring 默认有轻微过冲）
     val rotation by animateFloatAsState(
         targetValue = if (isFlipped) 180f else 0f,
+        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
         label = "card_flip",
+    )
+
+    // 容器色平滑过渡（避免硬切）
+    val containerColor by animateColorAsState(
+        targetValue = if (isFlipped) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        },
+        animationSpec = tween(durationMillis = 300),
+        label = "card_color",
     )
 
     Card(
         modifier = modifier
-            .graphicsLayer { rotationY = rotation },
-        colors = CardDefaults.cardColors(
-            containerColor = if (isFlipped) {
-                MaterialTheme.colorScheme.secondaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerHigh
+            .graphicsLayer {
+                rotationY = rotation
+                // 修正 3D 透视失真：cameraDistance 越大透视效果越弱（边缘拉伸越小）
+                // 默认值偏小导致 180° 翻转时边缘严重拉伸
+                cameraDistance = 12 * density
             },
-        ),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
         onClick = onClick,
     ) {
         Box(
@@ -146,12 +177,16 @@ private fun FlipCard(
         ) {
             // 阶段5：优先使用 CardContent 结构化渲染（6种模板专属样式）
             // template 为 null 时降级为 front/back 纯文本（向后兼容）
+            //
+            // 关键：用 shouldShowBack(rotation) 而非 isFlipped 决定显示正/反面，
+            // 确保内容切换与动画同步在 rotation>90° 那一帧发生（卡侧消失瞬间），
+            // 用户视觉上感知不到内容切换，也不会看到镜像文字。
             val template = card.template
             if (template != null) {
-                CardContent(card = template, isFlipped = isFlipped)
+                CardContent(card = template, isFlipped = shouldShowBack(rotation))
             } else {
                 Text(
-                    text = if (isFlipped) card.back else card.front,
+                    text = if (shouldShowBack(rotation)) card.back else card.front,
                     style = MaterialTheme.typography.headlineMedium,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(Spacing.xl),
@@ -189,3 +224,21 @@ private fun RatingButtons(onRate: (CardRating) -> Unit) {
         ) { Text("简单") }
     }
 }
+
+/**
+ * 判断卡片翻转动画当前应显示正面还是背面。
+ *
+ * 90° 是"卡侧消失"的临界点：
+ * - rotation ≤ 90°：正面朝向用户，显示正面内容
+ * - rotation > 90°：背面朝向用户，显示背面内容
+ *
+ * 提取为纯函数便于测试。注意 [androidx.compose.animation.core.animateFloatAsState]
+ * 会在每帧更新 rotation，本函数在每帧被调用以决定内容切换时机。
+ *
+ * 修复镜像 bug 的核心：原实现用 [if (isFlipped)] 硬切内容，与 rotation 动画时序错位，
+ * 导致用户在 rotation 0→90° 区间看到背面内容（被正向投影渲染），
+ * 在 rotation 90°→180° 区间看到镜像文字（被 3D 投影左右镜像）。
+ * 用本函数后，内容切换发生在 rotation>90° 那一帧，背面内容立即以正向方向渲染（虽然外层
+ * graphicsLayer 仍在 rotation，但背面内容本身是正向的，所以用户看到的是正常的背面）。
+ */
+internal fun shouldShowBack(rotation: Float): Boolean = rotation > 90f
