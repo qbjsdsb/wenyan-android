@@ -12,8 +12,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -54,6 +57,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GraphScreen(
+    onNavigateToAiAssistant: () -> Unit = {},
     viewModel: GraphViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -63,7 +67,17 @@ fun GraphScreen(
     ExpressiveScaffold(
         topBar = {
             // 图谱 Canvas 固定布局不滚动，仅享受 Large 标题样式
-            WenyanLargeTopAppBar(title = "知识图谱")
+            WenyanLargeTopAppBar(
+                title = "知识图谱",
+                actions = {
+                    IconButton(onClick = onNavigateToAiAssistant) {
+                        Icon(
+                            imageVector = Icons.Default.SmartToy,
+                            contentDescription = "AI助手",
+                        )
+                    }
+                },
+            )
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding ->

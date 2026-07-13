@@ -8,7 +8,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.wenyan.app.feature.aiassistant.AiAssistantScreen
 import com.wenyan.app.feature.aiassistant.ApiConfigScreen
-import com.wenyan.app.feature.aiassistant.MentorInfoScreen
 import com.wenyan.app.feature.cards.CardsScreen
 import com.wenyan.app.feature.graph.GraphScreen
 import com.wenyan.app.feature.knowledge.KnowledgePointDetailScreen
@@ -28,10 +27,10 @@ import com.wenyan.app.feature.settings.SettingsScreen
  *
  * 子路由（非顶级目的地）：
  * - knowledge_detail/{pointId}：知识点详情（Spec C1.27 多教材对照 + C7.2 来源溯源）
- * - mentor：导师信息（外链南师大文学院官网，Spec C6.8）
  * - api_config：API 配置（Spec C5.7a 设计文档 3.6.4 多服务商配置）
  *
- * 后续 Task 可在此扩展子路由（如真题详情等）。
+ * 4 个主屏（knowledge/quiz/cards/graph）TopBar 右上角均提供 AI 入口（SmartToy 图标），
+ * 与底部 NavigationBar 第 5 个 AI Tab 形成双入口，确保任何位置都能一键到达 AI 助手。
  */
 @Composable
 fun WenyanNavHost(
@@ -44,8 +43,8 @@ fun WenyanNavHost(
         modifier = modifier,
     ) {
         knowledgeDestination(
-            onNavigateToMentor = {
-                navController.navigate(ROUTE_MENTOR)
+            onNavigateToAiAssistant = {
+                navController.navigate(TopLevelDestination.ROUTE_AI_ASSISTANT)
             },
             onNavigateToDetail = { pointId ->
                 navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId")
@@ -59,8 +58,16 @@ fun WenyanNavHost(
                 navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId")
             },
         )
-        cardsDestination()
-        graphDestination()
+        cardsDestination(
+            onNavigateToAiAssistant = {
+                navController.navigate(TopLevelDestination.ROUTE_AI_ASSISTANT)
+            },
+        )
+        graphDestination(
+            onNavigateToAiAssistant = {
+                navController.navigate(TopLevelDestination.ROUTE_AI_ASSISTANT)
+            },
+        )
         aiAssistantDestination(
             onNavigateToApiConfig = {
                 navController.navigate(ROUTE_API_CONFIG)
@@ -69,7 +76,6 @@ fun WenyanNavHost(
                 navController.navigate(ROUTE_SETTINGS)
             },
         )
-        mentorDestination()
         apiConfigDestination(
             onBack = { navController.popBackStack() },
         )
@@ -90,12 +96,12 @@ fun WenyanNavHost(
 
 // 各顶级目的地的 composable 注册，拆分为扩展函数便于后续扩展子路由
 private fun NavGraphBuilder.knowledgeDestination(
-    onNavigateToMentor: () -> Unit,
+    onNavigateToAiAssistant: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
 ) {
     composable(TopLevelDestination.ROUTE_KNOWLEDGE) {
         KnowledgeScreen(
-            onNavigateToMentor = onNavigateToMentor,
+            onNavigateToAiAssistant = onNavigateToAiAssistant,
             onNavigateToDetail = onNavigateToDetail,
         )
     }
@@ -113,15 +119,19 @@ private fun NavGraphBuilder.quizDestination(
     }
 }
 
-private fun NavGraphBuilder.cardsDestination() {
+private fun NavGraphBuilder.cardsDestination(
+    onNavigateToAiAssistant: () -> Unit,
+) {
     composable(TopLevelDestination.ROUTE_CARDS) {
-        CardsScreen()
+        CardsScreen(onNavigateToAiAssistant = onNavigateToAiAssistant)
     }
 }
 
-private fun NavGraphBuilder.graphDestination() {
+private fun NavGraphBuilder.graphDestination(
+    onNavigateToAiAssistant: () -> Unit,
+) {
     composable(TopLevelDestination.ROUTE_GRAPH) {
-        GraphScreen()
+        GraphScreen(onNavigateToAiAssistant = onNavigateToAiAssistant)
     }
 }
 
@@ -134,13 +144,6 @@ private fun NavGraphBuilder.aiAssistantDestination(
             onNavigateToApiConfig = onNavigateToApiConfig,
             onNavigateToSettings = onNavigateToSettings,
         )
-    }
-}
-
-// 导师信息子路由（Spec Task 27：外链官网，不内置数据）
-private fun NavGraphBuilder.mentorDestination() {
-    composable(ROUTE_MENTOR) {
-        MentorInfoScreen()
     }
 }
 
@@ -180,7 +183,6 @@ private fun NavGraphBuilder.knowledgeDetailDestination(
 }
 
 // 子路由常量
-private const val ROUTE_MENTOR = "mentor"
 private const val ROUTE_API_CONFIG = "api_config"
 private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_KNOWLEDGE_DETAIL = "knowledge_detail"
