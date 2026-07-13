@@ -14,7 +14,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -25,7 +24,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.designsystem.component.ChipVariant
@@ -35,6 +33,7 @@ import com.wenyan.app.core.designsystem.component.GroupedCard
 import com.wenyan.app.core.designsystem.component.GroupedCardDivider
 import com.wenyan.app.core.designsystem.component.GroupedCardItem
 import com.wenyan.app.core.designsystem.component.Spacing
+import com.wenyan.app.core.designsystem.component.TonalCardLow
 import com.wenyan.app.core.designsystem.component.WenyanInfoChip
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.database.entity.DataSourceEntity
@@ -124,10 +123,16 @@ fun KnowledgePointDetailScreen(
 
                         // ── 摘要 ──
                         point.summary?.takeIf { it.isNotBlank() }?.let { summary ->
-                            InfoSection(title = "摘要") {
+                            GroupedCard(title = "摘要") {
                                 Text(
                                     text = summary,
                                     style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(
+                                        start = Spacing.lg,
+                                        end = Spacing.lg,
+                                        top = Spacing.md,
+                                        bottom = Spacing.md,
+                                    ),
                                 )
                             }
                         }
@@ -192,6 +197,13 @@ private fun HeaderSection(point: KnowledgePointEntity) {
 
 // ── 通用信息区块 ────────────────────────────────────────────
 
+/**
+ * 无容器的标题区块（仅用于内部有容器的场景，避免嵌套卡片）。
+ *
+ * 当前仅 MultiPerspectiveSection 使用——其内部 PerspectiveCard 已有 Surface/TonalCardLow 容器，
+ * 若再套 GroupedCard 的 TonalCard 会导致 AMOLED 模式下色调层级反转
+ *（surfaceBright 未被 AMOLED 覆盖为 Black，而 surfaceContainerLow 被覆盖）。
+ */
 @Composable
 private fun InfoSection(
     title: String,
@@ -258,42 +270,50 @@ private fun PerspectiveCard(
     content: String,
     isOfficial: Boolean,
 ) {
-    val containerColor = if (isOfficial) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceContainerLow
-    }
-    val labelColor = if (isOfficial) {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    val contentColor = if (isOfficial) {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurface
-    }
-    Surface(
-        color = containerColor,
-        contentColor = contentColor,
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+    if (isOfficial) {
+        // 答题基准（马工程）：用 primaryContainer 突出官方权威性
+        // designsystem 的 TonalCard/TonalCardLow 无 primaryContainer 变体，此处保留自定义 Surface
+        Surface(
+            color = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = labelColor,
-            )
-            Text(
-                text = content,
-                style = MaterialTheme.typography.bodyMedium,
-                color = contentColor,
-            )
+            Column(
+                modifier = Modifier.padding(Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                Text(
+                    text = content,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        }
+    } else {
+        // 学习理解/多视角：用 TonalCardLow（surfaceContainerLow + shapes.medium）
+        TonalCardLow(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = content,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
         }
     }
 }
@@ -302,14 +322,11 @@ private fun PerspectiveCard(
 
 @Composable
 private fun SourcesSection(sources: List<DataSourceEntity>) {
-    InfoSection(title = "资料来源（${sources.size}）") {
-        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            sources.forEach { source ->
-                SourceRow(source)
-                HorizontalDivider(
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                )
+    GroupedCard(title = "资料来源（${sources.size}）") {
+        sources.forEachIndexed { index, source ->
+            SourceRow(source)
+            if (index < sources.size - 1) {
+                GroupedCardDivider()
             }
         }
     }
@@ -318,7 +335,9 @@ private fun SourcesSection(sources: List<DataSourceEntity>) {
 @Composable
 private fun SourceRow(source: DataSourceEntity) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.md, bottom = Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
