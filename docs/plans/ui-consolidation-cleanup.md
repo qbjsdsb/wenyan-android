@@ -76,18 +76,31 @@
 
 ## Phase 1：KnowledgePointDetailScreen 统一
 
-### Task 1: InfoSection → GroupedCard（3 处调用）
+### 深度调查发现的关键约束（必读）
+
+**AMOLED 嵌套卡片视觉反转问题：**
+
+调查 `WenyanTheme.kt` line 60-68 发现，AMOLED 模式覆盖了 `surfaceContainerLow = Color.Black`，但**未覆盖 `surfaceBright`**。
+
+- `GroupedCard` 内部用 `TonalCard`（`surfaceBright`）→ AMOLED 下为深灰色
+- `TonalCardLow` 用 `surfaceContainerLow` → AMOLED 下为纯黑
+
+若在 `GroupedCard` 内嵌套 `TonalCardLow`（如 MultiPerspectiveSection 的 PerspectiveCard），会形成"深灰卡套纯黑卡"的视觉反转——外层比内层更亮，违反 M3 Expressive 的 elevation 层级语义。
+
+**结论：** `MultiPerspectiveSection` 不能用 `GroupedCard` 包裹 `PerspectiveCard`（会导致嵌套卡片）。保留 `InfoSection` 无容器模式。
+
+**padding 一致性约束：**
+
+`GroupedCardItem` 的水平 padding 是 `Spacing.lg`（16dp）。GroupedCard 内的所有内容必须用 `horizontal = Spacing.lg` 保持左边缘对齐。
+
+### Task 1: 摘要 + 资料来源 → GroupedCard（2 处，无嵌套风险）
 
 **Files:**
 - Modify: `feature/knowledge/src/main/java/com/wenyan/app/feature/knowledge/KnowledgePointDetailScreen.kt`
 
 **改动说明：**
 
-当前 `InfoSection` 是手写的 `Column { Text(title, primary) ; content() }`，与 `GroupedCard` 的标题区（`titleMedium + primary`）完全重复。删除 `InfoSection` 函数，3 处调用改为 `GroupedCard`。
-
-**关键差异：**
-- `GroupedCard` 的内容会被 `TonalCard`（surfaceBright）包裹，`InfoSection` 的内容无容器
-- `GroupedCard` 的内容在 `Column` 中无 spacedBy，需按场景手动加间距
+摘要（纯文本）和资料来源（SourceRow 无容器）改为 GroupedCard，不形成嵌套卡片。多教材对照保留 InfoSection（因其内部 PerspectiveCard 有容器，套 GroupedCard 会嵌套）。
 
 **改动点：**
 
@@ -103,29 +116,17 @@ GroupedCard(title = "摘要") {
     Text(
         text = summary,
         style = MaterialTheme.typography.bodyMedium,
-        modifier = Modifier.padding(Spacing.md),
+        modifier = Modifier.padding(
+            start = Spacing.lg,
+            end = Spacing.lg,
+            top = Spacing.md,
+            bottom = Spacing.md,
+        ),
     )
 }
 ```
 
-2. **多教材对照**（line 221-252）：`MultiPerspectiveSection` 内的 `InfoSection` → `GroupedCard`，内部 `Column(spacedBy)` 保留
-```kotlin
-// 改前
-InfoSection(title = "多教材对照") {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-        // PerspectiveCard(...) × N
-    }
-}
-
-// 改后
-GroupedCard(title = "多教材对照") {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-        // PerspectiveCard(...) × N
-    }
-}
-```
-
-3. **资料来源**（line 305-316）：`SourcesSection` 内的 `InfoSection` → `GroupedCard`
+2. **资料来源**（line 305-316）：
 ```kotlin
 // 改前
 InfoSection(title = "资料来源（${sources.size}）") {
@@ -148,79 +149,41 @@ GroupedCard(title = "资料来源（${sources.size}）") {
 }
 ```
 
-4. **删除 `InfoSection` 函数**（line 195-209）
+3. **保留 InfoSection 函数**（line 195-209）— 仅多教材对照 1 处使用，加注释说明保留原因
 
-5. **清理 imports**：删除不再需要的 `FontWeight`（如果 InfoSection 是最后使用者）
+**InfoSection 加注释：**
+```kotlin
+/**
+ * 无容器的标题区块（仅用于内部有容器的场景，避免嵌套卡片）。
+ *
+ * 当前仅 MultiPerspectiveSection 使用——其内部 PerspectiveCard 已有 Surface/TonalCardLow 容器，
+ * 若再套 GroupedCard 的 TonalCard 会导致 AMOLED 模式下色调层级反转
+ *（surfaceBright 未被 AMOLED 覆盖为 Black，而 surfaceContainerLow 被覆盖）。
+ */
+@Composable
+private fun InfoSection(
+    title: String,
+    content: @Composable () -> Unit,
+) { ... }
+```
 
-- [ ] **Step 1: 修改 KnowledgePointDetailScreen.kt — 3 处 InfoSection 调用改为 GroupedCard**
-- [ ] **Step 2: 删除 InfoSection 函数**
-- [ ] **Step 3: 清理 imports（FontWeight 等，如果不再使用）**
+- [ ] **Step 1: 摘要 InfoSection → GroupedCard（Text 加 horizontal=lg, vertical=md padding）**
+- [ ] **Step 2: 资料来源 InfoSection → GroupedCard + HorizontalDivider → GroupedCardDivider**
+- [ ] **Step 3: InfoSection 函数加 KDoc 注释说明保留原因**
 - [ ] **Step 4: 编译验证** `:feature:knowledge:compileDebugKotlin`
 
-### Task 2: PerspectiveCard → TonalCardLow（非 official）
+### Task 2: PerspectiveCard → TonalCardLow（非 official，独立卡片不嵌套）
 
 **Files:**
 - Modify: `feature/knowledge/src/main/java/com/wenyan/app/feature/knowledge/KnowledgePointDetailScreen.kt`
 
 **改动说明：**
 
-当前 `PerspectiveCard` 用裸 `Surface`。经核实，非 official 的 PerspectiveCard 与 `TonalCardLow` 的 color/shape 完全一致：
-- color: `surfaceContainerLow` ✓
-- contentColor: `onSurface` ✓
-- shape: `shapes.medium` ✓
-
-直接用 `TonalCardLow` 替代非 official 的裸 Surface。official 的保留 `Surface(primaryContainer)` 因为是特殊语义高亮色，designsystem 无对应组件。
+`PerspectiveCard` 非 official 分支改用 `TonalCardLow`。由于 MultiPerspectiveSection 保留 InfoSection（无容器），PerspectiveCard 作为独立卡片呈现在页面背景上，不形成嵌套。
 
 **改动：**
 
 ```kotlin
-// 改前
-@Composable
-private fun PerspectiveCard(
-    label: String,
-    content: String,
-    isOfficial: Boolean,
-) {
-    val containerColor = if (isOfficial) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceContainerLow
-    }
-    val labelColor = if (isOfficial) {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    val contentColor = if (isOfficial) {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurface
-    }
-    Surface(
-        color = containerColor,
-        contentColor = contentColor,
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = labelColor,
-            )
-            Text(
-                text = content,
-                style = MaterialTheme.typography.bodyMedium,
-                color = contentColor,
-            )
-        }
-    }
-}
-
 // 改后
 @Composable
 private fun PerspectiveCard(
@@ -283,16 +246,14 @@ private fun PerspectiveCard(
 - [ ] **Step 2: 新增 TonalCardLow import**
 - [ ] **Step 3: 编译验证** `:feature:knowledge:compileDebugKotlin`
 
-### Task 3: SourcesSection → GroupedCardDivider
+### Task 3: SourceRow 加 padding
 
 **Files:**
 - Modify: `feature/knowledge/src/main/java/com/wenyan/app/feature/knowledge/KnowledgePointDetailScreen.kt`
 
 **改动说明：**
 
-已在 Task 1 的第 3 点完成 `InfoSection → GroupedCard` 替换。本任务额外要求：
-- `HorizontalDivider(thickness = 0.5.dp, color = outlineVariant)` → `GroupedCardDivider()`（实现完全一致，走 designsystem）
-- `SourceRow` 加 padding 与 GroupedCardItem 对齐（`start=lg, end=lg, top=md, bottom=md`）
+SourceRow 被 GroupedCard 的 TonalCard 包裹后，需加 `horizontal=lg, vertical=md` padding 与 GroupedCardItem 对齐（Task 1 已完成 GroupedCard 包裹和 GroupedCardDivider 替换）。
 
 **改动：**
 
@@ -327,9 +288,8 @@ private fun SourceRow(source: DataSourceEntity) {
 **需要清理的 import：** `HorizontalDivider`（如果不再使用）、`dp`（如果不再使用）
 
 - [ ] **Step 1: SourceRow 加 padding（start=lg, end=lg, top=md, bottom=md）**
-- [ ] **Step 2: SourcesSection 内 HorizontalDivider → GroupedCardDivider（已在 Task 1 完成 GroupedCard 包裹）**
-- [ ] **Step 3: 清理 imports（HorizontalDivider、dp 如果不再使用）**
-- [ ] **Step 4: 编译验证** `:feature:knowledge:compileDebugKotlin`
+- [ ] **Step 2: 清理 imports（HorizontalDivider、dp 如果不再使用）**
+- [ ] **Step 3: 编译验证** `:feature:knowledge:compileDebugKotlin`
 
 ### Task 4: Phase 1 验证关卡
 
@@ -344,16 +304,18 @@ private fun SourceRow(source: DataSourceEntity) {
 - [ ] **Step 3: Commit Phase 1**
   ```bash
   git add feature/knowledge/src/main/java/com/wenyan/app/feature/knowledge/KnowledgePointDetailScreen.kt
-  git commit -m "refactor: KnowledgePointDetailScreen 统一到 designsystem 组件
+  git commit -m "refactor: KnowledgePointDetailScreen 摘要+资料来源统一到 GroupedCard
 
-  - InfoSection → GroupedCard（消除重复造轮子，3 处调用）
-  - PerspectiveCard 非 official 分支 → TonalCardLow（走 designsystem）
-  - SourcesSection 的 HorizontalDivider → GroupedCardDivider
-  - SourceRow 加 padding 与 GroupedCardItem 对齐
+  - 摘要 InfoSection → GroupedCard（纯文本，无嵌套风险）
+  - 资料来源 InfoSection → GroupedCard + HorizontalDivider → GroupedCardDivider
+  - SourceRow 加 padding 与 GroupedCardItem 对齐（horizontal=lg, vertical=md）
+  - PerspectiveCard 非 official → TonalCardLow（走 designsystem，独立卡片不嵌套）
+  - 多教材对照保留 InfoSection（避免 AMOLED 嵌套卡片视觉反转）
 
-  为什么：InfoSection 与 GroupedCard 标题区重复造轮子（都用 titleMedium+primary），
-  PerspectiveCard 非 official 与 TonalCardLow 的 color/shape 完全一致却手写 Surface。
-  统一后消除重复代码，视觉规格由 designsystem 单一来源管理。"
+  为什么：InfoSection 与 GroupedCard 标题区重复造轮子（都用 titleMedium+primary）。
+  但 MultiPerspectiveSection 不能套 GroupedCard——AMOLED 模式下 surfaceContainerLow
+  被覆盖为 Black 而 surfaceBright 未覆盖，GroupedCard 套 TonalCardLow 会形成
+  '深灰卡套纯黑卡'的视觉反转。保留 InfoSection 无容器模式，加注释说明原因。"
   ```
 
 ---
@@ -456,9 +418,10 @@ private fun SourceRow(source: DataSourceEntity) {
   Run: `gradle assembleDebug --no-daemon`
   Expected: BUILD SUCCESSFUL
 
-- [ ] **Step 2: testDebugUnitTest**
+- [ ] **Step 2: testDebugUnitTest（先确认基线再验证）**
   Run: `gradle testDebugUnitTest --no-daemon`
-  Expected: BUILD SUCCESSFUL，112 tests passed（原 117 - 删除的 5 个 HierarchicalListItem 测试）
+  Expected: BUILD SUCCESSFUL，0 failures
+  注意：实施前先跑一次 testDebugUnitTest 记录基线测试数（上次为 117，但 core/ai 可能有新增测试），删除 5 个 HierarchicalListItem 测试后预期 = 基线 - 5
 
 ### Task 11: 推送 + CI 验证
 
@@ -469,17 +432,19 @@ private fun SourceRow(source: DataSourceEntity) {
 ### Task 12: 更新文档
 
 **Files:**
-- Modify: `docs/00-STATUS.md`
-- Modify: `docs/SESSION_LOG.md`
-- Modify: `AGENTS.md`
+- Modify: `docs/00-STATUS.md`（新增"UI 统一与死组件清理"章节 + 删除 line 66 的 HierarchicalListItem P1 条目）
+- Modify: `docs/SESSION_LOG.md`（新增 Session 2026-07-13 第二条记录）
+- Modify: `AGENTS.md`（修订第 9 节下一步优先级，删除已完成的 P1）
+- Modify: `docs/01-QUICK-RECOVERY.md`（更新 line 121-123 的剩余工作描述，删除 HierarchicalListItem 引用）
 - Modify: `docs/plans/ui-consolidation-cleanup.md`（顶部标记完成）
 
-- [ ] **Step 1: 更新 00-STATUS.md** — 新增"UI 统一与死组件清理"章节
+- [ ] **Step 1: 更新 00-STATUS.md** — 新增"UI 统一与死组件清理"章节 + 删除 HierarchicalListItem P1 条目
 - [ ] **Step 2: 更新 SESSION_LOG.md** — 新增 Session 2026-07-13（第二条）记录
 - [ ] **Step 3: 更新 AGENTS.md** — 修订第 9 节下一步优先级（删除已完成的 P1，修正原 P1 描述）
-- [ ] **Step 4: 更新 plan 文件** — 顶部标记为已完成
-- [ ] **Step 5: Commit 文档**
-- [ ] **Step 6: Push 文档 commit**
+- [ ] **Step 4: 更新 01-QUICK-RECOVERY.md** — 更新剩余工作描述，删除 HierarchicalListItem 引用
+- [ ] **Step 5: 更新 plan 文件** — 顶部标记为已完成
+- [ ] **Step 6: Commit 文档**
+- [ ] **Step 7: Push 文档 commit**
 
 ---
 
@@ -492,13 +457,19 @@ private fun SourceRow(source: DataSourceEntity) {
 - [x] 每个 Task 末尾有编译验证
 - [x] Commit message 说明"为什么改"
 
+### 深度调查发现的关键约束（已纳入计划）
+- [x] AMOLED 嵌套卡片视觉反转（surfaceBright 未被覆盖为 Black，surfaceContainerLow 被覆盖）→ MultiPerspectiveSection 保留 InfoSection
+- [x] padding 一致性（GroupedCardItem 水平 padding = lg=16dp）→ 摘要 Text 和 SourceRow 都用 horizontal=lg
+- [x] 测试数基线不确定（core/ai 可能有新增测试）→ 实施前先跑 testDebugUnitTest 确认基线
+- [x] 文档次生影响（00-STATUS.md + 01-QUICK-RECOVERY.md 引用 HierarchicalListItem）→ Task 12 补充更新
+
 ### 风险评估
-- **Phase 1 风险：低** — InfoSection→GroupedCard 是等价替换（标题样式一致），PerspectiveCard→TonalCardLow 是等价替换（color/shape 一致），SourcesSection→GroupedCardDivider 是等价替换（实现完全一致）
+- **Phase 1 风险：低** — 摘要/资料来源→GroupedCard 是等价替换（标题样式一致），PerspectiveCard→TonalCardLow 是等价替换（color/shape 一致），SourcesSection→GroupedCardDivider 是等价替换（实现完全一致）；多教材对照保留 InfoSection 避免嵌套风险
 - **Phase 2 风险：极低** — 4 个组件均 0 生产引用，删除不影响任何 Screen
 - **回滚方案** — 每个 Phase 独立 commit，可 `git revert` 单个 Phase
 
 ### 预期结果
 - 删除 4 个文件（死组件）+ 2 个关联文件（Preview/Test）
 - 修改 2 个文件（KnowledgePointDetailScreen + WenyanLargeTopAppBar 注释）
-- 测试数：117 → 112（删除 5 个 HierarchicalListItem 测试）
+- 测试数：基线 - 5（删除 5 个 HierarchicalListItem 测试，实施前先跑 testDebugUnitTest 确认基线）
 - CI 全绿
