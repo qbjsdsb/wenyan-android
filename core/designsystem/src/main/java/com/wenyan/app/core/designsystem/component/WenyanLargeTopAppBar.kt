@@ -27,10 +27,10 @@ import androidx.compose.ui.text.style.TextOverflow
  * 与 [LargeFlexibleTopAppBar] 原生 API 的差异：
  * - title 接收 String 而非 @Composable lambda，简化调用方
  * - subtitle 同样接收 String?
- * - onBack 为 null 时不显示返回按钮（与 [WenyanTopAppBar] 行为一致）
+ * - onBack 为 null 时不显示返回按钮
  * - 容器色统一用 surfaceContainer，标题色 onSurface
  *
- * 与 [WenyanTopAppBar] 的关键差异：
+ * 特性：
  * - 支持滚动折叠（透传 [scrollBehavior]）
  * - 支持副标题（[subtitle]），展开时显示在标题下方
  * - 展开时为大标题样式（headlineMedium），收起时为标准标题样式
