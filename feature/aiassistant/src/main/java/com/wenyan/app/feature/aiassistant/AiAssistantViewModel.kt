@@ -222,15 +222,18 @@ class AiAssistantViewModel @Inject constructor(
     // ── 防死记硬背检测 ────────────────────────────────────────────
 
     /**
-     * 检测某卡片是否疑似死记硬背。
+     * 检测某知识点是否疑似死记硬背。
      *
      * 检测结果通过 [AiAssistantUiState.roteWarning] 暴露给 UI。
+     *
+     * P1-AUDIT-3 修复：参数名 `cardId` → `pointId`，`relatedCardIds` → `relatedPointIds`，
+     * 与 AntiRoteMemorization 和 DAO 命名对齐。
      */
-    fun checkRoteMemorization(cardId: String, relatedCardIds: List<String>) {
+    fun checkRoteMemorization(pointId: String, relatedPointIds: List<String>) {
         viewModelScope.launch {
             try {
                 val result: RoteCheckResult = antiRoteMemorization
-                    .checkRoteMemorization(cardId, relatedCardIds)
+                    .checkRoteMemorization(pointId, relatedPointIds)
                     .first()
                 _uiState.update {
                     if (result.isSuspected) {
