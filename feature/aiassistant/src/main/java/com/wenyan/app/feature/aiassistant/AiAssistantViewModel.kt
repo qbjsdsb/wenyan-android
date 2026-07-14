@@ -16,6 +16,7 @@ import com.wenyan.app.core.ai.recall.RecallChecker
 import com.wenyan.app.core.ai.recall.RecallResult
 import com.wenyan.app.core.ai.recall.RoteCheckResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -108,6 +109,8 @@ class AiAssistantViewModel @Inject constructor(
                     contentSource = CONTENT_SOURCE_AI,
                     references = if (ragResult.hasResults) ragResult.references else emptyList(),
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(errorMessage = "请求失败：${e.message ?: "未知错误"}")
@@ -143,6 +146,8 @@ class AiAssistantViewModel @Inject constructor(
                 socraticTutor.guideEssayAnswer(question, userAnswer).collect { guide ->
                     addSocraticGuideMessage(guide)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(errorMessage = "引导失败：${e.message ?: "未知错误"}")
@@ -186,6 +191,8 @@ class AiAssistantViewModel @Inject constructor(
                     contentSource = CONTENT_SOURCE_AI,
                     references = explanation.references,
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(errorMessage = "解释失败：${e.message ?: "未知错误"}")
@@ -231,6 +238,8 @@ class AiAssistantViewModel @Inject constructor(
                         it.copy(roteWarning = null)
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 // 死记硬背检测失败不阻塞主流程，静默忽略
                 _uiState.update { it.copy(roteWarning = null) }
@@ -272,6 +281,8 @@ class AiAssistantViewModel @Inject constructor(
             try {
                 val available = aiService.isAvailable().first()
                 _uiState.update { it.copy(isAvailable = available) }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(isAvailable = false) }
             }

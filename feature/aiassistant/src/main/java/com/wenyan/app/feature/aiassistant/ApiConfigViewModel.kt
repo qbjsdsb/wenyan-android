@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.repository.ApiConfigRepository
 import com.wenyan.app.core.database.entity.ApiConfigEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -165,6 +166,8 @@ class ApiConfigViewModel @Inject constructor(
                     apiConfigRepository.setCurrent(id)
                 }
                 dismissForm()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _errorMessage.value = "保存失败：${e.message}"
             }
@@ -176,6 +179,8 @@ class ApiConfigViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 apiConfigRepository.setCurrent(id)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _errorMessage.value = "切换失败：${e.message}"
             }
@@ -187,6 +192,8 @@ class ApiConfigViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 apiConfigRepository.deleteConfig(id)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _errorMessage.value = "删除失败：${e.message}"
             }

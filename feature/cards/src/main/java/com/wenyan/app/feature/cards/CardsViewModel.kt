@@ -9,6 +9,7 @@ import com.wenyan.app.core.data.repository.SchedulingRepository
 import com.wenyan.app.core.database.entity.CardTemplateType
 import com.wenyan.app.core.fsrs.Rating
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -138,6 +139,8 @@ class CardsViewModel @Inject constructor(
             } ?: return@launch
             try {
                 schedulingRepository.rateCard(pointId, fsrsRating, templateType)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _errorMessage.value = "评分调度失败：${e.message ?: "未知错误"}"
             }
