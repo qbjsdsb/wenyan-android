@@ -1,10 +1,9 @@
 package com.wenyan.app.core.database.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import com.wenyan.app.core.database.entity.ChapterEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -14,10 +13,13 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ChapterDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // P0 修正:原用 @Insert(REPLACE),DELETE+INSERT 会触发子表 CASCADE
+    // (knowledge_points → memo_records/review_logs/data_sources),
+    // 静默清空用户 FSRS 调度数据。改用 @Upsert。
+    @Upsert
     suspend fun insert(entity: ChapterEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertAll(entities: List<ChapterEntity>)
 
     @Update

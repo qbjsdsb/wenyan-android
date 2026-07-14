@@ -1,9 +1,8 @@
 package com.wenyan.app.core.database.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import com.wenyan.app.core.database.entity.ReviewLogEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -13,10 +12,12 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ReviewLogDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // 改用 @Upsert:review_logs 有 FK→knowledge_points CASCADE,
+    // REPLACE 会 DELETE+INSERT 触发级联(虽然 review_logs 无子表,但保持一致性)。
+    @Upsert
     suspend fun insert(entity: ReviewLogEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertAll(entities: List<ReviewLogEntity>)
 
     @Query("DELETE FROM review_logs WHERE id = :id")

@@ -1,8 +1,6 @@
 package com.wenyan.app.core.database.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import androidx.room.Upsert
@@ -20,7 +18,7 @@ interface MemoRecordDao {
     @Upsert
     suspend fun upsert(entity: MemoRecordEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertAll(entities: List<MemoRecordEntity>)
 
     @Update

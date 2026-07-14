@@ -1,10 +1,9 @@
 package com.wenyan.app.core.database.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import com.wenyan.app.core.database.entity.ExamQuestionEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -16,10 +15,13 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ExamQuestionDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // P1 修正:原用 @Insert(REPLACE),DELETE+INSERT 会触发子表 CASCADE
+    // (data_sources/ai_grading_records 级联删除,template_fills SET_NULL)。
+    // 改用 @Upsert(INSERT ... ON CONFLICT DO UPDATE)。
+    @Upsert
     suspend fun insert(entity: ExamQuestionEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertAll(entities: List<ExamQuestionEntity>)
 
     @Update

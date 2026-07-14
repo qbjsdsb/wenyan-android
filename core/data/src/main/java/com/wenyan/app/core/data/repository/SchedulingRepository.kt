@@ -1,9 +1,12 @@
 package com.wenyan.app.core.data.repository
 
+import android.util.Log
 import com.wenyan.app.core.data.mapper.MemoRecordMapper
 import com.wenyan.app.core.database.dao.MemoRecordDao
+import com.wenyan.app.core.database.dao.ReviewLogDao
 import com.wenyan.app.core.database.entity.CardTemplateType
 import com.wenyan.app.core.database.entity.MemoRecordEntity
+import com.wenyan.app.core.database.entity.ReviewLogEntity
 import com.wenyan.app.core.fsrs.FsrsWrapper
 import com.wenyan.app.core.fsrs.MemoryTier
 import com.wenyan.app.core.fsrs.Rating
@@ -12,6 +15,7 @@ import com.wenyan.app.core.fsrs.TIER_CONFIGS
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -39,6 +43,7 @@ import javax.inject.Singleton
 @Singleton
 class SchedulingRepository @Inject constructor(
     private val memoRecordDao: MemoRecordDao,
+    private val reviewLogDao: ReviewLogDao,
     private val clockGuard: ClockGuard,
 ) {
     /**

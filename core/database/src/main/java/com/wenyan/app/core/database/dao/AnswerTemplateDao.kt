@@ -1,10 +1,9 @@
 package com.wenyan.app.core.database.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import com.wenyan.app.core.database.entity.AnswerTemplateEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -14,10 +13,12 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface AnswerTemplateDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // P1 修正:原用 @Insert(REPLACE),DELETE+INSERT 会触发子表 CASCADE
+    // (template_fills 级联删除,用户答题记录丢失)。改用 @Upsert。
+    @Upsert
     suspend fun insert(entity: AnswerTemplateEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertAll(entities: List<AnswerTemplateEntity>)
 
     @Update
