@@ -41,6 +41,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    // Material 3 Adaptive（WindowSizeClass 驱动自适应布局，v0.6 大屏适配）
+    api(libs.androidx.compose.material3.adaptive)
     // MaterialKolor 动态色彩生成（KSU 同款）
     api(libs.materialkolor)
     implementation(libs.androidx.compose.material.icons.extended)
