@@ -54,14 +54,12 @@ fun WenyanApp(
         }
 
         // P0-N1 修正：仅顶级路由显示外层 NavigationBar。
-        // - 子路由（knowledge_detail/{pointId} / settings / api_config）不显示，
+        // - 子路由（knowledge_detail/{pointId} / api_config / aiassistant）不显示，
         //   避免遮挡子页面的内容与返回按钮。
-        // - AiAssistant 虽是顶级路由，但其内部 ExpressiveScaffold 自带 InputBar，
-        //   外层 NavigationBar 会与之叠加冲突，故同样隐藏。
+        // - AiAssistant 改为子路由后自动不在 topLevelRoutes 中，无需额外排除。
+        //   其内部 ExpressiveScaffold 自带 InputBar，外层 NavigationBar 会与之叠加冲突。
         val currentRoute = currentDestination?.route
-        val showBottomBar = currentRoute != null &&
-            currentRoute in topLevelRoutes &&
-            currentRoute != TopLevelDestination.ROUTE_AI_ASSISTANT
+        val showBottomBar = currentRoute != null && currentRoute in topLevelRoutes
 
         // P2-REC-5 修正：用 remember 缓存 WenyanNavItem 列表（静态数据，不随重组变化）
         val navItems = remember {

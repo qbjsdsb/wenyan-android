@@ -44,12 +44,13 @@ import com.wenyan.app.feature.settings.BuildConfig
 /**
  * 设置页面。
  *
+ * v0.6 起从子路由提升为顶级 Tab，不再需要 onBack 返回箭头。
+ *
  * 包含：外观（主题模式/AMOLED）、动态色彩（开关/种子色/调色板风格）、AI 服务、关于。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit,
     onNavigateToApiConfig: () -> Unit,
     viewModel: ThemeViewModel = hiltViewModel(),
 ) {
@@ -62,7 +63,6 @@ fun SettingsScreen(
         topBar = {
             WenyanLargeTopAppBar(
                 title = "设置",
-                onBack = onBack,
                 scrollBehavior = scrollBehavior,
             )
         },

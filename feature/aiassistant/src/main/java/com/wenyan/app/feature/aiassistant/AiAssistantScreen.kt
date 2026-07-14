@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -46,7 +48,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,6 +67,12 @@ import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 /**
  * AI 助手界面（阶段4增强）。
  *
+ * v0.6 改动：
+ * - 从顶级 Tab 降为子路由（Push/Pop slide），由 4 个主屏 TopBar SmartToy 图标进入
+ * - 移除 onNavigateToSettings（设置已是底部 Tab，无需从 AI 助手跳转）
+ * - actions 重构：CloudOff 改为可点击 IconButton（跳转 ApiConfig），
+ *   MoreVert 改为 DropdownMenu 溢出菜单（包含"API 配置"）
+ *
  * 增强点：
  * - 内容来源标注（AI生成 / 教材原文 / OCR识别）
  * - 引用来源可溯源展示（sourceFile + sourcePage）
@@ -75,7 +85,6 @@ import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 @Composable
 fun AiAssistantScreen(
     onNavigateToApiConfig: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {},
     viewModel: AiAssistantViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -84,6 +93,8 @@ fun AiAssistantScreen(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
     )
+    // v0.6：MoreVert 溢出菜单展开状态
+    var showOverflowMenu by remember { mutableStateOf(false) }
 
     // 错误提示 → Snackbar
     // NF-UC4 修复：原 LaunchedEffect 在 Composable 离开时 showSnackbar 协程被取消，
@@ -121,25 +132,15 @@ fun AiAssistantScreen(
             WenyanLargeTopAppBar(
                 title = "AI助手",
                 actions = {
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "设置",
-                        )
-                    }
-                    IconButton(onClick = onNavigateToApiConfig) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "API 配置",
-                        )
-                    }
+                    // v0.6：CloudOff 改为可点击 IconButton，直接跳转 ApiConfig 修复离线状态
                     if (!uiState.isAvailable) {
-                        Icon(
-                            imageVector = Icons.Default.CloudOff,
-                            contentDescription = "离线",
-                            modifier = Modifier.padding(end = Spacing.xs),
-                            tint = MaterialTheme.colorScheme.error,
-                        )
+                        IconButton(onClick = onNavigateToApiConfig) {
+                            Icon(
+                                imageVector = Icons.Default.CloudOff,
+                                contentDescription = "AI 服务不可用，点击配置",
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                        }
                     }
                     IconButton(
                         onClick = viewModel::clearMessages,
@@ -149,6 +150,33 @@ fun AiAssistantScreen(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "清空对话",
                         )
+                    }
+                    // v0.6：MoreVert 改为 DropdownMenu 溢出菜单
+                    Box {
+                        IconButton(onClick = { showOverflowMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "更多",
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showOverflowMenu,
+                            onDismissRequest = { showOverflowMenu = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("API 配置") },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    onNavigateToApiConfig()
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Settings,
+                                        contentDescription = null,
+                                    )
+                                },
+                            )
+                        }
                     }
                 },
                 scrollBehavior = scrollBehavior,
