@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 文研App 基础主题，Compose 接管实际 UI，此处仅保留启动主题 -->
-    <style name="Theme.Wenyan" parent="android:Theme.Material.Light.NoActionBar">
+    <!-- 文研App 基础主题，Compose 接管实际 UI，此处仅保留启动主题。
+         NF-U3 修复：从 android:Theme.Material.Light.NoActionBar（legacy，无 DayNight）
+         改为 Theme.Material3.DayNight.NoActionBar（M3，支持暗色模式自动切换）。
+         com.google.android.material:material:1.12.0 已提供此主题。 -->
+    <style name="Theme.Wenyan" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowBackground">@color/wenyan_window_background</item>
     </style>

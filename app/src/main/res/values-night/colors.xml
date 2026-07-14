@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 文研App 深色模式颜色覆盖（NF-U4）。
+     仅覆盖窗口背景色，避免暗模式冷启动白屏闪烁。
+     wenyan_launcher_background 不需覆盖（深色在两种模式下通用）。
+     #1C1B1F 对应 M3 默认暗色 surface，与 Compose darkColorScheme 一致。
+     AMOLED 用户会有短暂 #1C1B1F → #000000 过渡，可接受。 -->
+<resources>
+    <color name="wenyan_window_background">#1C1B1F</color>
+</resources>
