@@ -4,6 +4,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -241,7 +242,8 @@ private fun ConfigCard(
     TonalCard(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onSetCurrent),
+            // NF-UA4 修复：加 role=Role.Button 语义，TalkBack 朗读"按钮"
+            .clickable(role = Role.Button, onClick = onSetCurrent),
     ) {
         Column(
             modifier = Modifier

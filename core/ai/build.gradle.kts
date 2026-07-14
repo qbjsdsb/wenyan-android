@@ -51,8 +51,9 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
 
-    // AndroidX Security + Keystore（API key 安全存储）
-    implementation(libs.androidx.security.crypto)
+    // NF-B7 修复：移除 androidx.security.crypto 死依赖。
+    // 实际加密在 core:data 的 ApiKeyCryptoImpl，用 AndroidKeyStore + javax.crypto，
+    // 无任何 androidx.security.crypto.* import。此 alpha 依赖从未被使用，应移除。
 
     // DataStore（API 配置存储）
     implementation(libs.androidx.datastore.preferences)

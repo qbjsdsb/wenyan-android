@@ -146,11 +146,9 @@ wenyan-core-data = { group = "com.wenyan.app", name = "core-data" }
 wenyan-core-designsystem = { group = "com.wenyan.app", name = "core-designsystem" }
 wenyan-core-fsrs = { group = "com.wenyan.app", name = "core-fsrs" }
 wenyan-core-ai = { group = "com.wenyan.app", name = "core-ai" }
-wenyan-feature-knowledge = { group = "com.wenyan.app", name = "feature-knowledge" }
-wenyan-feature-quiz = { group = "com.wenyan.app", name = "feature-quiz" }
-wenyan-feature-cards = { group = "com.wenyan.app", name = "feature-cards" }
-wenyan-feature-graph = { group = "com.wenyan.app", name = "feature-graph" }
-wenyan-feature-aiassistant = { group = "com.wenyan.app", name = "feature-aiassistant" }
+# NF-B8 修复：移除 5 个 wenyan-feature-* 死声明。
+# 各模块用 project(":feature:xxx") 引用，从未用 libs.wenyan.feature.xxx 别名。
+# 死声明误导维护者以为有版本管理，实际从未被引用。
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

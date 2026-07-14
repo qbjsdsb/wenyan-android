@@ -4,6 +4,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -175,7 +176,9 @@ private fun KnowledgePointCard(
     TonalCard(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            // NF-UA4 修复：加 role=Role.Button 语义，TalkBack 朗读"按钮"，
+            // 视障用户才能识别卡片可点击。原 .clickable 无 role，TalkBack 不朗读"按钮"。
+            .clickable(role = Role.Button, onClick = onClick),
     ) {
         Column(modifier = Modifier.padding(Spacing.lg)) {
             Text(

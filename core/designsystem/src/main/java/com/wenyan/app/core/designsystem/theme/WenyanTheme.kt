@@ -7,6 +7,7 @@ import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.materialkolor.dynamiccolor.ColorSpec
@@ -38,11 +39,19 @@ fun WenyanTheme(
     }
 
     // 生成基础 ColorScheme
+    // NF-UC2 修复：dynamicLightColorScheme/dynamicDarkColorScheme 内部读取系统资源，
+    // 不 remember 时每次重组都重新构建，Android 12+ 用户产生不必要的 GC 压力。
+    // rememberDynamicColorScheme 本身已 remember（materialkolor 库），
+    // 但 dynamicLightColorScheme/dynamicDarkColorScheme 是普通函数，需显式 remember。
+    // 因 remember 的 value lambda 不能调用 @Composable 函数，
+    // 用 if 分支分别 remember 对应方案。
     val baseScheme = if (config.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         // Android 12+：使用系统壁纸提取的动态色彩
-        if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        remember(context, isDark) {
+            if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }
     } else {
-        // Android 11- 或手动种子色：用 materialkolor 生成
+        // Android 11- 或手动种子色：用 materialkolor 生成（内部已 remember）
         val paletteStyle = config.paletteStyle.toMaterialKolorStyle()
         rememberDynamicColorScheme(
             seedColor = config.seedColor,

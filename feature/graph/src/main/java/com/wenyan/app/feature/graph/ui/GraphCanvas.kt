@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -85,7 +87,9 @@ fun GraphCanvas(
             nodes.associate { node ->
                 node.id to textMeasurer.measure(
                     AnnotatedString(node.label),
-                    TextStyle(fontSize = 9.sp, color = labelColor),
+                    // NF-UA3 修复：9.sp 低于 WCAG 推荐最小 12.sp，视力不佳用户难阅读。
+                    // 12.sp 是 Android 无障碍最小可读字号。
+                    TextStyle(fontSize = 12.sp, color = labelColor),
                 )
             }
         }
@@ -97,12 +101,20 @@ fun GraphCanvas(
                 .toSet()
         }
 
+        // NF-UC5 修复：rememberUpdatedState 保持最新 nodes 引用，
+        // 让 pointerInput(Unit) 内的 lambda 总能读到最新 nodes，无需重启手势检测。
+        val currentNodes by rememberUpdatedState(nodes)
+
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(nodes) {
+                // NF-UC5 修复：pointerInput(nodes) 在 nodes 列表变化时重启手势检测协程，
+                // R 值刷新瞬间（nodes 引用变化）tap 事件可能丢失。
+                // 改为 pointerInput(Unit) 让手势检测协程只启动一次，配合 rememberUpdatedState
+                // 在 lambda 内读取 currentNodes 而非闭包捕获的 nodes。
+                .pointerInput(Unit) {
                     detectTapGestures { tapOffset ->
-                        nodes.find { node ->
+                        currentNodes.find { node ->
                             val pos = positions[node.id]
                             pos != null && (tapOffset - pos).getDistance() <= touchRadiusPx
                         }?.let { onNodeClick(it.id) }

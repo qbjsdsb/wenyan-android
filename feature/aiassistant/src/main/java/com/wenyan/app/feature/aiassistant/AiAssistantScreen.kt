@@ -5,18 +5,21 @@ import androidx.compose.animation.core.tween
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
@@ -41,6 +44,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -82,16 +86,32 @@ fun AiAssistantScreen(
     )
 
     // 错误提示 → Snackbar
+    // NF-UC4 修复：原 LaunchedEffect 在 Composable 离开时 showSnackbar 协程被取消，
+    // clearError() 不执行 → 下次进入时 errorMessage 仍非空，错误消息重复展示。
+    // 改为：先 clearError() 再 showSnackbar，确保 errorMessage 立即清空，
+    // 即使 showSnackbar 被取消也不影响状态清理。
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let { msg ->
-            snackbarHostState.showSnackbar(msg)
             viewModel.clearError()
+            snackbarHostState.showSnackbar(
+                message = msg,
+                duration = SnackbarDuration.Short,
+            )
         }
     }
 
     // 新消息时自动滚动到底部
-    LaunchedEffect(uiState.messages.size) {
-        if (uiState.messages.isNotEmpty()) {
+    // NF-UC3 修复：原 LaunchedEffect(messages.size) 无条件滚动到底部，
+    // 用户上滑阅读历史消息时被新消息强制拉回底部，打断阅读。
+    // 改为：仅当用户已在底部附近（最后一个可见 item 索引 >= 总数-2）时才自动滚动。
+    val isAtBottom by remember {
+        derivedStateOf {
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            lastVisible >= uiState.messages.size - 2
+        }
+    }
+    LaunchedEffect(uiState.messages.size, isAtBottom) {
+        if (uiState.messages.isNotEmpty() && isAtBottom) {
             listState.animateScrollToItem(uiState.messages.size - 1)
         }
     }
@@ -370,9 +390,12 @@ private fun RoteWarningBanner(
             color = MaterialTheme.colorScheme.onErrorContainer,
             fontWeight = FontWeight.Medium,
             modifier = Modifier
+                // NF-UA2 修复：原触控目标 ~28dp（padding sm+xs），低于 WCAG 48dp 标准。
+                // defaultMinSize 强制最小 48dp 触控区域，手指粗用户也能准确点击。
+                .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
                 .clip(RoundedCornerShape(4.dp))
                 .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f))
-                .clickable(onClick = onDismiss)
+                .clickable(role = Role.Button, onClick = onDismiss)
                 .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
         )
     }
