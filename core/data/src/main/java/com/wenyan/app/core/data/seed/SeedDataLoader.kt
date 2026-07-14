@@ -1,11 +1,11 @@
 package com.wenyan.app.core.data.seed
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.withTransaction
 import com.wenyan.app.core.database.WenyanDatabase
 import com.wenyan.app.core.database.dao.ChapterDao
@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.json.Json
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -43,10 +44,26 @@ import javax.inject.Singleton
  *
  * P0-D2 修正：导入过程用 [WenyanDatabase.withTransaction] 包裹，确保 7 步原子性。
  * 原实现无事务包裹，中途失败会留下半成品数据 + DataStore 已写"initialized" → 永久半成品。
+ *
+ * NF-J 修复（种子加载链路稳健性）：
+ * - 合并双 DataStore：原先用独立的 `wenyan_seed_prefs` DataStore 记录初始化标志，
+ *   与主 `wenyan_preferences` 分离，导致全局偏好分散在两处。现统一注入 Hilt 单例
+ *   [DataStore]<[Preferences]>，与 [com.wenyan.app.core.data.di.DataStoreModule] 提供的
+ *   主 DataStore 共用一个文件（wenyan_preferences.preferences_pb）。
+ * - [isInitialized] / [markInitialized] 加 [IOException] 兜底：DataStore 读写在磁盘
+ *   故障/权限异常时抛 IOException，原实现会冒泡到 Application 的 CoroutineExceptionHandler
+ *   导致种子加载被吞掉、下次启动仍报错。现 [isInitialized] 异常时假设"未初始化"
+ *   让种子重试导入，[markInitialized] 异常时仅 Log.w 不冒泡（App 继续工作，下次启动重试，
+ *   种子重复导入用 REPLACE 策略幂等）。
+ * - 不修改 DAO 的 `@Insert(onConflict = REPLACE)` 策略：种子加载只在
+ *   `isInitialized() == false` 时执行（首次安装），事务包裹确保原子性，首次安装
+ *   用户无数据可被覆盖。"版本感知种子升级"（升级时按 seed_data.json 版本号增量导入）
+ *   应作为独立的 P1 feature，不在本修复范围。
  */
 @Singleton
 class SeedDataLoader @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val preferencesDataStore: DataStore<Preferences>,
     private val database: WenyanDatabase,
     private val examCodeHistoryDao: ExamCodeHistoryDao,
     private val graphRepository: GraphRepository,
@@ -59,13 +76,13 @@ class SeedDataLoader @Inject constructor(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
-    // DataStore 实例，记录初始化状态
-    private val Context.seedDataStore: DataStore<Preferences> by preferencesDataStore(
-        name = SEED_PREFERENCES_NAME,
-    )
-
     /**
      * 确保种子数据已加载：若尚未初始化则读取并导入，已初始化则跳过。
+     *
+     * NF-J 修复：[isInitialized] 与 [markInitialized] 都已加 IOException 兜底，
+     * 此方法自身不会再因 DataStore 故障抛 IOException；[readSeedDataFromAssets]
+     * 与 [importToDatabase] 的异常会冒泡到 Application 的 CoroutineExceptionHandler
+     * 被吞掉（Log.e），下次启动重试。
      */
     suspend fun ensureSeedDataLoaded() {
         val initialized = isInitialized()
@@ -76,13 +93,35 @@ class SeedDataLoader @Inject constructor(
         markInitialized()
     }
 
-    // 读取 DataStore 中是否已初始化标志
-    private suspend fun isInitialized(): Boolean =
-        context.seedDataStore.data.map { it[KEY_SEED_INITIALIZED] ?: false }.first()
+    /**
+     * 读取 DataStore 中是否已初始化标志。
+     *
+     * NF-J 修复：DataStore 读写可能抛 [IOException]（磁盘满/权限/文件损坏），
+     * 兜底返回 false 让种子重试导入（[importToDatabase] 用事务包裹 + REPLACE 幂等，
+     * 重复导入无副作用）。
+     */
+    private suspend fun isInitialized(): Boolean = try {
+        preferencesDataStore.data.map { it[KEY_SEED_INITIALIZED] ?: false }.first()
+    } catch (e: IOException) {
+        Log.w(TAG, "DataStore read failed, assuming seed not initialized", e)
+        false
+    }
 
-    // 标记初始化完成
+    /**
+     * 标记初始化完成。
+     *
+     * NF-J 修复：DataStore 写失败时仅 Log.w 不冒泡。原因：
+     * 1. 此时种子已成功导入数据库（[importToDatabase] 事务已提交）；
+     * 2. 若冒泡到 Application，会被 CoroutineExceptionHandler 吞掉，无意义；
+     * 3. 下次启动 [isInitialized] 仍返回 false → 重新导入（REPLACE 幂等，无副作用）。
+     * 唯一代价是下次启动会重复跑一次种子导入，可接受。
+     */
     private suspend fun markInitialized() {
-        context.seedDataStore.edit { it[KEY_SEED_INITIALIZED] = true }
+        try {
+            preferencesDataStore.edit { it[KEY_SEED_INITIALIZED] = true }
+        } catch (e: IOException) {
+            Log.w(TAG, "DataStore write failed, seed will re-import on next launch", e)
+        }
     }
 
     // 从 assets 读取并解析 seed_data.json
@@ -265,8 +304,8 @@ class SeedDataLoader @Inject constructor(
     }
 
     companion object {
+        private const val TAG = "SeedDataLoader"
         private const val SEED_DATA_FILE = "seed_data.json"
-        private const val SEED_PREFERENCES_NAME = "wenyan_seed_prefs"
         private val KEY_SEED_INITIALIZED = booleanPreferencesKey("seed_initialized")
 
         /** 科目排序顺序（按考研重要性排列：古代→现当代→外国→理论） */
