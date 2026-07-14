@@ -1,5 +1,6 @@
 package com.wenyan.app.core.data.repository
 
+import com.wenyan.app.core.data.util.catchAndLog
 import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.dao.MemoRecordDao
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
@@ -20,12 +21,20 @@ import javax.inject.Singleton
  * - 提供用户校对后标记 VERIFIED 激活的能力
  *
  * 通过构造函数注入 [KnowledgePointDao] 和 [MemoRecordDao]（Hilt @Inject）。
+ *
+ * P1 审计修复：combine/map 链加 .catchAndLog，DAO 异常时降级为空列表/0，
+ * 避免 ViewModel collect 崩溃导致 UI 永久 failed。
  */
 @Singleton
 class ReviewRepository @Inject constructor(
     private val knowledgePointDao: KnowledgePointDao,
     private val memoRecordDao: MemoRecordDao,
 ) {
+
+    private companion object {
+        private const val TAG = "ReviewRepository"
+    }
+
     /**
      * FSRS 复习队列：仅返回已 VERIFIED 且到期（next_review_at <= 当前时间）的知识点。
      *
@@ -43,7 +52,7 @@ class ReviewRepository @Inject constructor(
     ) { verifiedPoints, dueRecords ->
         val dueIds = dueRecords.map { it.pointId }.toSet()
         verifiedPoints.filter { it.id in dueIds }
-    }
+    }.catchAndLog(TAG, "getReviewQueue") { emptyList() }
 
     /**
      * 获取所有已 VERIFIED 的知识点（不过滤到期状态）。
@@ -53,6 +62,7 @@ class ReviewRepository @Inject constructor(
      */
     fun getAllVerifiedKnowledgePoints(): Flow<List<KnowledgePointEntity>> =
         knowledgePointDao.observeVerifiedForReview()
+            .catchAndLog(TAG, "getAllVerifiedKnowledgePoints") { emptyList() }
 
     /**
      * 获取所有已 VERIFIED 的知识点，附带科目名（P1 修复）。
@@ -62,6 +72,7 @@ class ReviewRepository @Inject constructor(
      */
     fun getVerifiedWithSubject(): Flow<List<KnowledgePointWithSubject>> =
         knowledgePointDao.observeVerifiedWithSubject()
+            .catchAndLog(TAG, "getVerifiedWithSubject") { emptyList() }
 
     /**
      * 今日待复习数量：已 VERIFIED 且到期（next_review_at <= 当前时间）的知识点数。
@@ -76,7 +87,7 @@ class ReviewRepository @Inject constructor(
     ) { verifiedPoints, dueRecords ->
         val verifiedIds = verifiedPoints.map { it.id }.toSet()
         dueRecords.count { it.pointId in verifiedIds }
-    }
+    }.catchAndLog(TAG, "getPendingReviewCount") { 0 }
 
     /**
      * "待校对"区：返回所有 ocr_status='PENDING' 的知识点。
@@ -86,10 +97,13 @@ class ReviewRepository @Inject constructor(
      */
     fun getPendingOcrKnowledgePoints(): Flow<List<KnowledgePointEntity>> =
         knowledgePointDao.observeByOcrStatus("PENDING")
+            .catchAndLog(TAG, "getPendingOcrKnowledgePoints") { emptyList() }
 
     /** "待校对"区数量：PENDING 状态知识点数 */
     fun getPendingOcrCount(): Flow<Int> =
-        knowledgePointDao.observeByOcrStatus("PENDING").map { it.size }
+        knowledgePointDao.observeByOcrStatus("PENDING")
+            .map { it.size }
+            .catchAndLog(TAG, "getPendingOcrCount") { 0 }
 
     /**
      * 将指定知识点标记为 VERIFIED（激活）。

@@ -1,6 +1,7 @@
 package com.wenyan.app.core.data.repository
 
 import androidx.compose.runtime.Immutable
+import com.wenyan.app.core.data.util.catchAndLog
 import com.wenyan.app.core.database.dao.DataSourceDao
 import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.entity.DataSourceEntity
@@ -24,12 +25,19 @@ import javax.inject.Singleton
  * 数据来源：
  * - [KnowledgePointDao]：知识点主表
  * - [DataSourceDao]：资料来源溯源表（Spec 新增）
+ *
+ * P1 审计修复：mapLatest 内含 suspend DAO 查询（getByIds），
+ * 加 .catchAndLog 降级为 null，避免详情页崩溃。
  */
 @Singleton
 class KnowledgeRepository @Inject constructor(
     private val knowledgePointDao: KnowledgePointDao,
     private val dataSourceDao: DataSourceDao,
 ) {
+
+    private companion object {
+        private const val TAG = "KnowledgeRepository"
+    }
 
     /**
      * 观察知识点详情（含来源溯源列表）。
@@ -64,7 +72,7 @@ class KnowledgeRepository @Inject constructor(
                     extensionPoints = if (extensionIds.isEmpty()) emptyList() else knowledgePointDao.getByIds(extensionIds),
                 )
             }
-        }
+        }.catchAndLog(TAG, "observeKnowledgePointDetail") { null }
 
     /** 单次获取知识点（非流式） */
     suspend fun getById(pointId: String): KnowledgePointEntity? = knowledgePointDao.getById(pointId)

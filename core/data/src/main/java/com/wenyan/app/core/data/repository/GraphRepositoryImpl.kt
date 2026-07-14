@@ -1,5 +1,6 @@
 package com.wenyan.app.core.data.repository
 
+import com.wenyan.app.core.data.util.catchAndLog
 import com.wenyan.app.core.database.dao.GraphEdgeDao
 import com.wenyan.app.core.database.dao.GraphNodeDao
 import com.wenyan.app.core.database.dao.KnowledgePointDao
@@ -27,6 +28,9 @@ import kotlin.math.pow
  *   （时钟回拨 → elapsedMillis 异常小 → R 接近 1，误判记忆完全保持；
  *    时钟前移 → elapsedMillis 异常大 → R 接近 0，误判记忆完全遗忘）。
  *
+ * P1 审计修复：所有 Flow 方法加 .catchAndLog，DAO 异常时降级为空列表/0f/null，
+ * 避免图谱界面崩溃。
+ *
  * @property graphNodeDao 图谱节点 DAO
  * @property graphEdgeDao 图谱边 DAO
  * @property memoRecordDao 记忆记录 DAO（用于计算可提取性 R）
@@ -44,12 +48,15 @@ class GraphRepositoryImpl @Inject constructor(
 
     override fun getAllNodes(): Flow<List<GraphNodeEntity>> =
         graphNodeDao.observeAll()
+            .catchAndLog(TAG, "getAllNodes") { emptyList() }
 
     override fun getAllEdges(): Flow<List<GraphEdgeEntity>> =
         graphEdgeDao.observeAll()
+            .catchAndLog(TAG, "getAllEdges") { emptyList() }
 
     override fun getNodesByType(type: GraphNodeType): Flow<List<GraphNodeEntity>> =
         graphNodeDao.observeByType(type.name)
+            .catchAndLog(TAG, "getNodesByType") { emptyList() }
 
     override fun getPrerequisites(nodeId: String): Flow<List<GraphNodeEntity>> = flow {
         val node = graphNodeDao.getById(nodeId)
@@ -65,7 +72,7 @@ class GraphRepositoryImpl @Inject constructor(
         // P1-D2 修正：原 mapNotNull { getById(it) } 串行 N 次查询，改为一次 IN 批量查询
         val nodesById = graphNodeDao.getByIds(prerequisiteIds).associateBy { it.id }
         emit(prerequisiteIds.mapNotNull { nodesById[it] })
-    }
+    }.catchAndLog(TAG, "getPrerequisites") { emptyList() }
 
     override fun getRelatedNodes(nodeId: String): Flow<List<GraphNodeEntity>> =
         graphEdgeDao.observeRelatedTo(nodeId).map { edges ->
@@ -79,7 +86,7 @@ class GraphRepositoryImpl @Inject constructor(
                 val nodesById = graphNodeDao.getByIds(relatedIds).associateBy { it.id }
                 relatedIds.mapNotNull { nodesById[it] }
             }
-        }
+        }.catchAndLog(TAG, "getRelatedNodes") { emptyList() }
 
     override fun getAdjacentNodes(nodeId: String): Flow<List<GraphNodeEntity>> =
         graphEdgeDao.observeRelatedTo(nodeId).map { edges ->
@@ -93,7 +100,7 @@ class GraphRepositoryImpl @Inject constructor(
                 val nodesById = graphNodeDao.getByIds(adjacentIds).associateBy { it.id }
                 adjacentIds.mapNotNull { nodesById[it] }
             }
-        }
+        }.catchAndLog(TAG, "getAdjacentNodes") { emptyList() }
 
     override fun getExamFrequency(nodeId: String): Flow<String> = flow {
         val node = graphNodeDao.getById(nodeId)
@@ -112,7 +119,7 @@ class GraphRepositoryImpl @Inject constructor(
             return@flow
         }
         emit(point.examFrequency)
-    }
+    }.catchAndLog(TAG, "getExamFrequency") { EXAM_FREQUENCY_NEVER }
 
     override suspend fun insertNode(node: GraphNodeEntity) {
         graphNodeDao.insert(node)
@@ -141,7 +148,7 @@ class GraphRepositoryImpl @Inject constructor(
         // NF-B 修复：用 ClockGuard.effectiveNowMillis() 替代 System.currentTimeMillis()，
         // 检测时钟回拨避免 R 值异常。
         emit(calculateRetrievability(memo, clockGuard.effectiveNowMillis()))
-    }
+    }.catchAndLog(TAG, "getRetrievability") { 0f }
 
     /**
      * 批量获取所有节点及其可提取性 R（阶段3新增）。
@@ -163,7 +170,7 @@ class GraphRepositoryImpl @Inject constructor(
                 val r = calculateRetrievabilityForNode(node, memoMap, now)
                 NodeWithRetrievability(node = node, retrievability = r)
             }
-        }
+        }.catchAndLog(TAG, "getNodesWithRetrievability") { emptyList() }
 
     /**
      * 计算单个节点的可提取性 R（批量场景，从 memoMap 取值）。
@@ -213,6 +220,7 @@ class GraphRepositoryImpl @Inject constructor(
     }
 
     private companion object {
+        private const val TAG = "GraphRepositoryImpl"
         private const val MILLIS_PER_DAY = 24.0 * 60 * 60 * 1000
 
         /** 默认考频（节点无关联知识点时返回） */

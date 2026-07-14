@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.wenyan.app.core.data.util.catchAndLog
 import com.wenyan.app.core.designsystem.theme.ColorMode
 import com.wenyan.app.core.designsystem.theme.ThemeConfig
 import com.wenyan.app.core.designsystem.theme.WenyanPaletteStyle
@@ -29,6 +30,9 @@ import javax.inject.Inject
  * 原实现直接 valueOf，若未来版本删除了某枚举值（或 DataStore 被外部写入非法值），
  * valueOf 抛 IllegalArgumentException → themeConfig Flow 崩溃 → 整个 App 主题系统瘫痪。
  * 改为 runCatching { valueOf(...) }.getOrNull() ?: DEFAULT，遇到非法值降级为默认值。
+ *
+ * P1 审计修复：themeConfig Flow 加 .catchAndLog，DataStore IO 异常（磁盘满/文件损坏）
+ * 时降级为默认 ThemeConfig，避免 App 启动时主题系统崩溃导致白屏。
  */
 class ThemeRepositoryImpl @Inject constructor(
     private val dataStore: DataStore<Preferences>,
@@ -43,7 +47,7 @@ class ThemeRepositoryImpl @Inject constructor(
             dynamicColor = prefs[DYNAMIC_COLOR_KEY] ?: true,
             seedColor = Color(prefs[SEED_COLOR_KEY] ?: 0xFF6750A4.toInt()),
         )
-    }
+    }.catchAndLog(TAG, "themeConfig") { ThemeConfig() }
 
     /** 解析 ColorMode，非法值降级为 SYSTEM */
     private fun parseColorMode(name: String): ColorMode? =
@@ -74,6 +78,7 @@ class ThemeRepositoryImpl @Inject constructor(
     }
 
     private companion object {
+        private const val TAG = "ThemeRepositoryImpl"
         val COLOR_MODE_KEY = stringPreferencesKey("color_mode")
         val AMOLED_KEY = booleanPreferencesKey("amoled_mode")
         val PALETTE_STYLE_KEY = stringPreferencesKey("palette_style")

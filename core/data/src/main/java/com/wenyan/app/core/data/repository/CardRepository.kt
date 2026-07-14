@@ -4,6 +4,7 @@ import com.wenyan.app.core.data.cards.CardSplitter
 import com.wenyan.app.core.data.cards.CardTemplate
 import com.wenyan.app.core.data.cards.DistinctionCard
 import com.wenyan.app.core.data.cards.EssayPointsCard
+import com.wenyan.app.core.data.util.catchAndLog
 import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import kotlinx.coroutines.flow.Flow
@@ -22,11 +23,18 @@ import javax.inject.Singleton
  *
  * 遵循 Wozniak 20条规则：严格最小信息原则，避免集合题。
  * 通过构造函数注入 [KnowledgePointDao]（Hilt @Inject），与 [ReviewRepository] 同一约定。
+ *
+ * P1 审计修复：map 内含 suspend DAO 查询（generateCardsFromKnowledgePoint → getByIds），
+ * 加 .catchAndLog 降级为空列表，避免卡片复习界面崩溃。
  */
 @Singleton
 class CardRepository @Inject constructor(
     private val knowledgePointDao: KnowledgePointDao,
 ) {
+
+    private companion object {
+        private const val TAG = "CardRepository"
+    }
 
     /**
      * 获取今日待复习卡片流。
@@ -44,7 +52,7 @@ class CardRepository @Inject constructor(
         knowledgePointDao.observeVerifiedForReview().map { verifiedPoints ->
             // Iterable.map 是 inline 函数，其 lambda 在 suspend 上下文中可调用 suspend 函数
             verifiedPoints.map { generateCardsFromKnowledgePoint(it) }.flatten()
-        }
+        }.catchAndLog(TAG, "getCardsForReview") { emptyList() }
 
     /**
      * 根据知识点自动生成卡片（Task 18.3）。
