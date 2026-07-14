@@ -3,15 +3,20 @@ package com.wenyan.app.core.ai
 import com.wenyan.app.core.ai.network.ChatMessage
 import com.wenyan.app.core.ai.network.ChatRequest
 import com.wenyan.app.core.ai.network.LlmApiService
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import java.io.IOException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -77,10 +82,31 @@ class AiServiceImpl @Inject constructor(
                 val content = body?.choices?.firstOrNull()?.message?.content
                 emit(content ?: EMPTY_RESPONSE_MESSAGE)
             } else {
-                emit("API 调用失败（HTTP ${response.code()}）：${response.message()}")
+                // P0-E1 修正：HTTP 错误码差异化提示。
+                // 401/403 → API Key 问题；5xx → 服务端问题；其他 → 通用提示。
+                val code = response.code()
+                val msg = when (code) {
+                    401, 403 -> "API Key 无效或已过期（HTTP $code），请检查配置"
+                    in 500..599 -> "AI 服务端错误（HTTP $code），请稍后重试"
+                    else -> "API 调用失败（HTTP $code）：${response.message()}"
+                }
+                emit(msg)
             }
-        } catch (e: Exception) {
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: SocketTimeoutException) {
+            // P0-E1 修正：网络异常差异化。原实现统一显示"网络错误"，
+            // 用户无法区分是超时、断网、DNS 失败还是协议错误。
+            emit("请求超时，请检查网络连接后重试")
+        } catch (e: UnknownHostException) {
+            emit("无法连接到 AI 服务，请检查网络或 baseUrl 配置")
+        } catch (e: SerializationException) {
+            emit("AI 响应解析失败：${e.message}")
+        } catch (e: IOException) {
+            // 其他 IO 异常（如 ConnectionResetException）归为网络问题
             emit("网络错误，请检查网络连接：${e.message}")
+        } catch (e: Exception) {
+            emit("AI 调用失败：${e.message}")
         }
     }.flowOn(Dispatchers.IO)
 
