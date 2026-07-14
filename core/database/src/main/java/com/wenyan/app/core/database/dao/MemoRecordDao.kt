@@ -54,4 +54,13 @@ interface MemoRecordDao {
 
     @Query("SELECT COUNT(*) FROM memo_records WHERE state = :state")
     suspend fun countByState(state: String): Int
+
+    /**
+     * 查询所有已存在的 point_id（P1-AUDIT-4 种子版本升级用）。
+     *
+     * 种子升级时需跳过已有 MemoRecord 的知识点（保留用户 FSRS 学习进度），
+     * 仅为新知识点创建初始 MemoRecord。用轻量 point_id 查询替代全量 entity 加载。
+     */
+    @Query("SELECT point_id FROM memo_records")
+    suspend fun getExistingPointIds(): List<String>
 }

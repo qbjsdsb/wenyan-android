@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.room.withTransaction
 import com.wenyan.app.core.database.WenyanDatabase
 import com.wenyan.app.core.database.dao.ChapterDao
@@ -57,8 +58,16 @@ import javax.inject.Singleton
  *   种子重复导入用 REPLACE 策略幂等）。
  * - 不修改 DAO 的 `@Insert(onConflict = REPLACE)` 策略：种子加载只在
  *   `isInitialized() == false` 时执行（首次安装），事务包裹确保原子性，首次安装
- *   用户无数据可被覆盖。"版本感知种子升级"（升级时按 seed_data.json 版本号增量导入）
- *   应作为独立的 P1 feature，不在本修复范围。
+ *   用户无数据可被覆盖。
+ *
+ * P1-AUDIT-4 修复：版本感知种子升级。原实现只用 boolean `seed_initialized` 标志，
+ * 更新 seed_data.json 后用户不会获得新内容（标志仍为 true）。现改为：
+ * - 存储 seed_data.json 的 metadata.version 到 DataStore
+ * - 启动时比对存储版本与当前 seed 版本
+ * - 版本不一致时重新导入内容表（subjects/chapters/knowledge_points/exam_questions/
+ *   writing_materials/graph），用 @Upsert 安全更新内容
+ * - **保护 MemoRecord**：升级时跳过已有 MemoRecord 的知识点（保留用户 FSRS 学习进度），
+ *   仅为新增知识点创建初始 MemoRecord
  */
 @Singleton
 class SeedDataLoader @Inject constructor(
@@ -77,7 +86,12 @@ class SeedDataLoader @Inject constructor(
     private val json = Json { ignoreUnknownKeys = true }
 
     /**
-     * 确保种子数据已加载：若尚未初始化则读取并导入，已初始化则跳过。
+     * 确保种子数据已加载：若尚未初始化或种子版本已更新则导入，否则跳过。
+     *
+     * P1-AUDIT-4 修复：版本感知升级逻辑。
+     * - 首次安装（initialized=false）：全量导入，包括 MemoRecord
+     * - 种子版本升级（initialized=true 但版本不同）：导入内容表，跳过已有 MemoRecord
+     * - 无变化（initialized=true 且版本相同）：跳过
      *
      * NF-J 修复：[isInitialized] 与 [markInitialized] 都已加 IOException 兜底，
      * 此方法自身不会再因 DataStore 故障抛 IOException；[readSeedDataFromAssets]
@@ -86,11 +100,19 @@ class SeedDataLoader @Inject constructor(
      */
     suspend fun ensureSeedDataLoaded() {
         val initialized = isInitialized()
-        if (initialized) return
-
         val seedData = readSeedDataFromAssets()
-        importToDatabase(seedData)
+        val currentVersion = seedData.metadata.version.ifBlank { DEFAULT_SEED_VERSION }
+        val storedVersion = getStoredSeedVersion()
+
+        if (initialized && storedVersion == currentVersion) return
+
+        val isUpgrade = initialized && storedVersion != currentVersion
+        if (isUpgrade) {
+            Log.i(TAG, "Seed version upgrade: $storedVersion → $currentVersion, re-importing content (MemoRecord preserved)")
+        }
+        importToDatabase(seedData, isUpgrade = isUpgrade)
         markInitialized()
+        storeSeedVersion(currentVersion)
     }
 
     /**
@@ -124,6 +146,33 @@ class SeedDataLoader @Inject constructor(
         }
     }
 
+    /**
+     * 读取 DataStore 中存储的种子版本（P1-AUDIT-4）。
+     *
+     * 用于版本感知升级：与当前 seed_data.json 的 metadata.version 比对，
+     * 不一致时触发重新导入。IOException 时返回空串（视为"未存储版本"→触发导入）。
+     */
+    private suspend fun getStoredSeedVersion(): String = try {
+        preferencesDataStore.data.map { it[KEY_SEED_VERSION] ?: "" }.first()
+    } catch (e: IOException) {
+        Log.w(TAG, "DataStore read failed for seed version, assuming empty", e)
+        ""
+    }
+
+    /**
+     * 存储种子版本到 DataStore（P1-AUDIT-4）。
+     *
+     * 与 [markInitialized] 同样的 IOException 兜底策略：写失败仅 Log.w，
+     * 下次启动会因版本不匹配重新导入（@Upsert 幂等，无副作用）。
+     */
+    private suspend fun storeSeedVersion(version: String) {
+        try {
+            preferencesDataStore.edit { it[KEY_SEED_VERSION] = version }
+        } catch (e: IOException) {
+            Log.w(TAG, "DataStore write failed for seed version: $version", e)
+        }
+    }
+
     // 从 assets 读取并解析 seed_data.json
     private fun readSeedDataFromAssets(): SeedData {
         val jsonStr = context.assets.open(SEED_DATA_FILE).bufferedReader().use { it.readText() }
@@ -144,8 +193,13 @@ class SeedDataLoader @Inject constructor(
      * P0-D2 修正：整个导入过程用 [database.withTransaction] 包裹，确保 7 步原子性。
      * 任何一步失败将回滚全部已插入数据，且 markInitialized() 不会被调用（在事务外），
      * 下次启动会重新尝试导入，避免留下"半成品数据 + initialized=true"的永久不一致。
+     *
+     * P1-AUDIT-4 修复：[isUpgrade] 参数控制 MemoRecord 导入策略。
+     * - 首次安装（isUpgrade=false）：为所有知识点创建初始 MemoRecord
+     * - 版本升级（isUpgrade=true）：查询已有 MemoRecord 的 point_id，仅为新增知识点
+     *   创建 MemoRecord，**不覆盖用户 FSRS 学习进度**（stability/difficulty/nextReviewAt）
      */
-    private suspend fun importToDatabase(seedData: SeedData) = database.withTransaction {
+    private suspend fun importToDatabase(seedData: SeedData, isUpgrade: Boolean = false) = database.withTransaction {
         val now = System.currentTimeMillis()
 
         // 步骤1：导入科目
@@ -218,24 +272,36 @@ class SeedDataLoader @Inject constructor(
         }
 
         // 步骤4：为每个知识点创建初始 MemoRecord（state=NEW，立即到期可复习）
-        val memoRecords = knowledgePointEntities.map { kp ->
-            MemoRecordEntity(
-                pointId = kp.id,
-                state = "NEW",
-                stability = 0.0,
-                difficulty = 5.0,
-                // P2-AUDIT-1 修正：lastReviewAt = 0L 表示"从未复习"，原为 now 语义错误
-                lastReviewAt = 0L,
-                nextReviewAt = now, // 立即到期，新知识点可立即进入复习队列
-                reviewCount = 0,
-                failCount = 0,
-                // P2-AUDIT-2 修正：统一为 "[]"，与 createDefaultMemoRecord 一致（原为 null）
-                history = "[]",
-                inPriorityQueue = 0,
-            )
+        // P1-AUDIT-4 修复：升级时跳过已有 MemoRecord 的知识点，保留用户 FSRS 学习进度。
+        // 仅为新增知识点（种子更新后新加的）创建初始 MemoRecord。
+        val existingMemoPointIds = if (isUpgrade) {
+            memoRecordDao.getExistingPointIds().toSet()
+        } else {
+            emptySet()
         }
+        val memoRecords = knowledgePointEntities
+            .filter { kp -> kp.id !in existingMemoPointIds }
+            .map { kp ->
+                MemoRecordEntity(
+                    pointId = kp.id,
+                    state = "NEW",
+                    stability = 0.0,
+                    difficulty = 5.0,
+                    // P2-AUDIT-1 修正：lastReviewAt = 0L 表示"从未复习"，原为 now 语义错误
+                    lastReviewAt = 0L,
+                    nextReviewAt = now, // 立即到期，新知识点可立即进入复习队列
+                    reviewCount = 0,
+                    failCount = 0,
+                    // P2-AUDIT-2 修正：统一为 "[]"，与 createDefaultMemoRecord 一致（原为 null）
+                    history = "[]",
+                    inPriorityQueue = 0,
+                )
+            }
         if (memoRecords.isNotEmpty()) {
             memoRecordDao.insertAll(memoRecords)
+        }
+        if (isUpgrade) {
+            Log.i(TAG, "Seed upgrade: created ${memoRecords.size} new MemoRecords, preserved ${existingMemoPointIds.size} existing")
         }
 
         // 步骤5：导入真题（按 subject 字段映射到 subjectId）
@@ -309,6 +375,10 @@ class SeedDataLoader @Inject constructor(
         private const val TAG = "SeedDataLoader"
         private const val SEED_DATA_FILE = "seed_data.json"
         private val KEY_SEED_INITIALIZED = booleanPreferencesKey("seed_initialized")
+        /** P1-AUDIT-4：种子版本号，用于版本感知升级 */
+        private val KEY_SEED_VERSION = stringPreferencesKey("seed_version")
+        /** seed_data.json metadata.version 为空时的默认版本（视为首次安装） */
+        private const val DEFAULT_SEED_VERSION = "v1"
 
         /** 科目排序顺序（按考研重要性排列：古代→现当代→外国→理论） */
         private val SUBJECT_ORDER = mapOf(
