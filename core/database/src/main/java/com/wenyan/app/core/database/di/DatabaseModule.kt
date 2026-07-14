@@ -7,6 +7,7 @@ import com.wenyan.app.core.database.dao.AiConversationDao
 import com.wenyan.app.core.database.dao.AiGradingRecordDao
 import com.wenyan.app.core.database.dao.AnswerTemplateDao
 import com.wenyan.app.core.database.dao.ApiConfigDao
+import com.wenyan.app.core.database.dao.AppMetaDao
 import com.wenyan.app.core.database.dao.ChapterDao
 import com.wenyan.app.core.database.dao.ChatHistoryDao
 import com.wenyan.app.core.database.dao.DataSourceDao
@@ -24,6 +25,7 @@ import com.wenyan.app.core.database.dao.WritingMaterialDao
 import com.wenyan.app.core.database.dao.WritingPatternDao
 import com.wenyan.app.core.database.migration.MIGRATION_1_2
 import com.wenyan.app.core.database.migration.MIGRATION_2_3
+import com.wenyan.app.core.database.migration.MIGRATION_3_4
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -36,7 +38,7 @@ import javax.inject.Singleton
  *
  * 提供：
  * - [WenyanDatabase] 单例（数据库文件 wenyan.db）
- * - 19 个 DAO 的 @Provides 方法
+ * - 20 个 DAO 的 @Provides 方法
  *
  * 安装到 [SingletonComponent] 以保证全局单例。
  */
@@ -53,6 +55,7 @@ object DatabaseModule {
      * 迁移策略：
      * - [MIGRATION_1_2]：memo_records 补 elapsed_days/scheduled_days/reps 字段
      * - [MIGRATION_2_3]：回填 reps = review_count（NF-D1 修复，v1→v2 未回填导致老卡片误判为新卡）
+     * - [MIGRATION_3_4]：新增 app_meta 表（NF-B / P0-E4 修复，存储 last_known_timestamp_ms 供 ClockGuard 用）
      * - fallbackToDestructiveMigrationOnDowngrade：仅版本号降级时重建表（开发期降级测试用）。
      *   P0-D1 修正：原 fallbackToDestructiveMigration() 在升级时也会清空整个数据库，
      *   v0.2.0 已发布用户有真实 FSRS 复习记录，升级时被静默清空是不可接受的。
@@ -68,7 +71,7 @@ object DatabaseModule {
             WenyanDatabase::class.java,
             WenyanDatabase.DATABASE_NAME,
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }
@@ -150,4 +153,8 @@ object DatabaseModule {
     @Provides
     fun provideDataSourceDao(database: WenyanDatabase): DataSourceDao =
         database.dataSourceDao()
+
+    @Provides
+    fun provideAppMetaDao(database: WenyanDatabase): AppMetaDao =
+        database.appMetaDao()
 }

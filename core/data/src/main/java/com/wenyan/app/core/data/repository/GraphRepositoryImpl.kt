@@ -21,10 +21,17 @@ import kotlin.math.pow
  *
  * 协调 [GraphNodeDao]、[GraphEdgeDao] 与 [MemoRecordDao]，提供图谱的查询与写入能力。
  *
+ * NF-B / P0-E4 修复：注入 [ClockGuard] 检测时钟回拨。
+ * - [getRetrievability] 与 [getNodesWithRetrievability] 用 [ClockGuard.effectiveNowMillis]
+ *   替代 `System.currentTimeMillis()`，避免用户改系统时间导致 R 值异常
+ *   （时钟回拨 → elapsedMillis 异常小 → R 接近 1，误判记忆完全保持；
+ *    时钟前移 → elapsedMillis 异常大 → R 接近 0，误判记忆完全遗忘）。
+ *
  * @property graphNodeDao 图谱节点 DAO
  * @property graphEdgeDao 图谱边 DAO
  * @property memoRecordDao 记忆记录 DAO（用于计算可提取性 R）
  * @property knowledgePointDao 知识点 DAO（用于查询考频 exam_frequency）
+ * @property clockGuard 时钟守卫（检测回拨，返回单调不减的有效时间戳）
  */
 @Singleton
 class GraphRepositoryImpl @Inject constructor(
@@ -32,6 +39,7 @@ class GraphRepositoryImpl @Inject constructor(
     private val graphEdgeDao: GraphEdgeDao,
     private val memoRecordDao: MemoRecordDao,
     private val knowledgePointDao: KnowledgePointDao,
+    private val clockGuard: ClockGuard,
 ) : GraphRepository {
 
     override fun getAllNodes(): Flow<List<GraphNodeEntity>> =
@@ -130,7 +138,9 @@ class GraphRepositoryImpl @Inject constructor(
             emit(0f)
             return@flow
         }
-        emit(calculateRetrievability(memo, System.currentTimeMillis()))
+        // NF-B 修复：用 ClockGuard.effectiveNowMillis() 替代 System.currentTimeMillis()，
+        // 检测时钟回拨避免 R 值异常。
+        emit(calculateRetrievability(memo, clockGuard.effectiveNowMillis()))
     }
 
     /**
@@ -138,6 +148,9 @@ class GraphRepositoryImpl @Inject constructor(
      *
      * combine 节点流与记忆记录流，一次性批量计算 R 值。
      * 记忆记录变更时（如评分后 upsert），R 值自动刷新。
+     *
+     * NF-B 修复：用 [ClockGuard.effectiveNowMillis] 替代 `System.currentTimeMillis()`，
+     * 检测时钟回拨避免 R 值异常。
      */
     override fun getNodesWithRetrievability(): Flow<List<NodeWithRetrievability>> =
         combine(
@@ -145,7 +158,7 @@ class GraphRepositoryImpl @Inject constructor(
             memoRecordDao.observeAll(),
         ) { nodes, memos ->
             val memoMap = memos.associateBy { it.pointId }
-            val now = System.currentTimeMillis()
+            val now = clockGuard.effectiveNowMillis()
             nodes.map { node ->
                 val r = calculateRetrievabilityForNode(node, memoMap, now)
                 NodeWithRetrievability(node = node, retrievability = r)

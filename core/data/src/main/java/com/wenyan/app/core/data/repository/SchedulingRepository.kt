@@ -9,7 +9,9 @@ import com.wenyan.app.core.fsrs.MemoryTier
 import com.wenyan.app.core.fsrs.Rating
 import com.wenyan.app.core.fsrs.ReviewLog
 import com.wenyan.app.core.fsrs.TIER_CONFIGS
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,11 +28,18 @@ import javax.inject.Singleton
  * - tier 由 CardTemplateType 推断（6种卡片类型 → 3档记忆强度）
  * - enableFuzz 在 TIER_EXACT 档关闭（精确到天），其他档开启（避免间隔过于规律）
  *
+ * NF-B / P0-E4 修复：注入 [ClockGuard] 检测时钟回拨。
+ * - [rateCard] 用 [ClockGuard.effectiveNowMillis] 替代 `LocalDateTime.now()` / `System.currentTimeMillis()`
+ * - 用户改系统时间（回拨 > 1 分钟）时，ClockGuard 返回 lastKnown 而非 current，
+ *   避免 FSRS 误判卡片"刚复习过"（间隔异常短）或"已过期很久"（间隔异常长）。
+ *
  * @property memoRecordDao 背诵记录 DAO（读写 memo_records 表）
+ * @property clockGuard 时钟守卫（检测回拨，返回单调不减的有效时间戳）
  */
 @Singleton
 class SchedulingRepository @Inject constructor(
     private val memoRecordDao: MemoRecordDao,
+    private val clockGuard: ClockGuard,
 ) {
     /**
      * 评分调度：根据用户评分更新知识点的 FSRS 调度状态。
@@ -66,7 +75,13 @@ class SchedulingRepository @Inject constructor(
         )
 
         // 3. MemoRecord → FlashCard（调度前状态）
-        val now = LocalDateTime.now()
+        // NF-B 修复：用 ClockGuard.effectiveNowMillis() 替代 LocalDateTime.now()，
+        // 检测时钟回拨避免 FSRS 误判。LocalDateTime 由有效 millis 转换。
+        val nowMillis = clockGuard.effectiveNowMillis()
+        val now = LocalDateTime.ofInstant(
+            Instant.ofEpochMilli(nowMillis),
+            ZoneId.systemDefault(),
+        )
         val flashCardBefore = MemoRecordMapper.toFlashCard(existingMemo)
 
         // 4. FSRS 调度
@@ -118,9 +133,12 @@ class SchedulingRepository @Inject constructor(
      * 创建默认 MemoRecord（兜底：知识点无对应记录时自动创建）
      *
      * 状态 NEW，stability=0，difficulty=5.0，nextReviewAt=now（立即到期）
+     *
+     * NF-B 修复：用 [ClockGuard.effectiveNowMillis] 替代 System.currentTimeMillis()，
+     * 检测时钟回拨避免新卡 nextReviewAt 异常。
      */
-    private fun createDefaultMemoRecord(pointId: String): MemoRecordEntity {
-        val now = System.currentTimeMillis()
+    private suspend fun createDefaultMemoRecord(pointId: String): MemoRecordEntity {
+        val now = clockGuard.effectiveNowMillis()
         return MemoRecordEntity(
             pointId = pointId,
             state = "NEW",
