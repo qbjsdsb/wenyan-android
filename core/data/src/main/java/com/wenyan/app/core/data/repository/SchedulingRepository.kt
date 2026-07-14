@@ -100,7 +100,11 @@ class SchedulingRepository @Inject constructor(
             dueDate = flashCardBefore.dueDate,
             stability = flashCardBefore.stability,
             difficulty = flashCardBefore.difficulty,
-            elapsedDays = flashCardBefore.elapsedDays,
+            // P0-AUDIT-1 修正：原用 flashCardBefore.elapsedDays（数据库旧值，即上次评分距上上次的间隔），
+            // 应取 flashCardAfter.elapsedDays（FsrsWrapper.scheduleInternal 本次计算的真实间隔：
+            // ChronoUnit.DAYS.between(lastReview, now)）。
+            // 影响：review_logs.elapsed_days 记录错误，未来 FSRS 参数优化训练数据不可信。
+            elapsedDays = flashCardAfter.elapsedDays,
             lastElapsedDays = flashCardBefore.scheduledDays,
             scheduledDays = flashCardAfter.scheduledDays,
             reviewTime = now,
@@ -167,6 +171,9 @@ class SchedulingRepository @Inject constructor(
      *
      * NF-B 修复：用 [ClockGuard.effectiveNowMillis] 替代 System.currentTimeMillis()，
      * 检测时钟回拨避免新卡 nextReviewAt 异常。
+     *
+     * P2-AUDIT-1 修正：lastReviewAt 改为 0L（表示"从未复习"），原为 now 语义错误。
+     * scheduleInternal 对 lastReview==null/0 走 elapsedDays=0 分支，行为正确。
      */
     private suspend fun createDefaultMemoRecord(pointId: String): MemoRecordEntity {
         val now = clockGuard.effectiveNowMillis()
@@ -175,7 +182,7 @@ class SchedulingRepository @Inject constructor(
             state = "NEW",
             stability = 0.0,
             difficulty = 5.0,
-            lastReviewAt = now,
+            lastReviewAt = 0L,
             nextReviewAt = now,
             reviewCount = 0,
             failCount = 0,
