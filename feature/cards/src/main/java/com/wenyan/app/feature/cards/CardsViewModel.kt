@@ -1,5 +1,6 @@
 package com.wenyan.app.feature.cards
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.cards.CardTemplate
@@ -14,7 +15,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -31,18 +31,22 @@ import javax.inject.Inject
  *   [SchedulingRepository.rateCard] 完成 FSRS 调度回写。
  * - 评分档位（AGAIN/HARD/GOOD/EASY）由 [CardRating] → [Rating] 映射。
  * - tier 由 [CardTemplateType] 推断，SchedulingRepository 内部按 tier 构造 FsrsWrapper。
+ *
+ * 进程被杀恢复（NF-L2 修复）：
+ * - [isFlipped] + [currentIndex] 持久化到 [SavedStateHandle]，进程被杀后恢复卡片位置。
  */
 @HiltViewModel
 class CardsViewModel @Inject constructor(
+    private val savedStateHandle: SavedStateHandle,
     private val cardRepository: CardRepository,
     private val schedulingRepository: SchedulingRepository,
 ) : ViewModel() {
 
-    // 翻转状态（UI 交互层）
-    private val _isFlipped = MutableStateFlow(false)
+    // 翻转状态（UI 交互层，NF-L2 修复：持久化到 SavedStateHandle）
+    private val _isFlipped = savedStateHandle.getStateFlow("isFlipped", false)
 
-    // 当前卡片索引（UI 交互层）
-    private val _currentIndex = MutableStateFlow(0)
+    // 当前卡片索引（UI 交互层，NF-L2 修复：持久化到 SavedStateHandle）
+    private val _currentIndex = savedStateHandle.getStateFlow("currentIndex", 0)
 
     // 错误提示（P1-NEW-4 新增，用于 rateCard 调度失败时反馈）
     private val _errorMessage = MutableStateFlow<String?>(null)
@@ -88,7 +92,7 @@ class CardsViewModel @Inject constructor(
 
     /** 翻转当前卡片 */
     fun flipCard() {
-        _isFlipped.update { !it }
+        savedStateHandle["isFlipped"] = !_isFlipped.value
     }
 
     /**
@@ -113,8 +117,8 @@ class CardsViewModel @Inject constructor(
         val cardTypeStr = current.cardType
 
         // 先推进 UI（立即响应）
-        _isFlipped.update { false }
-        _currentIndex.update { it + 1 }
+        savedStateHandle["isFlipped"] = false
+        savedStateHandle["currentIndex"] = _currentIndex.value + 1
 
         // 无 pointId 的卡片仅推进索引
         if (pointId.isBlank()) return

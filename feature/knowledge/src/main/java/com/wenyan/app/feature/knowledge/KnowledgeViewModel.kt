@@ -1,17 +1,16 @@
 package com.wenyan.app.feature.knowledge
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.repository.ReviewRepository
 import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
 /**
@@ -19,14 +18,23 @@ import javax.inject.Inject
  *
  * 注入 [ReviewRepository] 加载真实知识点数据。
  * 分类筛选通过 [KnowledgePointWithSubject.subjectName] 匹配 [KnowledgeCategory] 实现。
+ *
+ * 进程被杀恢复（NF-L1 修复）：[selectedCategory] 持久化到 [SavedStateHandle]，
+ * 进程被杀后恢复分类筛选状态。
  */
 @HiltViewModel
 class KnowledgeViewModel @Inject constructor(
+    private val savedStateHandle: SavedStateHandle,
     private val reviewRepository: ReviewRepository,
 ) : ViewModel() {
 
-    private val _selectedCategory = MutableStateFlow(KnowledgeCategory.ALL)
-    val selectedCategory: StateFlow<KnowledgeCategory> = _selectedCategory.asStateFlow()
+    // NF-L1 修复：selectedCategory 持久化到 SavedStateHandle（存 enum name 为 String）
+    private val _selectedCategoryName = savedStateHandle.getStateFlow("selectedCategory", KnowledgeCategory.ALL.name)
+
+    /** 当前选中的分类（从 SavedStateHandle 恢复，默认 ALL） */
+    val selectedCategory: StateFlow<KnowledgeCategory> = _selectedCategoryName
+        .map { name -> KnowledgeCategory.entries.find { it.name == name } ?: KnowledgeCategory.ALL }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, KnowledgeCategory.ALL)
 
     /**
      * 知识点列表：合并 Repository 数据流与分类筛选流。
@@ -36,7 +44,7 @@ class KnowledgeViewModel @Inject constructor(
      */
     val uiState: StateFlow<KnowledgeUiState> = combine(
         reviewRepository.getVerifiedWithSubject(),
-        _selectedCategory,
+        selectedCategory,
     ) { pointsWithSubject, category ->
         val filtered = filterByCategory(pointsWithSubject, category)
         KnowledgeUiState(
@@ -50,9 +58,9 @@ class KnowledgeViewModel @Inject constructor(
         initialValue = KnowledgeUiState(isLoading = true),
     )
 
-    // 切换分类标签
+    // 切换分类标签（NF-L1 修复：持久化到 SavedStateHandle）
     fun selectCategory(category: KnowledgeCategory) {
-        _selectedCategory.update { category }
+        savedStateHandle["selectedCategory"] = category.name
     }
 
     companion object {

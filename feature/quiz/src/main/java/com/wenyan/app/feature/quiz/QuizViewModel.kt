@@ -1,5 +1,6 @@
 package com.wenyan.app.feature.quiz
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.repository.ExamQuestionWithSubject
@@ -28,17 +29,26 @@ import javax.inject.Inject
  *   正确展示"610 文学基础（2022年代码）"等历史代码语义
  * - 完整保留 answerFramework / sampleEssay / answerStatus 等字段供 UI 展示
  * - 维护展开状态 [expandedQuestionIds]，控制答题框架/范文的折叠展开
+ *
+ * 进程被杀恢复（NF-L3 修复）：
+ * - [selectedYear] + [expandedQuestionIds] 持久化到 [SavedStateHandle]，
+ *   进程被杀后恢复真题浏览位置与展开状态。
  */
 @HiltViewModel
 class QuizViewModel @Inject constructor(
+    private val savedStateHandle: SavedStateHandle,
     private val examRepository: ExamRepository,
 ) : ViewModel() {
 
-    private val _selectedYear = MutableStateFlow<Int?>(null)
-    val selectedYear: StateFlow<Int?> = _selectedYear.asStateFlow()
+    // NF-L3 修复：selectedYear 持久化到 SavedStateHandle（用 -1 表示 null，避免可空类型序列化问题）
+    private val _selectedYear = savedStateHandle.getStateFlow("selectedYear", -1)
+    val selectedYear: StateFlow<Int?> = _selectedYear.map { if (it == -1) null else it }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    /** 展开状态：记录当前展开答题区的题目ID集合 */
-    private val _expandedQuestionIds = MutableStateFlow<Set<String>>(emptySet())
+    /** 展开状态：记录当前展开答题区的题目ID集合（NF-L3 修复：持久化到 SavedStateHandle） */
+    private val _expandedQuestionIds = MutableStateFlow<Set<String>>(
+        (savedStateHandle.get<ArrayList<String>>("expandedQuestionIds") ?: emptyList()).toSet(),
+    )
     val expandedQuestionIds: StateFlow<Set<String>> = _expandedQuestionIds.asStateFlow()
 
     /**
@@ -47,6 +57,9 @@ class QuizViewModel @Inject constructor(
      * 使用 flatMapLatest 在切换年份时自动取消上一个年份的订阅。
      * 使用 [ExamRepository.getExamQuestionsWithSubjectInfo] 获取科目判定信息，
      * 解决 610/801 代码语义翻转问题（Spec Task 26）。
+     *
+     * NF-L3 修复：_selectedYear 用 -1 表示 null（SavedStateHandle 持久化），
+     * 此处映射回 nullable 供 UI 使用。
      */
     val uiState: StateFlow<QuizUiState> = combine(
         examRepository.getAvailableYears(),
@@ -54,7 +67,7 @@ class QuizViewModel @Inject constructor(
     ) { years, selected ->
         years to selected
     }.flatMapLatest { (years, selected) ->
-        if (selected != null) {
+        if (selected != -1) {
             examRepository.getExamQuestionsWithSubjectInfo(selected).map { questionsWithSubject ->
                 QuizUiState(
                     isLoading = false,
@@ -79,15 +92,18 @@ class QuizViewModel @Inject constructor(
         initialValue = QuizUiState(isLoading = true),
     )
 
-    /** 选择某年份，加载对应题目 */
+    /** 选择某年份，加载对应题目（NF-L3 修复：持久化到 SavedStateHandle） */
     fun selectYear(year: Int) {
-        _selectedYear.update { year }
+        savedStateHandle["selectedYear"] = year
     }
 
-    /** 切换某题目的展开状态（折叠 ↔ 展开） */
+    /** 切换某题目的展开状态（折叠 ↔ 展开）（NF-L3 修复：持久化到 SavedStateHandle） */
     fun toggleExpanded(questionId: String) {
         _expandedQuestionIds.update { ids ->
-            if (questionId in ids) ids - questionId else ids + questionId
+            val newIds = if (questionId in ids) ids - questionId else ids + questionId
+            // 同步到 SavedStateHandle（用 ArrayList 以兼容 Bundle 序列化）
+            savedStateHandle["expandedQuestionIds"] = ArrayList(newIds)
+            newIds
         }
     }
 }
