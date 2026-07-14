@@ -22,6 +22,15 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // P1-AUDIT-2 修复：ClockGuard 在时钟回拨时调用 android.util.Log.w()，
+    // 单元测试 JVM 环境不 mock Log，默认抛 RuntimeException。
+    // isReturnDefaultValues=true 使 Log 方法返回默认值（0）而非抛异常。
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
+    }
+
 }
 
 dependencies {
@@ -57,8 +66,10 @@ dependencies {
     implementation(libs.androidx.datastore.core)
 
     // Compose（ThemeRepository / ThemeViewModel 的 Color 类型需要）
+    // P0-STAB-1 修复：@Immutable 注解在 androidx.compose.runtime 包，需显式声明依赖。
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.runtime)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
