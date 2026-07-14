@@ -8,39 +8,42 @@ import androidx.compose.ui.unit.sp
 /**
  * 文研App 字体排版（Material 3 Expressive 完整 15 样式）。
  *
+ * v0.6：Display 与 Headline 改用 SemiBold 字重，与 Title/Body 的 Medium/Normal
+ * 形成更鲜明的字重对比，制造 M3 Expressive 鼓励的"视觉张力"。
+ *
  * 参考 M3 设计规范：
  * https://m3.material.io/styles/typography/type-scale-tokens
  */
 val WenyanTypography = Typography(
-    // Display — 超大标题（页面级，极少使用）
+    // Display — 超大标题（页面级，极少使用）。v0.6：SemiBold 制造视觉张力
     displayLarge = TextStyle(
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 57.sp,
         lineHeight = 64.sp,
     ),
     displayMedium = TextStyle(
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 45.sp,
         lineHeight = 52.sp,
     ),
     displaySmall = TextStyle(
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 36.sp,
         lineHeight = 44.sp,
     ),
-    // Headline — 大标题
+    // Headline — 大标题。v0.6：SemiBold 与 Body Normal 形成对比
     headlineLarge = TextStyle(
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 32.sp,
         lineHeight = 40.sp,
     ),
     headlineMedium = TextStyle(
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 28.sp,
         lineHeight = 36.sp,
     ),
     headlineSmall = TextStyle(
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 24.sp,
         lineHeight = 32.sp,
     ),
