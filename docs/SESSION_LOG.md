@@ -1360,4 +1360,109 @@
 | 10 | `0dd5b0f` | NF-BB2 SocraticTutor 上下文 | 1 |
 | 11 | `96d9755` | 构建修复（compose runtime + testOptions） | 2 |
 | 12 | `d1cb4d7` | 第二批 8 项（性能+无障碍+死依赖） | 8 |
-| **合计** | 12 commits | | **55 项** |
+| 13 | `40972fc` | 第三批 4 项（NF-T7/T8/A2/E8） | 4 |
+| **合计** | 13 commits | | **59 项** |
+
+---
+
+## 2026-07-15 会话：v0.5.0 Phase 2 第三批修复（NF-T7/T8/A2/E8）
+
+### 目标
+
+用户指令"进行p1的修改，严谨仔细反复检查"。本轮完成 4 项小型 P1 修复 + 5 个单元测试，220 tests 0 failures。
+
+### 修复清单（4 项 P1）
+
+#### NF-T7: Rating 枚举新增 index 属性（FSRS 解耦）
+
+**问题**：`FsrsWrapper.initStability` 用 `w[rating.value - 1]` 访问权重数组，把"枚举业务值"（1=AGAIN,2=HARD...用于 FSRS 公式 `rating-3`）与"数组下标"（0,1,2,3）耦合。若未来枚举顺序调整（如新增 MANUALLY_MARKED 档），`value - 1` 不再等于数组下标，可能引发越界或权重错位。
+
+**修复**：Rating 枚举新增 `index` 属性（0-based），`initStability` 改用 `w[rating.index]`。`value` 仍用于算术（与 FSRS-6 公式 `rating-3` 保持一致）。
+
+**文件**：
+- `core/fsrs/src/main/java/com/wenyan/app/core/fsrs/FsrsModels.kt` — Rating 枚举加 `index: Int`
+- `core/fsrs/src/main/java/com/wenyan/app/core/fsrs/FsrsWrapper.kt` — `initStability` 用 `rating.index`
+
+**测试**：`initStability_allRatings_matchWeightsAtIndex` — 验证 4 档评分各自返回对应的 w[i]，同时验证 `rating.index` 与数组下标一致。
+
+#### NF-T8: FsrsWrapper applyFuzz 改用可注入 Random（FSRS 可测性）
+
+**问题**：`applyFuzz` 用全局 `Random.nextFloat()` 不可注入，单元测试只能验证 fuzz 输出范围而非精确值（每次运行结果不同，无法写确定性断言）。
+
+**修复**：FsrsWrapper 构造函数新增 `random: Random = Random.Default` 参数，`applyFuzz` 改用 `random.nextFloat()`。生产环境默认 `Random.Default` 行为不变，测试可注入固定种子 `Random(42)` 验证精确 fuzz 输出。
+
+**文件**：`core/fsrs/src/main/java/com/wenyan/app/core/fsrs/FsrsWrapper.kt`
+
+**测试**：
+- `applyFuzz_withSeededRandom_isDeterministic` — 两个相同种子 `Random(42)` 的 wrapper 产生相同 scheduledDays
+- `applyFuzz_differentSeeds_producesVariety` — 100 个不同种子产生 >1 种 scheduledDays
+
+#### NF-A2: RecallChecker L2 增加 GOOD 档（L2 评分修正）
+
+**问题**：原 L2 在 60-85% Jaccard 相似度范围统一返回 HARD（触发 L3）。若 L3 失败降级为 L2 结果，75-85% 相似度的答案被错误归为 HARD（过严）。75-85% 是"较好但不完美"，语义更接近 GOOD 而非 HARD。
+
+**修复**：
+- `L2_THRESHOLD_PARTIAL` 从 0.85f 改为 0.75f（L3 触发范围从 60-85% 收窄到 60-75%）
+- 新增 `L2_THRESHOLD_GOOD = 0.85f`（75-85% → GOOD，不触发 L3）
+- `PARTIAL_CORRECT_RANGE` 从 `0.60f..0.85f` 改为 `0.60f..0.75f`
+- `checkL2Semantic` 增加 GOOD 档：75-85% 直接返回 GOOD，不依赖 L3
+
+**文件**：`core/ai/src/main/java/com/wenyan/app/core/ai/recall/RecallChecker.kt`
+
+**测试**：
+- `c5_15_l2_highSimilarity_returnsGood_nfA2` — Jaccard=0.8（75-85%范围）应返回 GOOD
+- `c5_15_l2_partialSimilarity_triggersL3_nfA2` — Jaccard≈0.667（60-75%范围）应触发 L3
+
+**关键发现**：L3 被触发后 `RecallResult.coverage` 的语义从"L2 Jaccard 相似度"变为"L3 score/100"（见 `checkL3Llm` 中 `coverage = score / 100f`）。测试断言需用 L3 的 score/100 值（0.7）而非 L2 的 Jaccard 值（0.667）。
+
+#### NF-E8: ApiKeyCryptoImpl decrypt 抛 DecryptionException（加解密异常区分）
+
+**问题**：`decrypt` 在数据不完整（IV + 密文长度不足）时静默返回 `""`，导致"合法空 apiKey"（`encrypt("")` 返回 `""`）与"密文损坏"无法区分。用户看到一个"空 apiKey"的配置，误以为是数据问题而非密钥损坏。
+
+**修复**：
+- 新建 `DecryptionException`（RuntimeException 子类）
+- `decrypt` 三处失败路径改抛 `DecryptionException`：
+  1. Base64 解码失败（非法字符）
+  2. 密文数据不完整（长度 < IV_SIZE + 1）
+  3. GCM 认证失败（AEADBadTagException / 密文篡改 / master key 变更）
+- 空字符串输入仍返回 `""`（合法空 apiKey，不抛异常）
+- 调用方 `ApiConfigRepository.decryptedOrNull()` 已用 `runCatching { decrypt(...) }.getOrNull()` 捕获降级为 null
+
+**文件**：
+- `core/data/src/main/java/com/wenyan/app/core/data/crypto/DecryptionException.kt`（新建）
+- `core/data/src/main/java/com/wenyan/app/core/data/crypto/ApiKeyCrypto.kt` — 接口加 `@Throws` 注解 + KDoc
+- `core/data/src/main/java/com/wenyan/app/core/data/crypto/ApiKeyCryptoImpl.kt` — decrypt 三处失败路径抛异常
+
+### 验证
+
+- `assembleDebug` BUILD SUCCESSFUL
+- `testDebugUnitTest` **220 tests 0 failures**（215 基线 + 5 新增测试）
+- 注：lint 阶段在沙箱环境因 Java 17 + AGP 8.6.0 兼容性问题失败（`AndroidLintWorkAction` 类初始化错误），CI 环境无此问题
+
+### 环境发现
+
+- **Java 25 不兼容 AGP 8.6.0**：沙箱默认 Java 25.0.2，Gradle 启动即报 `25.0.2` 错误。需切换到 Java 17.0.2（`export JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2`）。CI runner 用 Java 17/21 无此问题。
+- **沙箱无 gradlew**：项目根目录无 `gradlew` 脚本和 `gradle-wrapper.jar`，需直接用 `gradle` 命令（mise 安装的 8.14.4）。
+
+### commit
+
+- `40972fc`：P1: v0.5.0 Phase 2 第三批修复 — NF-T7/T8/A2/E8（FSRS解耦+可测+L2评分+加解密异常）
+
+### 下次继续
+
+按 v3 审计计划优先级（详见 [docs/plans/full-audit-v0.5.0-deep.md](plans/full-audit-v0.5.0-deep.md)）：
+
+1. **P0**：CI 账单问题解决后，所有 CI ❌ commits 自动重跑
+2. **P0**：跑 emulator 实测 v0.3 + v0.4.2 + v0.5.0 修复
+3. **P1 大型任务**（需用户确认优先级）：
+   - P1-PG-1/2/3：启用 R8 + 补齐 ProGuard 规则
+   - NF-PP4：复习日志双写统一
+   - NF-PP5：错题本实现
+   - NF-PP6：AiAssistantViewModel 消息持久化
+   - NF-T4：MemoRecordMapper Float↔Double 精度（需 schema 迁移）
+   - NF-D3：observeDue Flow 不刷新（需架构调整）
+4. **P1 Phase 2 剩余维度审计**：
+   - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）
+   - 2.L：错误处理一致性 + 日志规范（sealed AppError + Timber + Snackbar 统一）
+   - 2.M：Compose 副作用 + Accessibility + M3 Expressive
+   - 2.N 剩余：NF-DS7-13 DataStore Key 治理

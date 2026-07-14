@@ -141,13 +141,13 @@ tools/                           # Python 管线脚本
 
 ## 7. 当前状态（2026-07-15）
 
-**✅ Release v0.3.0 已发布 + v0.5.0 Phase 2 第二批修复完成** — 12 commits，55 项修复，215 tests 0 failures。
+**✅ Release v0.3.0 已发布 + v0.5.0 Phase 2 第三批修复完成** — 13 commits，59 项修复，220 tests 0 failures。
 
-- 最新 commit：`d1cb4d7`（main，v0.5.0 Phase 2 第二批 8 项 P1/P2 修复）
+- 最新 commit：`40972fc`（main，v0.5.0 Phase 2 第三批 NF-T7/T8/A2/E8）
 - 最新 Release：[v0.3.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.3.0)（2026-07-15，debug 签名，17MB）
-- 验证：`assembleDebug` SUCCESSFUL + `testDebugUnitTest` **215 tests 0 failures** + `assembleRelease` SUCCESSFUL
+- 验证：`assembleDebug` SUCCESSFUL + `testDebugUnitTest` **220 tests 0 failures**（lint 阶段在沙箱因 Java 17 兼容性失败，CI 环境无此问题）
 - CI 阻塞：GitHub Actions 账单问题，Release workflow 无法执行正式签名，v0.3.0 APK 使用 debug 签名
-- v0.5.0 修复：12 commits（55 项 P1/P2 修复 + 2 项构建修复），详见 [docs/plans/full-audit-v0.5.0-deep.md](docs/plans/full-audit-v0.5.0-deep.md)
+- v0.5.0 修复：13 commits（59 项 P1/P2 修复 + 2 项构建修复），详见 [docs/plans/full-audit-v0.5.0-deep.md](docs/plans/full-audit-v0.5.0-deep.md)
 - 详见 [docs/00-STATUS.md](docs/00-STATUS.md)
 
 ## 8. 项目阶段总览
@@ -168,17 +168,19 @@ tools/                           # Python 管线脚本
 | Release v0.2.0 | ✅ 完成 | 签名 APK 发布，包含自 v0.1.0 以来所有改动 |
 | UI 精修 v0.3 | ✅ 完成 | 卡片镜像修复 + 导师信息删除 + AI 入口调整 + 全面动画优化（190 tests） |
 | 第三轮深度审计 v0.4.2 | ✅ 完成 | 4 Batch 修复：FSRS 算法 4 bug + 数据安全 7 项 + 测试有效 3 项 + UX/契约 10+ 文件（207 tests） |
-| 第四轮深度审计 v0.5.0 | ✅ Phase 2 P1/P2 修复完成 | 12 commits，55 项修复，Release v0.3.0 已发布 |
+| 第四轮深度审计 v0.5.0 | ✅ Phase 2 P1/P2 修复完成 | 13 commits，59 项修复，Release v0.3.0 已发布 |
 
 ## 9. 下一步优先级
 
-1. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 10 个 commit（`dd3ff06`~`0dd5b0f`）CI 验证
+1. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 13 个 commit（`dd3ff06`~`40972fc`）CI 验证
 2. **P0**：跑 emulator 实测 v0.3 + v0.4.2 + v0.5.0 修复 — 验证 FSRS 调度 + 卡片翻转 + AI 入口 + Tab/列表动画 + 深色模式
 3. **P1 大型任务**（需用户确认优先级）：
    - P1-PG-1/2/3：启用 R8 + 补齐 ProGuard 规则
    - NF-PP4：复习日志双写统一
    - NF-PP5：错题本实现
    - NF-PP6：AiAssistantViewModel 消息持久化
+   - NF-T4：MemoRecordMapper Float↔Double 精度（需 schema 迁移）
+   - NF-D3：observeDue Flow 不刷新（需架构调整）
 4. **P1 Phase 2 剩余维度审计**：
    - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）
    - 2.L：错误处理一致性 + 日志规范（sealed AppError + Timber + Snackbar 统一）

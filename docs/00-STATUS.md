@@ -5,13 +5,13 @@
 
 ## ✅ 当前状态
 
-**Release v0.3.0 已发布 + v0.5.0 Phase 2 第二批修复完成** — 12 commits，55 项修复，215 tests 0 failures。
+**Release v0.3.0 已发布 + v0.5.0 Phase 2 第三批修复完成** — 13 commits，59 项修复，220 tests 0 failures。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `d1cb4d7`（main，v0.5.0 Phase 2 第二批 8 项修复） |
+| 最新 commit | `40972fc`（main，v0.5.0 Phase 2 第三批 NF-T7/T8/A2/E8） |
 | 最新 Release | [v0.3.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.3.0)（2026-07-15，debug 签名，17MB） |
-| 测试 | **215 tests 0 failures**（207 基线 + 8 新增 v0.5.0 测试） |
+| 测试 | **220 tests 0 failures**（215 基线 + 5 新增 NF-T7/T8/A2 测试） |
 | 阻塞 | **CI 账单问题** — Release workflow 无法执行正式签名，v0.3.0 APK 使用 debug 签名 |
 | 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节 |
 
@@ -30,7 +30,7 @@
 | UI 改造闭环 | ✅ Phase 1-5 完成 | GroupedCard 增强 + 2 Screen 重构 + 4 Preview + 8 测试 |
 | UI 精修 v0.3 | ✅ 完成 | 卡片镜像修复 + AI 入口调整 + 全面动画优化 |
 | 第三轮深度审计 v0.4.2 | ✅ 4 Batch 修复完成 | FSRS 算法 + 数据安全 + 测试有效 + UX/契约（24 文件，207 tests） |
-| 第四轮深度审计 v0.5.0 | ✅ Phase 2 P1/P2 修复完成 | 12 commits，55 项修复，Release v0.3.0 已发布 |
+| 第四轮深度审计 v0.5.0 | ✅ Phase 2 P1/P2 修复完成 | 13 commits，59 项修复，Release v0.3.0 已发布 |
 
 ### 第四轮深度审计 v0.5.0（2026-07-15）
 
@@ -44,7 +44,7 @@
 | Phase 4 测试矩阵 | ⏳ 待执行 | 25 项 emulator 测试 |
 | Phase 5 修复执行 | ⏳ 待执行 | 7 Batch 修复 |
 
-#### Phase 2 已完成 commits（10 个）
+#### Phase 2 已完成 commits（13 个）
 
 | Commit | 内容 | CI |
 |--------|------|-----|
@@ -58,6 +58,9 @@
 | `01a1049` | 2.O/2.E 资源（monochrome icon + M3 DayNight + values-night） | ❌ 账单 |
 | `3179911` | 2.N 业务边界（LIKE 转义 + query 限制 + List→Set） | ❌ 账单 |
 | `0dd5b0f` | NF-BB2 SocraticTutor 三阶段上下文传递 | ❌ 账单 |
+| `96d9755` | 构建修复（compose runtime + testOptions） | ❌ 账单 |
+| `d1cb4d7` | 第二批 8 项（性能+无障碍+死依赖） | ❌ 账单 |
+| `40972fc` | 第三批 4 项（NF-T7 Rating.index + NF-T8 Random 注入 + NF-A2 L2 GOOD 档 + NF-E8 DecryptionException） | ❌ 账单 |
 
 ### 第三轮深度审计 v0.4.2（2026-07-14）
 
@@ -134,4 +137,4 @@
 - P1 修复（KnowledgeViewModel 科目筛选 + 科目名显示修复，DAO JOIN + 10 测试，184 tests 0 failures）
 - UI 精修 v0.3（卡片镜像修复 + 导师信息删除 + AI 入口调整 + 全面动画优化，190 tests 0 failures）
 - 第三轮深度审计 v0.4.2 修复（4 Batch：FSRS 算法 + 数据安全 + 测试有效 + UX/契约，24 文件，207 tests 0 failures）
-- 第四轮深度审计 v0.5.0 Phase 2 P1/P2 修复（10 commits：Flow 异常处理 + LEFT JOIN + keystore 随机化 + 种子版本升级 + 性能优化 + AntiRoteMemorization 收尾 + 资源配置 + 业务边界 + SocraticTutor 上下文传递）
+- 第四轮深度审计 v0.5.0 Phase 2 P1/P2 修复（13 commits：Flow 异常处理 + LEFT JOIN + keystore 随机化 + 种子版本升级 + 性能优化 + AntiRoteMemorization 收尾 + 资源配置 + 业务边界 + SocraticTutor 上下文传递 + 第二批性能/无障碍/死依赖 + 第三批 FSRS 解耦/可测/L2 评分/加解密异常）
