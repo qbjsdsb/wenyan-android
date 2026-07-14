@@ -282,8 +282,8 @@ class FsrsWrapperTest {
 
     /**
      * F-02 回归：EASY 评分的稳定性增长应大于 GOOD（语义正确）。
-     * 修正前：easyBonusVal = w[16] = 0.2316 < 1 → EASY stability (14.26) < GOOD (28.38)
-     * 修正后：easyBonusVal = 1 + w[16] = 1.2316 → EASY stability (32.64) > GOOD (28.38)
+     * NF-F1 修正后(exp(w[8])→w[8]):EASY stability (17.50) > GOOD (16.09)
+     * (修正前 exp(w[8]) 放大 3 倍:EASY 32.64 > GOOD 28.38)
      */
     @Test
     fun nextRecallStability_easy_greater_than_good() {
@@ -298,15 +298,16 @@ class FsrsWrapperTest {
 
     /**
      * F-02 回归：精确数值验证（D=5, S=10, R=0.9）。
-     * - GOOD: growth ≈ 1.838 → S' ≈ 28.38
-     * - EASY: growth ≈ 2.264 → S' ≈ 32.64
+     * NF-F1 修正后(exp(w[8])→w[8],增长降低 3.02 倍):
+     * - GOOD: growth ≈ 0.609 → S' ≈ 16.09
+     * - EASY: growth ≈ 0.750 → S' ≈ 17.50
      */
     @Test
     fun nextRecallStability_easy_correct_value() {
         val wrapper = FsrsWrapper(requestRetention = 0.9f, maximumInterval = 365)
         val sEasy = wrapper.nextRecallStability(5f, 10f, 0.9f, Rating.EASY)
-        // 修正后约 32.64；修正前约 14.26
-        assertTrue("EASY stability 应约为 32.64（实际 $sEasy）", sEasy in 30f..35f)
+        // NF-F1 修正后约 17.50(原 exp(w[8]) 放大版约 32.64)
+        assertTrue("EASY stability 应约为 17.50（实际 $sEasy）", sEasy in 16f..19f)
     }
 
     /**
