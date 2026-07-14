@@ -1466,3 +1466,61 @@
    - 2.L：错误处理一致性 + 日志规范（sealed AppError + Timber + Snackbar 统一）
    - 2.M：Compose 副作用 + Accessibility + M3 Expressive
    - 2.N 剩余：NF-DS7-13 DataStore Key 治理
+
+---
+
+## 2026-07-14 — v0.6 M3 Expressive 精修 Phase 1-4 完成
+
+**上下文**：用户反馈 "整体 UI 还是不够有 M3 Expressive 的味道"，且底部右侧 AI Tab 冗余（右上角已有 AI 助手入口），要求改为设置界面。用户明确要求大屏适配必须做（平板使用）。计划详见 [docs/plans/m3-expressive-polish-v0.6.md](plans/m3-expressive-polish-v0.6.md)。
+
+### 实施摘要（4 commit，全部已 push）
+
+| commit | Phase | 内容 |
+|--------|-------|------|
+| `eb146ef` | Phase 1 导航重构 | 底部第 5 Tab 砍 AI 改"设置"；AiAssistant 改为子路由 Push/Pop |
+| `8bf8d98` | Phase 2 动效 + 字体 | `WenyanTheme` 加 `animateColorScheme`（35 个颜色角色 spring 过渡）；`WenyanMotion` Push/Pop 改用 `spring<IntOffset>(dampingRatio=0.8f, StiffnessMediumLow)`；`Type.kt` Display/Headline 字重 Normal → SemiBold |
+| `0b5d4e6` | Phase 3 大屏自适应导航 | 新增 `material3-adaptive 1.2.0` 依赖；新建 `WenyanWideNavigationRail` + `WenyanAdaptiveNavigation`；`WenyanApp` 改用 `WenyanAdaptiveNavigation` 按 `WindowWidthSizeClass` 三档切换（Compact→NavigationBar / Medium→Rail 折叠 / Expanded→Rail 展开） |
+| `cc509d0` | Phase 4 组件升级 | 新建 `WenyanLoadingIndicator`（封装 M3 Expressive `LoadingIndicator`，集中 `@OptIn`）；7 个 Screen 的 `CircularProgressIndicator` → `WenyanLoadingIndicator`；`SettingsScreen` 主题模式选择 `FilterChip` → `SingleChoiceSegmentedButtonRow` |
+
+### 关键技术决策
+
+1. **底部第 5 Tab**：纯"设置"（无快捷混合入口，避免与右上角 AI 重复）
+2. **AiAssistant 路由**：子路由 Push/Pop（不入底部 Tab，由各 Screen 右上角 IconButton 触发）
+3. **共享元素过渡**：暂缓（API 不稳定）
+4. **WideNavigationRail**：实施（用户明确要求平板适配）
+5. **可变字体**：暂不引入（无网络字体，避免引入复杂度）
+6. **实施顺序**：Phase 1→2→3→4→5 串行
+
+### 已解决的技术坑
+
+- `spring<Float>` 类型不匹配：`slideInHorizontally` 需 `FiniteAnimationSpec<IntOffset>`，改 `spring<IntOffset>`
+- `WideNavigationRailItem` 缺 `railExpanded` 参数：添加 `railExpanded = expanded`
+- `indicatorColor` 参数名错误：应为 `selectedIndicatorColor`
+- `WindowWidthSizeClass` 包路径错误：不在 `androidx.compose.material3.adaptive`，而在 `androidx.window.core.layout`（来自 `androidx.window:window-core:1.5.0`，由 material3-adaptive 1.2.0 传递依赖）
+- `WideNavigationRail` 无 `containerColor` 参数：通过 `colors = WideNavigationRailDefaults.colors(containerColor = ...)` 设置
+
+### 验证
+
+- `:app:assembleDebug` BUILD SUCCESSFUL（APK 26MB，`app/build/outputs/apk/debug/app-debug.apk`）
+- `testDebugUnitTest` BUILD SUCCESSFUL，306 actionable tasks 306 up-to-date（无测试改动，220 tests 0 failures 基线保持）
+- 沙箱 `:app:validateSigningDebug` 失败：`Could not initialize class com.android.utils.JvmWideVariable`（cgroup 兼容性问题，非代码问题；用 `-x validateSigningDebug` 绕过，`packageDebug` 仍成功生成 APK）
+
+### push 状态
+
+```
+eb146ef..cc509d0  main -> main
+```
+
+本地与 `origin/main` 同步，4 个 commit 全部在远程仓库。
+
+### Phase 5 暂缓
+
+按计划 Phase 5（视觉精修：形状变体/共享元素/Preview）暂缓，待用户实测 Phase 1-4 后再决定是否需要。
+
+### 下次继续
+
+1. **P0**：用户 emulator 实测 v0.6 — 验证底部 Tab 切换、平板 WideNavigationRail 展开/折叠、主题切换颜色动画、Push/Pop 弹簧过渡、LoadingIndicator 多弧线动效、SegmentedButton 主题模式选择
+2. **P0**：CI 账单问题解决后，4 个新 commit（`eb146ef`/`8bf8d98`/`0b5d4e6`/`cc509d0`）CI 验证
+3. **P1**：若用户反馈 Phase 5 视觉精修有必要，按计划实施形状变体 + Preview 补全
+4. **P1**：v0.5.0 Phase 2 剩余维度审计（strings.xml / dimens.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
+5. **P1 大型任务**（需用户确认优先级）：R8 + ProGuard / 复习日志双写 / 错题本 / AiAssistant 持久化 / Float↔Double / observeDue Flow
