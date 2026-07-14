@@ -1,5 +1,6 @@
 package com.wenyan.app.core.ai
 
+import androidx.compose.runtime.Immutable
 import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import kotlinx.coroutines.flow.Flow
@@ -166,6 +167,7 @@ data class RagResult(
  * @param contentSource 内容来源类型：TEXTBOOK_NATIVE / TEXTBOOK_OCR
  * @param excerpt 引用原文片段
  */
+@Immutable
 data class RagReference(
     val sourceFile: String,
     val sourcePage: Int,

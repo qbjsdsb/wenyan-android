@@ -1,5 +1,6 @@
 package com.wenyan.app.feature.quiz
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -132,6 +133,7 @@ data class QuizUiState(
  * - [subjectDisplayName]：科目显示名称（含试卷代码与年份标注，来自 SubjectResolution）
  * - [subjectWarning]：科目警告信息（如"年份待核实"）
  */
+@Immutable
 data class QuizQuestionItem(
     val id: String,
     val year: Int,

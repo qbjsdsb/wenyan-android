@@ -1,5 +1,6 @@
 package com.wenyan.app.feature.aiassistant
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.ai.AiService
@@ -388,6 +389,7 @@ data class AiAssistantUiState(
  * @param references RAG 引用来源列表（可溯源），仅助手消息有
  * @param stage 苏格拉底引导阶段（仅苏格拉底引导消息有）
  */
+@Immutable
 data class AiMessage(
     val id: String,
     val role: AiRole,

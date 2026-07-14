@@ -1,5 +1,6 @@
 package com.wenyan.app.feature.graph
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.repository.GraphRepository
@@ -72,6 +73,7 @@ data class GraphUiState(
 )
 
 // 图谱节点项（UI 层模型）
+@Immutable
 data class GraphNodeItem(
     val id: String,
     val label: String,
@@ -79,6 +81,7 @@ data class GraphNodeItem(
 )
 
 // 图谱边项（UI 层模型）
+@Immutable
 data class GraphEdgeItem(
     val fromId: String,
     val toId: String,

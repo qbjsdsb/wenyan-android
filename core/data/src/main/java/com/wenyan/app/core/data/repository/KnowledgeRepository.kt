@@ -1,5 +1,6 @@
 package com.wenyan.app.core.data.repository
 
+import androidx.compose.runtime.Immutable
 import com.wenyan.app.core.database.dao.DataSourceDao
 import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.entity.DataSourceEntity
@@ -72,6 +73,7 @@ class KnowledgeRepository @Inject constructor(
 /**
  * 知识点详情（含来源溯源 + 关联知识点标题）。
  */
+@Immutable
 data class KnowledgePointDetail(
     val point: KnowledgePointEntity,
     val sources: List<DataSourceEntity>,

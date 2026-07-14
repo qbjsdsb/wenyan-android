@@ -1,5 +1,6 @@
 package com.wenyan.app.feature.cards
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -176,6 +177,7 @@ data class CardsUiState(
 }
 
 // 卡片项（UI 层模型，与 core:data 的 CardTemplate 解耦）
+@Immutable
 data class CardItem(
     val id: String,
     val front: String,

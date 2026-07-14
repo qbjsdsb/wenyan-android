@@ -79,6 +79,8 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 materialkolor = { group = "com.materialkolor", name = "material-kolor", version.ref = "materialKolor" }
 androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+# Compose Runtime（@Immutable/@Stable 注解，供 core 模块标记稳定类型，版本由 BOM 管理）
+androidx-compose-runtime = { group = "androidx.compose.runtime", name = "runtime" }
 
 # AndroidX 基础
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }

@@ -1,5 +1,6 @@
 package com.wenyan.app.core.database.entity
 
+import androidx.compose.runtime.Immutable
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -22,6 +23,7 @@ import androidx.room.PrimaryKey
  * - related_ids / contrast_ids / extension_ids / tags: List<String>
  * - exam_records / term_template: 结构复杂，使用 String 存储，业务层解析
  */
+@Immutable
 @Entity(
     tableName = "knowledge_points",
     foreignKeys = [

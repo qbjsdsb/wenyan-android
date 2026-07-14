@@ -1,5 +1,6 @@
 package com.wenyan.app.core.data.cards
 
+import androidx.compose.runtime.Immutable
 import com.wenyan.app.core.database.entity.CardTemplateType
 
 /**
@@ -19,6 +20,7 @@ import com.wenyan.app.core.database.entity.CardTemplateType
  * @property templateType 模板类型，对应 [CardTemplateType]
  * @property pointId 关联知识点 ID（阶段3新增，用于 FSRS 调度回写 memo_records）
  */
+@Immutable
 sealed class CardTemplate {
     abstract val front: String
     abstract val back: String
@@ -62,6 +64,7 @@ data class WorkTermFields(
  * 作品类（如《边城》）含 [work] 字段。
  * 渲染时按 [category] 分条列出对应字段。
  */
+@Immutable
 data class TermExplanationCard(
     override val front: String,
     override val back: String,
@@ -81,6 +84,7 @@ data class TermExplanationCard(
  * - [blank]：填空答案
  * - [hint]：语法情感提示（辅助回忆，不直接给答案）
  */
+@Immutable
 data class ClozeQuoteCard(
     override val front: String,
     override val back: String,
@@ -97,6 +101,7 @@ data class ClozeQuoteCard(
  * 自动生成正反两张：正面问作品背面答作者，正面问作者背面答作品。
  * 调用方通过 [createBidirectionalPair] 一次性生成正反两张。
  */
+@Immutable
 data class WorkAuthorBidirectionalCard(
     override val front: String,
     override val back: String,
@@ -143,6 +148,7 @@ data class WorkAuthorBidirectionalCard(
  * 遵循 Wozniak 规则：背面放 [keyPoints] 关键词提示而非完整答案，
  * 训练考场组织能力。适配 Outline 提纲背诵模式。
  */
+@Immutable
 data class EssayPointsCard(
     override val front: String,
     override val back: String,
@@ -159,6 +165,7 @@ data class EssayPointsCard(
  * 表格化对比多个流派（如京派/海派/新月派/象征派），
  * [schools] 列表每个元素为一个流派信息。
  */
+@Immutable
 data class SchoolComparisonCard(
     override val front: String,
     override val back: String,
@@ -182,6 +189,7 @@ data class SchoolInfo(
  * 易混淆作家/作品对比，正反面都出（[item1]/[item2] 互为正反）。
  * 由 [com.wenyan.app.core.data.cards.CardSplitter.generateDistinctionCards] 自动生成。
  */
+@Immutable
 data class DistinctionCard(
     override val front: String,
     override val back: String,

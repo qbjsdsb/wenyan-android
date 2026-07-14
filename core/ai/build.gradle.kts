@@ -57,6 +57,10 @@ dependencies {
     // DataStore（API 配置存储）
     implementation(libs.androidx.datastore.preferences)
 
+    // Compose Runtime（@Immutable 注解，标记 AI 数据类为 Compose 稳定类型，零运行时开销）
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.runtime)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)

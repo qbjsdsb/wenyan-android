@@ -1,5 +1,6 @@
 package com.wenyan.app.core.database.entity
 
+import androidx.compose.runtime.Immutable
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
@@ -21,6 +22,7 @@ import androidx.room.PrimaryKey
  * - is_current: 是否当前使用，默认 0
  * - created_at: 创建时间
  */
+@Immutable
 @Entity(
     tableName = "api_configs",
     indices = [
