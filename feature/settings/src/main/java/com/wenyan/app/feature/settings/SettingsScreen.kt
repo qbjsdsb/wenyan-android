@@ -193,34 +193,41 @@ fun SettingsScreen(
                                 }
                             }
                             GroupedCardDivider()
-                            // 调色板风格
-                            Row(
+                            // 调色板风格（v0.6：与主题模式选择一致，改用 SegmentedButton）
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
                                     text = "风格",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(bottom = Spacing.sm),
                                 )
-                                WenyanPaletteStyle.entries.forEach { style ->
-                                    FilterChip(
-                                        selected = themeConfig.paletteStyle == style,
-                                        onClick = { viewModel.setPaletteStyle(style) },
-                                        label = {
-                                            Text(
-                                                text = when (style) {
-                                                    WenyanPaletteStyle.TONAL_SPOT -> "Tonal Spot"
-                                                    WenyanPaletteStyle.NEUTRAL -> "Neutral"
-                                                    WenyanPaletteStyle.VIBRANT -> "Vibrant"
-                                                    WenyanPaletteStyle.EXPRESSIVE -> "Expressive"
-                                                },
-                                            )
-                                        },
-                                    )
+                                SingleChoiceSegmentedButtonRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    WenyanPaletteStyle.entries.forEachIndexed { index, style ->
+                                        SegmentedButton(
+                                            selected = themeConfig.paletteStyle == style,
+                                            onClick = { viewModel.setPaletteStyle(style) },
+                                            shape = SegmentedButtonDefaults.itemShape(
+                                                index = index,
+                                                count = WenyanPaletteStyle.entries.size,
+                                            ),
+                                            label = {
+                                                Text(
+                                                    text = when (style) {
+                                                        WenyanPaletteStyle.TONAL_SPOT -> "Tonal Spot"
+                                                        WenyanPaletteStyle.NEUTRAL -> "Neutral"
+                                                        WenyanPaletteStyle.VIBRANT -> "Vibrant"
+                                                        WenyanPaletteStyle.EXPRESSIVE -> "Expressive"
+                                                    },
+                                                )
+                                            },
+                                        )
+                                    }
                                 }
                             }
                         }
