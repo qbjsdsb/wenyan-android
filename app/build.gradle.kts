@@ -70,6 +70,9 @@ android {
 
     buildFeatures {
         compose = true
+        // NF-S1 修复：启用 BuildConfig 生成，供 WenyanApplication 判断 BuildConfig.DEBUG 配置 StrictMode。
+        // AGP 8.0+ 默认关闭 buildConfig，需显式开启。
+        buildConfig = true
     }
 
     packaging {
@@ -100,6 +103,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.material)
+    // Splash Screen API（消除冷启动白屏，Android 12+ 系统原生支持 + 向后兼容）
+    implementation(libs.androidx.core.splashscreen)
 
     // Compose
     implementation(platform(libs.androidx.compose.bom))
@@ -111,6 +116,8 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    // LeakCanary（仅 debug 构建内存泄漏检测，自动初始化，无需代码改动）
+    debugImplementation(libs.leakcanary.android)
 
     // Navigation Compose
     implementation(libs.androidx.navigation.compose)
