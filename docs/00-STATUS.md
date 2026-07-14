@@ -1,19 +1,19 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-07-14
+> 最后更新：2026-07-15
 
-## ✅ 当前状态
+## ⚠️ 当前状态
 
-**第三轮深度审计 v0.4.2 修复完成** — 4 Batch 修复（FSRS 算法正确性 + 数据安全 P0 + 测试有效性 P0 + UX/契约 P1），207 tests 0 failures。尚未 commit。
+**第四轮深度审计 v0.5.0 — Phase 2 P1/P2 修复执行中** — 已完成 10 个 commit 并 push main（涵盖 P0/P1/P2 多维度修复），CI 因 GitHub Actions 账单问题无法验证（非代码错误）。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `add1f43`（main，UI 精修 v0.3 最后一个 commit；v0.4.2 修复待 commit） |
-| 最新 Release | [v0.2.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.2.0)（2026-07-13，v0.3 + v0.4.2 改动尚未发版） |
-| 测试 | **207 tests 0 failures**（190 基线 + 17 新增：4 FSRS 回归 + 13 其他） |
-| 阻塞 | 无 |
-| 详情 | [02-VERSION-MATRIX.md](02-VERSION-MATRIX.md) |
+| 最新 commit | `0dd5b0f`（main，NF-BB2 SocraticTutor 三阶段上下文传递） |
+| 最新 Release | [v0.2.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.2.0)（2026-07-13，v0.3 + v0.4.2 + v0.5.0 改动尚未发版） |
+| 测试 | **207 tests 0 failures**（v0.4.2 基线，v0.5.0 改动待 CI 验证） |
+| 阻塞 | **CI 账单问题** — `dd3ff06`~`0dd5b0f` 共 10 个 commit CI 失败，根因 "recent account payments have failed or your spending limit needs to be increased"（非代码错误） |
+| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节 |
 
 ## 📊 项目进度
 
@@ -30,6 +30,34 @@
 | UI 改造闭环 | ✅ Phase 1-5 完成 | GroupedCard 增强 + 2 Screen 重构 + 4 Preview + 8 测试 |
 | UI 精修 v0.3 | ✅ 完成 | 卡片镜像修复 + AI 入口调整 + 全面动画优化 |
 | 第三轮深度审计 v0.4.2 | ✅ 4 Batch 修复完成 | FSRS 算法 + 数据安全 + 测试有效 + UX/契约（24 文件，207 tests） |
+| 第四轮深度审计 v0.5.0 | 🔄 Phase 2 P1/P2 修复执行中 | 10 个 commit 已 push main，CI 待账单问题解决 |
+
+### 第四轮深度审计 v0.5.0（2026-07-15）
+
+> 详见 [plans/full-audit-v0.5.0-deep.md](plans/full-audit-v0.5.0-deep.md)（5 Phase）
+
+| Phase | 状态 | 内容 |
+|-------|------|------|
+| Phase 1 数据持久化 | ⏳ 待执行 | 1.C AI 对话持久化 / 1.D 进程被杀恢复 |
+| Phase 2 代码质量 | 🔄 进行中 | 15 个维度（2.A-2.O），已完成 10 个 commit |
+| Phase 3 依赖升级 | ⏳ 待执行 | 依赖升级路径 |
+| Phase 4 测试矩阵 | ⏳ 待执行 | 25 项 emulator 测试 |
+| Phase 5 修复执行 | ⏳ 待执行 | 7 Batch 修复 |
+
+#### Phase 2 已完成 commits（10 个）
+
+| Commit | 内容 | CI |
+|--------|------|-----|
+| `dd3ff06` | P0-AUDIT-1 review_logs elapsedDays + P2 语义修正 | ❌ 账单 |
+| `ca3ceea` | P0-STAB-1 批量 @Immutable 注解 | ❌ 账单 |
+| `c0e2775` | P1-AUDIT-5 LEFT JOIN + P1-AUDIT-2 ORDER BY + P1-CI-1/2 + P1-S-1 + P2-LAZY-1 + P2-REC-5 | ❌ 账单 |
+| `63f5375` | P1 Repository Flow 异常处理（23 处 .catchAndLog） | ❌ 账单 |
+| `53a0c46` | P1-CI-4 keystore 密码随机化 + P1-AUDIT-4 种子版本感知升级 | ❌ 账单 |
+| `f9fc9c5` | P2 性能（GraphScreen remember + FlipCard derivedStateOf） | ❌ 账单 |
+| `5d00824` | P1-AUDIT-3 AntiRoteMemorization 参数命名 + NF-T6 防御性编码 | ❌ 账单 |
+| `01a1049` | 2.O/2.E 资源（monochrome icon + M3 DayNight + values-night） | ❌ 账单 |
+| `3179911` | 2.N 业务边界（LIKE 转义 + query 限制 + List→Set） | ❌ 账单 |
+| `0dd5b0f` | NF-BB2 SocraticTutor 三阶段上下文传递 | ❌ 账单 |
 
 ### 第三轮深度审计 v0.4.2（2026-07-14）
 
@@ -78,13 +106,22 @@
 
 ## 🎯 下一步优先级
 
-1. **P0**：git commit v0.4.2 修复（24 文件）+ push 到 main
-2. **P0**：跑 emulator 实测 v0.3 + v0.4.2 修复 — 验证 FSRS 调度正确性（EASY 间隔 > GOOD 间隔）+ 卡片翻转无镜像 + AI 入口可跳转
-3. **P0**：修复 4 个未修 P0（P0-E1/E2/E3/E4）— 工作量大，需单独排期（详见审计报告）
-4. **P1**：可选 — 发 Release v0.3.0（确认 CI 全绿后 `git tag v0.3.0 && git push origin v0.3.0`）
-5. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
-6. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
-7. **P4**：架构重构 — ReviewRepository.getAllVerifiedKnowledgePoints 已成事实死代码
+1. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 10 个 commit（`dd3ff06`~`0dd5b0f`）CI 验证
+2. **P0**：跑 emulator 实测 v0.3 + v0.4.2 + v0.5.0 修复 — 验证 FSRS 调度 + 卡片翻转 + AI 入口 + Tab/列表动画 + 深色模式
+3. **P1 大型任务**（需用户确认优先级）：
+   - P1-PG-1/2/3：启用 R8 + 补齐 ProGuard 规则
+   - NF-PP4：复习日志双写统一
+   - NF-PP5：错题本实现
+   - NF-PP6：AiAssistantViewModel 消息持久化
+4. **P1 Phase 2 剩余维度审计**：
+   - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）
+   - 2.L：错误处理一致性 + 日志规范（sealed AppError + Timber + Snackbar 统一）
+   - 2.M：Compose 副作用 + Accessibility + M3 Expressive
+   - 2.N 剩余：NF-DS7-13 DataStore Key 治理
+5. **P1**：可选 — 发 Release v0.3.0（确认 CI 全绿后 `git tag v0.3.0 && git push origin v0.3.0`）
+6. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+7. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
+8. **P4**：架构重构 — ReviewRepository.getAllVerifiedKnowledgePoints 已成事实死代码
 
 ## 📦 已交付
 
@@ -97,3 +134,4 @@
 - P1 修复（KnowledgeViewModel 科目筛选 + 科目名显示修复，DAO JOIN + 10 测试，184 tests 0 failures）
 - UI 精修 v0.3（卡片镜像修复 + 导师信息删除 + AI 入口调整 + 全面动画优化，190 tests 0 failures）
 - 第三轮深度审计 v0.4.2 修复（4 Batch：FSRS 算法 + 数据安全 + 测试有效 + UX/契约，24 文件，207 tests 0 failures）
+- 第四轮深度审计 v0.5.0 Phase 2 P1/P2 修复（10 commits：Flow 异常处理 + LEFT JOIN + keystore 随机化 + 种子版本升级 + 性能优化 + AntiRoteMemorization 收尾 + 资源配置 + 业务边界 + SocraticTutor 上下文传递）

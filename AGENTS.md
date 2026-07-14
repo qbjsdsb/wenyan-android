@@ -139,14 +139,15 @@ tools/                           # Python 管线脚本
 - commit message 说清"为什么改"，不只是"改了什么"
 - 用户偏好：中文交流、严谨验证、反复检查、有趣的教学风格、M3 谷歌味道 UI
 
-## 7. 当前状态（2026-07-14）
+## 7. 当前状态（2026-07-15）
 
-**✅ 无阻塞** — 第三轮深度审计 v0.4.2 修复完成（4 Batch：FSRS 算法 + 数据安全 + 测试有效 + UX/契约），207 tests 0 failures。待 commit。
+**⚠️ CI 阻塞** — 第四轮深度审计 v0.5.0 Phase 2 P1/P2 修复执行中，10 个 commit 已 push main，CI 因 GitHub Actions 账单问题无法验证（非代码错误）。
 
-- 最新 commit：`add1f43`（main，UI 精修 v0.3 最后一个 commit；v0.4.2 修复待 commit）
-- 最新 Release：[v0.2.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.2.0)（2026-07-13，v0.3 + v0.4.2 改动尚未发版）
-- 验证：`assembleDebug` SUCCESSFUL + `testDebugUnitTest` **207 tests 0 failures**（190 基线 + 17 新增）
-- v0.4.2 修复：4 Batch（FSRS 算法 4 bug + 数据安全 7 项 + 测试有效 3 项 + UX/契约 10+ 文件），详见 [docs/plans/full-audit-v0.4.2-deep.md](docs/plans/full-audit-v0.4.2-deep.md)
+- 最新 commit：`0dd5b0f`（main，NF-BB2 SocraticTutor 三阶段上下文传递）
+- 最新 Release：[v0.2.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.2.0)（2026-07-13，v0.3 + v0.4.2 + v0.5.0 改动尚未发版）
+- 验证：v0.4.2 基线 **207 tests 0 failures**；v0.5.0 改动（10 commits）待 CI 验证
+- CI 阻塞：`dd3ff06`~`0dd5b0f` 共 10 个 commit CI 失败，根因 "recent account payments have failed or your spending limit needs to be increased"
+- v0.5.0 修复：10 commits（P0-AUDIT-1 elapsedDays + P0-STAB-1 @Immutable + P1-AUDIT-5 LEFT JOIN + P1 Repository Flow .catchAndLog + P1-CI-4 keystore 随机化 + P1-AUDIT-4 种子版本升级 + P2 性能优化 + P1-AUDIT-3 AntiRoteMemorization 收尾 + 2.O/2.E 资源配置 + 2.N 业务边界 + NF-BB2 SocraticTutor 上下文传递），详见 [docs/plans/full-audit-v0.5.0-deep.md](docs/plans/full-audit-v0.5.0-deep.md)
 - 详见 [docs/00-STATUS.md](docs/00-STATUS.md)
 
 ## 8. 项目阶段总览
@@ -167,13 +168,23 @@ tools/                           # Python 管线脚本
 | Release v0.2.0 | ✅ 完成 | 签名 APK 发布，包含自 v0.1.0 以来所有改动 |
 | UI 精修 v0.3 | ✅ 完成 | 卡片镜像修复 + 导师信息删除 + AI 入口调整 + 全面动画优化（190 tests） |
 | 第三轮深度审计 v0.4.2 | ✅ 完成 | 4 Batch 修复：FSRS 算法 4 bug + 数据安全 7 项 + 测试有效 3 项 + UX/契约 10+ 文件（207 tests） |
+| 第四轮深度审计 v0.5.0 | 🔄 Phase 2 进行中 | 10 commits 已 push main，CI 待账单问题解决（Flow 异常处理 + LEFT JOIN + keystore 随机化 + 种子版本升级 + 性能优化 + AntiRoteMemorization 收尾 + 资源配置 + 业务边界 + SocraticTutor 上下文传递） |
 
 ## 9. 下一步优先级
 
-1. **P0**：git commit v0.4.2 修复（24 文件）+ push 到 main
-2. **P0**：跑 emulator 实测 v0.3 + v0.4.2 修复 — 验证 FSRS 调度正确性（EASY 间隔 > GOOD 间隔）+ 卡片翻转无镜像 + AI 入口可跳转 + Tab/列表动画
-3. **P0**：修复 4 个未修 P0（P0-E1/E2/E3/E4）— 工作量大，需单独排期（详见 [docs/plans/full-audit-v0.4.2-deep.md](docs/plans/full-audit-v0.4.2-deep.md)）
-4. **P1**：可选 — 发 Release v0.3.0（确认 CI 全绿后 `git tag v0.3.0 && git push origin v0.3.0`）
-5. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
-6. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
-7. **P4**：架构重构 — ReviewRepository.getAllVerifiedKnowledgePoints 已成事实死代码；getVerifiedWithSubject 职责应在 KnowledgeRepository（详见 SESSION_LOG 第四条）
+1. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 10 个 commit（`dd3ff06`~`0dd5b0f`）CI 验证
+2. **P0**：跑 emulator 实测 v0.3 + v0.4.2 + v0.5.0 修复 — 验证 FSRS 调度 + 卡片翻转 + AI 入口 + Tab/列表动画 + 深色模式
+3. **P1 大型任务**（需用户确认优先级）：
+   - P1-PG-1/2/3：启用 R8 + 补齐 ProGuard 规则
+   - NF-PP4：复习日志双写统一
+   - NF-PP5：错题本实现
+   - NF-PP6：AiAssistantViewModel 消息持久化
+4. **P1 Phase 2 剩余维度审计**：
+   - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）
+   - 2.L：错误处理一致性 + 日志规范（sealed AppError + Timber + Snackbar 统一）
+   - 2.M：Compose 副作用 + Accessibility + M3 Expressive
+   - 2.N 剩余：NF-DS7-13 DataStore Key 治理
+5. **P1**：可选 — 发 Release v0.3.0（确认 CI 全绿后 `git tag v0.3.0 && git push origin v0.3.0`）
+6. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+7. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
+8. **P4**：架构重构 — ReviewRepository.getAllVerifiedKnowledgePoints 已成事实死代码；getVerifiedWithSubject 职责应在 KnowledgeRepository（详见 SESSION_LOG 第四条）

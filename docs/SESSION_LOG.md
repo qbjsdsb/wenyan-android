@@ -971,3 +971,264 @@
    $JAVA_HOME/bin/java -Dorg.gradle.daemon=false -cp /root/.local/share/mise/installs/gradle/8.14.4/gradle-8.14.4/lib/gradle-launcher-8.14.4.jar org.gradle.launcher.GradleMain :app:assembleDebug --no-daemon 2>&1 | tail -5
    ```
 10. **开始工作**：根据 [00-STATUS.md](00-STATUS.md) 的"下一步优先级"选择任务
+
+
+---
+
+## Session 2026-07-15：第四轮深度审计 v0.5.0 — Phase 2 P1/P2 修复执行
+
+### 目标
+
+执行用户指令"再制定一个详细的检查计划…严谨认真，仔细检查，非常深入…把这个计划进一步打磨，彻底找出所有的问题" — 在前三轮审计基础上完成第四轮 v0.5.0 深度审计，制定 5 Phase 修复计划，并执行 Phase 2 P1/P2 修复。
+
+### 审计计划
+
+详见 [docs/plans/full-audit-v0.5.0-deep.md](plans/full-audit-v0.5.0-deep.md)（166KB，5 Phase）：
+- **Phase 1**：数据持久化与生命周期（1.C AI 对话持久化 / 1.D 进程被杀恢复）
+- **Phase 2**：代码质量与稳定性（2.A-2.O 共 15 个维度）
+- **Phase 3**：依赖升级路径
+- **Phase 4**：25 项 emulator 测试矩阵
+- **Phase 5**：7 Batch 修复执行
+
+### 已完成 Phase 2 P1/P2 修复（10 个 commit，全部 push main）
+
+| Commit | 类型 | 简述 |
+|--------|------|------|
+| `a7fdce2` | feat | 检查项目进展 |
+| `af14136`~`c2681f8` | 前轮 | P0+P1 修复（Navigation/HttpLogging/种子超时/CancellationException）— CI ✅ |
+| `dd3ff06` | P0+P2 | P0-AUDIT-1 review_logs elapsedDays 旧值未传 + P2 语义修正 — CI ❌ 账单 |
+| `ca3ceea` | P0 | P0-STAB-1 批量添加 @Immutable 注解（消除 Compose 不必要重组）— CI ❌ |
+| `c0e2775` | P1+P2 | P1-AUDIT-5 LEFT JOIN + P1-AUDIT-2 + P1-CI-1/2 + P1-S-1 + P2-LAZY-1 + P2-REC-5 — CI ❌ |
+| `63f5375` | P1 | Repository 层 23 处 Flow 链加 .catchAndLog 异常处理（7 Repository + FlowExt.kt）— CI ❌ |
+| `53a0c46` | P1 | P1-CI-4 keystore 密码随机化 + P1-AUDIT-4 种子版本感知升级 — CI ❌ |
+| `f9fc9c5` | P2 | GraphScreen remember(uiState.nodes) + FlipCard derivedStateOf 性能优化 — CI ❌ |
+| `5d00824` | P1 | P1-AUDIT-3 AntiRoteMemorization 参数命名对齐 + NF-T6 防御性编码 + 已知差距文档 — CI ❌ |
+| `01a1049` | P1 | 2.O/2.E 资源与配置（monochrome icon + M3 DayNight 主题 + values-night）— CI ❌ |
+| `3179911` | P1 | 2.N 业务边界（LIKE 转义 + query 长度限制 + List→Set 去重）— CI ❌ |
+| `0dd5b0f` | P1 | NF-BB2 SocraticTutor 三阶段上下文传递 — CI ❌ |
+
+### CI 状态（关键阻塞）
+
+- ✅ `c2681f8`/`d33dd4d`/`5c5bc64` — success（前轮 commits）
+- ❌ `dd3ff06`~`0dd5b0f` — failure（**非代码错误**，GitHub Actions 账单问题）
+- 根因：`recent account payments have failed or your spending limit needs to be increased`
+- 表现：CI "build" 步骤 3 秒失败无 step 执行，无日志 blob（BlobNotFound）
+- 应对：代码已 push main 等待账单问题解决后 CI 自动验证
+
+### 本轮修复详情
+
+#### Batch 1：P0-AUDIT-1 review_logs elapsedDays（`dd3ff06`）
+- **问题**：`ReviewRepository.recordReview()` 写入 review_logs 时未传 `elapsedDays`，导致 AntiRoteMemorization 检测逻辑失效
+- **修复**：补齐 elapsedDays 参数传递 + P2 FSRS 语义注释修正（LEARNING+HARD → nextRecallStability 正确，RELEARNING+HARD → nextForgetStability 正确）
+
+#### Batch 2：P0-STAB-1 @Immutable 批量注解（`ca3ceea`）
+- **问题**：多个 Compose State 数据类未标 @Immutable，导致不必要重组
+- **修复**：为所有纯数据 State 类批量添加 @Immutable 注解
+
+#### Batch 3：P1-AUDIT-5 + P1-AUDIT-2 + 多项 P1/P2（`c0e2775`）
+- **P1-AUDIT-5**：`KnowledgePointDao.observeVerifiedWithSubject` 从 INNER JOIN 改 LEFT JOIN — 无效关联的知识点不再静默丢失
+- **P1-AUDIT-2**：补齐缺失 ORDER BY（DAO observe 方法）
+- **P1-CI-1/2**：CI 配置修复
+- **P1-S-1**：StateFlow 语义修复
+- **P2-LAZY-1**：LazyColumn lazy 化
+- **P2-REC-5**：Repository 链优化
+
+#### Batch 4：P1 Repository Flow 异常处理（`63f5375`）
+- **问题**：Repository 层 23 处 Flow 链未捕获 DAO 异常，ViewModel collect 崩溃导致 UI 永久 failed
+- **修复**：新增 `FlowExt.kt` 提供 `Flow<T>.catchAndLog(tag, operation, fallback)` 扩展函数（记录日志 + emit 降级值）
+- 覆盖 7 个 Repository + 23 个方法
+- **关键**：`kotlinx.coroutines.flow.catch` 不捕获 CancellationException，协程取消正常传播
+
+#### Batch 5：P1-CI-4 + P1-AUDIT-4（`53a0c46`）
+- **P1-CI-4**：keystore 密码用 `openssl rand -base64 24` 随机化替代硬编码（每次运行产生不同密码）
+- **P1-AUDIT-4**：种子版本感知升级 — 存储 metadata.version 到 DataStore，启动时比对版本；版本不一致时重新导入内容表（@Upsert 安全），跳过已有 MemoRecord（保护 FSRS 学习进度）
+
+#### Batch 6：P2 性能优化（`f9fc9c5`）
+- **GraphScreen**：`remember(uiState.nodes)` 缓存 O(n) 统计计算，避免每次重组重复遍历 + 堆分配
+- **FlipCard**：`derivedStateOf { shouldShowBack(rotation) }` 使布尔值仅在跨过 90° 临界点时触发重组
+
+#### Batch 7：P1-AUDIT-3 AntiRoteMemorization 收尾（`5d00824`）
+- **参数命名修复**：`cardId` → `pointId`，`relatedCardIds` → `relatedPointIds`（实际语义是知识点 ID）
+- **NF-T6 防御性编码**：`log.rating.uppercase()` → `log.rating?.uppercase()`（防御性，保护潜在 schema 变更）
+- **KDoc 准确化**：原声称"DB 列未约束 NOT NULL"不准确（实际 `ReviewLogEntity.rating` 是非空 String，Room 生成 NOT NULL 约束），改为准确描述
+- **已知差距文档**：P1-AUDIT-3 已知差距（仅检测不干预 + 生产链路未接通 + 参数命名误导）写入 KDoc
+- AiAssistantViewModel.kt 同步参数重命名
+
+#### Batch 8：2.O/2.E 资源与配置修复（`01a1049`）
+- **NF-C5 (P1)**：新增 `ic_launcher_monochrome.xml`（Android 13+ themed icon，白色"文"字矢量图，系统根据壁纸自动着色）
+- **NF-C5 (P1)**：`ic_launcher.xml` + `ic_launcher_round.xml` 加 `<monochrome android:drawable="@drawable/ic_launcher_monochrome" />`
+- **NF-U3 (P1)**：`themes.xml` 从 legacy `android:Theme.Material.Light.NoActionBar` 改 M3 `Theme.Material3.DayNight.NoActionBar`
+- **NF-U4 (P1)**：新增 `values-night/colors.xml`（`wenyan_window_background = #1C1B1F`，M3 默认暗色 surface，避免深色模式白屏闪烁）
+
+#### Batch 9：2.N 业务边界修复（`3179911`）
+- **NF-BB1 (P1)**：LIKE 通配符转义 — `KnowledgePointDao.searchByKeyword` 4 个 LIKE 子句加 `ESCAPE '\\'` + `RagEngine.escapeLikeWildcards()` 方法（`%`→`\%`、`_`→`\_`、`\`→`\\`）。原查询搜索"100%"会匹配"1000"
+- **NF-BB10 (P1)**：`RagEngine.search()` 加 `query.take(MAX_QUERY_LENGTH=500)` 长度限制，防止超长 query 拖垮 DB
+- **NF-BB5 (P1)**：`ExamRepository.getRelatedKnowledgePoints` List→Set 去重，O(n) → O(1) 查找
+- **验证 NF-BB9 (P0) 已修复**：`Rating.fromValue` 用 `firstOrNull` + GOOD 降级（之前会话已修）
+- **验证 NF-BB8 (P1) 已修复**：`elapsedDays.coerceAtLeast(0)`（之前会话已修）
+
+#### Batch 10：NF-BB2 SocraticTutor 三阶段上下文传递（`0dd5b0f`）
+- **问题**：苏格拉底三阶段（分析论证漏洞→改进建议→范文）各自独立调用 LLM，输出可能逻辑不一致
+- **修复**：
+  - `PromptTemplates.buildSuggestPrompt` 加 `previousAnalysis: String = ""` 参数，prompt 中加入 `【上一阶段分析】` 段落
+  - `PromptTemplates.buildSampleEssayPrompt` 加 `previousAnalysis` + `previousSuggestion` 参数，prompt 中加入 `【论证分析】` + `【改进建议】` 段落
+  - `SocraticTutor.guideEssayAnswer()` 捕获 `analysisResult` 和 `suggestionResult`，传入后续阶段
+- **向后兼容**：新参数均有默认值 ""，不影响现有调用方
+
+### 关键技术决策
+
+1. **catchAndLog 扩展函数** — 统一 Flow 异常处理模式，避免每个 Repository 重复 try/catch 样板代码。`Flow<T>.catchAndLog(tag, operation, fallback)` 记录日志 + emit 降级值。`kotlinx.coroutines.flow.catch` 不捕获 CancellationException，协程取消信号正常传播。
+
+2. **FSRS-6 LEARNING+HARD 语义** — LEARNING+HARD → nextRecallStability 是正确的（卡片被回忆，只是有困难）；RELEARNING+HARD → nextForgetStability 也正确（卡片遗忘后重新学习）。原审计报告 P0-AUDIT-1 描述有误，已修正为 P2 文档级别。
+
+3. **种子版本感知升级** — 存储 metadata.version 到 DataStore，启动时比对版本；版本不一致时重新导入内容表（@Upsert 安全），跳过已有 MemoRecord（保护 FSRS 学习进度）。避免每次重新导入清空用户学习数据。
+
+4. **keystore 密码随机化** — `openssl rand -base64 24` 替代硬编码，每次 CI 运行产生不同密码。storepass = keypass（硬约束）通过 GitHub Secrets 一次性注入两个变量保证。
+
+5. **Compose remember 优化** — `remember(uiState.nodes)` 缓存 O(n) 统计计算，避免每次重组重复遍历 + 堆分配；`derivedStateOf { shouldShowBack(rotation) }` 使布尔值仅在跨过 90° 临界点时触发重组。
+
+6. **AntiRoteMemorization 已知差距** — 仅检测不干预（Spec 要求降低置信度 + 变体出题 + 反向提问）、生产链路未接通（无 UI 调用方）、参数命名误导（cardId 实为 pointId，已修）。这些差距已写入 KDoc 文档，留待下迭代。
+
+7. **Android 13+ themed icon** — `<monochrome>` 属性 + 白色矢量图，系统根据壁纸自动着色。需同时配置 `ic_launcher.xml` 和 `ic_launcher_round.xml`。
+
+8. **M3 DayNight 主题** — `Theme.Material3.DayNight.NoActionBar` 替代 legacy `android:Theme.Material.Light.NoActionBar`，配合 `values-night/colors.xml` 深色模式窗口背景，避免白屏闪烁。
+
+9. **SQLite LIKE 通配符转义** — `ESCAPE '\\'` 子句 + `escapeLikeWildcards()` 转义 `%` 和 `_`。原查询搜索"100%"会匹配"1000"等（% 被当通配符）。
+
+10. **SocraticTutor 三阶段上下文传递** — 阶段2 prompt 加入阶段1分析结果，阶段3 prompt 加入阶段1+2结果，三段输出连贯。新参数均有默认值 ""，向后兼容。
+
+### 修改文件清单（本轮新增/修改）
+
+**Batch 1（`dd3ff06`）**：
+- `core/data/src/main/java/com/wenyan/app/core/data/repository/ReviewRepository.kt`（elapsedDays 传递）
+
+**Batch 2（`ca3ceea`）**：
+- 多个 ViewModel/State 文件批量添加 @Immutable
+
+**Batch 3（`c0e2775`）**：
+- `core/database/src/main/java/com/wenyan/app/core/database/dao/KnowledgePointDao.kt`（LEFT JOIN）
+- 其他 DAO（ORDER BY 补齐）
+
+**Batch 4（`63f5375`）**：
+- `core/data/src/main/java/com/wenyan/app/core/data/util/FlowExt.kt`（新增 catchAndLog）
+- 7 个 Repository 文件（23 处 Flow 链）
+
+**Batch 5（`53a0c46`）**：
+- `.github/workflows/release.yml`（keystore 密码随机化）
+- `core/data/src/main/java/com/wenyan/app/core/data/repository/SeedDataLoader.kt`（版本感知升级）
+
+**Batch 6（`f9fc9c5`）**：
+- `feature/graph/src/main/java/com/wenyan/app/feature/graph/GraphScreen.kt`（remember 优化）
+- `feature/cards/src/main/java/com/wenyan/app/feature/cards/FlipCard.kt`（derivedStateOf）
+
+**Batch 7（`5d00824`）**：
+- `core/ai/src/main/java/com/wenyan/app/core/ai/recall/AntiRoteMemorization.kt`（参数命名 + NF-T6 + KDoc）
+- `feature/aiassistant/src/main/java/com/wenyan/app/feature/aiassistant/AiAssistantViewModel.kt`（参数同步）
+
+**Batch 8（`01a1049`）**：
+- `app/src/main/res/drawable/ic_launcher_monochrome.xml`（新增）
+- `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`
+- `app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml`
+- `app/src/main/res/values/themes.xml`
+- `app/src/main/res/values-night/colors.xml`（新增）
+
+**Batch 9（`3179911`）**：
+- `core/ai/src/main/java/com/wenyan/app/core/ai/RagEngine.kt`（query 限制 + LIKE 转义）
+- `core/database/src/main/java/com/wenyan/app/core/database/dao/KnowledgePointDao.kt`（ESCAPE '\\'）
+- `core/data/src/main/java/com/wenyan/app/core/data/repository/ExamRepository.kt`（List→Set）
+
+**Batch 10（`0dd5b0f`）**：
+- `core/ai/src/main/java/com/wenyan/app/core/ai/PromptTemplates.kt`（previousAnalysis/previousSuggestion 参数）
+- `core/ai/src/main/java/com/wenyan/app/core/ai/SocraticTutor.kt`（三阶段上下文传递）
+
+### 下次继续
+
+按 v3 审计计划优先级（详见 [docs/plans/full-audit-v0.5.0-deep.md](plans/full-audit-v0.5.0-deep.md)）：
+
+1. **P0 阻塞**：GitHub Actions 账单问题解决后，所有 CI ❌ commits 会自动重跑。需观察 `dd3ff06`~`0dd5b0f` 的 CI 状态
+2. **P1 大型任务**（需用户确认优先级）：
+   - P1-PG-1/2/3：启用 R8 + 补齐 ProGuard 规则
+   - NF-PP4：复习日志双写统一
+   - NF-PP5：错题本实现
+   - NF-PP6：AiAssistantViewModel 消息持久化
+3. **Phase 2 剩余维度审计**：
+   - 2.E 剩余：strings.xml 完整性（NF-U2，9 Screen 硬编码字符串迁移）、dimens.xml（NF-C10，CardRenderer 20+ 硬编码 dp）
+   - 2.L：错误处理一致性 + 日志规范（sealed AppError + Timber + Snackbar 统一 + CancellationException）
+   - 2.M：Compose 副作用 + Accessibility + M3 Expressive（LaunchedEffect + role + 触控目标 + TalkBack + MotionScheme + WideNavigationRail）
+   - 2.N 剩余：NF-DS7-13 DataStore Key 治理（需建 PreferenceKeys.kt 集中定义）
+4. **Phase 1 剩余（大型）**：1.C（AI 对话持久化）、1.D（进程被杀状态恢复）
+5. **Phase 3**：依赖升级路径
+6. **Phase 4**：25 项 emulator 测试矩阵
+7. **Phase 5**：7 Batch 修复
+
+### 新会话快速恢复 Checklist
+
+新沙箱会话开始时，按以下顺序操作（5-10 分钟内进入工作状态）：
+
+1. **读 [AGENTS.md](../AGENTS.md)** — 项目入口，了解技术栈、硬约束、CI 验证策略、当前状态
+2. **读 [00-STATUS.md](00-STATUS.md)** — 10 秒了解当前状态（v0.5.0 审计 Phase 2 P1/P2 修复执行中）
+3. **读本文档最后一节** — 上次进度（本次会话：v0.5.0 第四轮深度审计 Phase 2 P1/P2 修复 10 commits）
+4. **拉取最新代码**：
+   ```bash
+   cd /workspace && git pull origin main
+   ```
+5. **配置 Gradle 代理**（沙箱特有，新沙箱必做）：
+   ```bash
+   # /root/.gradle/gradle.properties
+   cat > /root/.gradle/gradle.properties <<'EOF'
+   systemProp.http.proxyHost=127.0.0.1
+   systemProp.http.proxyPort=18080
+   systemProp.https.proxyHost=127.0.0.1
+   systemProp.https.proxyPort=18080
+   systemProp.http.nonProxyHosts=localhost|127.0.0.1
+   EOF
+
+   # /root/.gradle/init.d/proxy.gradle（Robolectric 测试需要）
+   mkdir -p /root/.gradle/init.d
+   cat > /root/.gradle/init.d/proxy.gradle <<'EOF'
+   allprojects {
+       tasks.withType(Test).configureEach {
+           jvmArgs('-Dhttp.proxyHost=127.0.0.1','-Dhttp.proxyPort=18080',
+                   '-Dhttps.proxyHost=127.0.0.1','-Dhttps.proxyPort=18080',
+                   '-Dhttp.nonProxyHosts=localhost|127.0.0.1')
+       }
+   }
+   EOF
+   ```
+6. **配置环境变量**：
+   ```bash
+   export JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2
+   export ANDROID_HOME=/opt/android-sdk
+   export JAVA_TOOL_OPTIONS="-XX:-UseContainerSupport"
+   export PATH=$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+   ```
+7. **安装 Android SDK**（新沙箱无预装）：
+   ```bash
+   mkdir -p /opt/android-sdk/cmdline-tools
+   cd /opt/android-sdk/cmdline-tools
+   if [ ! -d latest ]; then
+     wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdline-tools.zip
+     unzip -q /tmp/cmdline-tools.zip -d /opt/android-sdk/cmdline-tools
+     mv /opt/android-sdk/cmdline-tools/cmdline-tools /opt/android-sdk/cmdline-tools/latest
+   fi
+   yes | sdkmanager --licenses > /dev/null 2>&1
+   sdkmanager "platform-tools;35.0.0" "platforms;android-35" "build-tools;35.0.0"
+   ```
+8. **配置 local.properties**：
+   ```bash
+   echo "sdk.dir=/opt/android-sdk" > /workspace/local.properties
+   ```
+9. **验证构建**：
+   ```bash
+   $JAVA_HOME/bin/java -Dorg.gradle.daemon=false -cp /root/.local/share/mise/installs/gradle/8.14.4/gradle-8.14.4/lib/gradle-launcher-8.14.4.jar org.gradle.launcher.GradleMain :app:assembleDebug --no-daemon 2>&1 | tail -5
+   ```
+10. **检查 CI 状态**（GitHub Actions 账单问题可能已解决）：
+    ```bash
+    # 从 git remote URL 提取 token
+    TOKEN=$(git -C /workspace remote get-url origin | grep -oE 'ghu_[A-Za-z0-9]+')
+    # 查看最近 CI runs
+    curl -s -H "Authorization: token $TOKEN" \
+      https://api.github.com/repos/qbjsdsb/wenyan-android/actions/runs?per_page=10 \
+      | python3 -c "import json,sys; [print(f\"{r['head_sha'][:7]} {r['conclusion']} {r['name']}\") for r in json.load(sys.stdin)['workflow_runs']]"
+    ```
+11. **开始工作**：根据 [00-STATUS.md](00-STATUS.md) 的"下一步优先级"选择任务
