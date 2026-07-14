@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 文研App 数据提取规则（Android 12+，dataExtractionRules）。
+     P0-M8：Android 12+ 设备云备份与设备迁移规则。
+     - cloud-backup：仅在设备支持加密时备份（disableIfNoEncryptionCapabilities）
+     - device-transfer：设备迁移时包含 sharedpref（无敏感数据，主题/AMOLED 等设置可迁移）
+     - wenyan.db 不迁移（含 FSRS 调度数据，跨设备无意义；API 密文密钥与设备 KeyStore 绑定，迁移后无法解密） -->
+<data-extraction-rules>
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
+        <exclude domain="database" path="wenyan.db" />
+        <exclude domain="sharedpref" path="wenyan_preferences.preferences_pb" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="database" path="wenyan.db" />
+    </device-transfer>
+</data-extraction-rules>

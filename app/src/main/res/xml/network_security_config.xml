@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 文研App 网络安全配置。
+     P0-M8：默认禁止明文流量，所有 LLM API 走 HTTPS。
+     信任系统 CA（Android 默认）。
+     未来可加 <pin-set> 对 DeepSeek/通义/智谱/月之暗面 做 certificate pinning。 -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

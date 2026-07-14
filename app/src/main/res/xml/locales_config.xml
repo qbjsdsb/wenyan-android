@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 文研App 语言配置。
+     P0-M8：Android 13+ per-app language preference 支持。
+     当前仅 zh-CN（简体中文），未来加 en-US 时取消注释。 -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="zh-CN" />
+    <!-- <locale android:name="en-US" /> -->
+</locale-config>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 文研App 备份规则（Android 11 及以下，fullBackupContent）。
+     P0-M8：Android 12 以下设备备份时排除敏感数据。
+     - 排除 DataStore preferences（含主题/AMOLED 等设置，无敏感数据但避免云同步污染）
+     - 排除 wenyan.db（含 FSRS 调度数据 + API 配置密文，跨设备恢复无意义且可能泄露） -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="wenyan_preferences.preferences_pb" />
+    <exclude domain="database" path="wenyan.db" />
+</full-backup-content>

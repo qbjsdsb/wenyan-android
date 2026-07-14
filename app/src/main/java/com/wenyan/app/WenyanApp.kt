@@ -46,20 +46,32 @@ fun WenyanApp(
             }
             ?.route
 
+        // P0-N1 修正：仅顶级路由显示外层 NavigationBar。
+        // - 子路由（knowledge_detail/{pointId} / settings / api_config）不显示，
+        //   避免遮挡子页面的内容与返回按钮。
+        // - AiAssistant 虽是顶级路由，但其内部 ExpressiveScaffold 自带 InputBar，
+        //   外层 NavigationBar 会与之叠加冲突，故同样隐藏。
+        val currentRoute = currentDestination?.route
+        val showBottomBar = currentRoute != null &&
+            currentRoute in TopLevelDestination.destinations.map { it.route } &&
+            currentRoute != TopLevelDestination.ROUTE_AI_ASSISTANT
+
         ExpressiveScaffold(
             modifier = Modifier.fillMaxSize(),
             bottomBar = {
-                WenyanNavigationBar(
-                    items = TopLevelDestination.destinations.map { destination ->
-                        WenyanNavItem(
-                            route = destination.route,
-                            label = destination.label,
-                            icon = destination.icon,
-                        )
-                    },
-                    currentRoute = selectedTopLevelRoute,
-                    onNavigate = { route -> navigateToTopLevelDestination(navController, route) },
-                )
+                if (showBottomBar) {
+                    WenyanNavigationBar(
+                        items = TopLevelDestination.destinations.map { destination ->
+                            WenyanNavItem(
+                                route = destination.route,
+                                label = destination.label,
+                                icon = destination.icon,
+                            )
+                        },
+                        currentRoute = selectedTopLevelRoute,
+                        onNavigate = { route -> navigateToTopLevelDestination(navController, route) },
+                    )
+                }
             },
         ) { innerPadding ->
             WenyanNavHost(
