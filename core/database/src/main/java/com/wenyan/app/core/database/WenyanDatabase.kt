@@ -47,7 +47,9 @@ import com.wenyan.app.core.database.entity.WritingPatternEntity
  * 文研App Room 数据库。
  *
  * - 数据库名：wenyan.db
- * - 版本：2（阶段3：memo_records 补 elapsed_days/scheduled_days/reps 字段）
+ * - 版本：3（NF-D1 修复：Migration_2_3 回填 reps 字段）
+ *   - v1→v2：memo_records 补 elapsed_days/scheduled_days/reps 字段
+ *   - v2→v3：回填 reps = review_count（修复 v1→v2 未回填导致老卡片被误判为新卡）
  *
  * 共 19 张表（无 mentors 表，导师信息改为外链官网）：
  * 1. subjects                科目
@@ -94,7 +96,7 @@ import com.wenyan.app.core.database.entity.WritingPatternEntity
         ExamCodeHistoryEntity::class,
         DataSourceEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(WenyanTypeConverters::class)

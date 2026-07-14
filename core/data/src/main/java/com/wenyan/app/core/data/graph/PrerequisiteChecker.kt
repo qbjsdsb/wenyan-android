@@ -19,6 +19,11 @@ import javax.inject.Singleton
  *
  * 通过 Hilt @Inject 注入 [GraphRepository]。
  *
+ * 防御性保护（NF-BB3 修复）：
+ * - [GraphRepository.getPrerequisites] 当前仅返回直接前置（一层），非递归，无 StackOverflow 风险。
+ * - 但若数据异常（重复 ID）或未来改为递归遍历传递闭包，可能出现重复节点或超大列表。
+ * - 故对返回结果去重（按 nodeId）并设上限 [MAX_PREREQUISITES]，超限截断并告警。
+ *
  * @property graphRepository 图谱仓库，提供前置依赖查询与可提取性 R 计算
  */
 @Singleton
@@ -35,12 +40,28 @@ class PrerequisiteChecker @Inject constructor(
      * 3. R < [RETRIEVABILITY_THRESHOLD] 标记 needsReview = true
      * 4. 若任一 needsReview = true，canStartLearning = false
      *
+     * 防御（NF-BB3）：对返回节点按 nodeId 去重 + 上限截断，防御异常数据与未来递归扩展。
+     *
      * @param nodeId 目标节点 ID
      * @return 前置依赖检测结果
      */
     fun checkPrerequisites(nodeId: String): Flow<PrerequisiteCheckResult> = flow {
-        // 1. 获取前置依赖节点列表
-        val prerequisiteNodes = graphRepository.getPrerequisites(nodeId).first()
+        // 1. 获取前置依赖节点列表（当前非递归，仅直接前置）
+        val rawPrerequisiteNodes = graphRepository.getPrerequisites(nodeId).first()
+
+        // NF-BB3 防御：去重（按 nodeId）+ 上限截断。
+        // 当前 getPrerequisites 非递归，重复仅可能由异常数据引起；
+        // 上限防御未来递归遍历传递闭包时遭遇环或超大图。
+        val prerequisiteNodes = rawPrerequisiteNodes
+            .distinctBy { it.id }
+            .take(MAX_PREREQUISITES)
+        if (rawPrerequisiteNodes.size > MAX_PREREQUISITES) {
+            // 截断告警：数据异常或图过大，避免下游 R 值计算 N+1 查询拖垮性能
+            android.util.Log.w(
+                TAG,
+                "Prerequisites truncated for nodeId=$nodeId: ${rawPrerequisiteNodes.size} > $MAX_PREREQUISITES",
+            )
+        }
 
         // 2. 对每个前置节点计算 R 值，构建 PrerequisiteNode 列表
         val prerequisites = prerequisiteNodes.map { node ->
@@ -87,6 +108,15 @@ class PrerequisiteChecker @Inject constructor(
     companion object {
         /** 可提取性 R 阈值，低于此值需先复习（Spec 要求 0.7） */
         const val RETRIEVABILITY_THRESHOLD = 0.7f
+
+        /**
+         * 前置节点列表防御性上限（NF-BB3）。
+         * 当前非递归实现下，单节点直接前置通常 < 10；上限 100 容纳异常数据，
+         * 并防御未来递归遍历传递闭包时遭遇环或超大图导致 N+1 R 值查询。
+         */
+        private const val MAX_PREREQUISITES = 100
+
+        private const val TAG = "PrerequisiteChecker"
     }
 }
 

@@ -23,6 +23,7 @@ import com.wenyan.app.core.database.dao.TemplateFillDao
 import com.wenyan.app.core.database.dao.WritingMaterialDao
 import com.wenyan.app.core.database.dao.WritingPatternDao
 import com.wenyan.app.core.database.migration.MIGRATION_1_2
+import com.wenyan.app.core.database.migration.MIGRATION_2_3
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -51,6 +52,7 @@ object DatabaseModule {
      *
      * 迁移策略：
      * - [MIGRATION_1_2]：memo_records 补 elapsed_days/scheduled_days/reps 字段
+     * - [MIGRATION_2_3]：回填 reps = review_count（NF-D1 修复，v1→v2 未回填导致老卡片误判为新卡）
      * - fallbackToDestructiveMigrationOnDowngrade：仅版本号降级时重建表（开发期降级测试用）。
      *   P0-D1 修正：原 fallbackToDestructiveMigration() 在升级时也会清空整个数据库，
      *   v0.2.0 已发布用户有真实 FSRS 复习记录，升级时被静默清空是不可接受的。
@@ -66,7 +68,7 @@ object DatabaseModule {
             WenyanDatabase::class.java,
             WenyanDatabase.DATABASE_NAME,
         )
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }
