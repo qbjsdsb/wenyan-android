@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 
 /**
@@ -65,7 +66,12 @@ class WenyanApplication : Application() {
         }
         super.onCreate()
         applicationScope.launch {
-            seedDataLoader.ensureSeedDataLoaded()
+            // P1 修正：种子加载加超时保护，防止 I/O 挂起或 DB 死锁导致协程永久阻塞。
+            // 超时抛出 TimeoutCancellationException，由 exceptionHandler 记录日志，
+            // App 正常启动（下次启动时 ensureSeedDataLoaded 会重试）。
+            withTimeout(30_000L) {
+                seedDataLoader.ensureSeedDataLoaded()
+            }
         }
     }
 }

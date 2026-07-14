@@ -46,6 +46,9 @@ abstract class AiModule {
                 } else {
                     HttpLoggingInterceptor.Level.NONE
                 }
+                // P1 修正：即使 Debug BODY 级别也 redact Authorization 头，
+                // 避免 API Key 明文写入 logcat（bug report / 旧版 Android logcat 读取）。
+                redactHeader("Authorization")
             }
             return OkHttpClient.Builder()
                 .connectTimeout(30, TimeUnit.SECONDS)

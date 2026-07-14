@@ -2,6 +2,7 @@ package com.wenyan.app.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -50,36 +51,97 @@ fun WenyanNavHost(
     ) {
         knowledgeDestination(
             onNavigateToAiAssistant = {
-                navController.navigate(TopLevelDestination.ROUTE_AI_ASSISTANT)
+                // P1 修正：顶级路由切换需 saveState + launchSingleTop + restoreState，
+                // 与底部 NavigationBar 一致（WenyanApp.navigateToTopLevelDestination）。
+                // 原实现无 nav options，快速双击或从子路由进入会重复压栈。
+                navController.navigate(TopLevelDestination.ROUTE_AI_ASSISTANT) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
             },
             onNavigateToDetail = { pointId ->
-                navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId")
+                // P0 修正：详情间跳转（detail→detail）时弹出现有 detail 入口，
+                // 避免 back stack 无界增长（用户在关联知识点间跳转 N 次后需按 N 次返回）。
+                // popUpTo 匹配 nav graph 中的 knowledge_detail/{pointId} 目标：
+                // - 列表→详情（back stack 无 detail）：popUpTo 为 no-op，安全
+                // - 详情→详情（back stack 有 detail）：弹出当前 detail，再压入新 detail
+                navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId") {
+                    popUpTo("$ROUTE_KNOWLEDGE_DETAIL/{pointId}") {
+                        inclusive = true
+                    }
+                    launchSingleTop = true
+                }
             },
         )
         quizDestination(
             onNavigateToAiAssistant = {
-                navController.navigate(TopLevelDestination.ROUTE_AI_ASSISTANT)
+                // P1 修正：顶级路由切换需 saveState + launchSingleTop + restoreState，
+                // 与底部 NavigationBar 一致（WenyanApp.navigateToTopLevelDestination）。
+                // 原实现无 nav options，快速双击或从子路由进入会重复压栈。
+                navController.navigate(TopLevelDestination.ROUTE_AI_ASSISTANT) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
             },
             onNavigateToDetail = { pointId ->
-                navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId")
+                // P0 修正：详情间跳转（detail→detail）时弹出现有 detail 入口，
+                // 避免 back stack 无界增长（用户在关联知识点间跳转 N 次后需按 N 次返回）。
+                // popUpTo 匹配 nav graph 中的 knowledge_detail/{pointId} 目标：
+                // - 列表→详情（back stack 无 detail）：popUpTo 为 no-op，安全
+                // - 详情→详情（back stack 有 detail）：弹出当前 detail，再压入新 detail
+                navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId") {
+                    popUpTo("$ROUTE_KNOWLEDGE_DETAIL/{pointId}") {
+                        inclusive = true
+                    }
+                    launchSingleTop = true
+                }
             },
         )
         cardsDestination(
             onNavigateToAiAssistant = {
-                navController.navigate(TopLevelDestination.ROUTE_AI_ASSISTANT)
+                // P1 修正：顶级路由切换需 saveState + launchSingleTop + restoreState，
+                // 与底部 NavigationBar 一致（WenyanApp.navigateToTopLevelDestination）。
+                // 原实现无 nav options，快速双击或从子路由进入会重复压栈。
+                navController.navigate(TopLevelDestination.ROUTE_AI_ASSISTANT) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
             },
         )
         graphDestination(
             onNavigateToAiAssistant = {
-                navController.navigate(TopLevelDestination.ROUTE_AI_ASSISTANT)
+                // P1 修正：顶级路由切换需 saveState + launchSingleTop + restoreState，
+                // 与底部 NavigationBar 一致（WenyanApp.navigateToTopLevelDestination）。
+                // 原实现无 nav options，快速双击或从子路由进入会重复压栈。
+                navController.navigate(TopLevelDestination.ROUTE_AI_ASSISTANT) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
             },
         )
         aiAssistantDestination(
             onNavigateToApiConfig = {
-                navController.navigate(ROUTE_API_CONFIG)
+                // P1 修正：子路由需 launchSingleTop，防止快速双击重复压栈
+                navController.navigate(ROUTE_API_CONFIG) {
+                    launchSingleTop = true
+                }
             },
             onNavigateToSettings = {
-                navController.navigate(ROUTE_SETTINGS)
+                navController.navigate(ROUTE_SETTINGS) {
+                    launchSingleTop = true
+                }
             },
         )
         apiConfigDestination(
@@ -88,13 +150,25 @@ fun WenyanNavHost(
         settingsDestination(
             onBack = { navController.popBackStack() },
             onNavigateToApiConfig = {
-                navController.navigate(ROUTE_API_CONFIG)
+                navController.navigate(ROUTE_API_CONFIG) {
+                    launchSingleTop = true
+                }
             },
         )
         knowledgeDetailDestination(
             onBack = { navController.popBackStack() },
             onNavigateToDetail = { pointId ->
-                navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId")
+                // P0 修正：详情间跳转（detail→detail）时弹出现有 detail 入口，
+                // 避免 back stack 无界增长（用户在关联知识点间跳转 N 次后需按 N 次返回）。
+                // popUpTo 匹配 nav graph 中的 knowledge_detail/{pointId} 目标：
+                // - 列表→详情（back stack 无 detail）：popUpTo 为 no-op，安全
+                // - 详情→详情（back stack 有 detail）：弹出当前 detail，再压入新 detail
+                navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId") {
+                    popUpTo("$ROUTE_KNOWLEDGE_DETAIL/{pointId}") {
+                        inclusive = true
+                    }
+                    launchSingleTop = true
+                }
             },
         )
     }
