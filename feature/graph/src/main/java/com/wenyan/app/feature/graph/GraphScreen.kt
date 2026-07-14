@@ -142,11 +142,23 @@ fun GraphScreen(
             }
 
             // 底部统计栏
-            if (!uiState.isLoading && uiState.nodes.isNotEmpty()) {
+            // P2 性能修复：统计计算包裹 remember(uiState.nodes)，避免每次重组重复 O(n) 遍历 + 堆分配。
+            // 原 map{}.average() 每次重组分配新 List<Float> + 两次 O(n) 遍历，
+            // 节点列表未变时完全无需重算。
+            val stats = remember(uiState.nodes) {
+                val nodes = uiState.nodes
+                if (nodes.isEmpty()) null
+                else Triple(
+                    nodes.size,
+                    nodes.count { it.retrievability > 0f && it.retrievability < 0.5f },
+                    nodes.map { it.retrievability }.average().toFloat(),
+                )
+            }
+            if (!uiState.isLoading && stats != null) {
                 StatsBar(
-                    totalNodes = uiState.nodes.size,
-                    weakNodes = uiState.nodes.count { it.retrievability > 0f && it.retrievability < 0.5f },
-                    avgRetrievability = uiState.nodes.map { it.retrievability }.average().toFloat(),
+                    totalNodes = stats.first,
+                    weakNodes = stats.second,
+                    avgRetrievability = stats.third,
                 )
             }
         }

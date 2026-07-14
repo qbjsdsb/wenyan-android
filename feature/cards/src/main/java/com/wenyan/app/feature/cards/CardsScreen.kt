@@ -32,7 +32,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -185,6 +187,13 @@ private fun FlipCard(
         label = "card_color",
     )
 
+    // P2 性能修复：用 derivedStateOf 包裹 shouldShowBack(rotation)，
+    // 使 showBack 仅在 rotation 跨过 90° 临界点（布尔值翻转）时触发重组，
+    // 而非 400ms 翻转动画的每一帧都重组 CardContent。
+    // 同时，containerColor 动画（300ms）导致父组件重组时，
+    // showBack 不变 → CardContent 参数不变 → Compose 编译器跳过 CardContent 调用。
+    val showBack by remember { derivedStateOf { shouldShowBack(rotation) } }
+
     Card(
         modifier = modifier
             .graphicsLayer {
@@ -203,15 +212,15 @@ private fun FlipCard(
             // 阶段5：优先使用 CardContent 结构化渲染（6种模板专属样式）
             // template 为 null 时降级为 front/back 纯文本（向后兼容）
             //
-            // 关键：用 shouldShowBack(rotation) 而非 isFlipped 决定显示正/反面，
+            // 关键：用 showBack（derivedStateOf）而非 isFlipped 决定显示正/反面，
             // 确保内容切换与动画同步在 rotation>90° 那一帧发生（卡侧消失瞬间），
             // 用户视觉上感知不到内容切换，也不会看到镜像文字。
             val template = card.template
             if (template != null) {
-                CardContent(card = template, isFlipped = shouldShowBack(rotation))
+                CardContent(card = template, isFlipped = showBack)
             } else {
                 Text(
-                    text = if (shouldShowBack(rotation)) card.back else card.front,
+                    text = if (showBack) card.back else card.front,
                     style = MaterialTheme.typography.headlineMedium,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(Spacing.xl),
