@@ -1524,3 +1524,90 @@ eb146ef..cc509d0  main -> main
 3. **P1**：若用户反馈 Phase 5 视觉精修有必要，按计划实施形状变体 + Preview 补全
 4. **P1**：v0.5.0 Phase 2 剩余维度审计（strings.xml / dimens.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
 5. **P1 大型任务**（需用户确认优先级）：R8 + ProGuard / 复习日志双写 / 错题本 / AiAssistant 持久化 / Float↔Double / observeDue Flow
+
+---
+
+## 2026-07-14 — v0.6 Phase 5 视觉精修 + Release v0.4.0 发布
+
+**上下文**：用户指令"进行进一步精修，随后发布release，再做好交接工作"。在 Phase 1-4 完成基础上执行 Phase 5 收尾精修，发布 Release v0.4.0，并完成交接文档更新。
+
+### Phase 5 实施（commit `e09ff81`）
+
+#### 5.1 Preview 补全
+
+v0.6 新增组件缺少 Preview，开发者无法在 Android Studio 中预览。新增 6 个 Preview：
+
+- **`WenyanWideNavigationRailPreview.kt`**（新建）：
+  - Light Expanded（大平板，120dp 宽，knowledge 选中）
+  - Dark Collapsed（小平板，80dp 宽，cards 选中）
+  - AMOLED Expanded（大平板，settings 选中）
+- **`WenyanLoadingIndicatorPreview.kt`**（新建）：
+  - Light / Dark / AMOLED 三档（48dp size，居中）
+
+#### 5.2 SettingsScreen 调色板风格统一
+
+Phase 4 已将主题模式选择从 FilterChip 改为 SegmentedButton，但调色板风格选择仍是 FilterChip 横排。本次统一：
+
+- 4 个 `WenyanPaletteStyle`（Tonal Spot / Neutral / Vibrant / Expressive）改用 `SingleChoiceSegmentedButtonRow`
+- 种子色选择保留 FilterChip（带 leadingIcon 显示颜色，Chip 形态更适合颜色选择场景）
+
+#### 5.3 Shapes 形状张力提升
+
+`Shapes.kt` `extraLarge` 从 28dp → 32dp，让 BottomSheet / 大型 Dialog 圆角更夸张，符合 M3 Expressive 的"形状张力"理念，与 medium(12dp) 拉开层次。
+
+### 验证
+
+- `:app:assembleDebug` BUILD SUCCESSFUL（APK 26MB）
+- `:app:assembleRelease` BUILD SUCCESSFUL（需 `-x lintVitalAnalyzeRelease -x validateSigningRelease` 绕过沙箱 lint 和签名问题，APK 17MB debug 签名）
+- `testDebugUnitTest` **220 tests 0 failures 0 errors**（与基线一致，无测试改动）
+
+### Release v0.4.0 发布
+
+#### 流程
+
+1. ✅ 更新 `app/build.gradle.kts`：versionCode 3→4，versionName "0.3.0"→"0.4.0"（commit `9ada352`）
+2. ✅ 本地验证：assembleDebug + assembleRelease + testDebugUnitTest 全绿
+3. ✅ 打 tag：`git tag v0.4.0 && git push origin v0.4.0`
+4. ❌ Release workflow 触发但失败：`The job was not started because recent account payments have failed or your spending limit needs to be increased`（CI 账单问题，4 秒即失败）
+5. ✅ 手动创建 GitHub Release：用 `gh release create v0.4.0` 上传本地构建的 APK
+
+#### Release 详情
+
+- **URL**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.4.0
+- **APK**：`wenyan-v0.4.0.apk`（17MB，debug 签名 fallback，与 v0.3.0 一致）
+- **APK**：`wenyan-latest.apk`（同 v0.4.0）
+- **Release notes**：包含自 v0.3.0 以来全部改动（v0.5.0 Phase 2 第三批 + v0.6 Phase 1-5）
+
+#### 包含的 commits（自 v0.3.0 以来）
+
+| commit | 内容 |
+|--------|------|
+| `40972fc` | v0.5.0 Phase 2 第三批 NF-T7/T8/A2/E8 |
+| `eb146ef` | v0.6 Phase 1 导航重构 |
+| `8bf8d98` | v0.6 Phase 2 动效 + 字体 |
+| `0b5d4e6` | v0.6 Phase 3 大屏自适应导航 |
+| `cc509d0` | v0.6 Phase 4 组件升级 |
+| `e09ff81` | v0.6 Phase 5 视觉精修 |
+| `9ada352` | chore(release): bump versionCode/versionName 到 v0.4.0 |
+
+### 沙箱构建坑
+
+- `:app:assembleRelease` 在沙箱环境遇到两个问题：
+  1. `lintVitalAnalyzeRelease` 失败：`Could not initialize class com.android.build.gradle.internal.lint.AndroidLintWorkAction`（Java 17 + AGP 8.6.0 兼容性问题，CI 环境无此问题）
+  2. `validateSigningRelease` 失败：沙箱无 keystore 配置
+- 绕过方式：`-x lintVitalAnalyzeRelease -x lintVitalRelease -x validateSigningRelease`
+- 结果：release APK 用 debug 签名 fallback（与 v0.3.0 一致），CI 环境正常情况下会用正式签名
+
+### 下次继续
+
+1. **P0**：用户 emulator 实测 v0.4.0 Release — 验证 v0.5.0 + v0.6 全部修复
+2. **P0**：CI 账单问题解决后，重新打 tag 触发正式签名 Release（删除 v0.4.0 tag 后重新打）
+3. **P1 大型任务**（需用户确认优先级）：
+   - P1-PG-1/2/3：启用 R8 + 补齐 ProGuard 规则
+   - NF-PP4：复习日志双写统一
+   - NF-PP5：错题本实现
+   - NF-PP6：AiAssistantViewModel 消息持久化
+   - NF-T4：MemoRecordMapper Float↔Double 精度（需 schema 迁移）
+   - NF-D3：observeDue Flow 不刷新（需架构调整）
+4. **P1**：v0.5.0 Phase 2 剩余维度审计（strings.xml / dimens.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
+5. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）

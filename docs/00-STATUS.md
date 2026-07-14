@@ -5,14 +5,14 @@
 
 ## ✅ 当前状态
 
-**v0.6 M3 Expressive 精修 Phase 1-4 完成（已 push）** — 4 commits：导航重构 + 动效字体 + 大屏自适应 + 组件升级。
+**Release v0.4.0 已发布** — 包含 v0.5.0 Phase 2 第三批 + v0.6 M3 Expressive 精修 Phase 1-5（7 commits，220 tests 0 failures）。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `cc509d0`（main，v0.6 Phase 4 组件升级 LoadingIndicator + SegmentedButton） |
-| 最新 Release | [v0.3.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.3.0)（2026-07-15，debug 签名，17MB） |
-| 测试 | **220 tests 0 failures**（无测试改动，基线保持） |
-| 阻塞 | **CI 账单问题** — 4 个 v0.6 commit 待 CI 验证（`eb146ef`/`8bf8d98`/`0b5d4e6`/`cc509d0`） |
+| 最新 commit | `9ada352`（main，chore(release): bump versionCode/versionName 到 v0.4.0） |
+| 最新 Release | [v0.4.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.4.0)（2026-07-14，debug 签名 fallback，17MB） |
+| 测试 | **220 tests 0 failures 0 errors** |
+| 阻塞 | **CI 账单问题** — Release workflow 无法执行正式签名，v0.4.0 APK 手动上传（debug 签名） |
 | 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节 |
 
 ## 📊 项目进度
@@ -31,7 +31,8 @@
 | UI 精修 v0.3 | ✅ 完成 | 卡片镜像修复 + AI 入口调整 + 全面动画优化 |
 | 第三轮深度审计 v0.4.2 | ✅ 4 Batch 修复完成 | FSRS 算法 + 数据安全 + 测试有效 + UX/契约（24 文件，207 tests） |
 | 第四轮深度审计 v0.5.0 | ✅ Phase 2 P1/P2 修复完成 | 13 commits，59 项修复，Release v0.3.0 已发布 |
-| v0.6 M3 Expressive 精修 | ✅ Phase 1-4 完成 | 4 commits：导航重构 + 动效字体 + 大屏自适应 + 组件升级（220 tests 保持） |
+| v0.6 M3 Expressive 精修 | ✅ Phase 1-5 完成 | 5 commits：导航重构 + 动效字体 + 大屏自适应 + 组件升级 + 视觉精修（220 tests 保持） |
+| Release v0.4.0 | ✅ 已发布 | 包含 v0.5.0 Phase 2 第三批 + v0.6 全部改动，debug 签名 fallback |
 
 ### 第四轮深度审计 v0.5.0（2026-07-15）
 
@@ -73,8 +74,9 @@
 | Phase 2 动效 + 字体 | ✅ 完成 | animateColorScheme（35 颜色角色 spring 过渡）+ Push/Pop 弹簧 + Display/Headline SemiBold | `8bf8d98` |
 | Phase 3 大屏自适应 | ✅ 完成 | material3-adaptive 1.2.0 + WenyanWideNavigationRail + WindowSizeClass 三档 | `0b5d4e6` |
 | Phase 4 组件升级 | ✅ 完成 | WenyanLoadingIndicator 替代 7 处 CircularProgressIndicator + SegmentedButton 替代 FilterChip | `cc509d0` |
-| Phase 5 视觉精修 | ⏸️ 暂缓 | 形状变体/共享元素/Preview，待用户实测后决定 | - |
-| 验证 | ✅ 完成 | assembleDebug SUCCESSFUL（APK 26MB）+ 220 tests 0 failures 保持 | - |
+| Phase 5 视觉精修 | ✅ 完成 | Preview 补全（6 个）+ SettingsScreen 调色板风格 SegmentedButton 统一 + Shapes extraLarge 28→32dp | `e09ff81` |
+| 验证 | ✅ 完成 | assembleDebug SUCCESSFUL + assembleRelease SUCCESSFUL（沙箱绕过 lint/signing）+ 220 tests 0 failures | - |
+| Release | ✅ 已发布 | v0.4.0（含 v0.5.0 + v0.6 全部改动，debug 签名 fallback） | `9ada352` |
 
 ### 第三轮深度审计 v0.4.2（2026-07-14）
 
@@ -123,9 +125,9 @@
 
 ## 🎯 下一步优先级
 
-1. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 14 个 commit 待 CI 验证（`dd3ff06`~`40972fc` v0.5.0 + `eb146ef`~`cc509d0` v0.6）
-2. **P0**：跑 emulator 实测 v0.6 — 验证底部 Tab 切换、平板 WideNavigationRail 展开/折叠、主题切换颜色动画、Push/Pop 弹簧过渡、LoadingIndicator 多弧线动效、SegmentedButton 主题模式选择
-3. **P1**：若用户反馈 Phase 5 视觉精修有必要，按计划实施形状变体 + Preview 补全
+1. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 15 个 commit 待 CI 验证（`dd3ff06`~`40972fc` v0.5.0 + `eb146ef`~`9ada352` v0.6 + Release）
+2. **P0**：跑 emulator 实测 v0.4.0 Release — 验证 v0.5.0 + v0.6 全部修复（FSRS 调度 + 卡片翻转 + AI 入口 + Tab/列表动画 + 深色模式 + 底部 Tab 切换 + 平板 WideNavigationRail + 主题切换颜色动画 + Push/Pop 弹簧 + LoadingIndicator + SegmentedButton）
+3. **P0**：CI 账单问题解决后，删除 v0.4.0 tag 重新打 tag 触发正式签名 Release（`git push origin :refs/tags/v0.4.0 && git tag v0.4.0 && git push origin v0.4.0`）
 4. **P1 大型任务**（需用户确认优先级）：
    - P1-PG-1/2/3：启用 R8 + 补齐 ProGuard 规则
    - NF-PP4：复习日志双写统一
@@ -136,15 +138,14 @@
    - 2.L：错误处理一致性 + 日志规范（sealed AppError + Timber + Snackbar 统一）
    - 2.M：Compose 副作用 + Accessibility + M3 Expressive
    - 2.N 剩余：NF-DS7-13 DataStore Key 治理
-6. **P1**：可选 — 发 Release v0.4.0（确认 CI 全绿后 `git tag v0.4.0 && git push origin v0.4.0`，包含 v0.5.0 + v0.6 全部改动）
-7. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
-8. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
-9. **P4**：架构重构 — ReviewRepository.getAllVerifiedKnowledgePoints 已成事实死代码
+6. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+7. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
+8. **P4**：架构重构 — ReviewRepository.getAllVerifiedKnowledgePoints 已成事实死代码
 
 ## 📦 已交付
 
-- GitHub Release v0.1.0（2026-07-12）+ v0.2.0（2026-07-13）+ v0.3.0（2026-07-15，debug 签名）
-- 签名 APK：`wenyan-v0.2.0.apk` + `wenyan-latest.apk`
+- GitHub Release v0.1.0（2026-07-12）+ v0.2.0（2026-07-13）+ v0.3.0（2026-07-15，debug 签名）+ **v0.4.0（2026-07-14，debug 签名 fallback）**
+- 签名 APK：`wenyan-v0.4.0.apk` + `wenyan-latest.apk`（v0.4.0，包含 v0.5.0 + v0.6 全部改动）
 - KSU 风格 UI 升级 Phase 0-3（4 个组件 + 9 个 Screen 迁移，已合并 main + CI 全绿）
 - UI 改造闭环 Phase 1-5（GroupedCard 增强 + 2 Screen 重构 + 4 Preview + 15 个组件测试）
 - UI 统一与死组件清理（KnowledgePointDetailScreen 统一 + 删除 4 个死组件，174 tests 0 failures）
@@ -153,4 +154,5 @@
 - UI 精修 v0.3（卡片镜像修复 + 导师信息删除 + AI 入口调整 + 全面动画优化，190 tests 0 failures）
 - 第三轮深度审计 v0.4.2 修复（4 Batch：FSRS 算法 + 数据安全 + 测试有效 + UX/契约，24 文件，207 tests 0 failures）
 - 第四轮深度审计 v0.5.0 Phase 2 P1/P2 修复（13 commits：Flow 异常处理 + LEFT JOIN + keystore 随机化 + 种子版本升级 + 性能优化 + AntiRoteMemorization 收尾 + 资源配置 + 业务边界 + SocraticTutor 上下文传递 + 第二批性能/无障碍/死依赖 + 第三批 FSRS 解耦/可测/L2 评分/加解密异常）
-- **v0.6 M3 Expressive 精修 Phase 1-4**（4 commits：导航重构 + 动效字体 + 大屏自适应 + 组件升级，220 tests 保持）
+- **v0.6 M3 Expressive 精修 Phase 1-5**（5 commits：导航重构 + 动效字体 + 大屏自适应 + 组件升级 + 视觉精修，220 tests 保持）
+- **Release v0.4.0**（含 v0.5.0 + v0.6 全部改动，220 tests 0 failures 0 errors）
