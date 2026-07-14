@@ -141,13 +141,13 @@ tools/                           # Python 管线脚本
 
 ## 7. 当前状态（2026-07-15）
 
-**⚠️ CI 阻塞** — 第四轮深度审计 v0.5.0 Phase 2 P1/P2 修复执行中，10 个 commit 已 push main，CI 因 GitHub Actions 账单问题无法验证（非代码错误）。
+**✅ Release v0.3.0 已发布** — 包含 v0.3 UI 精修 + v0.4.2 第三轮审计 + v0.5.0 第四轮审计 Phase 2 修复。215 tests 0 failures。
 
-- 最新 commit：`0dd5b0f`（main，NF-BB2 SocraticTutor 三阶段上下文传递）
-- 最新 Release：[v0.2.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.2.0)（2026-07-13，v0.3 + v0.4.2 + v0.5.0 改动尚未发版）
-- 验证：v0.4.2 基线 **207 tests 0 failures**；v0.5.0 改动（10 commits）待 CI 验证
-- CI 阻塞：`dd3ff06`~`0dd5b0f` 共 10 个 commit CI 失败，根因 "recent account payments have failed or your spending limit needs to be increased"
-- v0.5.0 修复：10 commits（P0-AUDIT-1 elapsedDays + P0-STAB-1 @Immutable + P1-AUDIT-5 LEFT JOIN + P1 Repository Flow .catchAndLog + P1-CI-4 keystore 随机化 + P1-AUDIT-4 种子版本升级 + P2 性能优化 + P1-AUDIT-3 AntiRoteMemorization 收尾 + 2.O/2.E 资源配置 + 2.N 业务边界 + NF-BB2 SocraticTutor 上下文传递），详见 [docs/plans/full-audit-v0.5.0-deep.md](docs/plans/full-audit-v0.5.0-deep.md)
+- 最新 commit：`96d9755`（main，core:data compose runtime + testOptions 修复）
+- 最新 Release：[v0.3.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.3.0)（2026-07-15，debug 签名，17MB）
+- 验证：`assembleDebug` SUCCESSFUL + `testDebugUnitTest` **215 tests 0 failures** + `assembleRelease` SUCCESSFUL
+- CI 阻塞：GitHub Actions 账单问题，Release workflow 无法执行正式签名，v0.3.0 APK 使用 debug 签名
+- v0.5.0 修复：11 commits（10 个 Phase 2 修复 + 1 个构建修复），详见 [docs/plans/full-audit-v0.5.0-deep.md](docs/plans/full-audit-v0.5.0-deep.md)
 - 详见 [docs/00-STATUS.md](docs/00-STATUS.md)
 
 ## 8. 项目阶段总览
@@ -168,7 +168,7 @@ tools/                           # Python 管线脚本
 | Release v0.2.0 | ✅ 完成 | 签名 APK 发布，包含自 v0.1.0 以来所有改动 |
 | UI 精修 v0.3 | ✅ 完成 | 卡片镜像修复 + 导师信息删除 + AI 入口调整 + 全面动画优化（190 tests） |
 | 第三轮深度审计 v0.4.2 | ✅ 完成 | 4 Batch 修复：FSRS 算法 4 bug + 数据安全 7 项 + 测试有效 3 项 + UX/契约 10+ 文件（207 tests） |
-| 第四轮深度审计 v0.5.0 | 🔄 Phase 2 进行中 | 10 commits 已 push main，CI 待账单问题解决（Flow 异常处理 + LEFT JOIN + keystore 随机化 + 种子版本升级 + 性能优化 + AntiRoteMemorization 收尾 + 资源配置 + 业务边界 + SocraticTutor 上下文传递） |
+| 第四轮深度审计 v0.5.0 | ✅ Phase 2 P1/P2 修复完成 | 11 commits 已 push main，Release v0.3.0 已发布 |
 
 ## 9. 下一步优先级
 

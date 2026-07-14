@@ -3,16 +3,16 @@
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
 > 最后更新：2026-07-15
 
-## ⚠️ 当前状态
+## ✅ 当前状态
 
-**第四轮深度审计 v0.5.0 — Phase 2 P1/P2 修复执行中** — 已完成 10 个 commit 并 push main（涵盖 P0/P1/P2 多维度修复），CI 因 GitHub Actions 账单问题无法验证（非代码错误）。
+**Release v0.3.0 已发布** — 包含 v0.3 UI 精修 + v0.4.2 第三轮审计 + v0.5.0 第四轮审计 Phase 2 修复。215 tests 0 failures。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `0dd5b0f`（main，NF-BB2 SocraticTutor 三阶段上下文传递） |
-| 最新 Release | [v0.2.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.2.0)（2026-07-13，v0.3 + v0.4.2 + v0.5.0 改动尚未发版） |
-| 测试 | **207 tests 0 failures**（v0.4.2 基线，v0.5.0 改动待 CI 验证） |
-| 阻塞 | **CI 账单问题** — `dd3ff06`~`0dd5b0f` 共 10 个 commit CI 失败，根因 "recent account payments have failed or your spending limit needs to be increased"（非代码错误） |
+| 最新 commit | `96d9755`（main，core:data compose runtime + testOptions 修复） |
+| 最新 Release | [v0.3.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.3.0)（2026-07-15，debug 签名） |
+| 测试 | **215 tests 0 failures**（207 基线 + 8 新增 v0.5.0 测试） |
+| 阻塞 | **CI 账单问题** — Release workflow 无法执行正式签名，v0.3.0 APK 使用 debug 签名 |
 | 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节 |
 
 ## 📊 项目进度
@@ -30,7 +30,7 @@
 | UI 改造闭环 | ✅ Phase 1-5 完成 | GroupedCard 增强 + 2 Screen 重构 + 4 Preview + 8 测试 |
 | UI 精修 v0.3 | ✅ 完成 | 卡片镜像修复 + AI 入口调整 + 全面动画优化 |
 | 第三轮深度审计 v0.4.2 | ✅ 4 Batch 修复完成 | FSRS 算法 + 数据安全 + 测试有效 + UX/契约（24 文件，207 tests） |
-| 第四轮深度审计 v0.5.0 | 🔄 Phase 2 P1/P2 修复执行中 | 10 个 commit 已 push main，CI 待账单问题解决 |
+| 第四轮深度审计 v0.5.0 | ✅ Phase 2 P1/P2 修复完成 | 10+1 commits 已 push main，Release v0.3.0 已发布 |
 
 ### 第四轮深度审计 v0.5.0（2026-07-15）
 
