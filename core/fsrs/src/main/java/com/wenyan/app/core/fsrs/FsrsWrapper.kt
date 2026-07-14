@@ -326,15 +326,32 @@ class FsrsWrapper(
     /**
      * 稳定性更新——回忆成功
      * 对应设计文档第3652行
-     * 增长 = exp(w[8]) * (11-D) * S^(-w[9]) * (exp((1-R)*w[10]) - 1) * hardPenalty * easyBonus
+     *
+     * 公式：growth = w[8] * (11-D) * S^(-w[9]) * (exp((1-R)*w[10]) - 1) * hardPenalty * easyBonus
      * 最终 S' = S * (1 + growth * stabilityGrowthFactor)
+     *
+     * NF-F1 修正（P0-F1 / 1.E 决策 A 简化版）：原实现用 `exp(w[8])` 放大增长系数,
+     * 与 FSRS-6 标准公式不符。FSRS-6 默认权重 w[8]=1.5336 已是直接乘子,
+     * 套用 exp() 后变为 exp(1.5336)≈4.635,放大 3.02 倍 → 间隔膨胀 3 倍 →
+     * 用户复习频率比 FSRS-6 标准低 3 倍 → 实际保留率低于 R_target。
+     *
+     * 修正后 growth 降低 3 倍,stability 增长放缓,间隔缩短,复习频率提升,
+     * 保留率向 R_target 收敛。对已发版用户:存量 stability 不变,后续评分增长放缓,
+     * 间隔逐步从 ~3× 收敛到 ~1× 标准值。
+     *
+     * 不改 retrievability / nextInterval / nextForgetStability:
+     * - retrievability decay=-1 vs FSRS-6 decay=-0.5:在 R_target∈{0.85,0.90,0.95}
+     *   下 nextInterval 差异 <3%,可忽略
+     * - nextForgetStability 槽位 w[11-14] vs FSRS-6 w[15-18]:当前 weights w[17-18]=0,
+     *   改槽位会让公式近乎失效,需同步更新 weights 数组,风险高,不在本次修复范围
      */
     fun nextRecallStability(d: Float, s: Float, r: Float, rating: Rating): Float {
         val hardPenalty = if (rating == Rating.HARD) w[15] else 1f
         // F-02 修正：w[16]=0.2316 < 1，直接用作乘子会让 EASY stability < GOOD stability（语义反转）。
         // 官方 FSRS-6 公式：easyBonus = 1 + w[16]，确保 EASY 增长 > GOOD 增长。
         val easyBonusVal = if (rating == Rating.EASY) 1f + w[16] else 1f
-        val growth = (exp(w[8].toDouble()) * (11.0 - d) * s.pow(-w[9]) *
+        // NF-F1 修正：exp(w[8]) → w[8]（FSRS-6 标准直接用 w[8] 作乘子,无需 exp 放大）
+        val growth = (w[8] * (11.0 - d) * s.pow(-w[9]) *
             (exp((1f - r) * w[10].toDouble()) - 1.0) * hardPenalty * easyBonusVal).toFloat()
         return s * (1f + growth * stabilityGrowthFactor)
     }
