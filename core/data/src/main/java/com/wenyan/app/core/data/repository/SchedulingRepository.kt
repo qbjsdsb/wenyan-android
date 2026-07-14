@@ -12,6 +12,7 @@ import com.wenyan.app.core.fsrs.MemoryTier
 import com.wenyan.app.core.fsrs.Rating
 import com.wenyan.app.core.fsrs.ReviewLog
 import com.wenyan.app.core.fsrs.TIER_CONFIGS
+import kotlinx.coroutines.CancellationException
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -114,6 +115,31 @@ class SchedulingRepository @Inject constructor(
             existingHistoryJson = existingMemo.history ?: "[]",
         )
         memoRecordDao.upsert(updatedMemo)
+
+        // 7. 写入 review_logs 表（P1 修复：原仅嵌入 memo.history JSON,
+        // review_logs 表从未写入,AntiRoteMemorization 读取始终为空,功能失效）
+        try {
+            reviewLogDao.insert(
+                ReviewLogEntity(
+                    id = UUID.randomUUID().toString(),
+                    pointId = pointId,
+                    rating = rating.name,
+                    elapsedDays = reviewLog.elapsedDays,
+                    scheduledDays = reviewLog.scheduledDays,
+                    state = reviewLog.state.name,
+                    stability = reviewLog.stability.toDouble(),
+                    difficulty = reviewLog.difficulty.toDouble(),
+                    reps = flashCardAfter.reps,
+                    createdAt = nowMillis,
+                ),
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // review_logs 写入失败不阻塞主调度流程,记录日志即可
+            Log.w(TAG, "Failed to insert review_log for pointId=$pointId", e)
+        }
+
         return updatedMemo
     }
 
@@ -159,5 +185,9 @@ class SchedulingRepository @Inject constructor(
             history = "[]",
             inPriorityQueue = 0,
         )
+    }
+
+    private companion object {
+        private const val TAG = "SchedulingRepository"
     }
 }
