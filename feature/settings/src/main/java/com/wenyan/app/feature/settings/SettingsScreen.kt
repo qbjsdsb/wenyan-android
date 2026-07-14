@@ -19,6 +19,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -87,17 +90,20 @@ fun SettingsScreen(
                         },
                     )
                     GroupedCardDivider()
-                    // 主题模式选择 chips（在卡片内独立一行）
-                    Row(
+                    // v0.6：主题模式选择改用 SegmentedButton（互斥选择更紧凑专业）
+                    SingleChoiceSegmentedButtonRow(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        ColorMode.entries.forEach { mode ->
-                            FilterChip(
+                        ColorMode.entries.forEachIndexed { index, mode ->
+                            SegmentedButton(
                                 selected = themeConfig.colorMode == mode,
                                 onClick = { viewModel.setColorMode(mode) },
+                                shape = SegmentedButtonDefaults.itemShape(
+                                    index = index,
+                                    count = ColorMode.entries.size,
+                                ),
                                 label = {
                                     Text(
                                         text = when (mode) {

@@ -24,7 +24,7 @@ import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material3.CircularProgressIndicator
+import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -121,7 +121,7 @@ fun QuizScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center,
                         ) {
-                            CircularProgressIndicator()
+                            WenyanLoadingIndicator()
                         }
                     }
                     isEmpty -> {
