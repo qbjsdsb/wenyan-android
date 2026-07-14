@@ -331,12 +331,18 @@ class AiAssistantViewModel @Inject constructor(
         )
     }
 
-    /** 生成唯一消息 ID */
-    private fun nextId(): String = System.currentTimeMillis().toString() + "-" + messageCounter++
+    /**
+     * 生成唯一消息 ID。
+     *
+     * P0-T1b 修正：原用 companion object var messageCounter 生成 "timestamp-counter" ID，
+     * 该 counter 跨 ViewModel 实例共享，导致：
+     * 1) 单测中多个 VM 实例 counter 持续累加，断言特定 ID 时抖动
+     * 2) 进程被杀重启后 counter 归零，可能与持久化消息 ID 冲突
+     * 改用 UUID 保证全局唯一性，无需可变状态。
+     */
+    private fun nextId(): String = java.util.UUID.randomUUID().toString()
 
     companion object {
-        private var messageCounter = 0
-
         /** AI 生成内容来源标识 */
         private const val CONTENT_SOURCE_AI = "AI_GENERATED"
     }

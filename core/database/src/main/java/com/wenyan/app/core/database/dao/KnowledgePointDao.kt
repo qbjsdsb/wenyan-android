@@ -42,21 +42,21 @@ interface KnowledgePointDao {
     @Query("SELECT * FROM knowledge_points WHERE chapter_id = :chapterId ORDER BY created_at ASC")
     fun observeByChapter(chapterId: String): Flow<List<KnowledgePointEntity>>
 
-    @Query("SELECT * FROM knowledge_points WHERE exam_frequency = :frequency")
+    @Query("SELECT * FROM knowledge_points WHERE exam_frequency = :frequency ORDER BY created_at ASC")
     fun observeByExamFrequency(frequency: String): Flow<List<KnowledgePointEntity>>
 
     /** 按 OCR 状态查询（索引 ocr_status） */
-    @Query("SELECT * FROM knowledge_points WHERE ocr_status = :status")
+    @Query("SELECT * FROM knowledge_points WHERE ocr_status = :status ORDER BY created_at ASC")
     fun observeByOcrStatus(status: String): Flow<List<KnowledgePointEntity>>
 
     /** 按内容来源查询 */
-    @Query("SELECT * FROM knowledge_points WHERE content_source = :source")
+    @Query("SELECT * FROM knowledge_points WHERE content_source = :source ORDER BY created_at ASC")
     fun observeByContentSource(source: String): Flow<List<KnowledgePointEntity>>
 
     @Query("SELECT COUNT(*) FROM knowledge_points WHERE chapter_id = :chapterId")
     suspend fun countByChapter(chapterId: String): Int
 
-    @Query("SELECT * FROM knowledge_points")
+    @Query("SELECT * FROM knowledge_points ORDER BY created_at ASC")
     fun observeAll(): Flow<List<KnowledgePointEntity>>
 
     /** 查询所有 OCR 已校验（VERIFIED）的知识点，用于 FSRS 复习队列（过滤 PENDING） */

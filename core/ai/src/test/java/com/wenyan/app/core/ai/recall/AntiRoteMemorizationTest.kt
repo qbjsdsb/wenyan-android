@@ -43,8 +43,10 @@ class AntiRoteMemorizationTest {
         val result = antiRote.checkRoteMemorization("card_001", listOf("card_002")).first()
 
         assertNotNull("checkRoteMemorization 应返回结果", result)
-        assertNotNull("结果应包含 isSuspected 字段", result.isSuspected)
-        assertNotNull("结果应包含 suggestion 字段", result.suggestion)
+        // P0-T1a 修正：原用 assertNotNull 在 Boolean/String 非空字段上恒真，改为精确断言。
+        // setup() 用空 FakeReviewLogDao 初始化 → 无复习记录 → isSuspected=false, suggestion="复习表现正常"
+        assertFalse("空复习历史时 isSuspected 应为 false", result.isSuspected)
+        assertEquals("复习表现正常", result.suggestion)
     }
 
     @Test

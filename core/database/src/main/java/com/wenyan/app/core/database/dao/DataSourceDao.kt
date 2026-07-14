@@ -29,17 +29,17 @@ interface DataSourceDao {
     @Query("SELECT * FROM data_sources WHERE id = :id")
     suspend fun getById(id: String): DataSourceEntity?
 
-    @Query("SELECT * FROM data_sources WHERE knowledge_point_id = :pointId")
+    @Query("SELECT * FROM data_sources WHERE knowledge_point_id = :pointId ORDER BY created_at ASC")
     fun observeByKnowledgePoint(pointId: String): Flow<List<DataSourceEntity>>
 
-    @Query("SELECT * FROM data_sources WHERE exam_question_id = :questionId")
+    @Query("SELECT * FROM data_sources WHERE exam_question_id = :questionId ORDER BY created_at ASC")
     fun observeByExamQuestion(questionId: String): Flow<List<DataSourceEntity>>
 
-    @Query("SELECT * FROM data_sources WHERE content_source = :source")
+    @Query("SELECT * FROM data_sources WHERE content_source = :source ORDER BY created_at ASC")
     fun observeByContentSource(source: String): Flow<List<DataSourceEntity>>
 
     /** 按 OCR 状态查询 */
-    @Query("SELECT * FROM data_sources WHERE ocr_status = :status")
+    @Query("SELECT * FROM data_sources WHERE ocr_status = :status ORDER BY created_at ASC")
     fun observeByOcrStatus(status: String): Flow<List<DataSourceEntity>>
 
     @Query("SELECT * FROM data_sources ORDER BY created_at DESC")

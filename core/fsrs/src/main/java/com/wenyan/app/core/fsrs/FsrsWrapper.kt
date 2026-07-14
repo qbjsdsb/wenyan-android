@@ -2,6 +2,7 @@ package com.wenyan.app.core.fsrs
 
 import kotlin.math.exp
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.random.Random
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
@@ -19,7 +20,7 @@ import java.time.temporal.ChronoUnit
  *
  * FSRS-6核心公式（设计文档第4628-4640行）：
  * - 可提取性：R = (1 + t/(9*S))^(-1)
- * - 难度更新含均值回归：D_next = w[6]*D' + (1-w[6])*w[4]
+ * - 难度更新含均值回归：D' = D - w[6]*(rating-3); D_next = w[7]*D' + (1-w[7])*w[4]
  * - 遗忘稳定性更新：S' = w[11] * D^(-w[12]) * ((S+1)^w[13] - 1) * exp(-w[14]*(1-R))
  * - 间隔计算：I = 9*S*(1/R_target - 1)
  *
@@ -51,7 +52,7 @@ class FsrsWrapper(
          */
         val DEFAULT_WEIGHTS = floatArrayOf(
             0.2172f, 0.3174f, 1.7265f, 5.1816f,  // w[0-3] 新卡初始稳定性S0
-            4.7284f, 1.0526f, 0.5699f, 0.2197f,  // w[4-7] 初始难度D0 + 难度变化 + 均值回归 + 振幅
+            4.7284f, 1.0526f, 0.5699f, 0.2197f,  // w[4-7] 初始难度D0 + initD评分影响 + nextD难度变化 + nextD均值回归
             1.5336f, 0.1752f, 0.9441f, 2.4926f,  // w[8-11] 回忆稳定性更新 + 遗忘稳定性更新
             0.0606f, 0.4656f, 1.1842f, 0.5316f,  // w[12-15] 遗忘参数 + Hard惩罚因子
             0.2316f,                               // w[16] Easy奖励因子
@@ -233,8 +234,8 @@ class FsrsWrapper(
                 ScheduleResult(recallS, newD, State.REVIEW, nextInterval(recallS).toFloat(), c.lapses)
             }
             Rating.EASY -> {
-                val recallS = nextRecallStability(c.difficulty, c.stability, rR, r)
-                ScheduleResult(recallS * easyBonus, newD, State.REVIEW, nextInterval(recallS).toFloat(), c.lapses)
+                val recallS = nextRecallStability(c.difficulty, c.stability, rR, r) * easyBonus
+                ScheduleResult(recallS, newD, State.REVIEW, nextInterval(recallS).toFloat(), c.lapses)
             }
         }
     }
@@ -255,8 +256,8 @@ class FsrsWrapper(
                 ScheduleResult(recallS, newD, State.REVIEW, nextInterval(recallS).toFloat(), c.lapses)
             }
             Rating.EASY -> {
-                val recallS = nextRecallStability(c.difficulty, c.stability, rR, r)
-                ScheduleResult(recallS * easyBonus, newD, State.REVIEW, nextInterval(recallS).toFloat(), c.lapses)
+                val recallS = nextRecallStability(c.difficulty, c.stability, rR, r) * easyBonus
+                ScheduleResult(recallS, newD, State.REVIEW, nextInterval(recallS).toFloat(), c.lapses)
             }
         }
     }
@@ -277,8 +278,8 @@ class FsrsWrapper(
                 ScheduleResult(recallS, newD, State.REVIEW, nextInterval(recallS).toFloat(), c.lapses)
             }
             Rating.EASY -> {
-                val recallS = nextRecallStability(c.difficulty, c.stability, rR, r)
-                ScheduleResult(recallS * easyBonus, newD, State.REVIEW, nextInterval(recallS).toFloat(), c.lapses)
+                val recallS = nextRecallStability(c.difficulty, c.stability, rR, r) * easyBonus
+                ScheduleResult(recallS, newD, State.REVIEW, nextInterval(recallS).toFloat(), c.lapses)
             }
         }
     }
@@ -312,12 +313,13 @@ class FsrsWrapper(
 
     /**
      * 难度更新（含均值回归）
-     * D_next = w[6]*D' + (1-w[6])*w[4]
+     * D' = D - w[6]*(rating-3)
+     * D_next = w[7]*D' + (1-w[7])*w[4]
      * 对应设计文档第3645行
      */
     fun nextDifficulty(d: Float, rating: Rating): Float {
-        val dNext = d - w[5] * (rating.value - 3)
-        val meanReverted = w[6] * dNext + (1f - w[6]) * w[4]
+        val dNext = d - w[6] * (rating.value - 3)
+        val meanReverted = w[7] * dNext + (1f - w[7]) * w[4]
         return meanReverted.coerceIn(1f, 10f)
     }
 
@@ -329,7 +331,9 @@ class FsrsWrapper(
      */
     fun nextRecallStability(d: Float, s: Float, r: Float, rating: Rating): Float {
         val hardPenalty = if (rating == Rating.HARD) w[15] else 1f
-        val easyBonusVal = if (rating == Rating.EASY) w[16] else 1f
+        // F-02 修正：w[16]=0.2316 < 1，直接用作乘子会让 EASY stability < GOOD stability（语义反转）。
+        // 官方 FSRS-6 公式：easyBonus = 1 + w[16]，确保 EASY 增长 > GOOD 增长。
+        val easyBonusVal = if (rating == Rating.EASY) 1f + w[16] else 1f
         val growth = (exp(w[8].toDouble()) * (11.0 - d) * s.pow(-w[9]) *
             (exp((1f - r) * w[10].toDouble()) - 1.0) * hardPenalty * easyBonusVal).toFloat()
         return s * (1f + growth * stabilityGrowthFactor)
@@ -349,12 +353,15 @@ class FsrsWrapper(
     /**
      * 间隔计算：I = 9*S*(1/R_target - 1)
      * 对应设计文档第3668行
-     * 结果限制在 [1, maximumInterval] 范围内
+     * 结果限制在 [1, maximumInterval] 范围内。
+     *
+     * F-05 修正：用 roundToInt() 替代 toInt()。官方 FSRS-6 使用 round()，
+     * 原实现 toInt() 截断会让 stability=5.7 得 5 天而官方得 6 天。
      */
     fun nextInterval(stability: Float): Int {
         if (stability <= 0f) return 1
         val interval = 9f * stability * (1f / requestRetention - 1f)
-        return minOf(maxOf(interval.toInt(), 1), maximumInterval)
+        return minOf(maxOf(interval.roundToInt(), 1), maximumInterval)
     }
 
     /**

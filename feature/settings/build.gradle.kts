@@ -15,6 +15,11 @@ android {
         minSdk = 26
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
+
+        // P1-M2：library 模块的 BuildConfig 不含 VERSION_NAME（那是 application 模块属性）。
+        // 显式注入 buildConfigField 供 SettingsScreen 显示版本号。
+        // 注意：发版时需与 app/build.gradle.kts 的 versionName 保持同步。
+        buildConfigField("String", "VERSION_NAME", "\"0.3.0\"")
     }
 
     compileOptions {
@@ -24,6 +29,8 @@ android {
 
     buildFeatures {
         compose = true
+        // P1-M2：SettingsScreen 版本号读取 BuildConfig.VERSION_NAME，需显式启用 buildConfig
+        buildConfig = true
     }
 }
 

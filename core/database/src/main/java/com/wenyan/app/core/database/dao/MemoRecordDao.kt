@@ -45,8 +45,10 @@ interface MemoRecordDao {
      *
      * 与 [com.wenyan.app.core.database.dao.GraphNodeDao.observeAll] combine 后，
      * 一次性计算所有节点的可提取性，避免 N+1 查询。
+     *
+     * P1-D3 修正：加 ORDER BY next_review_at ASC 保证 Compose 重组时顺序稳定。
      */
-    @Query("SELECT * FROM memo_records")
+    @Query("SELECT * FROM memo_records ORDER BY next_review_at ASC")
     fun observeAll(): Flow<List<MemoRecordEntity>>
 
     @Query("SELECT COUNT(*) FROM memo_records WHERE state = :state")

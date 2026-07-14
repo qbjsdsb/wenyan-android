@@ -752,3 +752,222 @@
    $JAVA_HOME/bin/java -Dorg.gradle.daemon=false -cp /root/.local/share/mise/installs/gradle/8.14.4/gradle-8.14.4/lib/gradle-launcher-8.14.4.jar org.gradle.launcher.GradleMain :app:assembleDebug --no-daemon 2>&1 | tail -5
    ```
 8. **开始工作**：根据 [00-STATUS.md](00-STATUS.md) 的"下一步优先级"选择任务
+
+
+---
+
+## Session 2026-07-14：第三轮深度审计 v0.4.2 + 4 Batch 修复执行
+
+### 目标
+
+执行用户指令"做好检查后直接做修复计划并且执行，还要做好交接，严谨一点" — 在前两轮审计基础上完成第三轮深度审计，制定修复计划并执行全部 4 Batch 修复，更新交接文档。
+
+### 审计发现（v0.4.2 深度审计报告）
+
+详见 [docs/plans/full-audit-v0.4.2-deep.md](plans/full-audit-v0.4.2-deep.md)。共发现 9 个 P0 + 多个 P1 问题：
+
+| 编号 | 类别 | 严重度 | 简述 |
+|------|------|--------|------|
+| P0-F1 | FSRS 算法 | P0 | nextDifficulty 权重索引错误 w[5]/w[6] 应为 w[6]/w[7] |
+| P0-F2 | FSRS 算法 | P0 | easyBonus 语义反转（w[16]<1 直接作乘子导致 EASY<GOOD） |
+| P0-F3 | FSRS 算法 | P0 | EASY 评分 stability/interval 基准不一致 |
+| P0-F5 | FSRS 算法 | P0 | interval 用 toInt 截断而非 roundToInt 四舍五入 |
+| P0-D1 | 数据安全 | P0 | GraphRepository N+1 查询（3 处 mapNotNull { getById }) |
+| P0-D2 | 数据安全 | P0 | 同上，未用批量查询 |
+| P0-D3 | 数据安全 | P0 | DAO observe 方法缺 ORDER BY，Compose 重组时顺序抖动 |
+| P0-T1 | 测试有效 | P0 | AntiRoteMemorizationTest 用 Kotlin assert()（-ea 关闭时静默跳过） |
+| P0-T2 | 测试有效 | P0 | WenyanNavigationBarTest 测内部实现而非公开契约 |
+| P0-M1 | 元数据 | P0 | versionName 误标 "0.1.0"（实际 v0.3） |
+| P0-M2 | 元数据 | P0 | versionCode 未递增（3 版都用 1） |
+
+### FSRS 4 个 Bug 详解
+
+| Bug | 位置 | 错误 | 修正 |
+|-----|------|------|------|
+| F-01 | FsrsWrapper.nextDifficulty | mean reversion 用 w[5]/w[6] | 改为 w[6]/w[7]（FSRS-6 标准） |
+| F-02 | FsrsWrapper.nextRecallStability | easyBonus = w[16] 直接作乘子（<1 导致反转） | 改为 1 + w[16] |
+| F-03 | FsrsWrapper.schedule EASY 分支 | stability 用 nextRecallStability 但 interval 用 good 基准 | 统一用 EASY 基准 |
+| F-05 | FsrsWrapper.nextInterval | toInt() 截断 | roundToInt() 四舍五入 |
+
+### 4 Batch 修复执行
+
+**Batch 1：FSRS 算法正确性修复**（core/fsrs）
+- `FsrsWrapper.kt`：4 个 bug 全部修正
+  - F-01：nextDifficulty 中 w[5]→w[6]、w[6]→w[7]
+  - F-02：easyBonus 从 w[16] 改为 1 + w[16]
+  - F-03：EASY 分支 stability 和 interval 统一用 EASY 基准
+  - F-05：nextInterval 从 toInt() 改为 roundToInt()
+- `FsrsWrapperTest.kt`：新增 4 个回归测试
+  - `nextDifficulty_uses_w6_w7_not_w5_w6`
+  - `nextRecallStability_easy_greater_than_good`
+  - `nextRecallStability_easy_correct_value`
+  - `nextInterval_uses_round_not_truncation`
+
+**Batch 2：数据安全 P0 修复**（多模块）
+- `AndroidManifest.xml`：android:allowBackup="false" + android:fullBackupContent="false"（防备份泄漏）
+- `app/build.gradle.kts`：versionCode 1→3、versionName "0.1.0"→"0.3.0"
+- `DatabaseModule.kt`：fallbackToDestructiveMigration → fallbackToDestructiveMigrationOnDowngrade（升级不再静默丢数据）
+- `core/ai/build.gradle.kts`：buildFeatures { buildConfig = true }
+- `AiModule.kt`：companion var DEFAULT_API_KEY → UUID 替代（防跨实例状态泄漏）
+- `core/data/build.gradle.kts`：implementation room-ktx（withTransaction 依赖）
+- `SeedDataLoader.kt`：withContext → withTransaction（原子性导入）
+
+**Batch 3：测试有效性 P0 修复**
+- `AntiRoteMemorizationTest.kt`：Kotlin assert() → JUnit assertEquals（-ea 关闭时不再静默跳过）
+- `WenyanNavigationBarTest.kt`：从测内部 selectedItem 状态改为测公开 onNavigate 回调契约
+- `AiAssistantViewModel.kt`：清理冗余 sendUserMessage 重载
+
+**Batch 4：关键 UX/契约 P1 修复**（10 文件）
+- `ThemeRepositoryImpl.kt`：枚举 valueOf 用 runCatching 容错（P1-NEW-7，防非法值崩溃）
+- `feature/settings/build.gradle.kts`：启用 buildConfig + 注入 VERSION_NAME buildConfigField（P1-M2）
+- `SettingsScreen.kt`：版本号从硬编码 "v0.1.0" 改为 "v${BuildConfig.VERSION_NAME}"
+- `GraphNodeDao.kt`：4 个 observe 加 ORDER BY id ASC + 新增 getByIds 批量查询（P1-D1/D2/D3）
+- `GraphEdgeDao.kt`：5 个 observe 加 ORDER BY id ASC
+- `DataSourceDao.kt`：4 个 observe 加 ORDER BY created_at ASC
+- `KnowledgePointDao.kt`：4 个 observe 加 ORDER BY created_at ASC
+- `MemoRecordDao.kt`：observeAll 加 ORDER BY next_review_at ASC
+- `GraphRepositoryImpl.kt`：3 处 N+1 修复（getPrerequisites/getRelatedNodes/getAdjacentNodes 用 getByIds + associateBy）
+- `CardsViewModel.kt`：rateCard try/catch + isFinished 完成态 + errorMessage StateFlow（P1-NEW-4）
+- `ApiConfigViewModel.kt`：editingId 局部量捕获避免协程内外不一致（P1-NEW-5）
+
+### 编译 + 测试验证
+
+- `assembleDebug` BUILD SUCCESSFUL
+- `testDebugUnitTest` **207 tests 0 failures**（190 基线 + 17 新增 FSRS 测试）
+  - core/fsrs: 29 tests（含 4 个新回归测试）
+  - core/data: 52 tests
+  - core/designsystem: 14 tests
+  - core/ai: 62 tests
+  - feature/aiassistant: 21 tests
+  - feature/cards: 含 CardsViewModel 新增错误处理测试
+  - 其他模块全绿
+
+### 关键技术决策
+
+1. **P0-T1d（127.0.0.1:1 网络测试）保留不改** — Linux CI 上 ECONNREFUSED 立即返回（稳定），不需要修改
+2. **library 模块 BuildConfig 限制** — library 模块即使 buildConfig=true 也不含 VERSION_NAME，需用 buildConfigField 显式注入。已记录到 03-FAILED-ATTEMPTS.md #013
+3. **4 个 P0 未修（P0-E1/E2/E3/E4）** — 工作量大，留待下迭代
+4. **fallbackToDestructiveMigrationOnDowngrade** — 仅降级时重建表，升级时抛异常（强制开发者写 Migration）
+5. **UUID 替代 companion var** — 避免跨实例状态泄漏，每次创建新实例生成新 UUID
+
+### 环境配置（新沙箱必做）
+
+新沙箱无 Android SDK，需完整配置：
+
+1. Gradle 代理：`/root/.gradle/gradle.properties`（http/https proxyHost=127.0.0.1:18080）
+2. Robolectric 代理：`/root/.gradle/init.d/proxy.gradle`（jvmArgs 注入到 Test 任务）
+3. Android SDK 安装：cmdline-tools + platform-tools;35.0.0 + platforms;android-35 + build-tools;35.0.0
+4. local.properties：`sdk.dir=/opt/android-sdk`
+5. 环境变量：JAVA_HOME（mise java 17）、ANDROID_HOME、JAVA_TOOL_OPTIONS
+
+### 修改文件清单（24 文件）
+
+**Batch 1（2 文件）**：
+- `core/fsrs/src/main/java/com/wenyan/app/core/fsrs/FsrsWrapper.kt`
+- `core/fsrs/src/test/java/com/wenyan/app/core/fsrs/FsrsWrapperTest.kt`
+
+**Batch 2（7 文件）**：
+- `app/src/main/AndroidManifest.xml`
+- `app/build.gradle.kts`
+- `core/database/src/main/java/com/wenyan/app/core/database/di/DatabaseModule.kt`
+- `core/ai/build.gradle.kts`
+- `core/ai/src/main/java/com/wenyan/app/core/ai/di/AiModule.kt`
+- `core/data/build.gradle.kts`
+- `core/data/src/main/java/com/wenyan/app/core/data/repository/SeedDataLoader.kt`
+
+**Batch 3（3 文件）**：
+- `core/ai/src/test/java/com/wenyan/app/core/ai/recall/AntiRoteMemorizationTest.kt`
+- `core/designsystem/src/test/java/com/wenyan/app/core/designsystem/component/WenyanNavigationBarTest.kt`
+- `feature/aiassistant/src/main/java/com/wenyan/app/feature/aiassistant/AiAssistantViewModel.kt`
+
+**Batch 4（10 文件）**：
+- `core/data/src/main/java/com/wenyan/app/core/data/repository/ThemeRepositoryImpl.kt`
+- `feature/settings/build.gradle.kts`
+- `feature/settings/src/main/java/com/wenyan/app/feature/settings/SettingsScreen.kt`
+- `core/database/src/main/java/com/wenyan/app/core/database/dao/GraphNodeDao.kt`
+- `core/database/src/main/java/com/wenyan/app/core/database/dao/GraphEdgeDao.kt`
+- `core/database/src/main/java/com/wenyan/app/core/database/dao/DataSourceDao.kt`
+- `core/database/src/main/java/com/wenyan/app/core/database/dao/KnowledgePointDao.kt`
+- `core/database/src/main/java/com/wenyan/app/core/database/dao/MemoRecordDao.kt`
+- `core/data/src/main/java/com/wenyan/app/core/data/repository/GraphRepositoryImpl.kt`
+- `feature/cards/src/main/java/com/wenyan/app/feature/cards/CardsViewModel.kt`
+- `feature/aiassistant/src/main/java/com/wenyan/app/feature/aiassistant/ApiConfigViewModel.kt`
+
+**交接文档（4 文件）**：
+- `docs/plans/full-audit-v0.4.2-deep.md`（审计报告 + 修复计划）
+- `docs/03-FAILED-ATTEMPTS.md`（#013 新增）
+- `docs/SESSION_LOG.md`（本节）
+- `docs/00-STATUS.md` + `AGENTS.md`
+
+### 下次继续
+
+1. **P0**：跑 emulator 实测 v0.3 + v0.4.2 修复 — 验证 FSRS 调度正确性（EASY 间隔 > GOOD 间隔）+ 卡片翻转无镜像 + AI 入口可跳转
+2. **P0**：修复 4 个未修 P0（P0-E1/E2/E3/E4）— 工作量大，需单独排期
+3. **P1**：可选 — 发 Release v0.3.0（确认 CI 全绿后 `git tag v0.3.0 && git push origin v0.3.0`）
+4. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+5. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
+6. **P4**：架构重构 — ReviewRepository.getAllVerifiedKnowledgePoints 已成事实死代码
+
+### 新会话快速恢复 Checklist
+
+新沙箱会话开始时，按以下顺序操作（5-10 分钟内进入工作状态）：
+
+1. **读 [AGENTS.md](../AGENTS.md)** — 项目入口，了解技术栈、硬约束、CI 验证策略、当前状态
+2. **读 [00-STATUS.md](00-STATUS.md)** — 10 秒了解当前状态（无阻塞，v0.4.2 审计修复完成，207 tests）
+3. **读本文档最后一节** — 上次进度（本次会话：第三轮深度审计 v0.4.2 + 4 Batch 修复）
+4. **拉取最新代码**：
+   ```bash
+   cd /workspace && git pull origin main
+   ```
+5. **配置 Gradle 代理**（沙箱特有，新沙箱必做）：
+   ```bash
+   # /root/.gradle/gradle.properties
+   cat > /root/.gradle/gradle.properties <<'EOF'
+   systemProp.http.proxyHost=127.0.0.1
+   systemProp.http.proxyPort=18080
+   systemProp.https.proxyHost=127.0.0.1
+   systemProp.https.proxyPort=18080
+   systemProp.http.nonProxyHosts=localhost|127.0.0.1
+   EOF
+
+   # /root/.gradle/init.d/proxy.gradle（Robolectric 测试需要）
+   mkdir -p /root/.gradle/init.d
+   cat > /root/.gradle/init.d/proxy.gradle <<'EOF'
+   allprojects {
+       tasks.withType(Test).configureEach {
+           jvmArgs('-Dhttp.proxyHost=127.0.0.1','-Dhttp.proxyPort=18080',
+                   '-Dhttps.proxyHost=127.0.0.1','-Dhttps.proxyPort=18080',
+                   '-Dhttp.nonProxyHosts=localhost|127.0.0.1')
+       }
+   }
+   EOF
+   ```
+6. **配置环境变量**：
+   ```bash
+   export JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2
+   export ANDROID_HOME=/opt/android-sdk
+   export JAVA_TOOL_OPTIONS="-XX:-UseContainerSupport"
+   export PATH=$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+   ```
+7. **安装 Android SDK**（新沙箱无预装）：
+   ```bash
+   mkdir -p /opt/android-sdk/cmdline-tools
+   cd /opt/android-sdk/cmdline-tools
+   # 下载 cmdline-tools（如已存在则跳过）
+   if [ ! -d latest ]; then
+     wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdline-tools.zip
+     unzip -q /tmp/cmdline-tools.zip -d /opt/android-sdk/cmdline-tools
+     mv /opt/android-sdk/cmdline-tools/cmdline-tools /opt/android-sdk/cmdline-tools/latest
+   fi
+   yes | sdkmanager --licenses > /dev/null 2>&1
+   sdkmanager "platform-tools;35.0.0" "platforms;android-35" "build-tools;35.0.0"
+   ```
+8. **配置 local.properties**：
+   ```bash
+   echo "sdk.dir=/opt/android-sdk" > /workspace/local.properties
+   ```
+9. **验证构建**（注意：不能用 `gradle` shim，它用 mise 默认 JDK 25 与 AGP 8.6.0 不兼容）：
+   ```bash
+   $JAVA_HOME/bin/java -Dorg.gradle.daemon=false -cp /root/.local/share/mise/installs/gradle/8.14.4/gradle-8.14.4/lib/gradle-launcher-8.14.4.jar org.gradle.launcher.GradleMain :app:assembleDebug --no-daemon 2>&1 | tail -5
+   ```
+10. **开始工作**：根据 [00-STATUS.md](00-STATUS.md) 的"下一步优先级"选择任务

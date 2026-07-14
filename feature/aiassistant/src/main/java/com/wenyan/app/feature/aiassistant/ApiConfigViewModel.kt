@@ -131,6 +131,15 @@ class ApiConfigViewModel @Inject constructor(
             return
         }
 
+        // P1-NEW-5 修正：捕获 editingId 的瞬时值到局部量。
+        // 原实现第 134 行 `val id = editingId ?: UUID...` 读取 editingId，
+        // 第 154 行在 launch 协程内又读 `editingId == null`。
+        // editingId 是可变 var，若用户在 launch 调度前点了 showAddForm（把 editingId 置 null），
+        // launch 内读到的 editingId 已不是 saveConfig 调用时的值，导致：
+        //   - 原本是编辑场景（id=已存在），但 launch 内 editingId==null 误判为新建，
+        //     可能错误调用 setCurrent 把刚编辑的配置设为当前。
+        // 现用局部 isNew 在调用时锁定语义，避免协程内外读取不一致。
+        val isNew = editingId == null
         val id = editingId ?: UUID.randomUUID().toString()
         val existing = uiState.value.configs.find { it.id == id }
         val entity = ApiConfigEntity(
@@ -150,8 +159,8 @@ class ApiConfigViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 apiConfigRepository.saveConfig(entity)
-                // 如果是新建且列表中无当前配置，自动设为当前
-                if (editingId == null && uiState.value.currentConfigId == null) {
+                // 如果是新建且列表中无当前配置，自动设为当前（用局部 isNew 而非 editingId）
+                if (isNew && uiState.value.currentConfigId == null) {
                     apiConfigRepository.setCurrent(id)
                 }
                 dismissForm()

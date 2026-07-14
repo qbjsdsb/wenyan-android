@@ -11,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -43,6 +44,10 @@ class CardsViewModel @Inject constructor(
     // 当前卡片索引（UI 交互层）
     private val _currentIndex = MutableStateFlow(0)
 
+    // 错误提示（P1-NEW-4 新增，用于 rateCard 调度失败时反馈）
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
     /**
      * 卡片 UI 状态。
      *
@@ -52,12 +57,17 @@ class CardsViewModel @Inject constructor(
      * - [_currentIndex]：当前索引（交互层）
      *
      * 当卡片列表变化时，[currentIndex] 自动钳制到有效范围。
+     *
+     * P1-NEW-4 修正：新增 [CardsUiState.isFinished] 标记牌组完成。
+     * 原实现 currentIndex 持续累加超过 cards.size 后 currentCard 为 null，UI 显示空白但无完成态，
+     * 用户无法区分"加载中"和"已完成"。现当 currentIndex >= cards.size 时标记 isFinished=true。
      */
     val uiState: StateFlow<CardsUiState> = combine(
         cardRepository.getCardsForReview(),
         _isFlipped,
         _currentIndex,
     ) { cards, isFlipped, currentIndex ->
+        val isFinished = cards.isNotEmpty() && currentIndex >= cards.size
         val safeIndex = if (cards.isEmpty()) {
             0
         } else {
@@ -68,6 +78,7 @@ class CardsViewModel @Inject constructor(
             cards = cards.mapIndexed { index, card -> card.toUiItem(index) },
             currentIndex = safeIndex,
             isFlipped = isFlipped,
+            isFinished = isFinished,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -89,6 +100,12 @@ class CardsViewModel @Inject constructor(
      * 3. 异步调用 SchedulingRepository.rateCard 完成 FSRS 调度
      *
      * 无 pointId 的卡片（pointId 为空）仅推进索引，不触发调度。
+     *
+     * P1-NEW-4 修正：schedulingRepository.rateCard 加 try/catch。
+     * 原实现若调度回写抛异常（如数据库写入失败），异常会冒泡到协程异常处理器，
+     * 用户无任何反馈且 FSRS 状态可能不一致。现捕获异常并设置 errorMessage，
+     * UI 可据此提示用户"评分已记录但调度失败，请重试"。
+     * 注意：即使调度失败也不回滚 UI 索引（用户已心理上"翻过"这张卡，回滚会造成困惑）。
      */
     fun rateCard(rating: CardRating) {
         val current = uiState.value.currentCard ?: return
@@ -115,8 +132,17 @@ class CardsViewModel @Inject constructor(
             } catch (e: IllegalArgumentException) {
                 null
             } ?: return@launch
-            schedulingRepository.rateCard(pointId, fsrsRating, templateType)
+            try {
+                schedulingRepository.rateCard(pointId, fsrsRating, templateType)
+            } catch (e: Exception) {
+                _errorMessage.value = "评分调度失败：${e.message ?: "未知错误"}"
+            }
         }
+    }
+
+    /** 清除错误提示（P1-NEW-4 新增） */
+    fun clearError() {
+        _errorMessage.value = null
     }
 
     /** 将 [CardTemplate] 映射为 UI 层 [CardItem] */
@@ -136,6 +162,8 @@ data class CardsUiState(
     val cards: List<CardItem> = emptyList(),
     val currentIndex: Int = 0,
     val isFlipped: Boolean = false,
+    /** 牌组是否已完成（P1-NEW-4 新增，currentIndex >= cards.size 时为 true） */
+    val isFinished: Boolean = false,
 ) {
     val currentCard: CardItem? get() = cards.getOrNull(currentIndex)
 }

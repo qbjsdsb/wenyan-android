@@ -49,9 +49,12 @@ object DatabaseModule {
      * 使用 ApplicationContext 构建数据库，allowMainThreadQueries 默认不开启，
      * 所有数据库操作须在协程中执行。
      *
-     * 迁移策略（阶段3新增）：
+     * 迁移策略：
      * - [MIGRATION_1_2]：memo_records 补 elapsed_days/scheduled_days/reps 字段
-     * - fallbackToDestructiveMigration：兜底，未来新增未声明的迁移时重建表（仅开发期安全）
+     * - fallbackToDestructiveMigrationOnDowngrade：仅版本号降级时重建表（开发期降级测试用）。
+     *   P0-D1 修正：原 fallbackToDestructiveMigration() 在升级时也会清空整个数据库，
+     *   v0.2.0 已发布用户有真实 FSRS 复习记录，升级时被静默清空是不可接受的。
+     *   改为 OnDowngrade 后，未来升级若缺少迁移将抛出 IllegalStateException 而非静默丢数据。
      */
     @Provides
     @Singleton
@@ -64,7 +67,7 @@ object DatabaseModule {
             WenyanDatabase.DATABASE_NAME,
         )
             .addMigrations(MIGRATION_1_2)
-            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }
 

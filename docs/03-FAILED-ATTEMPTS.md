@@ -197,6 +197,22 @@
 
 ---
 
+## #013 library 模块 BuildConfig 不含 VERSION_NAME
+
+- **日期**：2026-07-14
+- **现象**：
+  ```
+  e: SettingsScreen.kt:242:52 Unresolved reference 'VERSION_NAME'.
+  ```
+- **根因**：`BuildConfig.VERSION_NAME` 是 `com.android.application` 插件（app 模块）的 defaultConfig 属性。`com.android.library` 插件（library 模块）即使启用 `buildFeatures { buildConfig = true }`，生成的 BuildConfig 类**不含** VERSION_NAME / versionCode 字段（library 模块没有这些概念）。在 library 模块中引用 `BuildConfig.VERSION_NAME` 会报 Unresolved reference。
+- **已尝试修复**：
+  - ❌ 仅在 library 模块 `buildFeatures { buildConfig = true }` — 启用后 BuildConfig 类存在但无 VERSION_NAME 字段，编译仍失败
+  - ✅ 在 library 模块 `defaultConfig { buildConfigField("String", "VERSION_NAME", "\"0.3.0\"") }` — 显式注入，编译通过
+- **教训**：library 模块需要版本号显示时，必须用 `buildConfigField` 显式注入，不能直接引用 `BuildConfig.VERSION_NAME`。注意需与 app 模块的 versionName 手动同步。
+- **相关文件**：`feature/settings/build.gradle.kts`、`feature/settings/src/main/java/com/wenyan/app/feature/settings/SettingsScreen.kt`
+
+---
+
 ## 模板（新失败方案按此格式记录）
 
 ```markdown

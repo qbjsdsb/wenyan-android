@@ -39,6 +39,7 @@ import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.designsystem.theme.ColorMode
 import com.wenyan.app.core.designsystem.theme.WenyanPaletteStyle
+import com.wenyan.app.feature.settings.BuildConfig
 
 /**
  * 设置页面。
@@ -237,7 +238,8 @@ fun SettingsScreen(
                 GroupedCard(title = "关于") {
                     GroupedCardItem(
                         title = "版本",
-                        subtitle = "v0.1.0",
+                        // P1-M2 修正：原硬编码 "v0.1.0" 与实际版本脱节，改读 BuildConfig.VERSION_NAME
+                        subtitle = "v${BuildConfig.VERSION_NAME}",
                     )
                 }
             }

@@ -17,6 +17,12 @@ android {
         consumerProguardFiles("consumer-rules.pro")
     }
 
+    // P1-H2 修正：启用 BuildConfig 以区分 Debug/Release 日志级别
+    // （AGP 8.0+ 库模块默认不生成 BuildConfig）
+    buildFeatures {
+        buildConfig = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

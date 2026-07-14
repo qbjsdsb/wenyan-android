@@ -16,8 +16,11 @@ android {
         applicationId = "com.wenyan.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        // P0-M2 修正：versionCode 必须每次发版递增，否则包安装器无法区分版本。
+        // v0.1.0=1, v0.2.0=2, v0.3.0=3（当前未发版的 v0.3 内部版本号）
+        versionCode = 3
+        // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
+        versionName = "0.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

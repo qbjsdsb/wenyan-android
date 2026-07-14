@@ -6,6 +6,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.room.withTransaction
+import com.wenyan.app.core.database.WenyanDatabase
 import com.wenyan.app.core.database.dao.ChapterDao
 import com.wenyan.app.core.database.dao.ExamCodeHistoryDao
 import com.wenyan.app.core.database.dao.ExamQuestionDao
@@ -38,10 +40,14 @@ import javax.inject.Singleton
  *
  * 种子数据结构对齐 generate_seed.py 输出格式，覆盖四类：
  * 知识点 / 真题 / 写作素材（卡片由 [com.wenyan.app.core.data.repository.CardRepository] 动态生成，不入库）。
+ *
+ * P0-D2 修正：导入过程用 [WenyanDatabase.withTransaction] 包裹，确保 7 步原子性。
+ * 原实现无事务包裹，中途失败会留下半成品数据 + DataStore 已写"initialized" → 永久半成品。
  */
 @Singleton
 class SeedDataLoader @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val database: WenyanDatabase,
     private val examCodeHistoryDao: ExamCodeHistoryDao,
     private val graphRepository: GraphRepository,
     private val subjectDao: SubjectDao,
@@ -95,8 +101,12 @@ class SeedDataLoader @Inject constructor(
      * 7. 保留科目代码历史 + 知识图谱骨架导入
      *
      * 卡片不入库：由 [com.wenyan.app.core.data.repository.CardRepository] 从知识点动态生成。
+     *
+     * P0-D2 修正：整个导入过程用 [database.withTransaction] 包裹，确保 7 步原子性。
+     * 任何一步失败将回滚全部已插入数据，且 markInitialized() 不会被调用（在事务外），
+     * 下次启动会重新尝试导入，避免留下"半成品数据 + initialized=true"的永久不一致。
      */
-    private suspend fun importToDatabase(seedData: SeedData) {
+    private suspend fun importToDatabase(seedData: SeedData) = database.withTransaction {
         val now = System.currentTimeMillis()
 
         // 步骤1：导入科目

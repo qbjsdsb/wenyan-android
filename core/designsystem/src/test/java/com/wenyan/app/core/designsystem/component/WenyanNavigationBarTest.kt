@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -78,6 +79,7 @@ class WenyanNavigationBarTest {
             }
         }
         composeRule.onNodeWithText("真题").performClick()
-        assert(clickedRoute == "quiz") { "Expected clickedRoute to be 'quiz', was $clickedRoute" }
+        // P0-T1c 修正：原用 Kotlin assert() 在 -ea 关闭时静默跳过，改为 JUnit assertEquals
+        assertEquals("Expected clickedRoute to be 'quiz'", "quiz", clickedRoute)
     }
 }

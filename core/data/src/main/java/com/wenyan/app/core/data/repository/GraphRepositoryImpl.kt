@@ -54,8 +54,9 @@ class GraphRepositoryImpl @Inject constructor(
             emit(emptyList())
             return@flow
         }
-        val prerequisiteNodes = prerequisiteIds.mapNotNull { graphNodeDao.getById(it) }
-        emit(prerequisiteNodes)
+        // P1-D2 修正：原 mapNotNull { getById(it) } 串行 N 次查询，改为一次 IN 批量查询
+        val nodesById = graphNodeDao.getByIds(prerequisiteIds).associateBy { it.id }
+        emit(prerequisiteIds.mapNotNull { nodesById[it] })
     }
 
     override fun getRelatedNodes(nodeId: String): Flow<List<GraphNodeEntity>> =
@@ -63,7 +64,13 @@ class GraphRepositoryImpl @Inject constructor(
             val relatedIds = edges.flatMap { edge ->
                 listOf(edge.sourceId, edge.targetId).filter { it != nodeId }
             }.distinct()
-            relatedIds.mapNotNull { graphNodeDao.getById(it) }
+            // P1-D1 修正：原 mapNotNull { getById(it) } 串行 N 次查询，改为一次 IN 批量查询
+            if (relatedIds.isEmpty()) {
+                emptyList()
+            } else {
+                val nodesById = graphNodeDao.getByIds(relatedIds).associateBy { it.id }
+                relatedIds.mapNotNull { nodesById[it] }
+            }
         }
 
     override fun getAdjacentNodes(nodeId: String): Flow<List<GraphNodeEntity>> =
@@ -71,7 +78,13 @@ class GraphRepositoryImpl @Inject constructor(
             val adjacentIds = edges.flatMap { edge ->
                 listOf(edge.sourceId, edge.targetId).filter { it != nodeId }
             }.distinct()
-            adjacentIds.mapNotNull { graphNodeDao.getById(it) }
+            // P1-D1 修正：同 getRelatedNodes，改为一次 IN 批量查询
+            if (adjacentIds.isEmpty()) {
+                emptyList()
+            } else {
+                val nodesById = graphNodeDao.getByIds(adjacentIds).associateBy { it.id }
+                adjacentIds.mapNotNull { nodesById[it] }
+            }
         }
 
     override fun getExamFrequency(nodeId: String): Flow<String> = flow {

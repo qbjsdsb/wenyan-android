@@ -24,6 +24,11 @@ import javax.inject.Inject
  * - PALETTE_STYLE_KEY: String (枚举 name)
  * - DYNAMIC_COLOR_KEY: Boolean
  * - SEED_COLOR_KEY: Int (ARGB)
+ *
+ * P1-NEW-7 修正：枚举 valueOf 改为 runCatching 容错。
+ * 原实现直接 valueOf，若未来版本删除了某枚举值（或 DataStore 被外部写入非法值），
+ * valueOf 抛 IllegalArgumentException → themeConfig Flow 崩溃 → 整个 App 主题系统瘫痪。
+ * 改为 runCatching { valueOf(...) }.getOrNull() ?: DEFAULT，遇到非法值降级为默认值。
  */
 class ThemeRepositoryImpl @Inject constructor(
     private val dataStore: DataStore<Preferences>,
@@ -31,17 +36,22 @@ class ThemeRepositoryImpl @Inject constructor(
 
     override val themeConfig: Flow<ThemeConfig> = dataStore.data.map { prefs ->
         ThemeConfig(
-            colorMode = ColorMode.valueOf(
-                prefs[COLOR_MODE_KEY] ?: ColorMode.SYSTEM.name,
-            ),
+            colorMode = prefs[COLOR_MODE_KEY]?.let { parseColorMode(it) } ?: ColorMode.SYSTEM,
             amoledMode = prefs[AMOLED_KEY] ?: false,
-            paletteStyle = WenyanPaletteStyle.valueOf(
-                prefs[PALETTE_STYLE_KEY] ?: WenyanPaletteStyle.TONAL_SPOT.name,
-            ),
+            paletteStyle = prefs[PALETTE_STYLE_KEY]?.let { parsePaletteStyle(it) }
+                ?: WenyanPaletteStyle.TONAL_SPOT,
             dynamicColor = prefs[DYNAMIC_COLOR_KEY] ?: true,
             seedColor = Color(prefs[SEED_COLOR_KEY] ?: 0xFF6750A4.toInt()),
         )
     }
+
+    /** 解析 ColorMode，非法值降级为 SYSTEM */
+    private fun parseColorMode(name: String): ColorMode? =
+        runCatching { ColorMode.valueOf(name) }.getOrNull()
+
+    /** 解析 WenyanPaletteStyle，非法值降级为 TONAL_SPOT */
+    private fun parsePaletteStyle(name: String): WenyanPaletteStyle? =
+        runCatching { WenyanPaletteStyle.valueOf(name) }.getOrNull()
 
     override suspend fun setColorMode(mode: ColorMode) {
         dataStore.edit { it[COLOR_MODE_KEY] = mode.name }
