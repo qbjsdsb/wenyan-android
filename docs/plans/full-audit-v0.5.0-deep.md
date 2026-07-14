@@ -442,63 +442,329 @@ data class AppMetaEntity(
 
 **验证**:`SchedulingRepositoryClockTest`:模拟时钟前移 + 回拨 5 分钟 + 回拨 1 小时,断言 `dueCards` 行为正确。
 
-### 1.C P0-E2 AI 对话持久化(大,出方案)
+### 1.C P0-E2 AI 对话持久化(大,出方案 — 完整实现级设计)
 
-**问题**:`AiAssistantViewModel` 把消息放在内存 `StateFlow<List<ChatMessage>>`,进程被杀即丢。
+**问题**:`AiAssistantViewModel` 把消息放在内存 `StateFlow<List<AiMessage>>`,进程被杀即丢。
 
-**修复方案**(完整设计,留待执行):
+**现状调研**(2026-07-15):
+- `chat_history` 表 + `ChatHistoryDao`:已注册,**无任何 Repository 引用**(死代码)
+- `ai_conversations` 表 + `AiConversationDao`:已注册,**无任何 Repository 引用**(死代码)
+- 两表字段 90% 重叠(NF-D4),`ai_conversations` 多 `is_bookmarked` + `context_screen_type` 改名
+- `AiAssistantViewModel` 用 `MutableStateFlow<List<AiMessage>>` 纯内存,`clearMessages()` 直接清空
+- `AiMessage` 含 `references: List<RagReference>` 和 `stage: SocraticStage?`,需序列化存储
 
-1. **数据模型重整**(结合 NF-D4):
-   - 合并 `chat_history` + `ai_conversations` 为单一 `ChatConversationEntity`(id/title/createdAt/lastMessageAt/model)
-   - `ChatMessageEntity`(id/conversationId/role/content/timestamp/tokens)
-   - v3 Migration:`INSERT INTO ai_conversations SELECT ... FROM chat_history`(字段对齐)+ DROP `chat_history`
+**修复方案**(实现级设计):
 
-2. **Repository**:
-   ```kotlin
-   interface ChatRepository {
-       fun observeConversations(): Flow<List<ChatConversation>>
-       fun observeMessages(conversationId: String): Flow<List<ChatMessage>>
-       suspend fun createConversation(): String
-       suspend fun appendMessage(conversationId: String, msg: ChatMessage)
-       suspend fun deleteConversation(id: String)
-   }
-   ```
+#### 1.C.1 数据模型重整(结合 NF-D4)
 
-3. **ViewModel 改造**:
-   - `currentConversationId: StateFlow<String?>` 持久化到 DataStore
-   - App 启动时若 `currentConversationId != null` → 从 DB 加载历史
-   - 发送/接收消息 → `appendMessage` 落库
+合并 `chat_history` + `ai_conversations` → 规范化两表模型(对话 + 消息):
 
-4. **UI**:加"新建对话"/"历史对话列表"入口。
+```kotlin
+// 新表:chat_conversations(对话元数据)
+@Entity(
+    tableName = "chat_conversations",
+    foreignKeys = [ForeignKey(
+        entity = ApiConfigEntity::class, parentColumns = ["id"],
+        childColumns = ["api_config_id"], onDelete = ForeignKey.SET_NULL
+    )],
+    indices = [Index("api_config_id"), Index("updated_at")]
+)
+data class ChatConversationEntity(
+    @PrimaryKey @ColumnInfo(name = "id") val id: String,
+    @ColumnInfo(name = "title") val title: String,           // 首条用户消息前 30 字
+    @ColumnInfo(name = "api_config_id") val apiConfigId: String?,
+    @ColumnInfo(name = "model") val model: String?,           // 使用的模型名
+    @ColumnInfo(name = "message_count") val messageCount: Int = 0,
+    @ColumnInfo(name = "created_at") val createdAt: Long,
+    @ColumnInfo(name = "updated_at") val updatedAt: Long,     // 最后消息时间
+)
 
-**验证**:`ChatRepositoryImplTest` + 集成测试(进程被杀重启,历史完整恢复)。
+// 新表:chat_messages(消息内容,FK→对话)
+@Entity(
+    tableName = "chat_messages",
+    foreignKeys = [ForeignKey(
+        entity = ChatConversationEntity::class, parentColumns = ["id"],
+        childColumns = ["conversation_id"], onDelete = ForeignKey.CASCADE
+    )],
+    indices = [Index("conversation_id"), Index("created_at")]
+)
+data class ChatMessageEntity(
+    @PrimaryKey @ColumnInfo(name = "id") val id: String,
+    @ColumnInfo(name = "conversation_id") val conversationId: String,
+    @ColumnInfo(name = "role") val role: String,              // USER / ASSISTANT
+    @ColumnInfo(name = "content") val content: String,
+    @ColumnInfo(name = "content_source") val contentSource: String?,  // AI_GENERATED 等
+    @ColumnInfo(name = "stage") val stage: String?,           // SocraticStage 序列化
+    @ColumnInfo(name = "references_json") val referencesJson: String?, // RagReference 列表 JSON
+    @ColumnInfo(name = "context_screen") val contextScreen: String?,
+    @ColumnInfo(name = "context_title") val contextTitle: String?,
+    @ColumnInfo(name = "tokens_used") val tokensUsed: Int?,
+    @ColumnInfo(name = "created_at") val createdAt: Long,
+)
+```
 
-### 1.D P0-E3 进程被杀状态恢复(大,出方案)
+#### 1.C.2 Migration v4→v5
+
+```kotlin
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // 1. 创建新表
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS chat_conversations (
+                id TEXT NOT NULL PRIMARY KEY,
+                title TEXT NOT NULL,
+                api_config_id TEXT,
+                model TEXT,
+                message_count INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                FOREIGN KEY(api_config_id) REFERENCES api_configs(id) ON DELETE SET NULL
+            )
+        """.trimIndent())
+        database.execSQL("CREATE INDEX IF NOT EXISTS index_chat_conversations_api_config_id ON chat_conversations(api_config_id)")
+        database.execSQL("CREATE INDEX IF NOT EXISTS index_chat_conversations_updated_at ON chat_conversations(updated_at)")
+
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id TEXT NOT NULL PRIMARY KEY,
+                conversation_id TEXT NOT NULL,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                content_source TEXT,
+                stage TEXT,
+                references_json TEXT,
+                context_screen TEXT,
+                context_title TEXT,
+                tokens_used INTEGER,
+                created_at INTEGER NOT NULL,
+                FOREIGN KEY(conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE
+            )
+        """.trimIndent())
+        database.execSQL("CREATE INDEX IF NOT EXISTS index_chat_messages_conversation_id ON chat_messages(conversation_id)")
+        database.execSQL("CREATE INDEX IF NOT EXISTS index_chat_messages_created_at ON chat_messages(created_at)")
+
+        // 2. 迁移存量数据:chat_history + ai_conversations → 单一默认对话 + messages
+        //    (两表当前无数据,但保留迁移逻辑防用户已有历史)
+        database.execSQL("""
+            INSERT INTO chat_conversations (id, title, api_config_id, model, message_count, created_at, updated_at)
+            SELECT 'migrated_legacy', '历史对话', NULL, NULL, COUNT(*), 
+                   COALESCE(MIN(created_at), 0), COALESCE(MAX(created_at), 0)
+            FROM (SELECT created_at FROM chat_history UNION ALL SELECT created_at FROM ai_conversations)
+            HAVING COUNT(*) > 0
+        """.trimIndent())
+
+        // chat_history → chat_messages
+        database.execSQL("""
+            INSERT INTO chat_messages (id, conversation_id, role, content, content_source, stage, references_json, context_screen, context_title, tokens_used, created_at)
+            SELECT id, 'migrated_legacy', role, content, NULL, NULL, NULL, context_screen, context_title, tokens_used, created_at
+            FROM chat_history
+        """.trimIndent())
+        // ai_conversations → chat_messages(context_screen_type → context_screen)
+        database.execSQL("""
+            INSERT INTO chat_messages (id, conversation_id, role, content, content_source, stage, references_json, context_screen, context_title, tokens_used, created_at)
+            SELECT id, 'migrated_legacy', role, content, NULL, NULL, NULL, context_screen_type, context_title, tokens_used, created_at
+            FROM ai_conversations
+        """.trimIndent())
+
+        // 3. 删除旧表
+        database.execSQL("DROP TABLE IF EXISTS chat_history")
+        database.execSQL("DROP TABLE IF EXISTS ai_conversations")
+    }
+}
+```
+
+**注意**:当前两表无数据(死代码),迁移主要保证 schema 正确。exportSchema=true 需更新 schema JSON。
+
+#### 1.C.3 DAO
+
+```kotlin
+@Dao
+interface ChatConversationDao {
+    @Upsert suspend fun upsert(entity: ChatConversationEntity)
+    @Query("SELECT * FROM chat_conversations ORDER BY updated_at DESC")
+    fun observeAll(): Flow<List<ChatConversationEntity>>
+    @Query("SELECT * FROM chat_conversations WHERE id = :id")
+    suspend fun getById(id: String): ChatConversationEntity?
+    @Query("DELETE FROM chat_conversations WHERE id = :id")
+    suspend fun deleteById(id: String)
+    @Query("UPDATE chat_conversations SET message_count = :count, updated_at = :updatedAt WHERE id = :id")
+    suspend fun touch(id: String, count: Int, updatedAt: Long)
+}
+
+@Dao
+interface ChatMessageDao {
+    @Upsert suspend fun upsert(entity: ChatMessageEntity)
+    @Query("SELECT * FROM chat_messages WHERE conversation_id = :convId ORDER BY created_at ASC")
+    fun observeByConversation(convId: String): Flow<List<ChatMessageEntity>>
+    @Query("DELETE FROM chat_messages WHERE conversation_id = :convId")
+    suspend fun deleteByConversation(convId: String)
+    @Query("SELECT COUNT(*) FROM chat_messages WHERE conversation_id = :convId")
+    suspend fun countByConversation(convId: String): Int
+}
+```
+
+#### 1.C.4 Repository
+
+```kotlin
+interface ChatRepository {
+    fun observeConversations(): Flow<List<ChatConversation>>
+    fun observeMessages(conversationId: String): Flow<List<ChatMessage>>
+    val currentConversationId: Flow<String?>
+    suspend fun createConversation(title: String, apiConfigId: String?, model: String?): String
+    suspend fun appendMessage(conversationId: String, message: ChatMessage)
+    suspend fun deleteConversation(id: String)
+    suspend fun setCurrentConversation(id: String?)
+    suspend fun loadOrInitCurrent(): String?  // 启动时恢复
+}
+```
+
+实现要点:
+- 注入 `ChatConversationDao` + `ChatMessageDao` + `DataStore<Preferences>`(持久化 currentConversationId)
+- `appendMessage` 内部:upsert message + `conversationDao.touch()` 更新 count/updatedAt
+- `ChatMessage` ↔ `ChatMessageEntity` 映射:`references` 用 `kotlinx.serialization` JSON 序列化,`stage` 用 enum.name
+
+#### 1.C.5 ViewModel 改造
+
+```kotlin
+@HiltViewModel
+class AiAssistantViewModel @Inject constructor(
+    private val chatRepository: ChatRepository,
+    // ... 其他依赖不变
+) : ViewModel() {
+
+    val uiState: StateFlow<AiAssistantUiState> = chatRepository.currentConversationId
+        .flatMapLatest { convId ->
+            if (convId != null) {
+                chatRepository.observeMessages(convId).map { msgs ->
+                    AiAssistantUiState(messages = msgs.map { it.toAiMessage() })
+                }
+            } else {
+                flowOf(AiAssistantUiState())
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AiAssistantUiState())
+
+    init {
+        viewModelScope.launch { chatRepository.loadOrInitCurrent() }
+    }
+
+    fun sendMessage(text: String) {
+        viewModelScope.launch {
+            val convId = ensureConversation()  // 无 current 则创建
+            // ... 保存 user message
+            chatRepository.appendMessage(convId, userMsg)
+            // ... AI 调用后保存 assistant message
+            chatRepository.appendMessage(convId, assistantMsg)
+        }
+    }
+
+    fun clearMessages() {
+        // 改为:删除当前对话 + 清空 currentConversationId
+        viewModelScope.launch {
+            chatRepository.currentConversationId.first()?.let {
+                chatRepository.deleteConversation(it)
+            }
+            chatRepository.setCurrentConversation(null)
+        }
+    }
+}
+```
+
+#### 1.C.6 UI 变更(最小化)
+
+- AiAssistantScreen 顶部加"历史对话"入口(Drawer 或 Sheet)
+- 对话列表项:title + updatedAt + messageCount,点击切换
+- "新建对话"按钮:调 `setCurrentConversation(null)` + 清空 UI
+- **不做**复杂 UI(搜索/重命名/收藏),留后续迭代
+
+#### 1.C.7 验证
+
+- `ChatRepositoryImplTest`:创建/追加/删除/恢复
+- `MigrationTest`(Room schema):v4→v5 数据迁移正确性
+- 集成测试:进程被杀重启,历史完整恢复
+- 现有 `AiAssistantViewModelTest` 适配(注入 FakeChatRepository)
+
+#### 1.C.8 风险与决策
+
+| 风险 | 决策 |
+|------|------|
+| 旧表有数据但无 Repository 引用,可能从未写入 | Migration 保留迁移逻辑但预期 0 行 |
+| `references: List<RagReference>` 序列化 | 用 kotlinx.serialization JSON,字段 nullable |
+| 存量用户升级后 currentConversationId=null | `loadOrInitCurrent()` 返回 null,UI 空白,发首条消息时自动创建 |
+| DB version 4→5 | 与 1.B 的 v3→v4 链接,Migration_4_5 纯 DDL+DML,幂等 |
+
+**工作量预估**:8-12 文件改动(Entity×2 + DAO×2 + Migration + Repository + ViewModel + DI + Test×3),建议单独一个 commit。
+
+### 1.D P0-E3 进程被杀状态恢复(大,出方案 — 实际范围远小于预估)
 
 **问题**:全项目 0 处 `rememberSaveable` / 0 处 `onSaveInstanceState`(NF-U1 已确认)。
 
-**修复方案**(完整设计,留待执行):
+**现状调研**(2026-07-15,1.L 修复后重新评估):
 
-1. **审计所有 Composable 的可变状态**:
-   ```bash
-   grep -rn "remember\s*{" feature/ core/designsystem/ | wc -l
-   grep -rn "rememberSaveable" feature/ core/designsystem/
-   ```
+#### 1.D.1 ViewModel SavedStateHandle — ✅ 已完成(1.L 第六批)
 
-2. **改造清单**(预估 30+ 处):
-   - 所有 `var x by remember { mutableStateOf(...) }` 改 `rememberSaveable`
-   - 复杂状态用 `Saver` 自定义保存
-   - `LazyListState` / `ScrollState` 用 `rememberSaveable`
-   - **优先级**:CardsScreen(isFlipped/currentIndex) > QuizScreen(selectedYear/expandedQuestionIds) > KnowledgeScreen(selectedCategory) > AiAssistantScreen(listState) > KnowledgePointDetailScreen(scrollState 提到 Crossfade 外)
+| ViewModel | SavedStateHandle | 持久化字段 | 状态 |
+|-----------|-----------------|-----------|------|
+| CardsViewModel | ✅ | isFlipped, currentIndex | 1.L 已修 |
+| QuizViewModel | ✅ | selectedYear, expandedQuestionIds | 1.L 已修 |
+| KnowledgeViewModel | ✅ | selectedCategory | 1.L 已修 |
+| KnowledgePointDetailViewModel | ✅ | pointId(导航参数) | 原有 |
+| ThemeViewModel | ❌ 不需要 | 主题配置从 DataStore 读取,已持久化 | - |
+| GraphViewModel | ❌ 不需要 | 纯 combine repository Flow,无可变 UI 状态 | - |
+| AiAssistantViewModel | ❌ 由 1.C 覆盖 | 消息将持久化到 DB | 1.C 处理 |
+| ApiConfigViewModel | ❌ 不需要 | editingId 已用 MutableStateFlow(1.Q),表单状态瞬时 | - |
 
-3. **ViewModel 已 SavedStateHandle 注入**(检查 Hilt ViewModelFactory 配置):
-   - 所有 ViewModel 构造函数加 `savedStateHandle: SavedStateHandle`
-   - 关键状态写 `savedStateHandle["key"] = value` + 读 `savedStateHandle.getStateFlow("key", default)`
-   - **当前仅 `KnowledgePointDetailViewModel` 使用**(subagent 已核对)
+**结论**:ViewModel 层 SavedStateHandle 已全部覆盖,无需额外工作。
 
-4. **Manifest**:`android:configChanges` 评估 + `android:saveEnabled="true"`(默认)。
+#### 1.D.2 Composable `rememberSaveable` — 仅 3 处(非预估的 30+)
 
-**验证**:开发者选项"不保留活动"开启,旋转 + 切后台 + 杀进程,UI 状态完整恢复。
+实际 `grep` 结果:`feature/` 下仅 3 处 `remember { mutableStateOf }` / `rememberScrollState` / `rememberLazyListState`:
+
+| 文件 | 行 | 当前代码 | 改造 | 优先级 |
+|------|----|---------|------|--------|
+| ApiConfigScreen.kt | 84 | `var deletingConfig by remember { mutableStateOf<ApiConfigEntity?>(null) }` | 改 `rememberSaveable` + 自定义 Saver(只存 id:String?) | P2(删除确认弹窗,丢失影响小) |
+| AiAssistantScreen.kt | 78 | `val listState = rememberLazyListState()` | 改 `rememberSaveable(saver = LazyListState.Saver)` | P3(1.C 持久化消息后,滚动位置次要) |
+| KnowledgePointDetailScreen.kt | 122 | `val scrollState = rememberScrollState()`(在 Crossfade 内) | 提到 Crossfade 外 + `rememberSaveable` | P2(详情页滚动位置) |
+
+`SnackbarHostState` × 3 处(GraphScreen/ApiConfigScreen/AiAssistantScreen):瞬时反馈,无需持久化。
+
+#### 1.D.3 Manifest configChanges — ✅ 已完成(1.L)
+
+`AndroidManifest.xml:27` 已设 `android:configChanges="orientation|screenSize|keyboardHidden|screenLayout"`。
+
+#### 1.D.4 实施方案
+
+```kotlin
+// ApiConfigScreen.kt — 删除确认状态(只存 id,重建时从 uiState 查找)
+val saver = remember {
+    Saver<ApiConfigEntity?, String?>(
+        save = { it?.id },
+        restore = { id -> id } // 简化:恢复后需从 uiState 重新匹配,或直接关闭弹窗
+    )
+}
+var deletingConfigId by rememberSaveable(saver = Saver(...)) { mutableStateOf<String?>(null) }
+
+// AiAssistantScreen.kt — 滚动位置
+val listState = rememberLazyListState()
+// LazyListState 已自带 Saver,但 rememberLazyListState 不用 rememberSaveable
+// 改为:val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+
+// KnowledgePointDetailScreen.kt — 滚动位置提到 Crossfade 外
+val scrollState = rememberSaveable { ScrollState(0) }
+// Crossfade { ... scrollState ... }  ← scrollState 定义在 Crossfade 外层
+```
+
+#### 1.D.5 风险与决策
+
+| 风险 | 决策 |
+|------|------|
+| `ApiConfigEntity` 不可直接 rememberSaveable(非 Bundle 友好) | 只存 id:String?,恢复后从 uiState 查找或关闭弹窗 |
+| `LazyListState.Saver` API 版本兼容 | Compose 1.5+ 已稳定,当前 BOM 2025.12.00 支持 |
+| 滚动位置恢复在 1.C 消息加载后可能跳变 | 1.C 实现后统一验证 |
+
+**工作量预估**:3 文件小改(~30 行),可与 1.C 实现一起 commit,或单独小 commit。
+
+**结论**:1.D 实际范围远小于原预估(30+ → 3 处),因 1.L 已覆盖 ViewModel 层。剩余 Composable 层 3 处 `rememberSaveable` 为 P2-P3 优先级,非阻塞。
 
 ### 1.E ⚠ 新 P0-F1 FSRS 公式版本定位决策(最高优先级,出决策)
 
