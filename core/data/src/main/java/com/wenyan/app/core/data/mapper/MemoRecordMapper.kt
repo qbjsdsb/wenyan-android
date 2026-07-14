@@ -1,5 +1,6 @@
 package com.wenyan.app.core.data.mapper
 
+import android.util.Log
 import com.wenyan.app.core.database.entity.MemoRecordEntity
 import com.wenyan.app.core.fsrs.FlashCard
 import com.wenyan.app.core.fsrs.Rating
@@ -140,7 +141,13 @@ object MemoRecordMapper {
                     "$inner,$entry]"
                 }
             }
-            else -> "[$entry]"  // 格式异常时重置
+            else -> {
+                // P0-EE1 修正：原实现静默重置丢历史，现记录警告日志。
+                // 旧历史因格式损坏无法安全解析，只能保留新 entry，但日志可追溯。
+                // TODO(Batch 7): 引入 kotlinx.serialization 替代 StringBuilder，做健壮 JSON 解析。
+                Log.w("MemoRecordMapper", "History JSON 格式异常，已重置并保留新 entry，旧历史丢失: $trimmed")
+                "[$entry]"
+            }
         }
     }
 

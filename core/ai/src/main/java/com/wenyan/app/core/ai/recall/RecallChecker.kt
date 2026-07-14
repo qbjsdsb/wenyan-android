@@ -56,8 +56,17 @@ class RecallChecker @Inject constructor(
             QuestionType.ESSAY -> {
                 val l2Result = checkL2Semantic(userAnswer, correctAnswer)
                 if (l2Result.rating == RecallRating.HARD && l2Result.coverage in PARTIAL_CORRECT_RANGE) {
-                    // L2 判定"部分正确"（覆盖率 60-85%）时触发 L3 评估
-                    emit(l2Result)
+                    // L2 判定"部分正确"（覆盖率 60-85%）时触发 L3 LLM 评估
+                    // P0-A1 修正：原实现 if/else 两分支均 emit(l2Result)，L3 从未触发。
+                    // 现 if 分支调用 checkL3Llm()，LLM 失败时降级为 L2 结果，不阻塞复习流程。
+                    val l3Result = try {
+                        checkL3Llm(userAnswer, correctAnswer)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        null
+                    }
+                    emit(l3Result ?: l2Result)
                 } else {
                     emit(l2Result)
                 }

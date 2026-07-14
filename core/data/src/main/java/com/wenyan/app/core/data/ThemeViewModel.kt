@@ -8,6 +8,7 @@ import com.wenyan.app.core.designsystem.theme.ColorMode
 import com.wenyan.app.core.designsystem.theme.ThemeConfig
 import com.wenyan.app.core.designsystem.theme.WenyanPaletteStyle
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -29,23 +30,40 @@ class ThemeViewModel @Inject constructor(
     val themeConfig: StateFlow<ThemeConfig> = themeRepository.themeConfig
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeConfig())
 
-    fun setColorMode(mode: ColorMode) = viewModelScope.launch {
+    fun setColorMode(mode: ColorMode) = launchSafely {
         themeRepository.setColorMode(mode)
     }
 
-    fun setAmoledMode(enabled: Boolean) = viewModelScope.launch {
+    fun setAmoledMode(enabled: Boolean) = launchSafely {
         themeRepository.setAmoledMode(enabled)
     }
 
-    fun setPaletteStyle(style: WenyanPaletteStyle) = viewModelScope.launch {
+    fun setPaletteStyle(style: WenyanPaletteStyle) = launchSafely {
         themeRepository.setPaletteStyle(style)
     }
 
-    fun setDynamicColor(enabled: Boolean) = viewModelScope.launch {
+    fun setDynamicColor(enabled: Boolean) = launchSafely {
         themeRepository.setDynamicColor(enabled)
     }
 
-    fun setSeedColor(color: Color) = viewModelScope.launch {
+    fun setSeedColor(color: Color) = launchSafely {
         themeRepository.setSeedColor(color)
+    }
+
+    /**
+     * 安全启动协程：捕获 DataStore IOException 等异常，避免崩溃全局 ThemeViewModel。
+     *
+     * P0-V1 修正：原 5 处 viewModelScope.launch 全无 try/catch，
+     * DataStore 抛 IOException 时 App 崩溃（ThemeViewModel 是全局单例）。
+     * CancellationException 必须重新抛出，不吞协程取消。
+     */
+    private fun launchSafely(block: suspend () -> Unit) = viewModelScope.launch {
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // 静默处理，避免 DataStore IO 异常崩溃全局主题 ViewModel
+        }
     }
 }

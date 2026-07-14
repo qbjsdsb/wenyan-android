@@ -45,7 +45,8 @@ class ApiConfigViewModel @Inject constructor(
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
     /** 编辑中的配置 ID（null = 新建模式） */
-    private var editingId: String? = null
+    // P0-C1 修正：原为 var，非线程安全。改用 MutableStateFlow（内部 AtomicReference）。
+    private val editingId = MutableStateFlow<String?>(null)
 
     /**
      * UI 状态：合并配置列表 + 当前配置标记。
@@ -63,14 +64,14 @@ class ApiConfigViewModel @Inject constructor(
 
     /** 打开新建表单 */
     fun showAddForm() {
-        editingId = null
+        editingId.value = null
         _formState.value = ApiConfigFormState()
         _isFormVisible.value = true
     }
 
     /** 打开编辑表单，预填已有配置 */
     fun showEditForm(config: ApiConfigEntity) {
-        editingId = config.id
+        editingId.value = config.id
         _formState.value = ApiConfigFormState(
             provider = config.provider,
             displayName = config.displayName,
@@ -86,7 +87,7 @@ class ApiConfigViewModel @Inject constructor(
     /** 关闭表单 */
     fun dismissForm() {
         _isFormVisible.value = false
-        editingId = null
+        editingId.value = null
         _formState.value = ApiConfigFormState()
     }
 
@@ -96,9 +97,9 @@ class ApiConfigViewModel @Inject constructor(
         _formState.update {
             it.copy(
                 provider = provider,
-                displayName = if (editingId == null) preset.displayName else it.displayName,
-                baseUrl = if (editingId == null) preset.defaultBaseUrl else it.baseUrl,
-                model = if (editingId == null) preset.defaultModel else it.model,
+                displayName = if (editingId.value == null) preset.displayName else it.displayName,
+                baseUrl = if (editingId.value == null) preset.defaultBaseUrl else it.baseUrl,
+                model = if (editingId.value == null) preset.defaultModel else it.model,
             )
         }
     }
@@ -133,14 +134,14 @@ class ApiConfigViewModel @Inject constructor(
 
         // P1-NEW-5 修正：捕获 editingId 的瞬时值到局部量。
         // 原实现第 134 行 `val id = editingId ?: UUID...` 读取 editingId，
-        // 第 154 行在 launch 协程内又读 `editingId == null`。
+        // 第 154 行在 launch 协程内又读 `editingId.value == null`。
         // editingId 是可变 var，若用户在 launch 调度前点了 showAddForm（把 editingId 置 null），
         // launch 内读到的 editingId 已不是 saveConfig 调用时的值，导致：
         //   - 原本是编辑场景（id=已存在），但 launch 内 editingId==null 误判为新建，
         //     可能错误调用 setCurrent 把刚编辑的配置设为当前。
         // 现用局部 isNew 在调用时锁定语义，避免协程内外读取不一致。
-        val isNew = editingId == null
-        val id = editingId ?: UUID.randomUUID().toString()
+        val isNew = editingId.value == null
+        val id = editingId.value ?: UUID.randomUUID().toString()
         val existing = uiState.value.configs.find { it.id == id }
         val entity = ApiConfigEntity(
             id = id,

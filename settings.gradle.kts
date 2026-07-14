@@ -25,7 +25,8 @@ dependencyResolutionManagement {
         maven { url = uri("https://maven.aliyun.com/repository/public") }
         google()
         mavenCentral()
-        maven { url = uri("https://jitpack.io") }  // JitPack 仓库，用于 FSRS-Kotlin 库
+        // P0-B8 修正：移除 jitpack.io 死仓库声明（项目无 com.github.* 依赖，FSRS 自实现）。
+        // 原声明导致 CI/沙盒环境（jitpack 不可达）依赖解析卡在 TCP 超时。
     }
 }
 

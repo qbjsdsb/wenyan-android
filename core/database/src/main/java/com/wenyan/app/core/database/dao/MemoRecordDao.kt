@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import com.wenyan.app.core.database.entity.MemoRecordEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -14,7 +15,9 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface MemoRecordDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // P0-DB 修正：原用 @Insert(REPLACE)，会 DELETE+INSERT 触发 FK CASCADE + 丢 history。
+    // 改用 @Upsert，内部用 INSERT ... ON CONFLICT DO UPDATE，不触发 DELETE，安全更新。
+    @Upsert
     suspend fun upsert(entity: MemoRecordEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

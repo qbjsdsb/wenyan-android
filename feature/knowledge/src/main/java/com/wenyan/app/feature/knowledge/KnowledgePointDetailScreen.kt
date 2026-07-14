@@ -256,7 +256,7 @@ private fun MultiPerspectiveSection(point: KnowledgePointEntity) {
             if (hasStudyText) {
                 PerspectiveCard(
                     label = "学习理解（袁行霈）",
-                    content = point.studyText!!,
+                    content = point.studyText.orEmpty(),
                     isOfficial = false,
                 )
             }
