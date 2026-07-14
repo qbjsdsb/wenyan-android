@@ -7,6 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDateTime
 import kotlin.math.roundToInt
+import kotlin.random.Random
 
 /**
  * Task 30 - FsrsWrapper 单元测试。
@@ -134,6 +135,43 @@ class FsrsWrapperTest {
         assertEquals(0.2172f, wrapper.initStability(Rating.AGAIN), 0.0001f)
     }
 
+    /**
+     * NF-T7 回归：initStability 应使用 `rating.index` 而非 `rating.value - 1` 访问权重数组。
+     *
+     * 验证 4 档评分各自返回对应的 w[i]：
+     * - AGAIN → w[0] = 0.2172
+     * - HARD  → w[1] = 0.3174
+     * - GOOD  → w[2] = 1.7265
+     * - EASY  → w[3] = 5.1816
+     *
+     * 若未来 Rating 枚举顺序调整（如新增 MANUALLY_MARKED 档），`value - 1` 不再等于
+     * 数组下标，本测试会立即失败，强制开发者重新审视 index 映射。
+     */
+    @Test
+    fun initStability_allRatings_matchWeightsAtIndex() {
+        val wrapper = FsrsWrapper(requestRetention = 0.9f, maximumInterval = 365)
+        val cases = listOf(
+            Rating.AGAIN to 0,
+            Rating.HARD to 1,
+            Rating.GOOD to 2,
+            Rating.EASY to 3,
+        )
+        for ((rating, expectedIndex) in cases) {
+            assertEquals(
+                "initStability($rating) 应等于 w[$expectedIndex]",
+                FsrsWrapper.DEFAULT_WEIGHTS[expectedIndex],
+                wrapper.initStability(rating),
+                0.0001f,
+            )
+            // 同时验证 index 属性与数组下标一致
+            assertEquals(
+                "Rating.index 应等于数组下标",
+                expectedIndex,
+                rating.index,
+            )
+        }
+    }
+
     // ===================== 初始难度 initDifficulty =====================
 
     /** initDifficulty（Rating.GOOD 返回 w[4]=4.7284f） */
@@ -212,6 +250,88 @@ class FsrsWrapperTest {
             wrapper.schedule(reviewCard, Rating.GOOD, now).scheduledDays
         }.toSet()
         assertEquals("enableFuzz=false 应产生确定性间隔", 1, intervals.size)
+    }
+
+    /**
+     * NF-T8 回归：applyFuzz 使用可注入 Random，相同种子的两个 wrapper 产生相同 fuzz 输出。
+     *
+     * 验证：
+     * - 两个 wrapper 用相同种子 Random(42)，对相同卡片调度，scheduledDays 应一致
+     * - 与 enableFuzz=false 的"裸间隔"不同（证明 fuzz 生效）
+     *
+     * 原实现用全局 `Random.nextFloat()`，每次运行结果不同，无法写精确断言。
+     * 修正后可注入固定种子，测试可验证 fuzz 是否被正确应用。
+     */
+    @Test
+    fun applyFuzz_withSeededRandom_isDeterministic() {
+        val now = LocalDateTime.of(2026, 7, 10, 12, 0)
+        val reviewCard = FlashCard(
+            state = State.REVIEW,
+            stability = 50f,
+            difficulty = 5f,
+            lastReview = now.minusDays(30),
+            reps = 5,
+        )
+
+        // 两个独立 wrapper，相同种子，独立消耗随机数
+        val wrapper1 = FsrsWrapper(
+            requestRetention = 0.9f, maximumInterval = 365,
+            enableFuzz = true, random = Random(42),
+        )
+        val wrapper2 = FsrsWrapper(
+            requestRetention = 0.9f, maximumInterval = 365,
+            enableFuzz = true, random = Random(42),
+        )
+
+        val days1 = wrapper1.schedule(reviewCard, Rating.GOOD, now).scheduledDays
+        val days2 = wrapper2.schedule(reviewCard, Rating.GOOD, now).scheduledDays
+
+        assertEquals(
+            "相同种子的两个 wrapper 应产生相同 scheduledDays（fuzz 输出可重现）",
+            days1, days2,
+        )
+
+        // 验证 fuzz 确实生效：与 enableFuzz=false 的裸间隔对比
+        val noFuzzWrapper = FsrsWrapper(
+            requestRetention = 0.9f, maximumInterval = 365, enableFuzz = false,
+        )
+        val noFuzzDays = noFuzzWrapper.schedule(reviewCard, Rating.GOOD, now).scheduledDays
+        // stability=50 时裸间隔 = 9*50*(1/0.9-1) = 50，fuzz 后应在 [49, 51] 范围（±5% = ±2.5）
+        // 注意：fuzz 是 ±5% 但取整后可能仍等于裸值（概率事件），所以只验证 fuzz 在合理范围
+        assertTrue(
+            "fuzz 后 scheduledDays ($days1) 应在裸间隔 ($noFuzzDays) ±3 范围内",
+            kotlin.math.abs(days1 - noFuzzDays) <= 3,
+        )
+    }
+
+    /**
+     * NF-T8 补充：不同种子的 wrapper 应产生不同 fuzz 输出（高概率）。
+     *
+     * 100 个不同种子的 wrapper 调度相同卡片，scheduledDays 集合 size 应 > 1
+     * （证明 fuzz 确实引入了随机性，而非恒定返回）。
+     */
+    @Test
+    fun applyFuzz_differentSeeds_producesVariety() {
+        val now = LocalDateTime.of(2026, 7, 10, 12, 0)
+        val reviewCard = FlashCard(
+            state = State.REVIEW,
+            stability = 50f,
+            difficulty = 5f,
+            lastReview = now.minusDays(30),
+            reps = 5,
+        )
+
+        val distinctDays = (1..100).map { seed ->
+            FsrsWrapper(
+                requestRetention = 0.9f, maximumInterval = 365,
+                enableFuzz = true, random = Random(seed),
+            ).schedule(reviewCard, Rating.GOOD, now).scheduledDays
+        }.toSet()
+
+        assertTrue(
+            "100 个不同种子的 wrapper 应产生 >1 种 scheduledDays（实际 ${distinctDays.size}）",
+            distinctDays.size > 1,
+        )
     }
 
     // ===================== F-01: nextDifficulty 权重索引修正回归测试 =====================

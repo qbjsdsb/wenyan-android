@@ -193,6 +193,60 @@ class RecallCheckerTest {
         assertTrue("覆盖率<60%应为HARD", result.coverage < 0.60f)
     }
 
+    /**
+     * NF-A2 回归：L2 在 75-85% 相似度范围应返回 GOOD（不再统一返回 HARD 触发 L3）。
+     *
+     * 构造 Jaccard = 8/10 = 0.8 ∈ [0.75, 0.85) → GOOD
+     * - correctAnswer "建安风骨是汉代诗歌"：9 字 → 8 bigrams（建安/安风/风骨/骨是/是汉/汉代/代诗/诗歌）
+     * - userAnswer "建安风骨是汉代诗歌代表"：11 字 → 10 bigrams（多了 歌代/代表）
+     * - intersection = 8（correct 的 8 个 bigrams 全部在 user 中）
+     * - union = 10
+     * - Jaccard = 0.8
+     *
+     * 修正前：60-85% 范围统一返回 HARD（触发 L3），L3 失败时降级为 HARD（过严）
+     * 修正后：75-85% 直接返回 GOOD，不依赖 L3
+     */
+    @Test
+    fun c5_15_l2_highSimilarity_returnsGood_nfA2() = runTest {
+        val correctAnswer = "建安风骨是汉代诗歌"
+        val userAnswer = "建安风骨是汉代诗歌代表"
+
+        val result = checker.checkRecall(userAnswer, correctAnswer, QuestionType.ESSAY).first()
+
+        assertEquals(RecallLevel.L2, result.level)
+        assertEquals("Jaccard 应为 0.8", 0.8f, result.coverage, 0.001f)
+        assertEquals("NF-A2: 75-85% 相似度应返回 GOOD", RecallRating.GOOD, result.rating)
+    }
+
+    /**
+     * NF-A2 补充：L2 在 60-75% 相似度范围仍返回 HARD 并触发 L3 LLM 评估。
+     *
+     * 构造 Jaccard = 8/12 ≈ 0.667 ∈ [0.60, 0.75) → HARD + 触发 L3
+     * - correctAnswer "建安风骨是汉末诗歌"：9 字 → 8 bigrams
+     * - userAnswer "建安风骨是汉末诗歌代表特征"：13 字 → 12 bigrams（多了 歌代/代表/表特/特征）
+     * - intersection = 8, union = 12, Jaccard = 0.667
+     *
+     * FakeAiService 返回 score=70（L3 评分 60-75 → HARD），所以最终结果是 L3 level。
+     *
+     * 注意：L3 被触发后 [RecallResult.coverage] 的语义从"L2 Jaccard 相似度"变为
+     * "L3 score/100"（见 [RecallChecker.checkL3Llm] 中 `coverage = score / 100f`）。
+     * 因此 L3 结果的 coverage = 70/100 = 0.7，而非 L2 的 0.667。
+     */
+    @Test
+    fun c5_15_l2_partialSimilarity_triggersL3_nfA2() = runTest {
+        aiService.response = """{"score": 70, "reason": "部分正确"}"""
+        val correctAnswer = "建安风骨是汉末诗歌"
+        val userAnswer = "建安风骨是汉末诗歌代表特征"
+
+        val result = checker.checkRecall(userAnswer, correctAnswer, QuestionType.ESSAY).first()
+
+        // L3 触发后 coverage = score/100 = 0.7（非 L2 的 Jaccard 0.667）
+        assertEquals("L3 coverage 应为 score/100", 0.7f, result.coverage, 0.001f)
+        assertEquals("60-75% 相似度应触发 L3 评估", RecallLevel.L3, result.level)
+        assertEquals(70, result.score)
+        assertEquals(RecallRating.HARD, result.rating)
+    }
+
     @Test
     fun c5_15_l2_scoreAndReasonAreNull() = runTest {
         val result = checker.checkRecall("答案", "正确答案", QuestionType.ESSAY).first()

@@ -4,6 +4,7 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import java.security.GeneralSecurityException
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -56,14 +57,32 @@ class ApiKeyCryptoImpl @Inject constructor(
     }
 
     override fun decrypt(ciphertext: String): String {
+        // 空字符串是合法的"无 apiKey"标记，直接返回（不抛异常）
         if (ciphertext.isEmpty()) return ""
-        val data = Base64.decode(ciphertext, Base64.NO_WRAP)
-        if (data.size < GCM_IV_SIZE + 1) return "" // 数据不完整
+        val data = try {
+            Base64.decode(ciphertext, Base64.NO_WRAP)
+        } catch (e: IllegalArgumentException) {
+            // NF-E8 修正：Base64 解码失败（非法字符）抛 DecryptionException 而非静默返回 ""
+            throw DecryptionException("Base64 解码失败：非法字符", e)
+        }
+        // NF-E8 修正：原 `if (data.size < GCM_IV_SIZE + 1) return ""` 静默返回空字符串，
+        // 导致"合法空 apiKey"与"密文损坏"无法区分。改抛 DecryptionException，
+        // 调用方（ApiConfigRepository.decryptedOrNull）用 runCatching 捕获后降级为 null。
+        if (data.size < GCM_IV_SIZE + 1) {
+            throw DecryptionException(
+                "密文数据不完整：期望至少 ${GCM_IV_SIZE + 1} 字节（IV + 密文），实际 ${data.size} 字节",
+            )
+        }
         val iv = data.copyOfRange(0, GCM_IV_SIZE)
         val encrypted = data.copyOfRange(GCM_IV_SIZE, data.size)
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.DECRYPT_MODE, masterKey, GCMParameterSpec(GCM_TAG_BITS, iv))
-        return String(cipher.doFinal(encrypted), Charsets.UTF_8)
+        return try {
+            String(cipher.doFinal(encrypted), Charsets.UTF_8)
+        } catch (e: GeneralSecurityException) {
+            // GCM 认证失败（AEADBadTagException）、密钥不匹配等
+            throw DecryptionException("GCM 认证失败：密文损坏或 master key 已变更", e)
+        }
     }
 
     /** 在 AndroidKeyStore 中生成 AES-256 master key（仅首次调用） */

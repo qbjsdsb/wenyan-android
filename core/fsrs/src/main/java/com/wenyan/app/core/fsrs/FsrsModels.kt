@@ -8,13 +8,21 @@ import java.time.LocalDateTime
  * 对应FSRS-Kotlin库的Rating枚举和设计文档第3470行。
  * 用户复习时的4档评分反馈，FSRS算法据此调整记忆稳定性和难度。
  *
- * @property value 评分值（1=Again, 2=Hard, 3=Good, 4=Easy）
+ * @property value 评分值（1=Again, 2=Hard, 3=Good, 4=Easy），用于FSRS数学公式中的算术运算
+ *               （如 `rating.value - 3` 作为难度变化 delta）。
+ * @property index 0-based 数组下标（AGAIN=0, HARD=1, GOOD=2, EASY=3），用于 [FsrsWrapper] 中
+ *                 `w[index]` 权重数组访问。
+ *
+ * NF-T7 修正：原 `w[rating.value - 1]` 把"枚举业务值"与"数组下标"耦合，
+ * 若未来枚举顺序调整（如新增 MANUALLY_MARKED 档），`value - 1` 不再等于数组下标，
+ * 可能引发越界或权重错位。新增 `index` 属性显式表达"数组下标"语义，
+ * `value` 仅用于算术（与 FSRS-6 公式 `rating-3` 保持一致）。
  */
-enum class Rating(val value: Int) {
-    AGAIN(1),
-    HARD(2),
-    GOOD(3),
-    EASY(4);
+enum class Rating(val value: Int, val index: Int) {
+    AGAIN(1, 0),
+    HARD(2, 1),
+    GOOD(3, 2),
+    EASY(4, 3);
 
     companion object {
         /**

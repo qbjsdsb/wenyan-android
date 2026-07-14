@@ -12,7 +12,7 @@ import javax.inject.Singleton
  *
  * Spec 第 359-385 行、设计文档 3.3.5 节（第 849-918 行）：
  *
- * 三层检测机制（阈值对齐设计文档）：
+ * 三层检测机制（阈值对齐设计文档，NF-A2 修正后 L2 增加 GOOD 档）：
  * - L1 关键词匹配 + 同义词词典（名词解释/术语，本地 <10ms）
  *     覆盖率 < 30% → Again
  *     覆盖率 30-60% → Hard
@@ -20,12 +20,19 @@ import javax.inject.Singleton
  *     覆盖率 ≥ 85% → Easy
  * - L2 Jaccard 相似度（论述题/分析题，本地 <10ms）
  *     覆盖率 < 60% → Hard
- *     覆盖率 60-85% → 部分正确（触发 L3）
+ *     覆盖率 60-75% → 部分正确（触发 L3）
+ *     覆盖率 75-85% → Good（较好但不完美，不触发 L3）
  *     覆盖率 ≥ 85% → Easy
  * - L3 LLM 异步评估（L2 判定"部分正确"时触发，在线 3-5 秒）
  *     输出 0-100 分及理由
  *     不阻塞用户复习流程
  *     分数 < 60 → Again, 60-75 → Hard, 75-90 → Good, ≥ 90 → Easy
+ *
+ * NF-A2 修正：原 L2 在 60-85% 范围统一返回 HARD（触发 L3）。问题：
+ * - 若 L3 失败降级为 L2 结果，75-85% 相似度的答案被错误归为 HARD（过严）
+ * - 75-85% 是"较好但不完美"，语义更接近 GOOD 而非 HARD
+ * 修正方案：将 L3 触发范围从 60-85% 收窄到 60-75%，75-85% 直接返回 GOOD（不依赖 L3）。
+ * 60-75% 仍走 L3（部分正确需要 LLM 精细评估）。
  *
  * 阶段4实现变更：
  * - L2 从 BGE-small-zh 模型改为 Jaccard 相似度（Android 端不适合加载嵌入模型）
@@ -56,7 +63,9 @@ class RecallChecker @Inject constructor(
             QuestionType.ESSAY -> {
                 val l2Result = checkL2Semantic(userAnswer, correctAnswer)
                 if (l2Result.rating == RecallRating.HARD && l2Result.coverage in PARTIAL_CORRECT_RANGE) {
-                    // L2 判定"部分正确"（覆盖率 60-85%）时触发 L3 LLM 评估
+                    // L2 判定"部分正确"（覆盖率 60-75%）时触发 L3 LLM 评估
+                    // NF-A2 修正：L3 触发范围从 60-85% 收窄到 60-75%，
+                    // 75-85% 直接返回 GOOD（不依赖 L3，避免 L3 失败时降级过严）。
                     // P0-A1 修正：原实现 if/else 两分支均 emit(l2Result)，L3 从未触发。
                     // 现 if 分支调用 checkL3Llm()，LLM 失败时降级为 L2 结果，不阻塞复习流程。
                     val l3Result = try {
@@ -135,17 +144,22 @@ class RecallChecker @Inject constructor(
     /**
      * L2 语义相似度检测（阶段4改为 Jaccard 相似度）。
      *
-     * 阈值对齐设计文档第 872 行：
-     *   覆盖率 < 60% → Hard
-     *   覆盖率 60-85% → 部分正确（触发 L3）
+     * NF-A2 修正后阈值（设计文档第 872 行 + 审计 NF-A2 增补）：
+     *   覆盖率 < 60% → Hard（明显不足）
+     *   覆盖率 60-75% → Hard（部分正确，触发 L3 LLM 精细评估）
+     *   覆盖率 75-85% → Good（较好但不完美，不触发 L3）
      *   覆盖率 ≥ 85% → Easy
+     *
+     * 原 L2 在 60-85% 范围统一返回 HARD：若 L3 失败降级，75-85% 相似度
+     * 被错误归为 HARD（过严）。修正后 75-85% 直接返回 GOOD，避免依赖 L3。
      */
     private fun checkL2Semantic(userAnswer: String, correctAnswer: String): RecallResult {
         val similarity = calculateJaccardSimilarity(userAnswer, correctAnswer)
 
         val rating = when {
             similarity < L2_THRESHOLD_HARD -> RecallRating.HARD              // <60%
-            similarity < L2_THRESHOLD_PARTIAL -> RecallRating.HARD           // 60-85% 部分正确
+            similarity < L2_THRESHOLD_PARTIAL -> RecallRating.HARD           // 60-75% 部分正确,触发 L3
+            similarity < L2_THRESHOLD_GOOD -> RecallRating.GOOD              // 75-85% 较好但不完美
             else -> RecallRating.EASY                                        // ≥85%
         }
 
@@ -264,17 +278,18 @@ $correctAnswer
         private const val L1_THRESHOLD_HARD = 0.60f    // 30-60% → Hard
         private const val L1_THRESHOLD_GOOD = 0.85f    // 60-85% → Good
 
-        // L2 阈值（对齐设计文档第 872 行）
-        private const val L2_THRESHOLD_HARD = 0.60f    // <60% → Hard
-        private const val L2_THRESHOLD_PARTIAL = 0.85f // 60-85% → 部分正确（触发L3）
+        // L2 阈值（NF-A2 修正：增加 GOOD 档，L3 触发范围从 60-85% 收窄到 60-75%）
+        private const val L2_THRESHOLD_HARD = 0.60f    // <60% → Hard（明显不足）
+        private const val L2_THRESHOLD_PARTIAL = 0.75f // 60-75% → Hard（部分正确，触发 L3）
+        private const val L2_THRESHOLD_GOOD = 0.85f    // 75-85% → Good（较好但不完美，不触发 L3）
 
         // L3 阈值（设计文档第 881 行）
         private const val L3_THRESHOLD_AGAIN = 60      // <60 → Again
         private const val L3_THRESHOLD_HARD = 75       // 60-75 → Hard
         private const val L3_THRESHOLD_GOOD = 90       // 75-90 → Good
 
-        /** L2 部分正确范围（触发 L3） */
-        private val PARTIAL_CORRECT_RANGE = 0.60f..0.85f
+        /** L2 部分正确范围（触发 L3）— NF-A2 修正：从 0.60f..0.85f 收窄到 0.60f..0.75f */
+        private val PARTIAL_CORRECT_RANGE = 0.60f..0.75f
 
         /** 常见停用词（过滤无意义的关键词） */
         private val STOP_WORDS = setOf(

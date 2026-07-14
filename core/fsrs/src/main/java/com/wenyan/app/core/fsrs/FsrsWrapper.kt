@@ -30,6 +30,11 @@ import java.time.temporal.ChronoUnit
  * @param stabilityGrowthFactor 稳定性增长系数（三档参数，默认1.0=标准FSRS增长）
  * @param easyBonus           Easy额外加成（三档参数，默认1.0）
  * @param againPenalty        Again惩罚系数（三档参数，默认1.0=不额外惩罚）
+ * @param random              [applyFuzz] 使用的随机源。
+ *                            NF-T8 修正：原用全局 `Random.nextFloat()` 不可注入，
+ *                            单元测试只能验证 fuzz 输出范围而非精确值。
+ *                            现作为构造参数默认 [Random.Default]（生产环境行为不变），
+ *                            测试可注入固定种子 Random 验证精确 fuzz 输出。
  */
 class FsrsWrapper(
     private val requestRetention: Float,
@@ -37,7 +42,8 @@ class FsrsWrapper(
     private val enableFuzz: Boolean = true,
     private val stabilityGrowthFactor: Float = 1.0f,
     private val easyBonus: Float = 1.0f,
-    private val againPenalty: Float = 1.0f
+    private val againPenalty: Float = 1.0f,
+    private val random: Random = Random.Default,
 ) {
     companion object {
         private const val DAY_MS = 86_400_000L
@@ -296,11 +302,14 @@ class FsrsWrapper(
     }
 
     /**
-     * 新卡初始稳定性 S0 = w[rating-1]
+     * 新卡初始稳定性 S0 = w[rating.index]
      * 对应设计文档第3637行
+     *
+     * NF-T7 修正：原 `w[rating.value - 1]` 把枚举业务值与数组下标耦合，
+     * 改用 `rating.index` 显式表达下标语义，避免未来枚举顺序调整时引发越界或权重错位。
      */
     fun initStability(rating: Rating): Float {
-        return w[rating.value - 1]
+        return w[rating.index]
     }
 
     /**
@@ -387,6 +396,10 @@ class FsrsWrapper(
      * interval < 2.5: 不模糊
      * interval < 15: ±1天
      * else: ±5%
+     *
+     * NF-T8 修正：原用全局 `Random.nextFloat()` 不可注入，测试不可重复。
+     * 改用构造参数 [random]（默认 [Random.Default]，生产环境行为不变），
+     * 测试可注入固定种子 Random 验证精确 fuzz 输出。
      */
     private fun applyFuzz(interval: Float): Float {
         val fuzzRange = when {
@@ -394,7 +407,7 @@ class FsrsWrapper(
             interval < 15f -> 1f
             else -> interval * 0.05f
         }
-        val fuzz = Random.nextFloat() * 2f * fuzzRange - fuzzRange
+        val fuzz = random.nextFloat() * 2f * fuzzRange - fuzzRange
         return maxOf(1f, interval + fuzz)
     }
 
