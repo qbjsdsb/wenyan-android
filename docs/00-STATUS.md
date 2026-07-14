@@ -5,12 +5,12 @@
 
 ## ✅ 当前状态
 
-**Release v0.3.0 已发布** — 包含 v0.3 UI 精修 + v0.4.2 第三轮审计 + v0.5.0 第四轮审计 Phase 2 修复。215 tests 0 failures。
+**Release v0.3.0 已发布 + v0.5.0 Phase 2 第二批修复完成** — 12 commits，55 项修复，215 tests 0 failures。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `96d9755`（main，core:data compose runtime + testOptions 修复） |
-| 最新 Release | [v0.3.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.3.0)（2026-07-15，debug 签名） |
+| 最新 commit | `d1cb4d7`（main，v0.5.0 Phase 2 第二批 8 项修复） |
+| 最新 Release | [v0.3.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.3.0)（2026-07-15，debug 签名，17MB） |
 | 测试 | **215 tests 0 failures**（207 基线 + 8 新增 v0.5.0 测试） |
 | 阻塞 | **CI 账单问题** — Release workflow 无法执行正式签名，v0.3.0 APK 使用 debug 签名 |
 | 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节 |
@@ -30,7 +30,7 @@
 | UI 改造闭环 | ✅ Phase 1-5 完成 | GroupedCard 增强 + 2 Screen 重构 + 4 Preview + 8 测试 |
 | UI 精修 v0.3 | ✅ 完成 | 卡片镜像修复 + AI 入口调整 + 全面动画优化 |
 | 第三轮深度审计 v0.4.2 | ✅ 4 Batch 修复完成 | FSRS 算法 + 数据安全 + 测试有效 + UX/契约（24 文件，207 tests） |
-| 第四轮深度审计 v0.5.0 | ✅ Phase 2 P1/P2 修复完成 | 10+1 commits 已 push main，Release v0.3.0 已发布 |
+| 第四轮深度审计 v0.5.0 | ✅ Phase 2 P1/P2 修复完成 | 12 commits，55 项修复，Release v0.3.0 已发布 |
 
 ### 第四轮深度审计 v0.5.0（2026-07-15）
 

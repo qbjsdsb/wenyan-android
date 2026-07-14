@@ -1232,3 +1232,132 @@
       | python3 -c "import json,sys; [print(f\"{r['head_sha'][:7]} {r['conclusion']} {r['name']}\") for r in json.load(sys.stdin)['workflow_runs']]"
     ```
 11. **开始工作**：根据 [00-STATUS.md](00-STATUS.md) 的"下一步优先级"选择任务
+
+---
+
+## Session 2026-07-15（续）：Release v0.3.0 + v0.5.0 Phase 2 第二批修复
+
+### 目标
+
+用户指令"现在我想看到成品，就是你发布release" + "问题继续修啊，完了做好交接工作，严肃认真仔细，反复检查不要出问题"。
+本轮完成：Release v0.3.0 发布 + v0.5.0 Phase 2 第二批 8 项 P1/P2 修复 + 完整交接文档。
+
+### Release v0.3.0 发布
+
+#### 流程
+1. 本地安装 Android SDK（cmdline-tools + platform-tools + platforms;android-35 + build-tools;35.0.0）
+2. 配置 local.properties + Gradle proxy
+3. 本地 assembleDebug 构建 — **发现 P0-STAB-1 遗留 bug**
+4. 修复 bug 后重新构建 — BUILD SUCCESSFUL
+5. 本地 testDebugUnitTest — **发现 P1-AUDIT-2 遗留 bug**
+6. 修复 bug 后重新测试 — 215 tests 0 failures
+7. 本地 assembleRelease — BUILD SUCCESSFUL
+8. 通过 GitHub API 创建 Release + 上传 APK
+
+#### 过程中发现的 2 个 CI 账单问题掩盖的 bug
+
+**Bug 1（commit `96d9755`）**：P0-STAB-1 遗留 — `core:data` 加了 `@Immutable` 注解但没加 `androidx.compose.runtime` 依赖。`compileDebugKotlin` 失败。修复：加 `implementation(libs.androidx.compose.runtime)`。
+
+**Bug 2（commit `96d9755`）**：P1-AUDIT-2 遗留 — `ClockGuard` 在时钟回拨时调用 `android.util.Log.w()`，新增 2 个测试触及该路径，但 `core:data` 没配 `testOptions.unitTests.isReturnDefaultValues = true`。测试失败。修复：加配置使 Log 方法返回默认值。
+
+#### Release 结果
+
+- **Tag**：`v0.3.0`
+- **Release URL**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.3.0
+- **APK**：`wenyan-v0.3.0.apk` (17MB) + `wenyan-latest.apk` (17MB)
+- **签名**：debug 签名（CI 账单问题导致 Release workflow 无法执行正式签名）
+- **验证**：assembleDebug SUCCESSFUL + testDebugUnitTest 215 tests 0 failures + assembleRelease SUCCESSFUL
+
+### v0.5.0 Phase 2 第二批修复（commit `d1cb4d7`）
+
+#### 修复清单（8 项 P1/P2）
+
+**性能优化**
+- **NF-UC2 (P1)**：WenyanTheme `dynamicLightColorScheme/dynamicDarkColorScheme` 未 remember，每次重组重建 ColorScheme。用 `remember(context, isDark)` 缓存。
+- **NF-UC5 (P1)**：GraphCanvas `pointerInput(nodes)` 在 nodes 变化时重启手势检测，R 值刷新瞬间 tap 丢失。改 `pointerInput(Unit)` + `rememberUpdatedState` 保持最新引用。
+
+**无障碍修复**
+- **NF-UA2 (P1)**：AiAssistantScreen "知道了" 触控目标 ~28dp 低于 WCAG 48dp 标准，加 `defaultMinSize(48.dp, 48.dp)` + `role=Role.Button`。
+- **NF-UA3 (P1)**：GraphCanvas 节点标签 `fontSize=9.sp` 低于 WCAG 推荐最小 12.sp，改为 12.sp。
+- **NF-UA4 (P1)**：KnowledgeScreen + ApiConfigScreen 的 TonalCard `.clickable` 无 role，TalkBack 不朗读"按钮"。加 `role=Role.Button` 语义。
+
+**UX 修复**
+- **NF-UC3 (P1)**：AiAssistantScreen `LaunchedEffect(messages.size)` 无条件滚动到底部，打断用户上滑阅读。改为 `derivedStateOf` 检测 `isAtBottom`，仅在底部附近才自动滚动。
+- **NF-UC4 (P1)**：`LaunchedEffect(errorMessage)` 内 `clearError` 在 Composable 离开时不执行，错误消息重复展示。改为先 `clearError()` 再 `showSnackbar`。
+
+**死依赖清理**
+- **NF-B7 (P2)**：`core:ai` 的 `androidx.security.crypto` 是死依赖（实际加密在 `core:data` 的 `ApiKeyCryptoImpl` 用 AndroidKeyStore + javax.crypto），移除。
+- **NF-B8 (P2)**：`libs.versions.toml` 5 个 `wenyan-feature-*` 声明从未被引用（各模块用 `project(":feature:xxx")`），移除死声明。
+
+#### 修改文件（7 个）
+
+1. `core/designsystem/src/main/java/com/wenyan/app/core/designsystem/theme/WenyanTheme.kt` — NF-UC2 remember
+2. `feature/graph/src/main/java/com/wenyan/app/feature/graph/ui/GraphCanvas.kt` — NF-UC5 pointerInput + NF-UA3 fontSize
+3. `feature/aiassistant/src/main/java/com/wenyan/app/feature/aiassistant/AiAssistantScreen.kt` — NF-UC3/UC4 LaunchedEffect + NF-UA2 触控目标
+4. `feature/aiassistant/src/main/java/com/wenyan/app/feature/aiassistant/ApiConfigScreen.kt` — NF-UA4 role
+5. `feature/knowledge/src/main/java/com/wenyan/app/feature/knowledge/KnowledgeScreen.kt` — NF-UA4 role
+6. `core/ai/build.gradle.kts` — NF-B7 移除 security-crypto
+7. `gradle/libs.versions.toml` — NF-B8 移除 wenyan-feature-*
+
+#### 验证
+
+- `assembleDebug` BUILD SUCCESSFUL
+- `testDebugUnitTest` **215 tests 0 failures**
+
+### 关键技术决策
+
+1. **remember 不能包裹 @Composable 调用** — NF-UC2 初版用 `remember(...) { if (...) dynamicDarkColorScheme(context) else rememberDynamicColorScheme(...) }` 编译失败，因 `rememberDynamicColorScheme` 是 @Composable 函数，不能在 `remember` 的 value lambda 中调用。修正：用 if 分支分别处理，`dynamicDarkColorScheme` 用 `remember(context, isDark)`，`rememberDynamicColorScheme` 直接调用（内部已 remember）。
+
+2. **pointerInput(Unit) + rememberUpdatedState 模式** — `pointerInput(nodes)` 在 key 变化时重启手势检测协程，R 值刷新瞬间 tap 丢失。改 `pointerInput(Unit)` 让协程只启动一次，配合 `rememberUpdatedState(nodes)` 在 lambda 内读取最新 nodes 引用。需加 `import androidx.compose.runtime.getValue`（`by` 委托需要）。
+
+3. **derivedStateOf 滚动策略** — `LaunchedEffect(messages.size)` 无条件滚动到底部打断阅读。用 `derivedStateOf { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1 >= messages.size - 2 }` 计算 `isAtBottom`，仅在底部附近才自动滚动。`derivedStateOf` 使布尔值仅在跨过临界点时触发重组。
+
+4. **WCAG 触控目标 48dp** — `defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)` 强制最小触控区域，配合 `role = Role.Button` 让 TalkBack 朗读"按钮"。
+
+5. **死依赖识别方法** — 用 `Grep` 搜索 `androidx.security.crypto|MasterKey|EncryptedSharedPreferences` 确认无 import，再用 `Grep` 搜索 `wenyan-feature-` 确认无引用。死依赖增加 APK 体积 + 误导维护者。
+
+### 完整 commit 链（本轮）
+
+- `96d9755`：fix(build) core:data compose runtime + testOptions — Release v0.3.0 阻塞修复
+- `0daa60b`：docs 更新 v0.5.0 进度
+- `7b4d9ab`：docs Release v0.3.0 发布
+- `d1cb4d7`：fix v0.5.0 Phase 2 第二批 8 项 P1/P2 修复
+
+### 下次继续
+
+按 v3 审计计划优先级（详见 [docs/plans/full-audit-v0.5.0-deep.md](plans/full-audit-v0.5.0-deep.md)）：
+
+1. **P0**：CI 账单问题解决后，所有 CI ❌ commits 自动重跑
+2. **P0**：跑 emulator 实测 v0.3.0 — 验证深色模式 + 触控目标 + 滚动策略 + 知识图谱 tap
+3. **P1 大型任务**（需用户确认优先级）：
+   - P1-PG-1/2/3：启用 R8 + 补齐 ProGuard 规则
+   - NF-PP4：复习日志双写统一
+   - NF-PP5：错题本实现
+   - NF-PP6：AiAssistantViewModel 消息持久化
+4. **P1 Phase 2 剩余维度审计**：
+   - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）
+   - 2.L：错误处理一致性 + 日志规范（sealed AppError + Timber + Snackbar 统一）
+   - 2.M 剩余：Compose 副作用（LaunchedEffect key 审计）+ M3 Expressive（WideNavigationRail）
+   - 2.N 剩余：NF-DS7-13 DataStore Key 治理（需建 PreferenceKeys.kt 集中定义）
+5. **Phase 1 剩余（大型）**：1.C（AI 对话持久化）、1.D（进程被杀状态恢复）
+6. **Phase 3**：依赖升级路径
+7. **Phase 4**：25 项 emulator 测试矩阵
+8. **Phase 5**：7 Batch 修复
+
+### v0.5.0 Phase 2 修复进度总览
+
+| 批次 | Commit | 内容 | 项数 |
+|------|--------|------|------|
+| 1 | `dd3ff06` | P0-AUDIT-1 elapsedDays + P2 语义 | 2 |
+| 2 | `ca3ceea` | P0-STAB-1 @Immutable | 1 |
+| 3 | `c0e2775` | P1-AUDIT-5 LEFT JOIN + 多项 | 6 |
+| 4 | `63f5375` | P1 Repository Flow .catchAndLog | 23 |
+| 5 | `53a0c46` | P1-CI-4 keystore + P1-AUDIT-4 种子 | 2 |
+| 6 | `f9fc9c5` | P2 性能（remember + derivedStateOf） | 2 |
+| 7 | `5d00824` | P1-AUDIT-3 AntiRoteMemorization | 1 |
+| 8 | `01a1049` | 2.O/2.E 资源配置 | 4 |
+| 9 | `3179911` | 2.N 业务边界 | 3 |
+| 10 | `0dd5b0f` | NF-BB2 SocraticTutor 上下文 | 1 |
+| 11 | `96d9755` | 构建修复（compose runtime + testOptions） | 2 |
+| 12 | `d1cb4d7` | 第二批 8 项（性能+无障碍+死依赖） | 8 |
+| **合计** | 12 commits | | **55 项** |

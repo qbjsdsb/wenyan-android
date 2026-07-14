@@ -141,13 +141,13 @@ tools/                           # Python 管线脚本
 
 ## 7. 当前状态（2026-07-15）
 
-**✅ Release v0.3.0 已发布** — 包含 v0.3 UI 精修 + v0.4.2 第三轮审计 + v0.5.0 第四轮审计 Phase 2 修复。215 tests 0 failures。
+**✅ Release v0.3.0 已发布 + v0.5.0 Phase 2 第二批修复完成** — 12 commits，55 项修复，215 tests 0 failures。
 
-- 最新 commit：`96d9755`（main，core:data compose runtime + testOptions 修复）
+- 最新 commit：`d1cb4d7`（main，v0.5.0 Phase 2 第二批 8 项 P1/P2 修复）
 - 最新 Release：[v0.3.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.3.0)（2026-07-15，debug 签名，17MB）
 - 验证：`assembleDebug` SUCCESSFUL + `testDebugUnitTest` **215 tests 0 failures** + `assembleRelease` SUCCESSFUL
 - CI 阻塞：GitHub Actions 账单问题，Release workflow 无法执行正式签名，v0.3.0 APK 使用 debug 签名
-- v0.5.0 修复：11 commits（10 个 Phase 2 修复 + 1 个构建修复），详见 [docs/plans/full-audit-v0.5.0-deep.md](docs/plans/full-audit-v0.5.0-deep.md)
+- v0.5.0 修复：12 commits（55 项 P1/P2 修复 + 2 项构建修复），详见 [docs/plans/full-audit-v0.5.0-deep.md](docs/plans/full-audit-v0.5.0-deep.md)
 - 详见 [docs/00-STATUS.md](docs/00-STATUS.md)
 
 ## 8. 项目阶段总览
@@ -168,7 +168,7 @@ tools/                           # Python 管线脚本
 | Release v0.2.0 | ✅ 完成 | 签名 APK 发布，包含自 v0.1.0 以来所有改动 |
 | UI 精修 v0.3 | ✅ 完成 | 卡片镜像修复 + 导师信息删除 + AI 入口调整 + 全面动画优化（190 tests） |
 | 第三轮深度审计 v0.4.2 | ✅ 完成 | 4 Batch 修复：FSRS 算法 4 bug + 数据安全 7 项 + 测试有效 3 项 + UX/契约 10+ 文件（207 tests） |
-| 第四轮深度审计 v0.5.0 | ✅ Phase 2 P1/P2 修复完成 | 11 commits 已 push main，Release v0.3.0 已发布 |
+| 第四轮深度审计 v0.5.0 | ✅ Phase 2 P1/P2 修复完成 | 12 commits，55 项修复，Release v0.3.0 已发布 |
 
 ## 9. 下一步优先级
 
