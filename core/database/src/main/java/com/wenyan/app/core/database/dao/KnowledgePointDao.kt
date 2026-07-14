@@ -78,15 +78,19 @@ interface KnowledgePointDao {
      * 在 title / core_conclusion / full_content / study_text 四个字段中做 LIKE 搜索。
      * SQLite LIKE 对中文友好，无需分词。
      *
-     * @param keyword 搜索关键词
+     * NF-BB1 修复：加 ESCAPE '\\' 子句，配合调用方转义 % 和 _ 通配符。
+     * 原查询未转义，搜索"100%"会匹配"1000"等（% 被当通配符）。
+     * 调用方（RagEngine）需在传入前 escapeLikeWildcards(keyword)。
+     *
+     * @param keyword 搜索关键词（已转义 % 和 _）
      * @return 匹配的知识点列表，按 updated_at DESC 排序
      */
     @Query(
         "SELECT * FROM knowledge_points WHERE " +
-            "title LIKE '%' || :keyword || '%' OR " +
-            "core_conclusion LIKE '%' || :keyword || '%' OR " +
-            "full_content LIKE '%' || :keyword || '%' OR " +
-            "study_text LIKE '%' || :keyword || '%' " +
+            "title LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
+            "core_conclusion LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
+            "full_content LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
+            "study_text LIKE '%' || :keyword || '%' ESCAPE '\\' " +
             "ORDER BY updated_at DESC LIMIT :limit",
     )
     suspend fun searchByKeyword(keyword: String, limit: Int = 5): List<KnowledgePointEntity>

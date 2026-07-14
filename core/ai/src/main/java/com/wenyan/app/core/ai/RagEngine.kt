@@ -41,7 +41,9 @@ class RagEngine @Inject constructor(
      * @return 检索结果，无相关结果时 [RagResult.hasResults] 为 false
      */
     fun search(query: String): Flow<RagResult> = flow {
-        val keyword = extractKeyword(query)
+        // NF-BB10: 限制查询长度，防止超长输入导致 LIKE 搜索卡顿
+        val truncatedQuery = query.take(MAX_QUERY_LENGTH)
+        val keyword = extractKeyword(truncatedQuery)
         if (keyword.isBlank()) {
             emit(RagResult(
                 hasResults = false,
@@ -51,7 +53,7 @@ class RagEngine @Inject constructor(
             return@flow
         }
 
-        val results = knowledgePointDao.searchByKeyword(keyword, limit = MAX_RESULTS)
+        val results = knowledgePointDao.searchByKeyword(escapeLikeWildcards(keyword), limit = MAX_RESULTS)
         if (results.isEmpty()) {
             emit(RagResult(
                 hasResults = false,
@@ -112,6 +114,16 @@ class RagEngine @Inject constructor(
         return keyword.trim()
     }
 
+    /**
+     * 转义 SQLite LIKE 通配符（NF-BB1）。
+     *
+     * 将 `%` → `\%`，`_` → `\_`，`\\` → `\\\\`。
+     * 配合 DAO 的 `ESCAPE '\\'` 子句，使搜索关键词中的 % 和 _ 被视为字面字符。
+     * 例如搜索"100%"时，不再匹配"1000"等。
+     */
+    private fun escapeLikeWildcards(input: String): String =
+        input.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
     /** 将 [KnowledgePointEntity] 转换为 [RagReference] */
     private fun KnowledgePointEntity.toRagReference(): RagReference {
         val excerpt = buildExcerpt()
@@ -143,6 +155,9 @@ class RagEngine @Inject constructor(
 
         /** 摘录最大长度 */
         private const val MAX_EXCERPT_LENGTH = 200
+
+        /** 查询最大长度（NF-BB10：防超长输入导致 LIKE 搜索卡顿） */
+        private const val MAX_QUERY_LENGTH = 500
     }
 }
 

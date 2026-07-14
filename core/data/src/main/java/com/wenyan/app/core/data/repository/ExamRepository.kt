@@ -102,7 +102,9 @@ class ExamRepository @Inject constructor(
             if (relatedIds.isNullOrEmpty()) {
                 emptyList()
             } else {
-                verifiedPoints.filter { it.id in relatedIds }
+                // NF-BB5: 转 Set 去 + O(1) 查找，原 List 的 `in` 是 O(n)
+                val relatedIdSet = relatedIds.toSet()
+                verifiedPoints.filter { it.id in relatedIdSet }
             }
         }.catchAndLog(TAG, "getRelatedKnowledgePoints") { emptyList() }
 
