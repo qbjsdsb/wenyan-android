@@ -70,25 +70,29 @@ class SocraticTutor @Inject constructor(
         val references = ragResult.references
 
         // 阶段1：分析论证漏洞
+        val analysisResult = analyzeArguments(question, userAnswer, references)
         emit(SocraticGuide(
             stage = SocraticStage.ANALYZE,
-            content = analyzeArguments(question, userAnswer, references),
+            content = analysisResult,
             isSampleEssay = false,
             contentSource = CONTENT_SOURCE_AI,
         ))
 
         // 阶段2：提供改进建议（而非标准答案）
+        // NF-BB2: 传入阶段1分析结果作为上下文，使建议能针对具体问题
+        val suggestionResult = suggestImprovements(question, userAnswer, references, analysisResult)
         emit(SocraticGuide(
             stage = SocraticStage.SUGGEST,
-            content = suggestImprovements(question, userAnswer, references),
+            content = suggestionResult,
             isSampleEssay = false,
             contentSource = CONTENT_SOURCE_AI,
         ))
 
         // 阶段3：展示范文供对比（标注"范文，非标准答案"）
+        // NF-BB2: 传入阶段1+2结果作为上下文，使范文能体现改进方向
         emit(SocraticGuide(
             stage = SocraticStage.SHOW_SAMPLE,
-            content = buildSampleEssay(question, references),
+            content = buildSampleEssay(question, references, analysisResult, suggestionResult),
             isSampleEssay = true,
             contentSource = CONTENT_SOURCE_AI,
         ))
@@ -174,22 +178,27 @@ class SocraticTutor @Inject constructor(
         return aiService.chat(prompt).first()
     }
 
-    /** 提供改进建议（而非标准答案） */
+    /** 提供改进建议（而非标准答案）。
+     *  NF-BB2: [previousAnalysis] 传入阶段1分析结果作为上下文 */
     private suspend fun suggestImprovements(
         question: String,
         userAnswer: String,
         references: List<RagReference>,
+        previousAnalysis: String = "",
     ): String {
-        val prompt = PromptTemplates.buildSuggestPrompt(question, userAnswer, references)
+        val prompt = PromptTemplates.buildSuggestPrompt(question, userAnswer, references, previousAnalysis)
         return aiService.chat(prompt).first()
     }
 
-    /** 构建范文（标注"范文，非标准答案"） */
+    /** 构建范文（标注"范文，非标准答案"）。
+     *  NF-BB2: [previousAnalysis] + [previousSuggestion] 传入前两阶段结果作为上下文 */
     private suspend fun buildSampleEssay(
         question: String,
         references: List<RagReference>,
+        previousAnalysis: String = "",
+        previousSuggestion: String = "",
     ): String {
-        val prompt = PromptTemplates.buildSampleEssayPrompt(question, references)
+        val prompt = PromptTemplates.buildSampleEssayPrompt(question, references, previousAnalysis, previousSuggestion)
         return aiService.chat(prompt).first()
     }
 

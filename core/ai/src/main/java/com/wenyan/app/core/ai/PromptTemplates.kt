@@ -66,13 +66,24 @@ $refContext
 
     /**
      * 构建改进建议的 prompt（方向性建议，非标准答案）。
+     *
+     * NF-BB2 修复：加入 [previousAnalysis] 作为上下文，使建议阶段能引用分析阶段
+     * 指出的具体问题，三段输出逻辑一致而非各自独立。
+     *
+     * @param previousAnalysis 阶段1（论证分析）的输出，空字符串表示无上下文
      */
     fun buildSuggestPrompt(
         question: String,
         userAnswer: String,
         references: List<RagReference>,
+        previousAnalysis: String = "",
     ): String {
         val refContext = formatReferences(references)
+        val analysisContext = if (previousAnalysis.isNotBlank()) {
+            "\n【上一阶段分析】\n$previousAnalysis\n"
+        } else {
+            ""
+        }
         return """请为以下论述题答案提供改进建议。
 
 【题目】$question
@@ -81,7 +92,7 @@ $refContext
 $userAnswer
 
 【参考资料】
-$refContext
+$refContext$analysisContext
 
 请提供方向性建议（不要给出完整标准答案）：
 1. 可以补充哪些角度的内容
@@ -94,25 +105,42 @@ $refContext
 
     /**
      * 构建范文的 prompt（标注"范文，非标准答案"）。
+     *
+     * NF-BB2 修复：加入 [previousAnalysis] 和 [previousSuggestion] 作为上下文，
+     * 使范文阶段能针对分析指出的漏洞和改进建议来构建，三段输出形成连贯整体。
+     *
+     * @param previousAnalysis 阶段1（论证分析）的输出
+     * @param previousSuggestion 阶段2（改进建议）的输出
      */
     fun buildSampleEssayPrompt(
         question: String,
         references: List<RagReference>,
+        previousAnalysis: String = "",
+        previousSuggestion: String = "",
     ): String {
         val refContext = formatReferences(references)
+        val contextSection = buildString {
+            if (previousAnalysis.isNotBlank()) {
+                append("\n【论证分析】\n").append(previousAnalysis).append("\n")
+            }
+            if (previousSuggestion.isNotBlank()) {
+                append("\n【改进建议】\n").append(previousSuggestion).append("\n")
+            }
+        }
         return """请基于参考资料生成一篇参考范文。
 
 【题目】$question
 
 【参考资料】
-$refContext
+$refContext$contextSection
 
 要求：
 1. 开头标注"【范文，非标准答案】"
 2. 结构清晰，论点明确，论据具体
 3. 引用参考资料中的内容时标注来源
-4. 篇幅控制在 500-800 字
-5. 注意：这是供对比学习的参考范文，不是唯一正确答案"""
+4. 范文应体现上述改进建议中的方向（如有）
+5. 篇幅控制在 500-800 字
+6. 注意：这是供对比学习的参考范文，不是唯一正确答案"""
     }
 
     /**
