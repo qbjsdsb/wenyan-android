@@ -17,7 +17,14 @@ enum class Rating(val value: Int) {
     EASY(4);
 
     companion object {
-        fun fromValue(v: Int): Rating = entries.first { it.value == v }
+        /**
+         * 按 value 查找 Rating，越界时降级为 GOOD。
+         *
+         * P0-BB9 修正：原 `entries.first { it.value == v }` 在 v 越界
+         * （如 0、5、负数）时抛 NoSuchElementException，调用方未捕获会崩。
+         * 现用 firstOrNull + GOOD 降级，GOOD 是中间值，语义最接近"用户未明确选择"。
+         */
+        fun fromValue(v: Int): Rating = entries.firstOrNull { it.value == v } ?: Rating.GOOD
     }
 }
 

@@ -118,7 +118,9 @@ object ExamCodeResolver {
         return history.find { record ->
             record.examCode == examCode &&
                 year >= record.validFromYear &&
-                (record.validToYear == null || year <= record.validToYear!!)
+                // P0-T2 修正：原 `record.validToYear!!` 在 null 检查后冗余，
+                // 但用 let + Elvis 更安全（避免 !! 在重构时遗留 NPE 风险）。
+                (record.validToYear?.let { year <= it } ?: true)
         }?.subjectName
     }
 }

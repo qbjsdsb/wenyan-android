@@ -54,7 +54,10 @@ object ContentTierMapper {
      * @return 对应的TierFsrsConfig
      */
     fun getConfig(contentType: ContentType): TierFsrsConfig {
-        return TIER_CONFIGS[mapContentTypeToTier(contentType)]!!
+        // P0-T6 修正：原 `TIER_CONFIGS[...]!!` 用 !!，改用 getValue。
+        // 若新增 MemoryTier 忘加 TIER_CONFIGS 条目，getValue 抛 IllegalArgumentException
+        //（含 key 名）比 NPE 更易排查。
+        return TIER_CONFIGS.getValue(mapContentTypeToTier(contentType))
     }
 
     /**

@@ -410,7 +410,9 @@ private fun AnswerSection(
                     color = MaterialTheme.colorScheme.tertiary,
                 )
                 Text(
-                    text = question.answerFramework!!,
+                    // P0-T6 修正：原 `question.answerFramework!!`，已由 hasFramework 守护非 null，
+                    // 但用 orEmpty() 更安全（避免重构时守护条件被改而遗留 NPE）。
+                    text = question.answerFramework.orEmpty(),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(top = Spacing.xs),
                 )
@@ -442,7 +444,9 @@ private fun AnswerSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = question.sampleEssay!!,
+                    // P0-T6 修正：原 `question.sampleEssay!!`，已由 hasEssay 守护非 null，
+                    // 用 orEmpty() 更安全。
+                    text = question.sampleEssay.orEmpty(),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(top = Spacing.xs),
                 )

@@ -53,7 +53,9 @@ class SchedulingRepository @Inject constructor(
 
         // 2. 按 tier 构造 FsrsWrapper（无状态，每次按需构造）
         val tier = mapCardTypeToTier(cardType)
-        val config = TIER_CONFIGS[tier] ?: TIER_CONFIGS[MemoryTier.TIER_FRAMEWORK]!!
+        // P0-T3 修正：原 `TIER_CONFIGS[MemoryTier.TIER_FRAMEWORK]!!` 用 !!，
+        // 改用 getValue 抛 IllegalArgumentException（含 key 名）而非 NPE，便于排查。
+        val config = TIER_CONFIGS[tier] ?: TIER_CONFIGS.getValue(MemoryTier.TIER_FRAMEWORK)
         val wrapper = FsrsWrapper(
             requestRetention = config.targetRetention,
             maximumInterval = config.maxInterval,
