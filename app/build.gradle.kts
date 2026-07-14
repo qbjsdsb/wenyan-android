@@ -31,6 +31,10 @@ android {
     // Release 签名配置
     // - CI 环境：从环境变量读取 keystore（KEYSTORE_PATH 指向解码后的 .jks 文件）
     // - 本地环境：若无 keystore 配置，fallback 到 debug 签名（避免本地编译失败）
+    //
+    // P1-S-1 修正：CI 环境（CI=true）不允许 fallback 到 debug 签名。
+    // debug keystore 公开，任何人都能签发相同包名 APK，存在安全风险。
+    // CI 必须配置正式 keystore，否则 fail fast。
     signingConfigs {
         create("release") {
             val keystorePath = System.getenv("KEYSTORE_PATH")
@@ -57,9 +61,20 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // 若 release signingConfig 未配置 keystore（storeFile 为 null），则使用 debug 签名
+            // P1-S-1 修正：CI 环境不允许 fallback 到 debug 签名。
+            // 本地开发（CI 未设置）允许 fallback，方便开发者无 keystore 时验证 release 编译。
+            // CI 环境（CI=true）必须配置正式 keystore，否则 throw GradleException 中止构建。
             val releaseConfig = signingConfigs.getByName("release")
-            signingConfig = if (releaseConfig.storeFile != null) releaseConfig else signingConfigs.getByName("debug")
+            signingConfig = if (releaseConfig.storeFile != null) {
+                releaseConfig
+            } else if (System.getenv("CI") == "true") {
+                throw GradleException(
+                    "Release 签名未配置：CI 环境必须设置 KEYSTORE_PATH / KEYSTORE_PASSWORD / " +
+                        "KEY_ALIAS / KEY_PASSWORD 环境变量。debug 签名不允许用于 CI Release 构建。",
+                )
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 

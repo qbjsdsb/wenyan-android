@@ -45,21 +45,39 @@ class ClockGuard @Inject constructor(
     /**
      * 返回当前有效时间戳（millis）。
      *
-     * 检测时钟回拨：若 current < lastKnown - [TOLERANCE_MS]，返回 lastKnown；
+     * 检测时钟回拨：若 current < lastKnown - [TOLERANCE_MS]，返回 lastKnown + 1 并更新 DB；
      * 否则更新 lastKnown = current 并返回 current。
      *
-     * @return 单调不减的有效时间戳
+     * P1-AUDIT-2 修正：回拨期间返回 `lastKnown + 1`（而非固定 `lastKnown`）并更新 DB。
+     * 原实现返回固定 `lastKnown` 且不更新 DB,导致回拨期间多次调用 `effectiveNowMillis()`
+     * 返回相同值 → FSRS 计算 `elapsedDays = daysBetween(lastReview, now)` 时
+     * `now == lastReview == lastKnown` → `elapsedDays = 0`,误判卡片"刚复习过"。
+     *
+     * 修正后每次调用返回 `lastKnown + 1` 并写入 DB,确保连续调用严格单调递增。
+     * 1ms 递增对 FSRS `elapsedDays`（以天为单位）无影响,但避免了 `elapsedDays = 0` 的误判。
+     *
+     * @return 单调不减的有效时间戳（回拨期间每次调用递增 1ms）
      */
     suspend fun effectiveNowMillis(): Long {
         val current = System.currentTimeMillis()
         val lastKnown = appMetaDao.getByKey(KEY_LAST_KNOWN_TS)?.longValue
         return if (lastKnown != null && current < lastKnown - TOLERANCE_MS) {
+            // P1-AUDIT-2 修正：lastKnown + 1 确保单调递增,避免回拨期间 elapsedDays = 0
+            val effective = lastKnown + 1
             Log.w(
                 TAG,
                 "Clock rollback detected: current=$current, lastKnown=$lastKnown " +
-                    "(rollback=${lastKnown - current}ms > tolerance=$TOLERANCE_MS ms), using lastKnown",
+                    "(rollback=${lastKnown - current}ms > tolerance=$TOLERANCE_MS ms), " +
+                    "using effective=$effective (lastKnown+1 for monotonic increment)",
             )
-            lastKnown
+            appMetaDao.upsert(
+                AppMetaEntity(
+                    key = KEY_LAST_KNOWN_TS,
+                    longValue = effective,
+                    stringValue = null,
+                ),
+            )
+            effective
         } else {
             appMetaDao.upsert(
                 AppMetaEntity(

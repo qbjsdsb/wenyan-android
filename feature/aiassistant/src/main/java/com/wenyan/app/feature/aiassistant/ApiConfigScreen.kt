@@ -367,7 +367,8 @@ private fun ApiConfigFormDialog(
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    items(LlmProvider.entries.toList()) { provider ->
+                    // P2-LAZY-1 修正：LazyRow items 加 key（用 provider.key 唯一标识），避免重组时丢失选中状态
+                    items(items = LlmProvider.entries.toList(), key = { it.key }) { provider ->
                         ProviderChip(
                             label = provider.displayName,
                             selected = formState.provider == provider.key,

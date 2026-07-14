@@ -94,19 +94,22 @@ interface KnowledgePointDao {
     /**
      * 查询所有 VERIFIED 知识点，附带科目名（P1 修复）。
      *
-     * 通过 JOIN chapters + subjects 一次查询获取科目名，避免 N+1。
-     * 用 INNER JOIN：若知识点无对应科目（数据异常），不显示在列表中
-     * （强制数据完整性，比显示"未知科目"更好）。
+     * 通过 LEFT JOIN chapters + subjects 一次查询获取科目名，避免 N+1。
+     *
+     * P1-AUDIT-5 修正：原用 INNER JOIN，若知识点无对应 chapter 或 chapter 无对应 subject
+     * （数据异常），该知识点会被静默排除，用户在列表中无感知地"丢失"知识点。
+     * 改用 LEFT JOIN 后，无有效关联的知识点依然返回，subject_name 为 null，
+     * UI 层 fallback 显示"未知科目"，确保数据不丢失。
      *
      * 关联路径：knowledge_points.chapter_id → chapters.subject_id → subjects.id
      *
-     * @return 知识点 + 科目名的关联列表，按 updated_at DESC 排序
+     * @return 知识点 + 科目名（可能为 null）的关联列表，按 updated_at DESC 排序
      */
     @Query(
         "SELECT kp.*, s.name AS subject_name " +
             "FROM knowledge_points kp " +
-            "INNER JOIN chapters c ON kp.chapter_id = c.id " +
-            "INNER JOIN subjects s ON c.subject_id = s.id " +
+            "LEFT JOIN chapters c ON kp.chapter_id = c.id " +
+            "LEFT JOIN subjects s ON c.subject_id = s.id " +
             "WHERE kp.ocr_status = 'VERIFIED' " +
             "ORDER BY kp.updated_at DESC",
     )

@@ -162,7 +162,8 @@ private fun YearSelector(
         contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        items(years) { year ->
+        // P2-LAZY-1 修正：LazyRow items 加 key，避免列表重组时 item 丢失状态/动画异常
+        items(items = years, key = { it }) { year ->
             FilterChip(
                 selected = selectedYear == year,
                 onClick = { onYearSelected(year) },

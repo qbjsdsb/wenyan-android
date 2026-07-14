@@ -73,13 +73,17 @@ class KnowledgeViewModel @Inject constructor(
          *
          * 注意：ALL.keyword 为空字符串，任意字符串.contains("") 返回 true，
          * 但为明确语义，ALL 分支显式返回全部。
+         *
+         * P1-AUDIT-5 修正：subjectName 可能为 null（LEFT JOIN 无有效科目关联的知识点）。
+         * null subjectName 不匹配任何具体分类（ANCIENT/MODERN/FOREIGN/THEORY），
+         * 但在 ALL 分类下会显示（fallback "未知科目"）。
          */
         internal fun filterByCategory(
             points: List<KnowledgePointWithSubject>,
             category: KnowledgeCategory,
         ): List<KnowledgePointWithSubject> {
             if (category == KnowledgeCategory.ALL) return points
-            return points.filter { it.subjectName.contains(category.keyword) }
+            return points.filter { it.subjectName?.contains(category.keyword) == true }
         }
 
         /** 将关联数据映射为 UI 项（供测试调用） */
@@ -87,7 +91,7 @@ class KnowledgeViewModel @Inject constructor(
             KnowledgePointItem(
                 id = pointWithSubject.point.id,
                 title = pointWithSubject.point.title,
-                subject = pointWithSubject.subjectName,
+                subject = pointWithSubject.subjectName ?: "未知科目",
                 summary = pointWithSubject.point.summary
                     ?: pointWithSubject.point.coreConclusion.take(100),
             )

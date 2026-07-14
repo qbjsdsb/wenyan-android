@@ -182,11 +182,13 @@ fun AiAssistantScreen(
                         contentPadding = PaddingValues(Spacing.lg),
                         verticalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
-                        items(items = uiState.messages, key = { it.id }) { message ->
+                        // P2-LAZY-1 修正：混合列表加 contentType，帮助 LazyList 复用 item cache
+                        // 消息项 contentType="message"，加载指示器 contentType="loading"
+                        items(items = uiState.messages, key = { it.id }, contentType = { "message" }) { message ->
                             MessageBubble(message, modifier = Modifier.animateItem())
                         }
                         if (uiState.isLoading) {
-                            item {
+                            item(key = "loading", contentType = "loading") {
                                 Box(
                                     modifier = Modifier.fillMaxWidth(),
                                     contentAlignment = Alignment.Center,

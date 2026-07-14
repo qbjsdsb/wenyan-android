@@ -7,8 +7,8 @@ name: Release
 # 流程：
 # 1. 从 GitHub Secrets 解码 keystore 到临时文件
 # 2. 验证 keystore（storepass）
-# 3. 构建 signed release APK
-# 4. 运行单元测试
+# 3. 运行单元测试（P1-CI-1 修正：先测试后构建）
+# 4. 构建 signed release APK
 # 5. 创建 GitHub Release 并附加 APK
 #
 # 前置条件（一次性配置）：
@@ -30,6 +30,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # P1-CI-2 修正：添加超时保护，防止 Gradle 挂起无限占用 runner
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -52,9 +54,14 @@ jobs:
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
+          # P1-S-1 修正：KEYSTORE_BASE64 未配置时 fail fast（exit 1），
+          # 而非静默使用 debug 签名。debug keystore 公开，任何人都能签发
+          # 相同包名 APK，存在安全风险。Release 必须用正式签名。
           if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "⚠ KEYSTORE_BASE64 secret 未配置，将使用 debug 签名（仅测试用）"
-            exit 0
+            echo "✗ ERROR: KEYSTORE_BASE64 secret 未配置，无法进行 Release 签名"
+            echo "  请先运行 'Generate Keystore (One-time)' workflow，"
+            echo "  再将 KEYSTORE_BASE64 / KEYSTORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD 添加到 GitHub Secrets"
+            exit 1
           fi
           echo "$KEYSTORE_BASE64" | base64 -d > $RUNNER_TEMP/wenyan-release.jks
           echo "✓ Keystore 已解码到 $RUNNER_TEMP/wenyan-release.jks"
@@ -69,6 +76,12 @@ jobs:
           echo "Verifying keystore with storepass..."
           keytool -list -keystore "$KEYSTORE_PATH" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" -v
 
+      # P1-CI-1 修正：先测试后构建。
+      # 原顺序 assembleRelease → testDebugUnitTest，测试失败时 release APK 已构建，
+      # 可能被错误发布。改为先 testDebugUnitTest，测试全绿后再构建 release APK。
+      - name: Run unit tests
+        run: gradle testDebugUnitTest --no-daemon --stacktrace
+
       - name: Build signed release APK
         env:
           KEYSTORE_PATH: ${{ runner.temp }}/wenyan-release.jks
@@ -76,9 +89,6 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: gradle assembleRelease --no-daemon --stacktrace
-
-      - name: Run unit tests
-        run: gradle testDebugUnitTest --no-daemon --stacktrace
 
       - name: Get version from tag
         id: version

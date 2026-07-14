@@ -142,9 +142,49 @@ class KnowledgeViewModelTest {
         }
     }
 
+    // P1-AUDIT-5 测试：null subjectName（LEFT JOIN 无有效科目关联的知识点）
+
+    @Test
+    fun filterByCategory_ALL_withNullSubjectName_returnsAllPoints() {
+        // null subjectName 在 ALL 分类下应显示（不静默丢失数据）
+        val points = listOf(
+            makePointWithSubject("kp1", "中国古代文学"),
+            makePointWithSubject("kp2", subjectName = null),
+        )
+        val result = KnowledgeViewModel.filterByCategory(points, KnowledgeCategory.ALL)
+        assertEquals(2, result.size)
+    }
+
+    @Test
+    fun filterByCategory_nonAll_withNullSubjectName_excludesNullPoints() {
+        // null subjectName 在具体分类下应排除（无法匹配 keyword）
+        val points = listOf(
+            makePointWithSubject("kp1", "中国古代文学"),
+            makePointWithSubject("kp2", subjectName = null),
+        )
+        KnowledgeCategory.entries.filter { it != KnowledgeCategory.ALL }.forEach { category ->
+            val result = KnowledgeViewModel.filterByCategory(points, category)
+            assertEquals(
+                "null subjectName should be excluded from category $category",
+                if (category == KnowledgeCategory.ANCIENT) 1 else 0,
+                result.size,
+            )
+        }
+    }
+
+    @Test
+    fun toUiItem_nullSubjectName_fallsBackToUnknown() {
+        val pointWithSubject = KnowledgePointWithSubject(
+            point = makePoint(id = "kp1"),
+            subjectName = null,
+        )
+        val uiItem = KnowledgeViewModel.toUiItem(pointWithSubject)
+        assertEquals("未知科目", uiItem.subject)
+    }
+
     private fun makePointWithSubject(
         id: String,
-        subjectName: String,
+        subjectName: String?,
     ) = KnowledgePointWithSubject(
         point = makePoint(id = id),
         subjectName = subjectName,

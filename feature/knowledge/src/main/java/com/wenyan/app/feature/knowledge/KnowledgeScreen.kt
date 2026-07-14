@@ -132,7 +132,8 @@ private fun CategoryChips(
         contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        items(KnowledgeCategory.entries.toList()) { category ->
+        // P2-LAZY-1 修正：LazyRow items 加 key（用 category.name 唯一标识），避免重组时丢失选中状态
+        items(items = KnowledgeCategory.entries.toList(), key = { it.name }) { category ->
             FilterChip(
                 selected = selectedCategory == category,
                 onClick = { onCategorySelected(category) },

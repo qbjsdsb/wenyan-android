@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # P1-CI-2 修正：添加超时保护，防止 Gradle 挂起无限占用 runner
+    # （默认 6 小时太长，正常构建+测试 < 15 分钟，30 分钟足够）
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -27,14 +30,18 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew || true
 
+      # P1-CI-1 修正：先测试后构建。
+      # 原顺序 assembleDebug → assembleRelease → testDebugUnitTest，
+      # 测试失败时 APK 已构建，artifact 可能被下载使用。
+      # 改为先 testDebugUnitTest，测试全绿后再构建 APK。
+      - name: Run unit tests
+        run: gradle testDebugUnitTest --no-daemon --stacktrace
+
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Build release APK
         run: gradle assembleRelease --no-daemon --stacktrace
-
-      - name: Run unit tests
-        run: gradle testDebugUnitTest --no-daemon --stacktrace
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4

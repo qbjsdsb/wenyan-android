@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,6 +47,12 @@ fun WenyanApp(
             }
             ?.route
 
+        // P2-REC-5 修正：用 remember 缓存静态映射，避免每次重组都创建新 List 分配内存。
+        // TopLevelDestination.destinations 是静态列表（companion object val），映射结果不变。
+        val topLevelRoutes = remember {
+            TopLevelDestination.destinations.map { it.route }
+        }
+
         // P0-N1 修正：仅顶级路由显示外层 NavigationBar。
         // - 子路由（knowledge_detail/{pointId} / settings / api_config）不显示，
         //   避免遮挡子页面的内容与返回按钮。
@@ -53,21 +60,26 @@ fun WenyanApp(
         //   外层 NavigationBar 会与之叠加冲突，故同样隐藏。
         val currentRoute = currentDestination?.route
         val showBottomBar = currentRoute != null &&
-            currentRoute in TopLevelDestination.destinations.map { it.route } &&
+            currentRoute in topLevelRoutes &&
             currentRoute != TopLevelDestination.ROUTE_AI_ASSISTANT
+
+        // P2-REC-5 修正：用 remember 缓存 WenyanNavItem 列表（静态数据，不随重组变化）
+        val navItems = remember {
+            TopLevelDestination.destinations.map { destination ->
+                WenyanNavItem(
+                    route = destination.route,
+                    label = destination.label,
+                    icon = destination.icon,
+                )
+            }
+        }
 
         ExpressiveScaffold(
             modifier = Modifier.fillMaxSize(),
             bottomBar = {
                 if (showBottomBar) {
                     WenyanNavigationBar(
-                        items = TopLevelDestination.destinations.map { destination ->
-                            WenyanNavItem(
-                                route = destination.route,
-                                label = destination.label,
-                                icon = destination.icon,
-                            )
-                        },
+                        items = navItems,
                         currentRoute = selectedTopLevelRoute,
                         onNavigate = { route -> navigateToTopLevelDestination(navController, route) },
                     )
