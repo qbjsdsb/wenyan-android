@@ -24,6 +24,7 @@ import com.wenyan.app.core.data.cards.SchoolInfo
 import com.wenyan.app.core.data.cards.TermExplanationCard
 import com.wenyan.app.core.data.cards.TermCategory
 import com.wenyan.app.core.data.cards.WorkAuthorBidirectionalCard
+import com.wenyan.app.core.designsystem.component.Spacing
 
 /**
  * 卡片内容渲染入口（Task 17.8）。
@@ -62,8 +63,8 @@ private fun TermExplanationContent(card: TermExplanationCard, isFlipped: Boolean
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         if (!isFlipped) {
             Text(
@@ -90,7 +91,7 @@ private fun TermExplanationContent(card: TermExplanationCard, isFlipped: Boolean
 
 @Composable
 private fun SocietyFieldsList(fields: com.wenyan.app.core.data.cards.SocietyTermFields) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         if (fields.time.isNotBlank()) FieldRow("时间", fields.time)
         if (fields.place.isNotBlank()) FieldRow("地点", fields.place)
         if (fields.members.isNotBlank()) FieldRow("人物", fields.members)
@@ -102,7 +103,7 @@ private fun SocietyFieldsList(fields: com.wenyan.app.core.data.cards.SocietyTerm
 
 @Composable
 private fun WorkFieldsList(fields: com.wenyan.app.core.data.cards.WorkTermFields) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         if (fields.author.isNotBlank()) FieldRow("作者", fields.author)
         if (fields.era.isNotBlank()) FieldRow("年代", fields.era)
         if (fields.content.isNotBlank()) FieldRow("内容", fields.content)
@@ -118,7 +119,7 @@ private fun FieldRow(label: String, value: String) {
             text = "$label：",
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(end = 8.dp),
+            modifier = Modifier.padding(end = Spacing.sm),
         )
         Text(
             text = value,
@@ -144,8 +145,8 @@ private fun ClozeQuoteContent(card: ClozeQuoteCard, isFlipped: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (!isFlipped) {
@@ -161,7 +162,7 @@ private fun ClozeQuoteContent(card: ClozeQuoteCard, isFlipped: Boolean) {
                 Text(
                     text = "提示：${card.hint}",
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(8.dp),
+                    modifier = Modifier.padding(Spacing.sm),
                 )
             }
         } else {
@@ -192,12 +193,12 @@ private fun WorkAuthorContent(card: WorkAuthorBidirectionalCard, isFlipped: Bool
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(Spacing.lg),
         contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             if (!isFlipped) {
                 Text(
@@ -236,8 +237,8 @@ private fun EssayPointsContent(card: EssayPointsCard, isFlipped: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         if (!isFlipped) {
             Text(
@@ -260,7 +261,7 @@ private fun EssayPointsContent(card: EssayPointsCard, isFlipped: Boolean) {
                 Text(
                     text = "${index + 1}. $point",
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(start = 8.dp),
+                    modifier = Modifier.padding(start = Spacing.sm),
                 )
             }
         }
@@ -279,8 +280,8 @@ private fun SchoolComparisonContent(card: SchoolComparisonCard, isFlipped: Boole
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         if (!isFlipped) {
             Text(
@@ -307,7 +308,9 @@ private fun SchoolRow(school: SchoolInfo) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = Spacing.xs),
+        // NF-C10：2.dp 不在 Spacing 6 级 token 体系（最小 xs=4.dp），
+        // 此处为流派对照表格的紧凑行内间距，刻意小于 xs 以呈现表格化密度，保留字面量。
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Text(
@@ -335,8 +338,8 @@ private fun DistinctionContent(card: DistinctionCard, isFlipped: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         if (!isFlipped) {
             Text(
@@ -374,7 +377,7 @@ private fun DistinctionContent(card: DistinctionCard, isFlipped: Boolean) {
                 Text(
                     text = "${index + 1}. $diff",
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(start = 8.dp),
+                    modifier = Modifier.padding(start = Spacing.sm),
                 )
             }
         }

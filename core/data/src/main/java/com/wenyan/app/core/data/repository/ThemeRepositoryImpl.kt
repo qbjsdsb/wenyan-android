@@ -45,7 +45,7 @@ class ThemeRepositoryImpl @Inject constructor(
             paletteStyle = prefs[PALETTE_STYLE_KEY]?.let { parsePaletteStyle(it) }
                 ?: WenyanPaletteStyle.TONAL_SPOT,
             dynamicColor = prefs[DYNAMIC_COLOR_KEY] ?: true,
-            seedColor = Color(prefs[SEED_COLOR_KEY] ?: 0xFF6750A4.toInt()),
+            seedColor = Color(prefs[SEED_COLOR_KEY] ?: DEFAULT_SEED_COLOR_ARGB),
         )
     }.catchAndLog(TAG, "themeConfig") { ThemeConfig() }
 
@@ -84,5 +84,10 @@ class ThemeRepositoryImpl @Inject constructor(
         val PALETTE_STYLE_KEY = stringPreferencesKey("palette_style")
         val DYNAMIC_COLOR_KEY = booleanPreferencesKey("dynamic_color")
         val SEED_COLOR_KEY = intPreferencesKey("seed_color")
+
+        // NF-DS10 修复：种子色默认值单一来源。
+        // 原硬编码 0xFF6750A4.toInt() 与 ThemeConfig().seedColor 默认值重复，
+        // 修改默认色时需同步两处易遗漏。现统一从 ThemeConfig 取默认值。
+        private val DEFAULT_SEED_COLOR_ARGB = ThemeConfig().seedColor.toArgb()
     }
 }

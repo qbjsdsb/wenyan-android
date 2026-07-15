@@ -123,7 +123,7 @@ class SeedDataLoader @Inject constructor(
      * 重复导入无副作用）。
      */
     private suspend fun isInitialized(): Boolean = try {
-        preferencesDataStore.data.map { it[KEY_SEED_INITIALIZED] ?: false }.first()
+        preferencesDataStore.data.map { it[SEED_INITIALIZED_KEY] ?: false }.first()
     } catch (e: IOException) {
         Log.w(TAG, "DataStore read failed, assuming seed not initialized", e)
         false
@@ -140,7 +140,7 @@ class SeedDataLoader @Inject constructor(
      */
     private suspend fun markInitialized() {
         try {
-            preferencesDataStore.edit { it[KEY_SEED_INITIALIZED] = true }
+            preferencesDataStore.edit { it[SEED_INITIALIZED_KEY] = true }
         } catch (e: IOException) {
             Log.w(TAG, "DataStore write failed, seed will re-import on next launch", e)
         }
@@ -153,7 +153,7 @@ class SeedDataLoader @Inject constructor(
      * 不一致时触发重新导入。IOException 时返回空串（视为"未存储版本"→触发导入）。
      */
     private suspend fun getStoredSeedVersion(): String = try {
-        preferencesDataStore.data.map { it[KEY_SEED_VERSION] ?: "" }.first()
+        preferencesDataStore.data.map { it[SEED_VERSION_KEY] ?: "" }.first()
     } catch (e: IOException) {
         Log.w(TAG, "DataStore read failed for seed version, assuming empty", e)
         ""
@@ -167,7 +167,7 @@ class SeedDataLoader @Inject constructor(
      */
     private suspend fun storeSeedVersion(version: String) {
         try {
-            preferencesDataStore.edit { it[KEY_SEED_VERSION] = version }
+            preferencesDataStore.edit { it[SEED_VERSION_KEY] = version }
         } catch (e: IOException) {
             Log.w(TAG, "DataStore write failed for seed version: $version", e)
         }
@@ -374,9 +374,10 @@ class SeedDataLoader @Inject constructor(
     companion object {
         private const val TAG = "SeedDataLoader"
         private const val SEED_DATA_FILE = "seed_data.json"
-        private val KEY_SEED_INITIALIZED = booleanPreferencesKey("seed_initialized")
+        // NF-DS7 修复：Key 命名统一为 XXX_KEY 后缀式，与 ThemeRepositoryImpl 一致。
+        private val SEED_INITIALIZED_KEY = booleanPreferencesKey("seed_initialized")
         /** P1-AUDIT-4：种子版本号，用于版本感知升级 */
-        private val KEY_SEED_VERSION = stringPreferencesKey("seed_version")
+        private val SEED_VERSION_KEY = stringPreferencesKey("seed_version")
         /** seed_data.json metadata.version 为空时的默认版本（视为首次安装） */
         private const val DEFAULT_SEED_VERSION = "v1"
 
