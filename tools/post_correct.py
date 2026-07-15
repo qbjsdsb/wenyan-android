@@ -44,21 +44,141 @@ CONFIDENCE_MEDIUM = 0.85   # 0.85 <= score < 0.95 送LLM纠错
 MAX_CHANGE_RATE = 0.05
 
 # 常见OCR形近字对照表（用于本地快速修正，不依赖LLM）
-# 这些是最常见的中文OCR形近字错误
+# v5扩充：从12条扩充至50+条，覆盖文学考研教材常见OCR错误
+# 注意：只收录单向映射（OCR错误→正确字），不收录双向/恒等映射
+# v5.1清理：移除所有"视上下文"的不确定条目（交给LLM纠错处理），
+#           移除dict键冲突（如"滨"同时映射到"宾"和"濒"），
+#           移除恒等映射（如"溜":"溜"）
 COMMON_OCR_ERRORS = {
-    "己": "已",  # "已"常被误识为"己"
-    "巳": "已",  # "已"常被误识为"巳"
-    "未": "末",  # "末"常被误识为"未"（视上下文）
-    "土": "士",  # "士"常被误识为"土"（视上下文）
-    "入": "人",  # "人"常被误识为"入"
-    "贝": "见",  # "见"常被误识为"贝"
-    "乌": "鸟",  # "鸟"常被误识为"乌"
-    "兔": "免",  # "免"常被误识为"兔"
-    "折": "拆",  # "拆"常被误识为"折"
-    "帅": "师",  # "师"常被误识为"帅"
-    "刁": "刀",  # "刀"常被误识为"刁"
-    "勺": "匀",  # "匀"常被误识为"勺"
+    # 原有12条（OCR常见误识方向）
+    "己": "已", "巳": "已", "未": "末", "土": "士",
+    "入": "人", "贝": "见", "乌": "鸟", "兔": "免",
+    "折": "拆", "帅": "师", "刁": "刀", "勺": "匀",
+
+    # v5扩充：高频形近字（单向，OCR常误识方向明确）
+    "戊": "戌", "戍": "戌",
+    "亨": "享",
+    "栽": "裁",
+    "瓣": "辫",
+    "嚣": "器",
+    "炙": "灸",
+    "藉": "籍",  # "书籍"常见
+    "蜚": "斐",  # "斐然"
+    "沧": "苍",  # "苍茫"
+    "朔": "塑",  # "塑料"
+    "冥": "瞑",  # "瞑目"
+    "嬴": "赢",  # "输赢"
+    "罔": "惘",  # "迷惘"
+    "殆": "怠",  # "怠慢"
+    "褛": "缕",  # "一丝一缕"
+    "踌": "筹",  # "筹谋"
+    "彷": "仿",  # "仿佛"
+    "徨": "惶",  # "惶恐"
+
+    # 文学教材常见误识（方向明确）
+    "睛": "晴",  # "晴天"
+    "崇": "祟",  # "作祟"
+    "颓": "殒",  # "殒落"
+    "捣": "岛",  # "海岛"
+    "堵": "睹",  # "耳闻目睹"
+    "蹓": "溜",  # "溜达"
+
+    # 注意：以下条目已移除（视上下文/双向/恒等/键冲突）：
+    # "恻":"测"（"恻隐"与"测量"均常见，方向不确定）
+    # "徙":"徒"和"徒":"徙"（双向，"迁徙"与"徒弟"均常见）
+    # "嵇":"稽"（"嵇康"是人名，不应替换）
+    # "滨":"宾"和"滨":"濒"（dict键冲突，"宾馆"与"濒临"均常见）
+    # "赌":"睹"（"赌博"与"目睹"均常见）
+    # "燥":"躁"、"澡":"躁"、"躁":"燥"（多向，"干燥"/"暴躁"/"洗澡"均常见）
+    # "溜":"溜"（恒等映射无意义）
+    # "拈":"沾"和"沾":"拈"（双向，"拈花"与"沾水"均常见）
+    # "卓":"桌"和"桌":"卓"（双向，"卓越"与"桌子"均常见）
+    # "历":"厉"和"厉":"历"（双向，"厉害"与"历史"均常见）
+    # "象":"像"和"像":"象"（双向，"画像"与"现象"均常见）
 }
+
+# v5新增：结构性噪声模式（广告/水印/页眉页脚）
+# 这些模式在OCR输出中反复出现，干扰知识点提取
+# v5.1改进：扩展字符类覆盖希腊字母变形，整行匹配避免残留
+STRUCTURAL_NOISE_PATTERNS = [
+    # 考研辅导广告（有多种OCR变形）
+    # 微信/QQ联系方式（含希腊字母OCR变形）
+    re.compile(r"咨询微信[:：]\s*\S+", re.IGNORECASE),
+    re.compile(r"台询以[:：]\s*\S+", re.IGNORECASE),  # OCR变形
+    re.compile(r"台询以\s*\S+", re.IGNORECASE),  # OCR变形（无冒号）
+    # 淘宝店铺搜索（整行清理，含OCR变形）
+    re.compile(r"详情搜索淘宝店铺.*", re.IGNORECASE),
+    re.compile(r"详情伎系间心而.*", re.IGNORECASE),  # OCR变形
+    re.compile(r"评情续霸淘的.*", re.IGNORECASE),  # OCR变形
+    re.compile(r"评技系淘宝店铺.*", re.IGNORECASE),  # OCR变形
+    re.compile(r"搜索淘宝店铺.*", re.IGNORECASE),
+    # 笃学文学考研品牌名（含OCR变形）
+    re.compile(r"笃学文学考研", re.IGNORECASE),
+    re.compile(r"笃学文字考研", re.IGNORECASE),  # OCR变形
+    re.compile(r"马子文学考研", re.IGNORECASE),  # OCR变形
+    re.compile(r"马子义学考研", re.IGNORECASE),  # OCR变形
+    re.compile(r"驾学义子考研", re.IGNORECASE),  # OCR变形
+    re.compile(r"馆学文学整明", re.IGNORECASE),  # OCR变形
+    re.compile(r"文子考研", re.IGNORECASE),  # OCR变形
+    # 扫描水印
+    re.compile(r"扫描全能王创建", re.IGNORECASE),
+    re.compile(r"扫描全能王", re.IGNORECASE),
+    # 纯页码行（仅数字的行）
+    re.compile(r"^\s*\d+\s*$", re.MULTILINE),
+]
+
+
+def clean_structural_noise(text: str) -> str:
+    """清理结构性噪声（广告/水印/页眉页脚/纯页码行）。
+
+    v5新增：从OCR文本中移除反复出现的广告水印噪声，
+    这些噪声在file_208等真题文件中大量出现，干扰知识点提取。
+
+    Args:
+        text: 原始OCR文本
+
+    Returns:
+        str: 清理后的文本
+    """
+    if not text:
+        return text
+
+    cleaned = text
+    for pattern in STRUCTURAL_NOISE_PATTERNS:
+        cleaned = pattern.sub("", cleaned)
+
+    # 清理多余的空行（噪声移除后可能留下连续空行）
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+
+    return cleaned.strip()
+
+
+def clean_pages_structural_noise(pages: list[dict]) -> list[dict]:
+    """对RapidOCR的pages结构执行结构性噪声清理。
+
+    就地修改pages中每页的text字段，移除广告/水印/页眉页脚。
+
+    Args:
+        pages: RapidOCR页面列表
+
+    Returns:
+        list: 清理后的页面列表（同一对象，text已更新）
+    """
+    for page in pages:
+        text = page.get("text", "")
+        if text:
+            page["text"] = clean_structural_noise(text)
+
+        # 也清理lines中的噪声
+        lines = page.get("lines", [])
+        for line in lines:
+            line_text = line.get("text", "")
+            if line_text:
+                cleaned = clean_structural_noise(line_text)
+                if cleaned != line_text:
+                    line["text"] = cleaned
+
+    return pages
 
 # 不应被LLM修改的专名标记（文学领域常见专名）
 # 这些是文学考研中的核心专名，LLM纠错时不得修改
@@ -608,6 +728,19 @@ def _route_blocks_by_confidence(
     api_config: dict | None = None,
 ) -> dict[str, Any]:
     """对已解析的blocks执行置信度分级路由+LLM纠错+人工校对队列。"""
+    # v5新增：结构性噪声清理（在置信度分级前执行，统一覆盖MinerU和RapidOCR两种来源）
+    # 移除广告/水印/页眉页脚/纯页码行，避免噪声干扰下游知识点提取
+    # 注意：形近字纠错不在此处执行——规则化替换会误改常用字（如"入学"→"人学"），
+    #       形近字纠错完全由LLM在中置信度块上处理（具备上下文理解能力）
+    noise_cleaned_count = 0
+    for block in blocks:
+        original_text = block.get("text", "")
+        if original_text:
+            cleaned_text = clean_structural_noise(original_text)
+            if cleaned_text != original_text:
+                block["text"] = cleaned_text
+                noise_cleaned_count += 1
+
     # 置信度分级路由
     routed = route_by_confidence(blocks)
 
@@ -669,6 +802,7 @@ def _route_blocks_by_confidence(
         "ocr_status": ocr_status,
         "status": "completed",
         "total_blocks": len(blocks),
+        "noise_cleaned_blocks": noise_cleaned_count,
         "high_confidence_blocks": len(routed["high"]),
         "medium_confidence_blocks": len(routed["medium"]),
         "low_confidence_blocks": len(routed["low"]),

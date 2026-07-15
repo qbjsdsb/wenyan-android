@@ -75,12 +75,18 @@ NON_OFFICIAL_LABEL = "非官方拓展"
 
 # ===== 教材来源识别 =====
 
-def identify_textbook_source(file_name: str, category: str) -> str:
-    """根据文件名和分类识别教材来源。
+def identify_textbook_source(file_name: str, category: str, relative_path: str = "") -> str:
+    """根据文件名、分类和相对路径识别教材来源。
+
+    v5修复：利用relative_path识别教材来源，解决以下问题：
+      - 马工程3文件file_name不含"马工程"，仅在relative_path的"马工程教材"目录中
+      - 袁行霈file_name不含"袁行霈"，仅在relative_path的"袁行霈版本"目录中
+      - 郑克鲁file_name可能同时含"聂珍钊"（副主编），需用relative_path区分
 
     Args:
         file_name: 文件名
         category: 文件分类（科目）
+        relative_path: 文件相对路径（含目录结构信息）
 
     Returns:
         str: 教材来源标识（"袁行霈"/"马工程"/"游国恩"/"丁帆"/"聂珍钊"/"郑克鲁"/"童庆炳"/"周宪"/"其他"）
@@ -88,25 +94,50 @@ def identify_textbook_source(file_name: str, category: str) -> str:
     if category not in TEXTBOOK_MAPPING:
         return "其他"
 
-    mapping = TEXTBOOK_MAPPING[category]
+    # 合并file_name和relative_path作为搜索文本
+    search_text = f"{relative_path} {file_name}"
 
-    # 检查主干教材
-    for keyword in mapping["main_file_keywords"]:
-        if keyword in file_name:
-            # 区分袁行霈和马工程（古代文学特殊处理）
-            if category == "古代文学":
-                if "马工程" in file_name or "中国古代文学史" in file_name:
-                    return "马工程"
-                if "袁行霈" in file_name or "袁行霈版本" in file_name:
-                    return "袁行霈"
-                if "游国恩" in file_name:
-                    return "游国恩"
-            return mapping["study_text_main"]
+    # 古代文学：需区分袁行霈/马工程/游国恩
+    if category == "古代文学":
+        # 先检查补充教材（游国恩），再检查主干（马工程/袁行霈）
+        # 注意：必须先检查马工程（用relative_path），否则"中国文学史"会先命中袁行霈
+        if "游国恩" in search_text:
+            return "游国恩"
+        if "马工程" in relative_path or "马工程教材" in relative_path:
+            return "马工程"
+        if "袁行霈" in search_text or "袁行霈版本" in relative_path:
+            return "袁行霈"
+        return "其他"
 
-    # 检查补充教材
-    for keyword in mapping["supplementary_file_keywords"]:
-        if keyword in file_name:
-            return mapping["supplementary"][0] if mapping["supplementary"] else "其他"
+    # 现当代文学：丁帆为主干，钱理群为补充
+    if category == "现当代文学":
+        if "丁帆" in search_text or "新文学史" in file_name:
+            return "丁帆"
+        if "钱理群" in search_text or "三十年" in file_name:
+            return "钱理群"
+        return "其他"
+
+    # 外国文学：聂珍钊为主干，郑克鲁为补充
+    # 注意：file_089的file_name同时含"聂珍钊"和"郑克鲁"，需用主编/副主编区分
+    if category == "外国文学":
+        # 郑克鲁单独成册的文件（relative_path或file_name含"郑克鲁"但不含"聂珍钊"）
+        if "郑克鲁" in search_text and "聂珍钊" not in search_text:
+            return "郑克鲁"
+        # 聂珍钊主编的文件
+        if "聂珍钊" in search_text:
+            return "聂珍钊"
+        # 兜底：file_name含"外国文学史"但无明确作者
+        if "外国文学史" in file_name:
+            return "聂珍钊"
+        return "其他"
+
+    # 文学理论：童庆炳为主干，周宪为补充
+    if category == "文学理论":
+        if "童庆炳" in search_text or "文学理论教程" in file_name:
+            return "童庆炳"
+        if "周宪" in search_text or "文学理论导引" in file_name:
+            return "周宪"
+        return "其他"
 
     return "其他"
 
@@ -174,9 +205,10 @@ def load_all_knowledge_points(input_dir: str) -> list[dict[str, Any]]:
 
         file_name = data.get("file_name", "")
         category = data.get("category", "未分类")
+        relative_path = data.get("relative_path", "")
 
-        # 识别教材来源
-        textbook_source = identify_textbook_source(file_name, category)
+        # 识别教材来源（v5修复：利用relative_path）
+        textbook_source = identify_textbook_source(file_name, category, relative_path)
 
         for kp in data.get("valid_knowledge_points", []):
             kp["textbook_source"] = textbook_source
@@ -200,6 +232,45 @@ def group_knowledge_points_by_title(kps: list[dict[str, Any]]) -> dict[str, list
     """
     import difflib
     import re
+
+    # v5修复：反义/对立概念排除规则
+    # 这些词对虽然字面相似度高，但语义上是对立/不同的概念，不应合并
+    ANTONYM_PREFIXES = ["后", "反", "非", "新", " neo"]
+
+    def is_antonym_pair(title1: str, title2: str) -> bool:
+        """检测两个标题是否为反义/对立概念对。
+
+        检测规则：
+          1. 一个标题是另一个的前缀+否定词（如"现代主义" vs "后现代主义"）
+          2. 含有对立词对（如"浪漫" vs "现实"、"古典" vs "现代"）
+
+        Args:
+            title1: 标题1（归一化后）
+            title2: 标题2（归一化后）
+
+        Returns:
+            bool: True表示是对立概念，不应合并
+        """
+        # 规则1：前缀否定（如"现代主义" vs "后现代主义"）
+        for prefix in ANTONYM_PREFIXES:
+            if len(title1) > len(title2) and title1.startswith(prefix) and title1[len(prefix):] == title2:
+                return True
+            if len(title2) > len(title1) and title2.startswith(prefix) and title2[len(prefix):] == title1:
+                return True
+
+        # 规则2：对立词对（在两个标题中分别出现）
+        antonym_pairs = [
+            ("浪漫", "现实"), ("古典", "现代"), ("唯美", "功利"),
+            ("积极", "消极"), ("主观", "客观"), ("形式", "内容"),
+            ("理性", "感性"), ("传统", "反传统"),
+        ]
+        for word1, word2 in antonym_pairs:
+            if word1 in title1 and word2 in title2:
+                return True
+            if word2 in title1 and word1 in title2:
+                return True
+
+        return False
 
     def normalize_title(title: str) -> str:
         """归一化标题：去除空格/标点/章节编号。"""
@@ -225,13 +296,16 @@ def group_knowledge_points_by_title(kps: list[dict[str, Any]]) -> dict[str, list
                 matched_key = ok
                 break
 
-        # 模糊匹配：相似度>0.8
+        # 模糊匹配：相似度>0.8，但排除反义/对立概念
         if matched_key is None:
             best_ratio = 0.0
             best_key = None
             for nk, ok in normalized_keys:
                 ratio = difflib.SequenceMatcher(None, norm, nk).ratio()
                 if ratio > best_ratio:
+                    # v5修复：检查是否为反义/对立概念对
+                    if ratio >= 0.8 and is_antonym_pair(norm, nk):
+                        continue  # 跳过对立概念，不合并
                     best_ratio = ratio
                     best_key = ok
             if best_ratio >= 0.8:
