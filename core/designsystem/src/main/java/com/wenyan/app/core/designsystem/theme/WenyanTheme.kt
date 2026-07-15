@@ -71,17 +71,21 @@ fun WenyanTheme(
     }
 
     // AMOLED 模式：将底层表面替换为纯黑
-    val finalScheme = if (isDark && config.amoledMode) {
-        baseScheme.copy(
-            background = Color.Black,
-            surface = Color.Black,
-            surfaceDim = Color.Black,
-            surfaceContainerLowest = Color.Black,
-            surfaceContainerLow = Color.Black,
-            surfaceContainer = Color.Black,
-        )
-    } else {
-        baseScheme
+    // NF-UP1 修复：baseScheme.copy 创建 36 字段的新 ColorScheme，每次重组都重建。
+    // remember(baseScheme, isDark, config.amoledMode) 保证仅在依赖变化时重建。
+    val finalScheme = remember(baseScheme, isDark, config.amoledMode) {
+        if (isDark && config.amoledMode) {
+            baseScheme.copy(
+                background = Color.Black,
+                surface = Color.Black,
+                surfaceDim = Color.Black,
+                surfaceContainerLowest = Color.Black,
+                surfaceContainerLow = Color.Black,
+                surfaceContainer = Color.Black,
+            )
+        } else {
+            baseScheme
+        }
     }
 
     // v0.6：颜色切换动画。主题切换（深色↔浅色、种子色变化、AMOLED 开关）时

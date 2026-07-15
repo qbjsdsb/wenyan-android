@@ -163,7 +163,8 @@ private fun YearSelector(
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         // P2-LAZY-1 修正：LazyRow items 加 key，避免列表重组时 item 丢失状态/动画异常
-        items(items = years, key = { it }) { year ->
+        // NF-UP4 修正：加 contentType 让 LazyRow 复用同一类型 item 的 slot，提升滚动性能
+        items(items = years, key = { it }, contentType = { "year" }) { year ->
             FilterChip(
                 selected = selectedYear == year,
                 onClick = { onYearSelected(year) },
@@ -193,7 +194,7 @@ private fun QuestionList(
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        items(items = questions, key = { it.id }) { question ->
+        items(items = questions, key = { it.id }, contentType = { "question" }) { question ->
             QuestionCard(
                 question = question,
                 isExpanded = question.id in expandedIds,

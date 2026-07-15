@@ -134,7 +134,8 @@ private fun CategoryChips(
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         // P2-LAZY-1 修正：LazyRow items 加 key（用 category.name 唯一标识），避免重组时丢失选中状态
-        items(items = KnowledgeCategory.entries.toList(), key = { it.name }) { category ->
+        // NF-UP4 修正：加 contentType 让 LazyRow 复用同一类型 item 的 slot，提升滚动性能
+        items(items = KnowledgeCategory.entries.toList(), key = { it.name }, contentType = { "category" }) { category ->
             FilterChip(
                 selected = selectedCategory == category,
                 onClick = { onCategorySelected(category) },
@@ -156,7 +157,7 @@ private fun KnowledgeList(
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        items(items = items, key = { it.id }) { item ->
+        items(items = items, key = { it.id }, contentType = { "knowledgeItem" }) { item ->
             KnowledgePointCard(
                 item = item,
                 onClick = { onNavigateToDetail(item.id) },

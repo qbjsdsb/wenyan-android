@@ -1,19 +1,27 @@
 package com.wenyan.app.feature.graph.ui
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -39,6 +47,13 @@ private val NODE_TOUCH_RADIUS_DP = 24f
  * - 边连线（薄弱子图 error 加粗）
  * - 节点标签（onSurface）
  * - 点击节点触发回调
+ *
+ * **NF-UA1 修复（无障碍）**：原 Canvas 内 detectTapGestures 检测点击，TalkBack
+ * 完全不可感知图谱与节点。现改为 Canvas 只负责绘制（边/节点/标签），节点上方叠加
+ * 透明 Box（每节点一个）承接点击 + semantics：
+ * - 整个图谱 Modifier.semantics { contentDescription = "知识图谱，N 个节点" }
+ * - 每个节点 Box Modifier.semantics { role = Button; contentDescription = node.label }
+ * TalkBack 现可朗读"知识图谱，X 个节点" → "节点：鲁迅作品"，双击触发节点点击。
  *
  * @param nodes 图谱节点列表（含 R 值）
  * @param edges 图谱边列表
@@ -68,7 +83,13 @@ fun GraphCanvas(
     val weakHaloColor = colorScheme.error.copy(alpha = 0.2f)
     val weakEdgeColor = colorScheme.error.copy(alpha = 0.6f)
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxSize()
+            // NF-UA1 修复：整个图谱加 semantics，让 TalkBack 朗读"知识图谱，N 个节点"。
+            // 视障用户进入图谱区域时即可感知存在与规模。
+            .semantics { contentDescription = "知识图谱，${nodes.size} 个节点" },
+    ) {
         val canvasWidth = constraints.maxWidth.toFloat()
         val canvasHeight = constraints.maxHeight.toFloat()
 
@@ -101,27 +122,9 @@ fun GraphCanvas(
                 .toSet()
         }
 
-        // NF-UC5 修复：rememberUpdatedState 保持最新 nodes 引用，
-        // 让 pointerInput(Unit) 内的 lambda 总能读到最新 nodes，无需重启手势检测。
-        val currentNodes by rememberUpdatedState(nodes)
-
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                // NF-UC5 修复：pointerInput(nodes) 在 nodes 列表变化时重启手势检测协程，
-                // R 值刷新瞬间（nodes 引用变化）tap 事件可能丢失。
-                // 改为 pointerInput(Unit) 让手势检测协程只启动一次，配合 rememberUpdatedState
-                // 在 lambda 内读取 currentNodes 而非闭包捕获的 nodes。
-                .pointerInput(Unit) {
-                    detectTapGestures { tapOffset ->
-                        currentNodes.find { node ->
-                            val pos = positions[node.id]
-                            pos != null && (tapOffset - pos).getDistance() <= touchRadiusPx
-                        }?.let { onNodeClick(it.id) }
-                    }
-                },
-        ) {
-            // ── 绘制边 ──
+        // ── Canvas 只负责绘制（边、节点、标签），不再处理点击 ──
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            // 绘制边
             edges.forEach { edge ->
                 val from = positions[edge.fromId]
                 val to = positions[edge.toId]
@@ -136,7 +139,7 @@ fun GraphCanvas(
                 }
             }
 
-            // ── 绘制节点 ──
+            // 绘制节点
             nodes.forEach { node ->
                 val pos = positions[node.id] ?: return@forEach
                 val color = colorForRetrievability(
@@ -173,6 +176,31 @@ fun GraphCanvas(
                     ),
                 )
             }
+        }
+
+        // ── NF-UA1 修复：节点点击改为 Box 叠加 ──
+        // 每个节点上方叠加一个透明 Box，承接点击 + semantics：
+        // - role = Role.Button → TalkBack 朗读"按钮"
+        // - contentDescription = node.label → TalkBack 朗读节点名
+        // TalkBack 用户可通过双击触发节点点击，与视觉用户操作一致。
+        // 触控区域直径 = 2 * touchRadiusPx（48dp），符合 WCAG 最小触控目标。
+        val touchSizeDp = with(density) { touchRadiusPx.toDp() } * 2
+        nodes.forEach { node ->
+            val pos = positions[node.id] ?: return@forEach
+            val xDp = with(density) { (pos.x - touchRadiusPx).toDp() }
+            val yDp = with(density) { (pos.y - touchRadiusPx).toDp() }
+            Box(
+                modifier = Modifier
+                    .size(touchSizeDp)
+                    .semantics {
+                        role = Role.Button
+                        contentDescription = node.label
+                    }
+                    .align(Alignment.TopStart)
+                    .absoluteOffset(x = xDp, y = yDp)
+                    .clip(CircleShape)
+                    .clickable { onNodeClick(node.id) },
+            )
         }
     }
 }

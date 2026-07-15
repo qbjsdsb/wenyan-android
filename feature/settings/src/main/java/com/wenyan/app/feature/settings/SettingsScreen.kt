@@ -48,9 +48,20 @@ import com.wenyan.app.feature.settings.BuildConfig
  * 设置页面。
  *
  * v0.6 起从子路由提升为顶级 Tab，不再需要 onBack 返回箭头。
- *
  * 包含：外观（主题模式/AMOLED）、动态色彩（开关/种子色/调色板风格）、AI 服务、关于。
  */
+
+// NF-UP2 修复：seedColors 移到文件顶层 top-level private val，
+// 避免每次 SettingsScreen 重组都创建新 List<Color>（5 个 Color 装箱）。
+// 顶层 val 在 class loader 加载时初始化一次，全局共享。
+private val SeedColors = listOf(
+    Color(0xFF6750A4), // 紫
+    Color(0xFF0061A4), // 蓝
+    Color(0xFF006C4C), // 绿
+    Color(0xFF9C4146), // 红
+    Color(0xFF7C5800), // 棕
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -170,14 +181,7 @@ fun SettingsScreen(
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                val seedColors = listOf(
-                                    Color(0xFF6750A4), // 紫
-                                    Color(0xFF0061A4), // 蓝
-                                    Color(0xFF006C4C), // 绿
-                                    Color(0xFF9C4146), // 红
-                                    Color(0xFF7C5800), // 棕
-                                )
-                                seedColors.forEach { color ->
+                                SeedColors.forEach { color ->
                                     FilterChip(
                                         selected = themeConfig.seedColor == color,
                                         onClick = { viewModel.setSeedColor(color) },

@@ -36,6 +36,7 @@ import java.time.ZoneId
 object MemoRecordMapper {
 
     private const val DAY_MS = 86_400_000L
+    private const val TAG = "MemoRecordMapper"
 
     /**
      * Room MemoRecordEntity → FlashCard
@@ -145,7 +146,7 @@ object MemoRecordMapper {
                 // P0-EE1 修正：原实现静默重置丢历史，现记录警告日志。
                 // 旧历史因格式损坏无法安全解析，只能保留新 entry，但日志可追溯。
                 // TODO(Batch 7): 引入 kotlinx.serialization 替代 StringBuilder，做健壮 JSON 解析。
-                Log.w("MemoRecordMapper", "History JSON 格式异常，已重置并保留新 entry，旧历史丢失: $trimmed")
+                Log.w(TAG, "History JSON 格式异常，已重置并保留新 entry，旧历史丢失: $trimmed")
                 "[$entry]"
             }
         }

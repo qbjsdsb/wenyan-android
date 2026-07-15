@@ -84,6 +84,9 @@ fun KnowledgePointDetailScreen(
             )
         },
     ) { innerPadding ->
+        // NF-UC1 修复：scrollState 移出 Crossfade lambda，避免状态切换（loading→content）
+        // 时 Composable 重建导致 scrollState 丢失，滚动位置归零。
+        val scrollState = rememberScrollState()
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -119,7 +122,6 @@ fun KnowledgePointDetailScreen(
                     }
                     else -> {
                         uiState.point?.let { point ->
-                            val scrollState = rememberScrollState()
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()

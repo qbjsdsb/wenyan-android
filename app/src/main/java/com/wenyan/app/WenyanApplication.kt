@@ -39,7 +39,11 @@ class WenyanApplication : Application() {
     lateinit var seedDataLoader: SeedDataLoader
 
     private val exceptionHandler = CoroutineExceptionHandler { _, e ->
-        Log.e("WenyanApplication", "Seed data load failed", e)
+        Log.e(TAG, "Seed data load failed", e)
+    }
+
+    private companion object {
+        private const val TAG = "WenyanApplication"
     }
 
     private val applicationScope = CoroutineScope(

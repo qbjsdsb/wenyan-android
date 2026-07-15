@@ -217,7 +217,7 @@ private fun ConfigList(
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        items(configs, key = { it.id }) { config ->
+        items(configs, key = { it.id }, contentType = { "config" }) { config ->
             ConfigCard(
                 config = config,
                 isCurrent = config.id == currentConfigId,
@@ -370,7 +370,8 @@ private fun ApiConfigFormDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     // P2-LAZY-1 修正：LazyRow items 加 key（用 provider.key 唯一标识），避免重组时丢失选中状态
-                    items(items = LlmProvider.entries.toList(), key = { it.key }) { provider ->
+                    // NF-UP4 修正：加 contentType 让 LazyRow 复用同一类型 item 的 slot，提升滚动性能
+                    items(items = LlmProvider.entries.toList(), key = { it.key }, contentType = { "provider" }) { provider ->
                         ProviderChip(
                             label = provider.displayName,
                             selected = formState.provider == provider.key,

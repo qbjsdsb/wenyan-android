@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 
 /**
@@ -105,7 +106,9 @@ fun GroupedCardItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+            // NF-UA4 修复：加 role=Role.Button 语义，TalkBack 朗读"按钮"，
+            // 视障用户才能识别该项可点击。原 .clickable 无 role，TalkBack 不朗读"按钮"。
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
             .padding(
                 start = Spacing.lg,
                 end = Spacing.lg,
