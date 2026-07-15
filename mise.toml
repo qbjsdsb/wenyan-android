@@ -1,2 +1,12 @@
 [tools]
 gradle = "8.14.4"
+# 文研App 要求 JDK 17（AGP 8.6.0 + Kotlin 2.3.10 + KSP 2.3.2 均基于 17 编译）
+# 沙箱默认 java=25.0.2 会导致 AGP 8.6.0 加载失败，必须显式锁定 17.0.2
+java = "17.0.2"
+
+[env]
+# JDK 17.0.2 在 cgroup v2 容器中 JvmWideVariable 初始化失败，
+# 关闭容器支持可避免（仅影响容器内 cgroup 内存限制感知，不影响构建）
+# 同时配置 HTTPS 代理 — Robolectric 测试 worker JVM 不继承 Gradle 代理设置，
+# 需在 JAVA_TOOL_OPTIONS 中配置才能让 MavenArtifactFetcher 通过代理下载 android-all jar
+JAVA_TOOL_OPTIONS = "-XX:-UseContainerSupport -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=18080 -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=18080 -Dhttp.nonProxyHosts=localhost|127.0.0.1|.svc|.cluster.local"
