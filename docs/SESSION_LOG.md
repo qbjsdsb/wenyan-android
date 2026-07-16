@@ -1611,3 +1611,91 @@ Phase 4 已将主题模式选择从 FilterChip 改为 SegmentedButton，但调�
    - NF-D3：observeDue Flow 不刷新（需架构调整）
 4. **P1**：v0.5.0 Phase 2 剩余维度审计（strings.xml / dimens.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
 5. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+
+---
+
+## 2026-07-16 会话：UI 全面审查 + P0/P1/P2 三批修复
+
+### 背景
+
+用户要求"整体软件界面是否优雅规范，先给个检查报告"。派 4 个并行 subagent 分维度深度审查（视觉规范/组件复用/无障碍/M3 Expressive），产出综合报告（总分 7.7/10，B+，35 项问题：6 P0 + 18 P1 + 11 P2）。用户确认后执行三批修复。
+
+### 环境恢复
+
+沙箱环境被重置（local.properties、Android SDK、`~/.gradle/gradle.properties` 全部丢失），完整重建：
+- 重建 `~/.gradle/gradle.properties`（代理 127.0.0.1:18080）
+- 下载 Android cmdline-tools + sdkmanager 安装 platform-tools/android-35/build-tools 35.0.0
+- 重建 `local.properties`（`sdk.dir=/opt/android-sdk`）
+- `compileDebugKotlin` 验证通过
+
+### P0 第一批 6 项核心修复（commit `fac5d39`）
+
+| # | 问题 | 修复 |
+|---|------|------|
+| P0-1 | AiAssistant 输入栏被键盘遮挡 | InputBar 加 `imePadding()` + `navigationBarsPadding()` |
+| P0-2 | ApiConfig 长表单 IME 遮挡底部字段 | `AlertDialog` → `ModalBottomSheet`（天然支持 IME 上推） |
+| P0-3 | 清空对话误触即丢失全部消息 | 加二次确认 `AlertDialog` |
+| P0-4 | AiAssistant 子路由缺 `onBack` | 加 `onBack` 参数 + NavHost 注入 |
+| P0-5 | 种子色 FilterChip TalkBack 无法区分 | `SeedColorPreset` 带色名 + `semantics { contentDescription }` |
+| P0-6 | 4 个列表 Screen 无错误处理，DB 异常会崩溃 | 新增共享 `ErrorState` + 4 个 ViewModel 加 `.catch{}` + `retry()` + Crossfade 加 error 分支 |
+
+**改动**：13 files, +463 -173
+
+### P1 第二批 6 项修复（commit `a37f4fc`）
+
+| # | 问题 | 修复 |
+|---|------|------|
+| P1-1 | KnowledgePointCard 长文本撑破布局 | title 限 2 行、summary 限 3 行 + `TextOverflow.Ellipsis` |
+| P1-2 | ConfigCard 长 URL/显示名撑高卡片 | displayName/baseUrl 限 1 行 + Ellipsis |
+| P1-3 | KnowledgePointCard TalkBack 逐个朗读 | `mergeDescendants` 合并为单一语义节点 |
+| P1-4 | GroupedCardItem TalkBack 逐个朗读 | `onClick != null` 时条件加 `mergeDescendants` |
+| P1-5 | 面向用户文案含技术术语 | "（AI生成内容标注为AI_GENERATED）" → "（AI 生成内容仅供参考）" |
+| P1-6 | FontWeight.Bold 过重 | `Bold(700)` → `SemiBold(600)`（M3 Expressive 推荐） |
+
+**改动**：4 files, +35 -5
+
+### P2 第三批 2 项修复（commit `3948da1`）
+
+| # | 问题 | 修复 |
+|---|------|------|
+| P2-1 | QuizScreen `Icons.Default.MenuBook` deprecation 警告 | → `Icons.AutoMirrored.Filled.MenuBook`（RTL 感知图标） |
+| P2-2 | KnowledgePointDetailScreen + GraphScreen FontWeight.Bold 残留 | → `SemiBold`（配合 P1-6 统一字重规范） |
+
+**改动**：3 files, +7 -4
+
+### 验证
+
+- `compileDebugKotlin` BUILD SUCCESSFUL（仅 `flatMapLatest` opt-in warning，非 error，与 QuizViewModel 既有模式一致）
+- `testDebugUnitTest` **220 tests 0 failures 0 errors**（与基线一致，无测试改动）
+
+### 沙箱构建注意事项
+
+- `CI=true` 会触发 `app/build.gradle.kts` 的 signing 配置检查（"Keystore config required in CI environment"），本地编译需用 `CI=false gradle compileDebugKotlin` 绕过
+- `assembleRelease` 需 `-x lintVitalAnalyzeRelease -x lintVitalRelease -x validateSigningRelease` 绕过沙箱 lint 和签名问题
+
+### 下次继续
+
+1. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 18 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + 本次 3 个 UI 修复）
+2. **P0**：跑 emulator 实测 — 验证 UI 三批修复（IME 适配 + 清空确认 + 错误重试 + 长文本省略 + 无障碍合并）
+3. **P1 大型任务**（需用户确认优先级）：
+   - P1-PG-1/2/3：启用 R8 + 补齐 ProGuard 规则
+   - NF-PP4：复习日志双写统一
+   - NF-PP5：错题本实现
+   - NF-PP6：AiAssistantViewModel 消息持久化
+   - NF-T4：MemoRecordMapper Float↔Double 精度（需 schema 迁移）
+   - NF-D3：observeDue Flow 不刷新（需架构调整）
+4. **P1**：v0.5.0 Phase 2 剩余维度审计（strings.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
+5. **P2 剩余 UI 项**（可选）：
+   - ConfigCard 架构级冲突：整卡点击 + 内部编辑/删除按钮，需重构（改为非 clickable + 显式"设为当前"按钮）
+   - CardRenderer FlipCard 超长背面答案溢出：加 `verticalScroll` 而非 Ellipsis
+   - @Preview 补齐（6 个已有，可再补 4 个）
+   - 平板双栏布局（已有 WideNavigationRail，可加 list-detail）
+6. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+
+### 本次 commits
+
+| commit | 内容 |
+|--------|------|
+| `fac5d39` | UI 审查 P0 第一批 6 项核心修复（IME/确认/无障碍/错误处理） |
+| `a37f4fc` | UI 审查 P1 第二批 6 项修复（长文本溢出/无障碍/文案/字重） |
+| `3948da1` | UI 审查 P2 第三批 2 项修复（deprecation + 字重统一） |

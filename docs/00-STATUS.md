@@ -1,19 +1,31 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-07-14
+> 最后更新：2026-07-16
 
 ## ✅ 当前状态
 
-**Release v0.4.0 已发布** — 包含 v0.5.0 Phase 2 第三批 + v0.6 M3 Expressive 精修 Phase 1-5（7 commits，220 tests 0 failures）。
+**UI 全面审查 + P0/P1/P2 三批修复完成** — 14 项 UI 修复（3 commits），220 tests 0 failures。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `9ada352`（main，chore(release): bump versionCode/versionName 到 v0.4.0） |
+| 最新 commit | `3948da1`（main，UI 审查 P2 第三批 deprecation + 字重统一） |
 | 最新 Release | [v0.4.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.4.0)（2026-07-14，debug 签名 fallback，17MB） |
 | 测试 | **220 tests 0 failures 0 errors** |
-| 阻塞 | **CI 账单问题** — Release workflow 无法执行正式签名，v0.4.0 APK 手动上传（debug 签名） |
+| 阻塞 | **CI 账单问题** — 18 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + UI 修复 3 个） |
 | 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节 |
+
+## 🆕 最新改动（2026-07-16）
+
+UI 全面审查 + P0/P1/P2 三批修复（14 项）：
+
+| 批次 | commit | 项数 | 核心内容 |
+|------|--------|------|----------|
+| P0 第一批 | `fac5d39` | 6 | IME 适配 + 清空确认 + onBack + 种子色无障碍 + ModalBottomSheet + 错误处理 |
+| P1 第二批 | `a37f4fc` | 6 | 长文本溢出 + mergeDescendants + 文案去技术术语 + 字重统一 |
+| P2 第三批 | `3948da1` | 2 | MenuBook deprecation + FontWeight.Bold 残留清理 |
+
+详见 [SESSION_LOG.md](SESSION_LOG.md) 最后一节。
 
 ## 📊 项目进度
 
@@ -125,22 +137,25 @@
 
 ## 🎯 下一步优先级
 
-1. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 15 个 commit 待 CI 验证（`dd3ff06`~`40972fc` v0.5.0 + `eb146ef`~`9ada352` v0.6 + Release）
-2. **P0**：跑 emulator 实测 v0.4.0 Release — 验证 v0.5.0 + v0.6 全部修复（FSRS 调度 + 卡片翻转 + AI 入口 + Tab/列表动画 + 深色模式 + 底部 Tab 切换 + 平板 WideNavigationRail + 主题切换颜色动画 + Push/Pop 弹簧 + LoadingIndicator + SegmentedButton）
+1. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 18 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + UI 修复 3 个）
+2. **P0**：跑 emulator 实测 — 验证 v0.5.0 + v0.6 + UI 三批修复（FSRS 调度 + 卡片翻转 + AI 入口 + Tab/列表动画 + 深色模式 + 底部 Tab 切换 + 平板 WideNavigationRail + 主题切换颜色动画 + Push/Pop 弹簧 + LoadingIndicator + SegmentedButton + IME 适配 + 清空确认 + 错误重试 + 长文本省略 + 无障碍合并）
 3. **P0**：CI 账单问题解决后，删除 v0.4.0 tag 重新打 tag 触发正式签名 Release（`git push origin :refs/tags/v0.4.0 && git tag v0.4.0 && git push origin v0.4.0`）
 4. **P1 大型任务**（需用户确认优先级）：
    - P1-PG-1/2/3：启用 R8 + 补齐 ProGuard 规则
    - NF-PP4：复习日志双写统一
    - NF-PP5：错题本实现
    - NF-PP6：AiAssistantViewModel 消息持久化
-5. **P1 Phase 2 剩余维度审计**：
-   - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）
-   - 2.L：错误处理一致性 + 日志规范（sealed AppError + Timber + Snackbar 统一）
-   - 2.M：Compose 副作用 + Accessibility + M3 Expressive
-   - 2.N 剩余：NF-DS7-13 DataStore Key 治理
-6. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
-7. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
-8. **P4**：架构重构 — ReviewRepository.getAllVerifiedKnowledgePoints 已成事实死代码
+   - NF-T4：MemoRecordMapper Float↔Double 精度（需 schema 迁移）
+   - NF-D3：observeDue Flow 不刷新（需架构调整）
+5. **P1**：v0.5.0 Phase 2 剩余维度审计（strings.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
+6. **P2 剩余 UI 项**（可选）：
+   - ConfigCard 架构级冲突：整卡点击 + 内部编辑/删除按钮，需重构
+   - CardRenderer FlipCard 超长背面答案溢出：加 `verticalScroll`
+   - @Preview 补齐（6 个已有，可再补 4 个）
+   - 平板双栏布局（已有 WideNavigationRail，可加 list-detail）
+7. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+8. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
+9. **P4**：架构重构 — ReviewRepository.getAllVerifiedKnowledgePoints 已成事实死代码
 
 ## 📦 已交付
 
@@ -156,3 +171,4 @@
 - 第四轮深度审计 v0.5.0 Phase 2 P1/P2 修复（13 commits：Flow 异常处理 + LEFT JOIN + keystore 随机化 + 种子版本升级 + 性能优化 + AntiRoteMemorization 收尾 + 资源配置 + 业务边界 + SocraticTutor 上下文传递 + 第二批性能/无障碍/死依赖 + 第三批 FSRS 解耦/可测/L2 评分/加解密异常）
 - **v0.6 M3 Expressive 精修 Phase 1-5**（5 commits：导航重构 + 动效字体 + 大屏自适应 + 组件升级 + 视觉精修，220 tests 保持）
 - **Release v0.4.0**（含 v0.5.0 + v0.6 全部改动，220 tests 0 failures 0 errors）
+- **UI 全面审查 + P0/P1/P2 三批修复**（3 commits：IME 适配 + 清空确认 + 错误处理 + 长文本溢出 + 无障碍 mergeDescendants + 文案/字重统一，220 tests 保持）
