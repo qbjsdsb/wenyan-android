@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.repository.ReviewRepository
 import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +26,7 @@ import javax.inject.Inject
  * 进程被杀恢复（NF-L1 修复）：[selectedCategory] 持久化到 [SavedStateHandle]，
  * 进程被杀后恢复分类筛选状态。
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class KnowledgeViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,

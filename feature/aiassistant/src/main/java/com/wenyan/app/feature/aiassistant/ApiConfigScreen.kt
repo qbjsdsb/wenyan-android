@@ -93,10 +93,13 @@ fun ApiConfigScreen(
     )
 
     // 错误提示 → Snackbar
+    // P0-4 修复：先 clearError() 再 showSnackbar()，与 AiAssistantScreen NF-UC4 修复一致。
+    // 原顺序（showSnackbar → clearError）在用户退出 ApiConfig 时协程被取消，
+    // clearError() 不执行 → 下次进入时 errorMessage 仍非空 → snackbar 重复展示。
     LaunchedEffect(errorMessage) {
         errorMessage?.let { msg ->
-            snackbarHostState.showSnackbar(msg)
             viewModel.clearError()
+            snackbarHostState.showSnackbar(msg)
         }
     }
 
@@ -368,6 +371,19 @@ private fun ApiConfigFormDialog(
     // 底部字段（温度/Token）被键盘遮挡无法访问。
     // ModalBottomSheet 天然支持 IME 上推（contentWindowInsets 包含 ime），
     // 且 BottomSheet 是 M3 Expressive 推荐的长表单容器形态。
+    //
+    // P0-3 修复：温度和 Token 输入框改为本地 String state 缓冲。
+    // 原因：原实现是受控的 `value = formState.temperature.toString()`，用户输入
+    // "0." / "-0" / "" 时 toDoubleOrNull() 返回 null，let {} 不执行，
+    // formState.temperature 不变，输入被立即丢弃，用户无法清空重输或输入小数点。
+    // 现改为本地 String state 自由输入，onSave 时统一解析与 coerceIn。
+    var temperatureText by remember(formState.temperature) {
+        mutableStateOf(formState.temperature.toString())
+    }
+    var maxTokensText by remember(formState.maxTokens) {
+        mutableStateOf(formState.maxTokens.toString())
+    }
+
     val sheetState = rememberModalBottomSheetState()
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -436,8 +452,11 @@ private fun ApiConfigFormDialog(
             )
             FormTextField(
                 label = "温度（0-2）",
-                value = formState.temperature.toString(),
+                value = temperatureText,
                 onValueChange = { v ->
+                    // P0-3 修复：本地 state 自由接收输入，不立即解析
+                    temperatureText = v
+                    // 实时尝试解析并向上同步（合法时才同步，不合法时保留本地输入）
                     v.toDoubleOrNull()?.let { onTemperatureChange(it.coerceIn(0.0, 2.0)) }
                 },
                 placeholder = "0.7",
@@ -445,8 +464,11 @@ private fun ApiConfigFormDialog(
             )
             FormTextField(
                 label = "最大 Token 数",
-                value = formState.maxTokens.toString(),
+                value = maxTokensText,
                 onValueChange = { v ->
+                    // P0-3 修复：本地 state 自由接收输入，不立即解析
+                    maxTokensText = v
+                    // 实时尝试解析并向上同步（合法时才同步，不合法时保留本地输入）
                     v.toIntOrNull()?.let { onMaxTokensChange(it.coerceIn(1, 32000)) }
                 },
                 placeholder = "2000",
@@ -462,7 +484,24 @@ private fun ApiConfigFormDialog(
                 TextButton(onClick = onDismiss) {
                     Text("取消")
                 }
-                TextButton(onClick = onSave) {
+                TextButton(
+                    onClick = {
+                        // P0-3 修复：保存时统一解析本地 state，非法值降级为默认值
+                        val parsedTemp = temperatureText.toDoubleOrNull()
+                            ?.coerceIn(0.0, 2.0)
+                            ?: formState.temperature
+                        if (parsedTemp != formState.temperature) {
+                            onTemperatureChange(parsedTemp)
+                        }
+                        val parsedTokens = maxTokensText.toIntOrNull()
+                            ?.coerceIn(1, 32000)
+                            ?: formState.maxTokens
+                        if (parsedTokens != formState.maxTokens) {
+                            onMaxTokensChange(parsedTokens)
+                        }
+                        onSave()
+                    },
+                ) {
                     Text("保存")
                 }
             }

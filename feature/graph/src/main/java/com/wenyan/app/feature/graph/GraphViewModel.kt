@@ -7,6 +7,7 @@ import com.wenyan.app.core.data.repository.GraphRepository
 import com.wenyan.app.core.data.repository.NodeWithRetrievability
 import com.wenyan.app.core.database.entity.GraphEdgeEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +29,7 @@ import javax.inject.Inject
  * R 值通过 combine(observeAll nodes, observeAll memos) 批量计算，
  * 评分后 memo_records 变更时 R 值自动刷新。
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class GraphViewModel @Inject constructor(
     private val graphRepository: GraphRepository,

@@ -19,7 +19,8 @@ android {
         // P1-M2：library 模块的 BuildConfig 不含 VERSION_NAME（那是 application 模块属性）。
         // 显式注入 buildConfigField 供 SettingsScreen 显示版本号。
         // 注意：发版时需与 app/build.gradle.kts 的 versionName 保持同步。
-        buildConfigField("String", "VERSION_NAME", "\"0.3.0\"")
+        // P0-6 修复：与 app/build.gradle.kts 的 versionName=0.4.0 对齐。
+        buildConfigField("String", "VERSION_NAME", "\"0.4.0\"")
     }
 
     compileOptions {

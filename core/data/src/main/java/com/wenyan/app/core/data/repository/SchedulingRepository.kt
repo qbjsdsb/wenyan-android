@@ -1,7 +1,8 @@
 package com.wenyan.app.core.data.repository
 
-import android.util.Log
+import androidx.room.withTransaction
 import com.wenyan.app.core.data.mapper.MemoRecordMapper
+import com.wenyan.app.core.database.WenyanDatabase
 import com.wenyan.app.core.database.dao.MemoRecordDao
 import com.wenyan.app.core.database.dao.ReviewLogDao
 import com.wenyan.app.core.database.entity.CardTemplateType
@@ -12,7 +13,6 @@ import com.wenyan.app.core.fsrs.MemoryTier
 import com.wenyan.app.core.fsrs.Rating
 import com.wenyan.app.core.fsrs.ReviewLog
 import com.wenyan.app.core.fsrs.TIER_CONFIGS
-import kotlinx.coroutines.CancellationException
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -38,11 +38,17 @@ import javax.inject.Singleton
  * - 用户改系统时间（回拨 > 1 分钟）时，ClockGuard 返回 lastKnown 而非 current，
  *   避免 FSRS 误判卡片"刚复习过"（间隔异常短）或"已过期很久"（间隔异常长）。
  *
+ * P0-2 修复：注入 [WenyanDatabase] 用 [withTransaction] 包裹 memo_records 与 review_logs
+ * 两步写入。原实现两步独立写入，memo upsert 成功后 review_log insert 失败（磁盘满 /
+ * SQLite 锁竞争 / 约束错误）会导致 memo.history JSON 有记录但 review_logs 表没有，
+ * AntiRoteMemorization 读取 review_logs 计算连续正确次数会拿到不完整数据，功能失效。
+ *
  * @property memoRecordDao 背诵记录 DAO（读写 memo_records 表）
  * @property clockGuard 时钟守卫（检测回拨，返回单调不减的有效时间戳）
  */
 @Singleton
 class SchedulingRepository @Inject constructor(
+    private val database: WenyanDatabase,
     private val memoRecordDao: MemoRecordDao,
     private val reviewLogDao: ReviewLogDao,
     private val clockGuard: ClockGuard,
@@ -118,11 +124,13 @@ class SchedulingRepository @Inject constructor(
             reviewLog = reviewLog,
             existingHistoryJson = existingMemo.history ?: "[]",
         )
-        memoRecordDao.upsert(updatedMemo)
 
-        // 7. 写入 review_logs 表（P1 修复：原仅嵌入 memo.history JSON,
-        // review_logs 表从未写入,AntiRoteMemorization 读取始终为空,功能失效）
-        try {
+        // P0-2 修复：memo_records 与 review_logs 两步写入包进 withTransaction，
+        // 要么全成要么全败。原实现两步独立，review_log 失败时 memo.history 已写入，
+        // 导致 AntiRoteMemorization 读取 review_logs 表数据不完整，功能静默失效。
+        // 事务失败时向上抛异常，UI 层可提示用户重试，而非静默分裂。
+        database.withTransaction {
+            memoRecordDao.upsert(updatedMemo)
             reviewLogDao.insert(
                 ReviewLogEntity(
                     id = UUID.randomUUID().toString(),
@@ -137,11 +145,6 @@ class SchedulingRepository @Inject constructor(
                     createdAt = nowMillis,
                 ),
             )
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            // review_logs 写入失败不阻塞主调度流程,记录日志即可
-            Log.w(TAG, "Failed to insert review_log for pointId=$pointId", e)
         }
 
         return updatedMemo
@@ -192,9 +195,5 @@ class SchedulingRepository @Inject constructor(
             history = "[]",
             inPriorityQueue = 0,
         )
-    }
-
-    private companion object {
-        private const val TAG = "SchedulingRepository"
     }
 }

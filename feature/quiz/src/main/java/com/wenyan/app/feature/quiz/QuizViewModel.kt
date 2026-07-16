@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.repository.ExamQuestionWithSubject
 import com.wenyan.app.core.data.repository.ExamRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -36,6 +37,7 @@ import javax.inject.Inject
  * - [selectedYear] + [expandedQuestionIds] 持久化到 [SavedStateHandle]，
  *   进程被杀后恢复真题浏览位置与展开状态。
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class QuizViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,

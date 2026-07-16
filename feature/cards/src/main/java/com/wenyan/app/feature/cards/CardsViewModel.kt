@@ -11,6 +11,7 @@ import com.wenyan.app.core.database.entity.CardTemplateType
 import com.wenyan.app.core.fsrs.Rating
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +40,7 @@ import javax.inject.Inject
  * 进程被杀恢复（NF-L2 修复）：
  * - [isFlipped] + [currentIndex] 持久化到 [SavedStateHandle]，进程被杀后恢复卡片位置。
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class CardsViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
