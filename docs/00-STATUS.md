@@ -5,36 +5,53 @@
 
 ## ✅ 当前状态
 
-**v0.5.0 Release 已发布（本地构建 + API 上传）** — 图标重设计 + 第五轮深度审计 21 项修复全部完成，220 tests 0 failures。
+**v0.6.0 P1 大型任务全部完成（5 Wave）** — NF-T4 / NF-PP4 / NF-PP5 / NF-PP6 / P1-PG 五大任务闭环，258 tests 0 failures。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `3f0a738`（main，文档：v0.5.0 Release 监视交接） |
-| 最新 Release | **[v0.5.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.5.0)**（2026-07-16，**本地构建 + GitHub API 上传**，debug 签名 fallback） |
-| 测试 | **220 tests 0 failures 0 errors** |
-| 阻塞 | **CI 账单问题** — 27 个 commit 待 CI 验证（不影响 Release，已通过 API 绕过） |
+| 最新 commit | `f297344`（main，P1-PG Wave 4 ProGuard 规则补齐） |
+| 最新 Release | **[v0.5.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.5.0)**（2026-07-16，本地构建 + GitHub API 上传，debug 签名 fallback） |
+| 测试 | **258 tests 0 failures 0 errors**（220 现有 + 38 P1 大型任务新增） |
+| 阻塞 | **CI 账单问题** — 33 个 commit 待 CI 验证（不影响 Release，已通过 API 绕过） |
 | 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节 |
 
 ## 🚨 新会话首要任务
 
-**v0.5.0 Release 已成功发布**（2026-07-16 16:43 UTC，Release ID 355225410）：
-- Release URL：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.5.0
-- 2 个 APK assets 已上传（17 MB each，debug 签名）：
-  - `wenyan-v0.5.0.apk`（asset_id 479398249）
-  - `wenyan-latest.apk`（asset_id 479398465）
-- 构建方式：`CI=false gradle assembleRelease --no-daemon`（沙箱无 keystore → debug 签名 fallback）
-- 上传方式：`curl -X POST .../releases/{id}/assets`（带 git remote 内嵌 token）
+**v0.6.0 Release 待发布**（P1 大型任务全部完成，需本地构建 + API 上传）：
+- 5 Wave 全部完成：
+  - Wave 1（`148dad6`）：数据库 schema v4→v5 统一迁移
+  - Wave 2.1-2.4（`302165e`/`6adeb40`/`55001c0`/`eb944a5`）：NF-T4 Float 统一 + NF-PP4 复习日志 + NF-PP6 ChatRepository + NF-PP5 WrongAnswerRepository
+  - Wave 3.1（`26ae190`）：NF-PP6 AiAssistantViewModel 持久化
+  - Wave 3.2（`c829e4f`）：NF-PP5 错题本完整闭环（接口提取 + 业务层 + UI 层 + 8 测试）
+  - Wave 4（`f297344`）：P1-PG ProGuard 规则补齐（13 个 .pro，不启用 minify）
 
 **P0 待办**（无需用户干预）：
 - GitHub Actions 账单问题：AI 无法解决，需用户充值或解除限制
 - 账单恢复后可重打 tag 触发正式签名 Release（可选，debug 签名 APK 已可用）
 
 **新会话可立即开始的 P1 任务**：
-1. 跑 emulator 实测 v0.5.0（图标 + P0/P1/P2 修复）
+1. 跑 emulator 实测 v0.6.0（错题本 + AI 对话持久化 + FSRS 调度 + 卡片翻转 + Tab 动画）
 2. v0.5.0 Phase 2 剩余维度审计（strings.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
-3. P1 大型任务（需用户确认优先级）：R8 启用 / 复习日志双写 / 错题本 / AI 消息持久化
+3. 启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
 
 ## 🆕 最新改动（2026-07-16）
+
+**P1 大型任务 5 Wave 全部完成（7 commits，38 测试新增，258 tests 0 failures）**：
+
+| Wave | commit | 内容 | 测试增量 |
+|------|--------|------|---------|
+| Wave 1 | `148dad6` | 数据库 schema v4→v5 统一迁移（NF-PP4/PP5/PP6 合并单次 Migration） | +0 |
+| Wave 2.1 | `302165e` | NF-T4 Float 类型统一消除 DB↔FSRS 精度损失 | +5 |
+| Wave 2.2 | `6adeb40` | NF-PP4 SchedulingRepositoryTest 真实事务验证 | +3 |
+| Wave 2.3 | `55001c0` | NF-PP6 ChatRepository Hilt 绑定 + ChatRepositoryImplTest | +6 |
+| Wave 2.4 | `eb944a5` | NF-PP5 WrongAnswerRepository + Hilt 绑定 + 7 测试 | +7 |
+| Wave 3.1 | `26ae190` | NF-PP6 AiAssistantViewModel 持久化 + Screen 新建对话按钮 | +3 |
+| Wave 3.2 | `c829e4f` | NF-PP5 错题本完整闭环（接口提取 + 业务层 + UI 层） | +8 |
+| Wave 4 | `f297344` | P1-PG ProGuard 规则补齐（13 个 .pro，不启用 minify） | +0 |
+
+详见 [plans/p1-large-tasks-plan.md](plans/p1-large-tasks-plan.md) + [SESSION_LOG.md](SESSION_LOG.md) 最后两节。
+
+---
 
 **启动图标重设计 + 第五轮深度审计 P0 + P1 + P2 第一批（21 项 + 图标，6 commits）**：
 

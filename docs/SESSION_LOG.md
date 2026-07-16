@@ -2095,9 +2095,92 @@ Phase 4 已将主题模式选择从 FilterChip 改为 SegmentedButton，但调�
 
 | commit | 内容 |
 |--------|------|
-| （待 commit） | feat: NF-PP5 Wave 3.2 错题本完整闭环（接口提取 + 业务层 + UI 层 + 8 测试） |
+| `c829e4f` | feat: NF-PP5 Wave 3.2 错题本完整闭环（接口提取 + 业务层 + UI 层 + 8 测试） |
 
 **继承的上一会话 commits**（已在 origin/main）：
+- `26ae190` NF-PP6 Wave 3.1 AiAssistantViewModel 持久化 + Screen 新建对话按钮 +3 测试
+- `eb944a5` NF-PP5 Wave 2.4 WrongAnswerRepository + Hilt 绑定 + 7 测试
+- `55001c0` NF-PP6 Wave 2.3 ChatRepository Hilt 绑定 + ChatRepositoryImplTest +6 测试
+- `6adeb40` NF-PP4 SchedulingRepositoryTest 真实事务验证 +3 测试
+- `302165e` NF-T4 Float 类型统一消除 DB↔FSRS 精度损失
+- `148dad6` Wave 1 数据库 schema v4→v5 统一迁移 (NF-PP4/PP5/PP6)
+
+---
+
+## Session 2026-07-16（续 5）：P1 大型任务 Wave 4 + Wave 5 完成（ProGuard 规则 + 全量验证）
+
+### 目标
+
+承接续 4 会话：执行 P1 大型任务最后两个 Wave — Wave 4（P1-PG ProGuard 规则补齐）+
+Wave 5（全量验证 + 文档 + Release v0.6.0）。用户指令："继续"。
+
+### 完成内容
+
+**1. Wave 4：P1-PG ProGuard 规则补齐（13 个 .pro 文件）**：
+
+为后续启用 R8 预置完整的 ProGuard 规则，当前 `isMinifyEnabled=false` 保持不变，
+不影响现有构建。启用 R8 时 consumer-rules.pro（各模块）+ app/proguard-rules.pro
+合并生效。
+
+| 文件 | 规则内容 |
+|------|---------|
+| `app/proguard-rules.pro` | Hilt（@HiltAndroidApp/@AndroidEntryPoint/@HiltViewModel）+ Compose（@Immutable/@Stable）+ Kotlin Metadata + kotlinx.coroutines + 反射兜底 |
+| `core/ai/consumer-rules.pro` | Retrofit（LlmApiService + Call/Response）+ OkHttp + kotlinx.serialization（6 LlmDtos + RagReference）|
+| `core/data/consumer-rules.pro` | kotlinx.serialization（6 SeedDataLoader 类）+ GraphSkeleton + Repository Impl + Mapper |
+| `core/database/consumer-rules.pro` | Room（@Entity/@Dao/@Database/@TypeConverter + _Impl 生成类）|
+| `core/fsrs/consumer-rules.pro` | FSRS 数据类（FlashCard/ReviewLog/SchedulingCard）+ 5 枚举（name() 序列化到 DB）+ FsrsWrapper + TIER_CONFIGS 顶层 val |
+| `core/common` / `core/designsystem` / `feature/settings` | 保持占位（无反射/序列化/Room/Retrofit 依赖）|
+| `feature/aiassistant` / `cards` / `graph` / `knowledge` / `quiz` | @HiltViewModel 显式声明（模块自包含保护）|
+
+**2. Wave 5.1：全量验证**：
+- `assembleDebug`：BUILD SUCCESSFUL（exit 0）
+- `testDebugUnitTest`：BUILD SUCCESSFUL in 19s，**258 tests 0 failures 0 errors**
+
+**3. Wave 5.2：文档更新**：
+- `docs/00-STATUS.md`：当前状态改为"v0.6.0 P1 大型任务全部完成（5 Wave）"，258 tests
+- `docs/SESSION_LOG.md`：新增本节记录 Wave 4 + Wave 5
+
+### 关键技术决策
+
+1. **consumer-rules.pro 设计意图** — 模块自包含保护，被其他 app 复用时也能保护自己。
+   每个 feature 模块显式声明 @HiltViewModel 规则，虽然 app/proguard-rules.pro 已有通用
+   规则，但显式声明更明确且符合 consumer-rules 设计意图。
+2. **FSRS 枚举 name() 序列化** — Rating/State/MemoryTier 等枚举的 name() 值被序列化到
+   数据库（如 review_logs.rating = "AGAIN"/"GOOD"/"EASY"），枚举常量名必须保留，否则
+   反序列化会失败。这是容易遗漏的规则。
+3. **Kotlin top-level val 编译为 FileNameKt** — TIER_CONFIGS 是 top-level val，编译为
+   FsrsWrapperKt 类的静态字段，需保留 FsrsWrapperKt。这是 Kotlin 特有的 ProGuard 陷阱。
+4. **不启用 minify 的策略** — Wave 4 仅写规则不启用，等 emulator 实测验证无崩溃后
+   再切换 isMinifyEnabled=true。这与 P1-10 的"R8 启用需 emulator 实测"原则一致。
+5. **Room _Impl 生成类** — Room 编译器生成的 WenyanDatabase_Impl / XxxDao_Impl 类必须
+   保留，否则运行时反射找不到实现类。通用规则 `-keep class **_Impl { *; }` 覆盖。
+
+### 验证
+
+- `assembleDebug`：BUILD SUCCESSFUL（exit 0）
+- `testDebugUnitTest`：BUILD SUCCESSFUL in 19s
+- 测试总数：**258 tests**，0 failures / 0 errors / 0 skipped
+
+### 下次继续
+
+1. **Wave 5.3-5.5：Release v0.6.0**：
+   - 升级版本号 versionCode 5→6 / versionName 0.5.0→0.6.0
+   - 本地构建 release APK（`CI=false gradle assembleRelease`，沙箱 debug 签名 fallback）
+   - GitHub API 创建 v0.6.0 Release + 上传 APK（沿用 v0.5.0 流程）
+2. **P0**：跑 emulator 实测 v0.6.0（错题本 + AI 对话持久化 + FSRS 调度 + 卡片翻转 + Tab 动画）
+3. **P0 阻塞**：GitHub Actions 账单问题（AI 无法解决，需用户充值或解除限制）
+4. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换）
+5. **P1**：v0.5.0 Phase 2 剩余维度审计（strings.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
+
+### 本次 commits
+
+| commit | 内容 |
+|--------|------|
+| `f297344` | feat: P1-PG Wave 4 ProGuard 规则补齐（13 个 .pro，不启用 minify） |
+| （待 commit） | docs: Wave 5.2 文档更新（00-STATUS + SESSION_LOG） |
+
+**继承的上一会话 commits**（已在 origin/main）：
+- `c829e4f` NF-PP5 Wave 3.2 错题本完整闭环（接口提取 + 业务层 + UI 层 + 8 测试）
 - `26ae190` NF-PP6 Wave 3.1 AiAssistantViewModel 持久化 + Screen 新建对话按钮 +3 测试
 - `eb944a5` NF-PP5 Wave 2.4 WrongAnswerRepository + Hilt 绑定 + 7 测试
 - `55001c0` NF-PP6 Wave 2.3 ChatRepository Hilt 绑定 + ChatRepositoryImplTest +6 测试
