@@ -1,0 +1,89 @@
+package com.wenyan.app.core.data.repository
+
+import com.wenyan.app.core.database.entity.WrongAnswerEntity
+import kotlinx.coroutines.flow.Flow
+
+/**
+ * 错题本仓库接口(NF-PP5 Wave 2.4)。
+ *
+ * 记录用户答错的题目,支持两个来源:
+ * - [SOURCE_CARD_AGAIN]:卡片复习答 CardsViewModel.rateCard(AGAIN) 时记录
+ * - [SOURCE_QUIZ_WRONG]:真题练习 QuizViewModel.submitAnswer() 判定错误时记录
+ *
+ * 同一知识点/真题的未解决错题,重复答错时递增 wrongCount(不重复插入),
+ * markResolved 后该错题不再出现在 observeUnresolved 中。
+ *
+ * 设计说明:
+ * - 读 API(observe*)直接返回 [WrongAnswerEntity](与 [ChatRepository] /
+ *   [ApiConfigRepository] 一致,直接暴露 Entity,不引入 domain model 增加无谓映射)
+ * - 写 API recordWrongAnswer 接收字段参数(非 Entity),内部判断是新插入还是递增
+ * - source 参数用 String + companion const,避免新增 enum 但仍约束取值
+ */
+interface WrongAnswerRepository {
+
+    /** 观察所有错题(按 lastWrongAt DESC) */
+    fun observeAll(): Flow<List<WrongAnswerEntity>>
+
+    /** 观察未解决错题(resolvedAt IS NULL,按 lastWrongAt DESC) */
+    fun observeUnresolved(): Flow<List<WrongAnswerEntity>>
+
+    /** 观察指定知识点的错题(按 lastWrongAt DESC) */
+    fun observeByPoint(pointId: String): Flow<List<WrongAnswerEntity>>
+
+    /** 观察指定真题的错题(按 lastWrongAt DESC) */
+    fun observeByExamQuestion(examQuestionId: String): Flow<List<WrongAnswerEntity>>
+
+    /**
+     * 记录一次答错。
+     *
+     * 逻辑:
+     * - 同一 pointId + source(且 resolvedAt IS NULL)已有记录 → incrementWrongCount(wrongCount++)
+     * - 同一 examQuestionId + source(且 resolvedAt IS NULL)已有记录 → incrementWrongCount
+     * - 否则 → upsert 新 WrongAnswerEntity
+     *
+     * pointId 与 examQuestionId 至少一个非空(卡片来源用 pointId,真题来源用 examQuestionId)。
+     *
+     * @param pointId        关联知识点 ID(卡片来源非空)
+     * @param examQuestionId 关联真题 ID(真题来源非空)
+     * @param userAnswer     用户错误答案
+     * @param correctAnswer  正确答案(可为空,待 AI 批改填入)
+     * @param source         来源:[SOURCE_CARD_AGAIN] 或 [SOURCE_QUIZ_WRONG]
+     * @return 错题记录 ID(新插入或已有)
+     */
+    suspend fun recordWrongAnswer(
+        pointId: String?,
+        examQuestionId: String?,
+        userAnswer: String,
+        correctAnswer: String?,
+        source: String,
+    ): String
+
+    /**
+     * 标记错题为已解决(写 resolvedAt)。
+     *
+     * @param id 错题 ID
+     */
+    suspend fun markResolved(id: String)
+
+    /**
+     * 删除错题记录。
+     *
+     * @param id 错题 ID
+     */
+    suspend fun deleteById(id: String)
+
+    /**
+     * 统计未解决错题数量。
+     *
+     * @return 未解决数量
+     */
+    suspend fun countUnresolved(): Int
+
+    companion object {
+        /** 来源:卡片复习答 AGAIN */
+        const val SOURCE_CARD_AGAIN = "CARD_AGAIN"
+
+        /** 来源:真题练习答错 */
+        const val SOURCE_QUIZ_WRONG = "QUIZ_WRONG"
+    }
+}

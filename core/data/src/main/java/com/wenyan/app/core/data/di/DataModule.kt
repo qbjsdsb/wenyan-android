@@ -6,6 +6,8 @@ import com.wenyan.app.core.data.repository.ChatRepositoryImpl
 import com.wenyan.app.core.data.repository.GraphRepository
 import com.wenyan.app.core.data.repository.GraphRepositoryImpl
 import com.wenyan.app.core.data.repository.LlmConfigProviderImpl
+import com.wenyan.app.core.data.repository.WrongAnswerRepository
+import com.wenyan.app.core.data.repository.WrongAnswerRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -52,4 +54,14 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindChatRepository(impl: ChatRepositoryImpl): ChatRepository
+
+    /**
+     * 绑定 [WrongAnswerRepository] 到 [WrongAnswerRepositoryImpl](NF-PP5 Wave 2.4)。
+     *
+     * WrongAnswerRepositoryImpl 通过 @Inject constructor 注入 WrongAnswerDao,
+     * DAO 由 DatabaseModule 提供。
+     */
+    @Binds
+    @Singleton
+    abstract fun bindWrongAnswerRepository(impl: WrongAnswerRepositoryImpl): WrongAnswerRepository
 }
