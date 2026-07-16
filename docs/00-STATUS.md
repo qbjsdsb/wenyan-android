@@ -17,11 +17,17 @@
 
 ## 🚨 新会话首要任务
 
-**检查 v0.5.0 Release 状态**（会话结束时尚未生成）：
-1. 浏览器打开 https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.5.0
-2. 若已生成：下载 APK 验证图标显示
-3. 若 404：打开 https://github.com/qbjsdsb/wenyan-android/actions 检查 workflow 是否被账单阻塞
-4. 若账单问题已解决：v0.5.0 可用正式签名 APK；否则 debug 签名 fallback（与 v0.3.0/v0.4.0 同）
+**v0.5.0 Release workflow 失败（GitHub Actions 账单阻塞，已确认）**：
+- Run ID 29515451654，触发于 2026-07-16 16:24:45 UTC
+- Job 状态 completed/failure，**0 steps 执行**，日志不存在 — 典型账单阻塞症状
+- 同时 Android Build & Test workflow 连续 4 次失败（同一原因）
+- Run URL：https://github.com/qbjsdsb/wenyan-android/actions/runs/29515451654
+
+**用户需操作**（AI 无法解决账单问题）：
+1. 登录 GitHub → Settings → Billing & plans → Actions 检查账单
+2. 充值或解除限制后重新触发：
+   - 方法 1（删 tag 重打）：`git push origin :refs/tags/v0.5.0 && git tag v0.5.0 && git push origin v0.5.0`
+   - 方法 2（UI re-run）：打开 Run URL → "Re-run failed jobs"
 
 ## 🆕 最新改动（2026-07-16）
 

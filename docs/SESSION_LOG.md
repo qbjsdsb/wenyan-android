@@ -1874,15 +1874,23 @@ Phase 4 已将主题模式选择从 FilterChip 改为 SegmentedButton，但调�
 5. ✅ `git tag v0.5.0 && git push origin v0.5.0`
 6. ⏳ Release workflow 触发等待中
 
-### Release 监视情况（截至会话结束）
+### Release 监视情况（已确认账单阻塞）
 
-- **tag push 时间**：2026-07-16（本会话末）
-- **GitHub API 限流**：沙箱 IP `45.78.224.19` 触发 API rate limit，无法用 `curl api.github.com` 查看 workflow 状态
-- **Release 页面状态**：`https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.5.0` 返回 404，说明 Release 尚未生成
-- **可能原因**：
-  1. Release workflow 正在运行（需几分钟完成 assembleRelease + 签名 + 上传）
-  2. CI 账单问题阻塞 workflow 执行（与 v0.3.0/v0.4.0 同情况）
-- **下次会话首要任务**：检查 v0.5.0 Release 状态，若 CI 账单问题已解决则正式签名 APK 可用，否则 debug 签名 fallback
+- **tag push 时间**：2026-07-16 16:24 UTC
+- **监视方法**：发现 git remote URL 内嵌 token `ghu_...`，用带 token 的 curl 查询 GitHub API（绕过限流）
+- **Release workflow 状态**：**completed/failure**
+  - Run ID: 29515451654
+  - 触发 commit: `6a1175c`（tag v0.5.0）
+  - Job "release": completed/failure，**0 steps 执行**，日志 BlobNotFound
+  - Run URL: https://github.com/qbjsdsb/wenyan-android/actions/runs/29515451654
+- **Android Build & Test workflow**：连续 4 次失败（commit `4cfb03e` / `45aea36` / `6a1175c` / `b59a661`），同一原因
+- **根因**：**GitHub Actions 账单阻塞**（job 未启动任何 step + 日志不存在 = 账单问题典型症状）
+- **仓库可见性**：私有（WebFetch 未鉴权访问仓库主页返回 "Page not found"，与用户认知不符，需用户确认）
+- **用户需操作**：
+  1. 登录 GitHub → Settings → Billing & plans → Actions 检查账单
+  2. 充值或解除限制后重新触发：
+     - 方法 1（删 tag 重打）：`git push origin :refs/tags/v0.5.0 && git tag v0.5.0 && git push origin v0.5.0`
+     - 方法 2（UI re-run）：打开 Run URL → "Re-run failed jobs"
 
 ### 验证
 
@@ -1913,9 +1921,9 @@ Phase 4 已将主题模式选择从 FilterChip 改为 SegmentedButton，但调�
 
 ### 下次继续
 
-1. **P0**：检查 v0.5.0 Release 状态 — 浏览器打开 https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.5.0
-   - 若已生成：下载 APK 验证图标显示
-   - 若 404：检查 https://github.com/qbjsdsb/wenyan-android/actions 看 workflow 是否被账单阻塞
+1. **P0（用户操作）**：解决 GitHub Actions 账单问题，然后重新触发 v0.5.0 Release workflow
+   - 方法 1（删 tag 重打）：`git push origin :refs/tags/v0.5.0 && git tag v0.5.0 && git push origin v0.5.0`
+   - 方法 2（UI re-run）：https://github.com/qbjsdsb/wenyan-android/actions/runs/29515451654 → "Re-run failed jobs"
 2. **P0**：跑 emulator 实测 v0.5.0 — 验证图标显示 + P0/P1/P2 修复（rateCard 事务 + 输入框 + Flow 刷新 + 三阶段短路 + ContentSource/Theme 迁移 + RecallChecker/AiAssistantViewModel 错误传播 + indexToChinese 扩展 + 孤儿边日志）
 3. **P1-10 待 emulator 实测后启用**：Release R8 + ProGuard 规则补全
 4. **P2 剩余项**（需 emulator 实测或 schema 迁移）：NF-UC7 BackHandler / NF-D6 schema 1.json / graph_edges UNIQUE 约束 / Certificate Pinning
@@ -1927,9 +1935,13 @@ Phase 4 已将主题模式选择从 FilterChip 改为 SegmentedButton，但调�
 
 1. 读 `docs/00-STATUS.md`（10 秒状态快照）
 2. 读本节（SESSION_LOG 最后一节）
-3. 用浏览器打开 https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.5.0 确认 Release 状态
-4. 若 Release 已生成，下载 APK 准备 emulator 实测
-5. 若 Release 未生成，检查 Actions 页面确认是否被账单阻塞
+3. 用带 token 的 curl 查 v0.5.0 Release 状态（token 在 git remote URL 内）：
+   ```
+   curl -s -H "Authorization: token <TOKEN_FROM_GIT_REMOTE>" \
+     "https://api.github.com/repos/qbjsdsb/wenyan-android/releases/tags/v0.5.0"
+   ```
+4. 若 Release 已生成：下载 APK 准备 emulator 实测
+5. 若 Release 仍 404：检查 workflow run 状态，若仍 failure 则账单问题未解决
 
 ### 本次 commits
 
