@@ -213,6 +213,26 @@
 
 ---
 
+## #014 GraphSkeleton FK 约束失败导致种子导入事务回滚（知识点全部丢失）
+
+- **日期**：2026-07-16
+- **现象**：v0.7.0 / v0.7.1 安装后知识点列表为空（`isEmpty=true`），显示"暂无知识点，等待种子数据加载"。App 正常启动无崩溃，logcat 无明显错误（异常被 CoroutineExceptionHandler 吞掉）。
+- **根因**：`GraphSkeleton.kt` 硬编码 `SUBJECT_ID = "subject-modern-contemporary-literature"`，与 `seed_data.json` 中 modern 科目的实际 id `"subj_02"` 不匹配。`GraphNodeEntity` 有 FK 到 `subjects` 表（`subject_id → subjects.id`），`importGraphSkeleton()` 在 `importToDatabase` 的 `withTransaction` 内调用时，`insertNode` 触发 FK 约束失败（SQLite FOREIGN KEY constraint failed），整个事务回滚——已插入的 subjects/chapters/knowledge_points(909条)/memo_records/exam_questions/writing_materials 全部丢失。异常被 `WenyanApplication` 的 `CoroutineExceptionHandler` 吞掉（仅 `Log.e`），App 正常启动但数据库为空。`markInitialized()` 在事务外（事务抛异常后不会执行），下次启动 `isInitialized()` 仍返回 false，重新尝试导入——无限失败循环。
+- **已尝试修复**（v0.7.0 / v0.7.1 未解决）：
+  - ❌ v0.7.0：接入 `study_text` 字段 + 升级 seed version — 未触及根因
+  - ❌ v0.7.1：精简 JSON（删除 cards/graph_nodes/graph_edges）+ withTimeout 30s→120s — 推测超时是根因，实际不是
+- **最终修复**（v0.7.2，双保险）：
+  - ✅ `GraphSkeleton.SUBJECT_ID` 改为 `"subj_02"`（与 seed_data.json 一致）
+  - ✅ `importGraphSkeleton()` 移出主 `withTransaction`，独立 `database.withTransaction { }` + try-catch，即使图谱导入失败也不影响知识点（主事务已提交 + markInitialized 已执行）
+  - ✅ seed version 2.1.0 → 2.2.0 触发重新导入
+- **教训**：
+  1. **预置常量必须与动态数据源对齐**——硬编码的 `SUBJECT_ID` 必须与 `seed_data.json` 中的实际 id 一致，否则 FK 约束失败
+  2. **附加功能不应与核心功能共享事务**——图谱骨架是附加功能，知识点导入是核心功能，不应放在同一个 `withTransaction` 内，否则附加功能失败会拖垮核心功能
+  3. **异常被吞掉时需要看 logcat**——`CoroutineExceptionHandler` 吞掉异常只 `Log.e`，App 正常启动但数据为空，容易误判为"数据加载慢"或"超时"
+- **相关文件**：`core/data/src/main/java/com/wenyan/app/core/data/seed/GraphSkeleton.kt`、`core/data/src/main/java/com/wenyan/app/core/data/seed/SeedDataLoader.kt`、`app/src/main/assets/seed_data.json`
+
+---
+
 ## 模板（新失败方案按此格式记录）
 
 ```markdown

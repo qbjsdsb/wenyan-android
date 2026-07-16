@@ -2264,3 +2264,56 @@ Wave 5（全量验证 + 文档 + Release v0.6.0）。用户指令："继续"。
 
 **继承的用户本地 commit**（已在 origin/main）：
 - `104bab9` fix: 逐字校对952知识点并重新生成seed_data
+
+---
+
+## v0.7.2 修复知识点不显示（GraphSkeleton FK 回滚）— 2026-07-16
+
+### 背景
+
+v0.7.0 / v0.7.1 发布后，用户多次重新安装，知识点列表始终为空（显示"暂无知识点，等待种子数据加载"）。v0.7.1 推测超时是根因（withTimeout 30s→120s + 精简 JSON），但实际未解决。
+
+### 根因排查
+
+用户反馈"重新安装了，但是为什么还是看不到知识点"后，深入排查发现真正的根因：
+
+1. **GraphSkeleton.kt 第 29 行**硬编码 `SUBJECT_ID = "subject-modern-contemporary-literature"`
+2. **seed_data.json** 中 modern 科目的 id 实际是 `"subj_02"`（第 21 行）
+3. **GraphNodeEntity** 有 FK 到 subjects 表（`subject_id → subjects.id`，onDelete = SET_NULL）
+4. **importGraphSkeleton()** 在 `importToDatabase` 的 `withTransaction` 内调用（第 352 行）
+5. `insertNode` 时 FK 约束失败（SQLite FOREIGN KEY constraint failed）
+6. **整个 withTransaction 回滚**——909 条知识点 + memo_records + exam_questions + writing_materials 全部丢失
+7. 异常被 `WenyanApplication` 的 `CoroutineExceptionHandler` 吞掉（仅 `Log.e`），App 正常启动但数据库为空
+8. `markInitialized()` 在事务外（事务抛异常后不执行），下次启动重新尝试导入——**无限失败循环**
+
+排查时排除的误导方向：
+- ❌ JSON 数据字段完整性（909 知识点字段齐全）
+- ❌ UI 逻辑（KnowledgeScreen isEmpty 分支正确）
+- ❌ DAO 策略（@Upsert 正确）
+- ❌ multi_perspectives 类型不匹配（硬编码 null，不导致解析失败）
+- ❌ 超时（v0.7.1 已增至 120s，不是根因）
+
+### 修复（v0.7.2，双保险）
+
+1. **GraphSkeleton.SUBJECT_ID**：`"subject-modern-contemporary-literature"` → `"subj_02"`（与 seed_data.json 一致）
+2. **importGraphSkeleton 移出主 withTransaction**：在 `ensureSeedDataLoaded` 中独立 `database.withTransaction { importGraphSkeleton() }` + try-catch，即使图谱导入失败也不影响知识点（主事务已提交 + markInitialized 已执行）
+3. **seed version**：2.1.0 → 2.2.0，触发 v0.7.1 用户重新导入
+4. **app 版本**：v0.7.1 → v0.7.2（versionCode 8 → 9）
+
+### 验证
+
+- `assembleDebug` SUCCESSFUL
+- `testDebugUnitTest` SUCCESSFUL
+- GitHub Release v0.7.2 已发布（APK 19MB，debug 签名，CI 账单问题未解决）
+
+### 教训（已补充到 03-FAILED-ATTEMPTS.md #014）
+
+1. 预置常量必须与动态数据源对齐——硬编码的 SUBJECT_ID 必须与 seed_data.json 一致
+2. 附加功能不应与核心功能共享事务——图谱骨架是附加功能，知识点导入是核心功能
+3. 异常被 CoroutineExceptionHandler 吞掉时，App 正常启动但数据为空，容易误判为"超时"
+
+### 本次 commits
+
+| commit | 内容 |
+|--------|------|
+| `5518933` | fix(v0.7.2): 修复知识点不显示根因——GraphSkeleton FK 约束失败导致种子导入事务回滚 |
