@@ -79,7 +79,7 @@ class ReviewRepository @Inject constructor(
      * 到期判断通过 [MemoRecordDao.observeDue]（使用 SQLite 内置时间）实现，
      * 与 [getPendingReviewCount] 保持语义一致：队列长度 = 待复习数量。
      *
-     * 如需获取全部 VERIFIED 知识点（含未到期），使用 [getAllVerifiedKnowledgePoints]。
+     * 如需获取全部 VERIFIED 知识点（含未到期，附科目名），使用 [getVerifiedWithSubject]。
      *
      * P1-1 修复：原实现直接 `combine(observeVerifiedForReview, observeDue)`，
      * Room Flow 仅在表数据变化时重新查询，observeDue 内的 `strftime('%s','now')`
@@ -103,20 +103,12 @@ class ReviewRepository @Inject constructor(
         .catchAndLog(TAG, "getReviewQueue") { emptyList() }
 
     /**
-     * 获取所有已 VERIFIED 的知识点（不过滤到期状态）。
-     *
-     * 供知识点浏览界面使用（如 [com.wenyan.app.feature.knowledge.KnowledgeViewModel]），
-     * 与 [getReviewQueue] 区别：此方法返回全部已验证知识点，不论是否到期。
-     */
-    fun getAllVerifiedKnowledgePoints(): Flow<List<KnowledgePointEntity>> =
-        knowledgePointDao.observeVerifiedForReview()
-            .catchAndLog(TAG, "getAllVerifiedKnowledgePoints") { emptyList() }
-
-    /**
      * 获取所有已 VERIFIED 的知识点，附带科目名（P1 修复）。
      *
-     * 供知识点浏览界面的分类筛选使用（如 [com.wenyan.app.feature.knowledge.KnowledgeViewModel]），
-     * 与 [getAllVerifiedKnowledgePoints] 区别：此方法返回科目名，支持按科目过滤。
+     * 供知识点浏览界面的分类筛选使用（如 [com.wenyan.app.feature.knowledge.KnowledgeViewModel]）。
+     *
+     * P1-9 清理：原 `getAllVerifiedKnowledgePoints()`（无科目名）已被此方法取代，
+     * 零调用方，已删除。新代码请用本方法。
      */
     fun getVerifiedWithSubject(): Flow<List<KnowledgePointWithSubject>> =
         knowledgePointDao.observeVerifiedWithSubject()

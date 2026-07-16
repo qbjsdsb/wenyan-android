@@ -100,13 +100,20 @@ class AiAssistantViewModel @Inject constructor(
                     return@launch
                 }
 
-                // 3. 构建 prompt 并调用 AI
+                // 3. 构建 prompt 并调用 AI（P1-5 改用 chatResult 区分成功/失败）
                 val prompt = PromptTemplates.buildChatPrompt(text, ragResult.references)
-                val response = aiService.chat(prompt).first()
+                val result = aiService.chatResult(prompt).first()
+
+                if (result.isFailure) {
+                    _uiState.update {
+                        it.copy(errorMessage = "请求失败：${result.exceptionOrNull()?.message ?: "未知错误"}")
+                    }
+                    return@launch
+                }
 
                 // 4. 添加 AI 回复（标注引用来源）
                 addAssistantMessage(
-                    content = response,
+                    content = result.getOrThrow(),
                     contentSource = CONTENT_SOURCE_AI,
                     references = if (ragResult.hasResults) ragResult.references else emptyList(),
                 )

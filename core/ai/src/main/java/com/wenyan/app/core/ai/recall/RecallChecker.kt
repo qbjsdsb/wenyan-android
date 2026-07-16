@@ -36,7 +36,7 @@ import javax.inject.Singleton
  *
  * 阶段4实现变更：
  * - L2 从 BGE-small-zh 模型改为 Jaccard 相似度（Android 端不适合加载嵌入模型）
- * - L3 接入 AiService.chat() 调用 LLM API
+ * - L3 接入 AiService.chatResult() 调用 LLM API（P1-5：原 chat() 错误吞噬导致失败时 score 误判为 0）
  */
 @Singleton
 class RecallChecker @Inject constructor(
@@ -88,13 +88,22 @@ class RecallChecker @Inject constructor(
      *
      * 在 L2 判定"部分正确"后，可通过此方法获取 L3 精确评估。
      *
+     * P1-5 修正：改用 [AiService.chatResult] 区分成功/失败。失败时抛异常，
+     * 由 [checkRecall] 的 try-catch 捕获并降级为 L2 结果（不阻塞复习流程）。
+     * 原实现用 [AiService.chat]，错误字符串被当作 LLM 回复解析，score 误判为 0 → AGAIN。
+     *
      * @param userAnswer 用户答案
      * @param correctAnswer 正确答案
      * @return L3 检测结果
+     * @throws Exception AI 调用失败时抛出（含差异化错误信息）
      */
     suspend fun checkL3Llm(userAnswer: String, correctAnswer: String): RecallResult {
         val prompt = buildL3Prompt(userAnswer, correctAnswer)
-        val response = aiService.chat(prompt).first()
+        val result = aiService.chatResult(prompt).first()
+        if (result.isFailure) {
+            throw result.exceptionOrNull() ?: IllegalStateException("L3 LLM 评估失败")
+        }
+        val response = result.getOrThrow()
         val (score, reason) = parseL3Response(response)
 
         val rating = when {

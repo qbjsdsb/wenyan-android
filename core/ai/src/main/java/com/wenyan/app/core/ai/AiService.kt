@@ -33,11 +33,17 @@ interface AiService {
      * - 增强点：区分资料原文与 AI 生成内容（内容来源五级标注）
      * - 增强点：RAG 无结果时不编造答案，明确告知用户
      *
-     * 注意：本方法把所有异常吞为 emit(errorString)，调用方无法区分"AI 真实回复"
-     * vs"错误提示字符串"。需要区分的场景请用 [chatResult]。
+     * ⚠️ **限制（P1-5 标注）**：本方法把所有异常吞为 `emit(errorString)`，调用方
+     * 无法区分"AI 真实回复" vs "错误提示字符串"。
+     * - **新代码请勿使用**：改用 [chatResult]，它返回 `Flow<Result<String>>`，
+     *   可通过 `result.isFailure` 短路避免错误字符串被当作 AI 回复传播。
+     * - **保留原因**：向后兼容已有调用方（[RecallChecker] / [AiAssistantViewModel]
+     *   已于 P1-5 迁移到 [chatResult]，但本方法仍供未来不需区分错误/成功的便捷场景使用）。
+     * - **行为差异**：[chatResult] 失败时调用方可选择不展示任何消息或显示错误提示；
+     *   [chat] 失败时强制把错误字符串作为"AI 回复"返回，调用方若不检查会误展示给用户。
      *
      * @param query 用户提问
-     * @return 流式 AI 回复片段（失败时 emit 错误提示字符串）
+     * @return 流式 AI 回复片段（失败时 emit 错误提示字符串，与成功回复不可区分）
      */
     fun chat(query: String): Flow<String>
 
