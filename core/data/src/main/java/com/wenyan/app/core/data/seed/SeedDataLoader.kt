@@ -264,7 +264,7 @@ class SeedDataLoader @Inject constructor(
                 ocrStatus = "VERIFIED",
                 sourceFile = seed.sourceRef,
                 sourcePage = null,
-                studyText = null,
+                studyText = seed.studyText,
             )
         }
         if (knowledgePointEntities.isNotEmpty()) {
@@ -451,6 +451,9 @@ data class KnowledgePointSeed(
     @SerialName("source_ref")
     val sourceRef: String? = null,
     val confidence: Double = 1.0,
+    /** 学习文本（逐字校对的教材原文，导入到 KnowledgePointEntity.studyText） */
+    @SerialName("study_text")
+    val studyText: String? = null,
 )
 
 /**
