@@ -73,7 +73,10 @@ class WenyanApplication : Application() {
             // P1 修正：种子加载加超时保护，防止 I/O 挂起或 DB 死锁导致协程永久阻塞。
             // 超时抛出 TimeoutCancellationException，由 exceptionHandler 记录日志，
             // App 正常启动（下次启动时 ensureSeedDataLoaded 会重试）。
-            withTimeout(30_000L) {
+            // v0.7.1 修正：30s → 120s。909 知识点（含 study_text）+ 909 写作素材 +
+            // 481 真题的 JSON 解析 + 事务导入，30 秒在低端设备上不够，导致超时后
+            // 异常被吞、知识点为空（详见 SESSION_LOG v0.7.1 修复）。
+            withTimeout(120_000L) {
                 seedDataLoader.ensureSeedDataLoaded()
             }
         }

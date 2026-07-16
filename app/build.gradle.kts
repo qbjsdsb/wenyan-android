@@ -17,10 +17,10 @@ android {
         minSdk = 26
         targetSdk = 35
         // P0-M2 修正：versionCode 必须每次发版递增，否则包安装器无法区分版本。
-        // v0.1.0=1, v0.2.0=2, v0.3.0=3, v0.4.0=4, v0.5.0=5, v0.6.0=6, v0.7.0=7（952知识点逐字校对 + study_text 接入）
-        versionCode = 7
+        // v0.1.0=1, v0.2.0=2, v0.3.0=3, v0.4.0=4, v0.5.0=5, v0.6.0=6, v0.7.0=7, v0.7.1=8（修复导入超时）
+        versionCode = 8
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
-        versionName = "0.7.0"
+        versionName = "0.7.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

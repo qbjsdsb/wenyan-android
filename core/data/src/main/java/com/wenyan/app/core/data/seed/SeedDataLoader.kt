@@ -407,7 +407,6 @@ data class SeedData(
     val knowledgePoints: List<KnowledgePointSeed> = emptyList(),
     @SerialName("exam_questions")
     val examQuestions: List<ExamQuestionSeed> = emptyList(),
-    val cards: List<kotlinx.serialization.json.JsonElement> = emptyList(),
     @SerialName("writing_materials")
     val writingMaterials: List<WritingMaterialSeed> = emptyList(),
 )
