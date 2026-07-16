@@ -2195,3 +2195,72 @@ Wave 5（全量验证 + 文档 + Release v0.6.0）。用户指令："继续"。
 - `6adeb40` NF-PP4 SchedulingRepositoryTest 真实事务验证 +3 测试
 - `302165e` NF-T4 Float 类型统一消除 DB↔FSRS 精度损失
 - `148dad6` Wave 1 数据库 schema v4→v5 统一迁移 (NF-PP4/PP5/PP6)
+
+---
+
+## Session 2026-07-16（续 6）：v0.7.0 发布 — 909 知识点逐字校对版
+
+### 目标
+
+用户在本地完成 952 知识点逐字校对（48.2 万字，修复 71 处错误），重新生成 seed_data.json 并
+上传到 GitHub（commit `104bab9`）。要求把知识点弄到软件里并重新发布 Release。
+
+### 完成内容
+
+**1. 数据检查**：
+- pull 远程 commit `104bab9`，检查 seed_data.json
+- 知识点：0 → 909（古代文学 460 / 文学理论 183 / 现当代 149 / 外国 117）
+- 写作素材：0 → 909
+- 真题：481（不变）
+- 3 个新资源文件：error_dict.json / exam_code_history.json / reference_catalog.json
+- 所有知识点 subject 匹配 subjects 列表（0 未匹配），导入不会跳过
+
+**2. 代码修复**：
+- `SeedDataLoader.kt`：KnowledgePointSeed 加 `@SerialName("study_text") val studyText: String? = null`，
+  导入逻辑改为 `studyText = seed.studyText`（原为 null 丢弃 200+ 字学习文本）
+- `seed_data.json`：metadata.version 2.0.0 → 2.1.0，触发升级重新导入
+  （v0.6.0 用户 storedVersion=2.0.0 != 2.1.0 → isUpgrade=true，跳过已有 MemoRecord 保留 FSRS 进度）
+- `app/build.gradle.kts`：versionCode 6→7, versionName "0.6.0"→"0.7.0"
+
+**3. 验证**：
+- `assembleDebug` SUCCESSFUL
+- `testDebugUnitTest` 258 tests 0 failures
+
+**4. Release v0.7.0 发布**：
+- 本地构建 release APK：BUILD SUCCESSFUL in 2m 58s，19 MB
+- tag v0.7.0 已 push（commit `2f2621b`）
+- GitHub Release 创建成功（Release ID 355323043）
+- 2 个 APK 上传成功：
+  - `wenyan-v0.7.0.apk`（asset_id 479566728，18.7 MB）
+  - `wenyan-latest.apk`（asset_id 479566777，18.7 MB）
+
+### 关键技术决策
+
+1. **study_text 字段接入** — 新数据每个知识点有 200+ 字的 study_text（教材原文），
+   原 SeedDataLoader 丢弃此字段（studyText=null）。改为从 seed 读取写入 entity，
+   让 App 展示完整学习内容。
+2. **seed version 升级触发** — 新 seed_data.json 的 metadata.version 仍是 "2.0.0"
+   （与 v0.6.0 相同），升级用户不会重新导入（第 107 行版本判断）。
+   改为 "2.1.0" 确保升级用户获得 909 知识点。
+3. **3 个新资源文件暂不接入** — error_dict.json / exam_code_history.json /
+   reference_catalog.json 已打包进 APK 但未被代码引用。后续按需接入。
+4. **ignoreUnknownKeys=true 兼容** — 新数据有多余字段（multi_perspectives /
+   conflict_flag / entities / relations 等），由于 Json 配置 ignoreUnknownKeys=true，
+   不会导致解析失败。
+
+### 下次继续
+
+1. **P0**：跑 emulator 实测 v0.7.0（909 知识点展示 + 错题本 + AI 对话持久化 + FSRS 调度）
+2. **P0 阻塞**：GitHub Actions 账单问题（AI 无法解决，需用户充值或解除限制）
+3. **P1**：接入 3 个新资源文件（exam_code_history / reference_catalog / error_dict）
+4. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换）
+5. **P1**：v0.5.0 Phase 2 剩余维度审计（strings.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
+
+### 本次 commits
+
+| commit | 内容 |
+|--------|------|
+| `2f2621b` | feat: 接入 909 知识点 + study_text 字段 + 升级 v0.7.0 |
+
+**继承的用户本地 commit**（已在 origin/main）：
+- `104bab9` fix: 逐字校对952知识点并重新生成seed_data

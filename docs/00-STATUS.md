@@ -5,39 +5,35 @@
 
 ## ✅ 当前状态
 
-**v0.6.0 P1 大型任务全部完成（5 Wave）** — NF-T4 / NF-PP4 / NF-PP5 / NF-PP6 / P1-PG 五大任务闭环，258 tests 0 failures。
+**v0.7.0 已发布 — 909 知识点逐字校对版，App 首次有实际学习内容** — 258 tests 0 failures。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `a25abbb`（main，Wave 5 文档 + 版本号 v0.6.0） |
-| 最新 Release | **[v0.6.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.6.0)**（2026-07-16 19:10 UTC，本地构建 + GitHub API 上传，debug 签名 fallback） |
-| 测试 | **258 tests 0 failures 0 errors**（220 现有 + 38 P1 大型任务新增） |
-| 阻塞 | **CI 账单问题** — 33 个 commit 待 CI 验证（不影响 Release，已通过 API 绕过） |
+| 最新 commit | `2f2621b`（main，接入 909 知识点 + study_text + v0.7.0） |
+| 最新 Release | **[v0.7.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.7.0)**（2026-07-16 19:50 UTC，本地构建 + GitHub API 上传，debug 签名 fallback） |
+| 测试 | **258 tests 0 failures 0 errors** |
+| 知识点 | **909 个**（古代文学 460 / 文学理论 183 / 现当代 149 / 外国 117） |
+| 阻塞 | **CI 账单问题** — 35 个 commit 待 CI 验证（不影响 Release，已通过 API 绕过） |
 | 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节 |
 
 ## 🚨 新会话首要任务
 
-**v0.6.0 Release 已成功发布**（2026-07-16 19:10 UTC，Release ID 355305907）：
-- Release URL：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.6.0
-- 2 个 APK assets 已上传（17 MB each，debug 签名 fallback）：
-  - `wenyan-v0.6.0.apk`（asset_id 479529845）
-  - `wenyan-latest.apk`（asset_id 479529905）
-- 构建方式：`CI=false gradle assembleRelease --no-daemon`（沙箱无 keystore → debug 签名 fallback）
-- 5 Wave 全部完成：
-  - Wave 1（`148dad6`）：数据库 schema v4→v5 统一迁移
-  - Wave 2.1-2.4（`302165e`/`6adeb40`/`55001c0`/`eb944a5`）：NF-T4 Float 统一 + NF-PP4 复习日志 + NF-PP6 ChatRepository + NF-PP5 WrongAnswerRepository
-  - Wave 3.1（`26ae190`）：NF-PP6 AiAssistantViewModel 持久化
-  - Wave 3.2（`c829e4f`）：NF-PP5 错题本完整闭环（接口提取 + 业务层 + UI 层 + 8 测试）
-  - Wave 4（`f297344`）：P1-PG ProGuard 规则补齐（13 个 .pro，不启用 minify）
+**v0.7.0 Release 已成功发布**（2026-07-16，Release ID 355323043）：
+- Release URL：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.7.0
+- 2 个 APK assets 已上传（18.7 MB each，debug 签名 fallback）：
+  - `wenyan-v0.7.0.apk`（asset_id 479566728）
+  - `wenyan-latest.apk`（asset_id 479566777）
+- 核心更新：接入 909 知识点（0→909）+ study_text 字段 + seed version 2.1.0 触发升级
 
 **P0 待办**（无需用户干预）：
 - GitHub Actions 账单问题：AI 无法解决，需用户充值或解除限制
 - 账单恢复后可重打 tag 触发正式签名 Release（可选，debug 签名 APK 已可用）
 
 **新会话可立即开始的 P1 任务**：
-1. 跑 emulator 实测 v0.6.0（错题本 + AI 对话持久化 + FSRS 调度 + 卡片翻转 + Tab 动画）
-2. v0.5.0 Phase 2 剩余维度审计（strings.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
-3. 启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
+1. 跑 emulator 实测 v0.7.0（909 知识点展示 + 错题本 + AI 对话持久化 + FSRS 调度）
+2. 接入 3 个新资源文件（exam_code_history.json 替代数据库表 / reference_catalog.json 设置页展示来源 / error_dict.json OCR 修正展示）
+3. v0.5.0 Phase 2 剩余维度审计（strings.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
+4. 启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
 
 ## 🆕 最新改动（2026-07-16）
 
