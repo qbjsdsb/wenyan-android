@@ -15,7 +15,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -55,6 +57,11 @@ class CardsViewModel @Inject constructor(
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
     /**
+     * 重试触发器（P0-6 新增）。点击重试时自增，[flatMapLatest] 会重新订阅数据流。
+     */
+    private val _retryTrigger = MutableStateFlow(0)
+
+    /**
      * 卡片 UI 状态。
      *
      * 合并三路流：
@@ -67,30 +74,39 @@ class CardsViewModel @Inject constructor(
      * P1-NEW-4 修正：新增 [CardsUiState.isFinished] 标记牌组完成。
      * 原实现 currentIndex 持续累加超过 cards.size 后 currentCard 为 null，UI 显示空白但无完成态，
      * 用户无法区分"加载中"和"已完成"。现当 currentIndex >= cards.size 时标记 isFinished=true。
+     *
+     * P0-6 修复：加 [catch] 捕获数据流异常，避免异常冒泡导致 app 崩溃。
      */
-    val uiState: StateFlow<CardsUiState> = combine(
-        cardRepository.getCardsForReview(),
-        _isFlipped,
-        _currentIndex,
-    ) { cards, isFlipped, currentIndex ->
-        val isFinished = cards.isNotEmpty() && currentIndex >= cards.size
-        val safeIndex = if (cards.isEmpty()) {
-            0
-        } else {
-            currentIndex.coerceIn(0, cards.size - 1)
+    val uiState: StateFlow<CardsUiState> = _retryTrigger
+        .flatMapLatest {
+            combine(
+                cardRepository.getCardsForReview(),
+                _isFlipped,
+                _currentIndex,
+            ) { cards, isFlipped, currentIndex ->
+                val isFinished = cards.isNotEmpty() && currentIndex >= cards.size
+                val safeIndex = if (cards.isEmpty()) {
+                    0
+                } else {
+                    currentIndex.coerceIn(0, cards.size - 1)
+                }
+                CardsUiState(
+                    isLoading = false,
+                    cards = cards.mapIndexed { index, card -> card.toUiItem(index) },
+                    currentIndex = safeIndex,
+                    isFlipped = isFlipped,
+                    isFinished = isFinished,
+                )
+            }
         }
-        CardsUiState(
-            isLoading = false,
-            cards = cards.mapIndexed { index, card -> card.toUiItem(index) },
-            currentIndex = safeIndex,
-            isFlipped = isFlipped,
-            isFinished = isFinished,
+        .catch { e ->
+            emit(CardsUiState(error = e.message ?: "加载失败"))
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = CardsUiState(isLoading = true),
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = CardsUiState(isLoading = true),
-    )
 
     /** 翻转当前卡片 */
     fun flipCard() {
@@ -153,6 +169,11 @@ class CardsViewModel @Inject constructor(
         _errorMessage.value = null
     }
 
+    /** 重试加载（P0-6 新增） */
+    fun retry() {
+        _retryTrigger.value++
+    }
+
     /** 将 [CardTemplate] 映射为 UI 层 [CardItem] */
     private fun CardTemplate.toUiItem(index: Int): CardItem = CardItem(
         id = "${templateType.name}_$index",
@@ -172,6 +193,8 @@ data class CardsUiState(
     val isFlipped: Boolean = false,
     /** 牌组是否已完成（P1-NEW-4 新增，currentIndex >= cards.size 时为 true） */
     val isFinished: Boolean = false,
+    /** 加载失败时的错误信息（P0-6 新增） */
+    val error: String? = null,
 ) {
     val currentCard: CardItem? get() = cards.getOrNull(currentIndex)
 }

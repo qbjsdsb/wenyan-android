@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -41,6 +42,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wenyan.app.core.designsystem.component.ErrorState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
@@ -80,14 +82,14 @@ fun CardsScreen(
         },
     ) { innerPadding ->
         Crossfade(
-            targetState = uiState.isLoading to (uiState.currentCard == null),
+            targetState = Triple(uiState.isLoading, uiState.error, uiState.currentCard == null),
             animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
             label = "cards_state",
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(Spacing.lg),
-        ) { (isLoading, isEmpty) ->
+        ) { (isLoading, error, isEmpty) ->
             when {
                 isLoading -> {
                     Box(
@@ -95,6 +97,20 @@ fun CardsScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         WenyanLoadingIndicator()
+                    }
+                }
+                // P0-6 修复：加 error 分支，数据加载失败时展示错误信息 + 重试按钮
+                error != null -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        ErrorState(
+                            icon = Icons.Default.CloudOff,
+                            title = "加载失败",
+                            message = error,
+                            onRetry = viewModel::retry,
+                        )
                     }
                 }
                 isEmpty -> {

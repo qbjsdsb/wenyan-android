@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -32,7 +34,9 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -337,6 +341,7 @@ private fun maskApiKey(key: String): String {
 
 // ── 表单弹窗 ──────────────────────────────────────────────────
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ApiConfigFormDialog(
     formState: ApiConfigFormState,
@@ -350,92 +355,111 @@ private fun ApiConfigFormDialog(
     onSave: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    // P0-2 修复：AlertDialog 改为 ModalBottomSheet。
+    // 原因：AlertDialog 内含 7 个 OutlinedTextField，IME 弹出时不会上推，
+    // 底部字段（温度/Token）被键盘遮挡无法访问。
+    // ModalBottomSheet 天然支持 IME 上推（contentWindowInsets 包含 ime），
+    // 且 BottomSheet 是 M3 Expressive 推荐的长表单容器形态。
+    val sheetState = rememberModalBottomSheetState()
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         shape = MaterialTheme.shapes.extraLarge,
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        title = { Text("API 配置") },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .imePadding()
+                .navigationBarsPadding()
+                .padding(horizontal = Spacing.lg)
+                .padding(bottom = Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            Text(
+                text = "API 配置",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            // 服务商预设选择
+            Text(
+                text = "服务商",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Medium,
+            )
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                // 服务商预设选择
-                Text(
-                    text = "服务商",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Medium,
-                )
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    // P2-LAZY-1 修正：LazyRow items 加 key（用 provider.key 唯一标识），避免重组时丢失选中状态
-                    // NF-UP4 修正：加 contentType 让 LazyRow 复用同一类型 item 的 slot，提升滚动性能
-                    items(items = LlmProvider.entries.toList(), key = { it.key }, contentType = { "provider" }) { provider ->
-                        ProviderChip(
-                            label = provider.displayName,
-                            selected = formState.provider == provider.key,
-                            onClick = { onProviderChange(provider.key) },
-                        )
-                    }
+                // P2-LAZY-1 修正：LazyRow items 加 key（用 provider.key 唯一标识），避免重组时丢失选中状态
+                // NF-UP4 修正：加 contentType 让 LazyRow 复用同一类型 item 的 slot，提升滚动性能
+                items(items = LlmProvider.entries.toList(), key = { it.key }, contentType = { "provider" }) { provider ->
+                    ProviderChip(
+                        label = provider.displayName,
+                        selected = formState.provider == provider.key,
+                        onClick = { onProviderChange(provider.key) },
+                    )
                 }
+            }
 
-                FormTextField(
-                    label = "显示名称",
-                    value = formState.displayName,
-                    onValueChange = onDisplayNameChange,
-                    placeholder = "如：我的 DeepSeek",
-                )
-                FormTextField(
-                    label = "接口地址",
-                    value = formState.baseUrl,
-                    onValueChange = onBaseUrlChange,
-                    placeholder = "https://api.deepseek.com",
-                )
-                FormTextField(
-                    label = "API 密钥",
-                    value = formState.apiKey,
-                    onValueChange = onApiKeyChange,
-                    placeholder = "sk-...",
-                    isPassword = true,
-                )
-                FormTextField(
-                    label = "模型名称",
-                    value = formState.model,
-                    onValueChange = onModelChange,
-                    placeholder = "deepseek-chat",
-                )
-                FormTextField(
-                    label = "温度（0-2）",
-                    value = formState.temperature.toString(),
-                    onValueChange = { v ->
-                        v.toDoubleOrNull()?.let { onTemperatureChange(it.coerceIn(0.0, 2.0)) }
-                    },
-                    placeholder = "0.7",
-                    keyboardType = KeyboardType.Decimal,
-                )
-                FormTextField(
-                    label = "最大 Token 数",
-                    value = formState.maxTokens.toString(),
-                    onValueChange = { v ->
-                        v.toIntOrNull()?.let { onMaxTokensChange(it.coerceIn(1, 32000)) }
-                    },
-                    placeholder = "2000",
-                    keyboardType = KeyboardType.Number,
-                )
+            FormTextField(
+                label = "显示名称",
+                value = formState.displayName,
+                onValueChange = onDisplayNameChange,
+                placeholder = "如：我的 DeepSeek",
+            )
+            FormTextField(
+                label = "接口地址",
+                value = formState.baseUrl,
+                onValueChange = onBaseUrlChange,
+                placeholder = "https://api.deepseek.com",
+            )
+            FormTextField(
+                label = "API 密钥",
+                value = formState.apiKey,
+                onValueChange = onApiKeyChange,
+                placeholder = "sk-...",
+                isPassword = true,
+            )
+            FormTextField(
+                label = "模型名称",
+                value = formState.model,
+                onValueChange = onModelChange,
+                placeholder = "deepseek-chat",
+            )
+            FormTextField(
+                label = "温度（0-2）",
+                value = formState.temperature.toString(),
+                onValueChange = { v ->
+                    v.toDoubleOrNull()?.let { onTemperatureChange(it.coerceIn(0.0, 2.0)) }
+                },
+                placeholder = "0.7",
+                keyboardType = KeyboardType.Decimal,
+            )
+            FormTextField(
+                label = "最大 Token 数",
+                value = formState.maxTokens.toString(),
+                onValueChange = { v ->
+                    v.toIntOrNull()?.let { onMaxTokensChange(it.coerceIn(1, 32000)) }
+                },
+                placeholder = "2000",
+                keyboardType = KeyboardType.Number,
+            )
+
+            // 操作按钮行
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text("取消")
+                }
+                TextButton(onClick = onSave) {
+                    Text("保存")
+                }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onSave) {
-                Text("保存")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        },
-    )
+        }
+    }
 }
 
 @Composable

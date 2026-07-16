@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.SmartToy
 import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
@@ -35,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.designsystem.component.EmptyState
+import com.wenyan.app.core.designsystem.component.ErrorState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.TonalCard
@@ -89,11 +91,11 @@ fun KnowledgeScreen(
             )
 
             Crossfade(
-                targetState = uiState.isLoading to uiState.knowledgePoints.isEmpty(),
+                targetState = Triple(uiState.isLoading, uiState.error, uiState.knowledgePoints.isEmpty()),
                 animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
                 label = "knowledge_state",
                 modifier = Modifier.fillMaxSize(),
-            ) { (isLoading, isEmpty) ->
+            ) { (isLoading, error, isEmpty) ->
                 when {
                     isLoading -> {
                         Box(
@@ -101,6 +103,20 @@ fun KnowledgeScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             WenyanLoadingIndicator()
+                        }
+                    }
+                    // P0-6 修复：加 error 分支，数据加载失败时展示错误信息 + 重试按钮
+                    error != null -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            ErrorState(
+                                icon = Icons.Default.CloudOff,
+                                title = "加载失败",
+                                message = error,
+                                onRetry = viewModel::retry,
+                            )
                         }
                     }
                     isEmpty -> {

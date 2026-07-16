@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -53,6 +54,11 @@ class QuizViewModel @Inject constructor(
     val expandedQuestionIds: StateFlow<Set<String>> = _expandedQuestionIds.asStateFlow()
 
     /**
+     * 重试触发器（P0-6 新增）。点击重试时自增，[flatMapLatest] 会重新订阅数据流。
+     */
+    private val _retryTrigger = MutableStateFlow(0)
+
+    /**
      * UI 状态：合并年份列表 + 选中年份的题目列表（含科目判定信息）。
      *
      * 使用 flatMapLatest 在切换年份时自动取消上一个年份的订阅。
@@ -61,41 +67,55 @@ class QuizViewModel @Inject constructor(
      *
      * NF-L3 修复：_selectedYear 用 -1 表示 null（SavedStateHandle 持久化），
      * 此处映射回 nullable 供 UI 使用。
+     *
+     * P0-6 修复：加 [catch] 捕获数据流异常，避免异常冒泡导致 app 崩溃。
      */
-    val uiState: StateFlow<QuizUiState> = combine(
-        examRepository.getAvailableYears(),
-        _selectedYear,
-    ) { years, selected ->
-        years to selected
-    }.flatMapLatest { (years, selected) ->
-        if (selected != -1) {
-            examRepository.getExamQuestionsWithSubjectInfo(selected).map { questionsWithSubject ->
-                QuizUiState(
-                    isLoading = false,
-                    availableYears = years,
-                    selectedYear = selected,
-                    questions = questionsWithSubject.map { it.toUiItem() },
-                )
+    val uiState: StateFlow<QuizUiState> = _retryTrigger
+        .flatMapLatest {
+            combine(
+                examRepository.getAvailableYears(),
+                _selectedYear,
+            ) { years, selected ->
+                years to selected
+            }.flatMapLatest { (years, selected) ->
+                if (selected != -1) {
+                    examRepository.getExamQuestionsWithSubjectInfo(selected).map { questionsWithSubject ->
+                        QuizUiState(
+                            isLoading = false,
+                            availableYears = years,
+                            selectedYear = selected,
+                            questions = questionsWithSubject.map { it.toUiItem() },
+                        )
+                    }
+                } else {
+                    flowOf(
+                        QuizUiState(
+                            isLoading = false,
+                            availableYears = years,
+                            selectedYear = null,
+                            questions = emptyList(),
+                        ),
+                    )
+                }
             }
-        } else {
-            flowOf(
-                QuizUiState(
-                    isLoading = false,
-                    availableYears = years,
-                    selectedYear = null,
-                    questions = emptyList(),
-                ),
-            )
         }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = QuizUiState(isLoading = true),
-    )
+        .catch { e ->
+            emit(QuizUiState(error = e.message ?: "加载失败"))
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = QuizUiState(isLoading = true),
+        )
 
     /** 选择某年份，加载对应题目（NF-L3 修复：持久化到 SavedStateHandle） */
     fun selectYear(year: Int) {
         savedStateHandle["selectedYear"] = year
+    }
+
+    /** 重试加载（P0-6 新增） */
+    fun retry() {
+        _retryTrigger.value++
     }
 
     /** 切换某题目的展开状态（折叠 ↔ 展开）（NF-L3 修复：持久化到 SavedStateHandle） */
@@ -115,6 +135,8 @@ data class QuizUiState(
     val availableYears: List<Int> = emptyList(),
     val selectedYear: Int? = null,
     val questions: List<QuizQuestionItem> = emptyList(),
+    /** 加载失败时的错误信息（P0-6 新增） */
+    val error: String? = null,
 )
 
 /**

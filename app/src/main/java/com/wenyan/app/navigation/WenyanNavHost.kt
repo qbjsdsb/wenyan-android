@@ -108,6 +108,7 @@ fun WenyanNavHost(
             },
         )
         aiAssistantDestination(
+            onBack = { navController.popBackStack() },
             onNavigateToApiConfig = {
                 // P1 修正：子路由需 launchSingleTop，防止快速双击重复压栈
                 navController.navigate(ROUTE_API_CONFIG) {
@@ -188,6 +189,7 @@ private fun NavGraphBuilder.settingsDestination(
 
 // v0.6：AiAssistant 从顶级 Tab 降为子路由，用 Push/Pop slide transition
 private fun NavGraphBuilder.aiAssistantDestination(
+    onBack: () -> Unit,
     onNavigateToApiConfig: () -> Unit,
 ) {
     composable(
@@ -198,6 +200,7 @@ private fun NavGraphBuilder.aiAssistantDestination(
         popExitTransition = { WenyanMotion.PopExitTransition },
     ) {
         AiAssistantScreen(
+            onBack = onBack,
             onNavigateToApiConfig = onNavigateToApiConfig,
         )
     }

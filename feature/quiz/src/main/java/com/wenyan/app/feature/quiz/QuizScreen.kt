@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Inbox
@@ -48,6 +49,7 @@ import com.wenyan.app.core.designsystem.component.ChipVariant
 import com.wenyan.app.core.designsystem.component.ContentSource
 import com.wenyan.app.core.designsystem.component.ContentSourceBadge
 import com.wenyan.app.core.designsystem.component.EmptyState
+import com.wenyan.app.core.designsystem.component.ErrorState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.TonalCard
@@ -110,11 +112,11 @@ fun QuizScreen(
             )
 
             Crossfade(
-                targetState = uiState.isLoading to uiState.questions.isEmpty(),
+                targetState = Triple(uiState.isLoading, uiState.error, uiState.questions.isEmpty()),
                 animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
                 label = "quiz_state",
                 modifier = Modifier.fillMaxSize(),
-            ) { (isLoading, isEmpty) ->
+            ) { (isLoading, error, isEmpty) ->
                 when {
                     isLoading -> {
                         Box(
@@ -122,6 +124,20 @@ fun QuizScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             WenyanLoadingIndicator()
+                        }
+                    }
+                    // P0-6 修复：加 error 分支，数据加载失败时展示错误信息 + 重试按钮
+                    error != null -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            ErrorState(
+                                icon = Icons.Default.CloudOff,
+                                title = "加载失败",
+                                message = error,
+                                onRetry = viewModel::retry,
+                            )
                         }
                     }
                     isEmpty -> {

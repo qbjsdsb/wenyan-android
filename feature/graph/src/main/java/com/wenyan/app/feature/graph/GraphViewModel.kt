@@ -7,9 +7,12 @@ import com.wenyan.app.core.data.repository.GraphRepository
 import com.wenyan.app.core.data.repository.NodeWithRetrievability
 import com.wenyan.app.core.database.entity.GraphEdgeEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
@@ -31,24 +34,43 @@ class GraphViewModel @Inject constructor(
 ) : ViewModel() {
 
     /**
+     * 重试触发器（P0-6 新增）。点击重试时自增，[flatMapLatest] 会重新订阅数据流。
+     */
+    private val _retryTrigger = MutableStateFlow(0)
+
+    /**
      * 图谱 UI 状态。
      *
      * 合并节点流（含 R 值）与边流，数据库变更时自动刷新。
+     *
+     * P0-6 修复：加 [catch] 捕获数据流异常，避免异常冒泡导致 app 崩溃。
      */
-    val uiState: StateFlow<GraphUiState> = combine(
-        graphRepository.getNodesWithRetrievability(),
-        graphRepository.getAllEdges(),
-    ) { nodesWithR, edges ->
-        GraphUiState(
-            isLoading = false,
-            nodes = nodesWithR.map { it.toUiItem() },
-            edges = edges.map { it.toUiItem() },
+    val uiState: StateFlow<GraphUiState> = _retryTrigger
+        .flatMapLatest {
+            combine(
+                graphRepository.getNodesWithRetrievability(),
+                graphRepository.getAllEdges(),
+            ) { nodesWithR, edges ->
+                GraphUiState(
+                    isLoading = false,
+                    nodes = nodesWithR.map { it.toUiItem() },
+                    edges = edges.map { it.toUiItem() },
+                )
+            }
+        }
+        .catch { e ->
+            emit(GraphUiState(error = e.message ?: "加载失败"))
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = GraphUiState(isLoading = true),
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = GraphUiState(isLoading = true),
-    )
+
+    /** 重试加载（P0-6 新增） */
+    fun retry() {
+        _retryTrigger.value++
+    }
 
     /** 将 [NodeWithRetrievability] 映射为 UI 层 [GraphNodeItem] */
     private fun NodeWithRetrievability.toUiItem(): GraphNodeItem = GraphNodeItem(
@@ -70,6 +92,8 @@ data class GraphUiState(
     val isLoading: Boolean = false,
     val nodes: List<GraphNodeItem> = emptyList(),
     val edges: List<GraphEdgeItem> = emptyList(),
+    /** 加载失败时的错误信息（P0-6 新增） */
+    val error: String? = null,
 )
 
 // 图谱节点项（UI 层模型）

@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,6 +32,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,6 +45,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -84,6 +88,7 @@ import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiAssistantScreen(
+    onBack: () -> Unit = {},
     onNavigateToApiConfig: () -> Unit = {},
     viewModel: AiAssistantViewModel = hiltViewModel(),
 ) {
@@ -95,6 +100,9 @@ fun AiAssistantScreen(
     )
     // v0.6：MoreVert 溢出菜单展开状态
     var showOverflowMenu by remember { mutableStateOf(false) }
+    // P0-3 修复：清空对话确认弹窗状态。原实现点击清空按钮直接清空，
+    // 误触即丢失全部对话不可恢复。现加二次确认 Dialog。
+    var showClearConfirmDialog by remember { mutableStateOf(false) }
 
     // 错误提示 → Snackbar
     // NF-UC4 修复：原 LaunchedEffect 在 Composable 离开时 showSnackbar 协程被取消，
@@ -131,6 +139,8 @@ fun AiAssistantScreen(
         topBar = {
             WenyanLargeTopAppBar(
                 title = "AI助手",
+                // P0-4 修复：子路由加 onBack，与其他子路由（ApiConfig/KnowledgePointDetail）契约一致
+                onBack = onBack,
                 actions = {
                     // v0.6：CloudOff 改为可点击 IconButton，直接跳转 ApiConfig 修复离线状态
                     if (!uiState.isAvailable) {
@@ -143,7 +153,8 @@ fun AiAssistantScreen(
                         }
                     }
                     IconButton(
-                        onClick = viewModel::clearMessages,
+                        // P0-3 修复：点击清空按钮弹确认框，而非直接清空
+                        onClick = { showClearConfirmDialog = true },
                         enabled = uiState.messages.isNotEmpty(),
                     ) {
                         Icon(
@@ -250,6 +261,32 @@ fun AiAssistantScreen(
             }
         }
     }
+
+    // P0-3 修复：清空对话确认 Dialog，避免误触丢失全部消息
+    if (showClearConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirmDialog = false },
+            shape = MaterialTheme.shapes.extraLarge,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            title = { Text("清空对话") },
+            text = { Text("确定清空所有对话记录吗？此操作不可撤销。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.clearMessages()
+                        showClearConfirmDialog = false
+                    },
+                ) {
+                    Text("清空", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirmDialog = false }) {
+                    Text("取消")
+                }
+            },
+        )
+    }
 }
 
 // ── 输入栏 ──────────────────────────────────────────────────────
@@ -264,6 +301,10 @@ private fun InputBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            // P0-1 修复：imePadding 让输入栏随 IME 上推，避免键盘遮挡。
+            // navigationBarsPadding 确保手势导航条不遮挡输入栏。
+            .imePadding()
+            .navigationBarsPadding()
             .padding(Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),

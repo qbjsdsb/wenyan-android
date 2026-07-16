@@ -31,6 +31,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.data.ThemeViewModel
@@ -54,12 +56,15 @@ import com.wenyan.app.feature.settings.BuildConfig
 // NF-UP2 修复：seedColors 移到文件顶层 top-level private val，
 // 避免每次 SettingsScreen 重组都创建新 List<Color>（5 个 Color 装箱）。
 // 顶层 val 在 class loader 加载时初始化一次，全局共享。
+// P0-5 修复：改为带色名的 SeedColorPreset，让 TalkBack 可朗读"种子色：紫色"。
+private data class SeedColorPreset(val color: Color, val name: String)
+
 private val SeedColors = listOf(
-    Color(0xFF6750A4), // 紫
-    Color(0xFF0061A4), // 蓝
-    Color(0xFF006C4C), // 绿
-    Color(0xFF9C4146), // 红
-    Color(0xFF7C5800), // 棕
+    SeedColorPreset(Color(0xFF6750A4), "紫色"),
+    SeedColorPreset(Color(0xFF0061A4), "蓝色"),
+    SeedColorPreset(Color(0xFF006C4C), "绿色"),
+    SeedColorPreset(Color(0xFF9C4146), "红色"),
+    SeedColorPreset(Color(0xFF7C5800), "棕色"),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -181,16 +186,21 @@ fun SettingsScreen(
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                SeedColors.forEach { color ->
+                                SeedColors.forEach { preset ->
                                     FilterChip(
-                                        selected = themeConfig.seedColor == color,
-                                        onClick = { viewModel.setSeedColor(color) },
+                                        selected = themeConfig.seedColor == preset.color,
+                                        onClick = { viewModel.setSeedColor(preset.color) },
                                         label = {},
+                                        // P0-5 修复：加 semantics contentDescription 让 TalkBack 朗读色名，
+                                        // 原 label={} + contentDescription=null 导致视障用户无法区分 5 个色块
+                                        modifier = Modifier.semantics {
+                                            contentDescription = "种子色：${preset.name}"
+                                        },
                                         leadingIcon = {
                                             Icon(
                                                 imageVector = Icons.Default.Palette,
                                                 contentDescription = null,
-                                                tint = color,
+                                                tint = preset.color,
                                             )
                                         },
                                     )

@@ -6,9 +6,12 @@ import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.repository.ReviewRepository
 import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
@@ -37,30 +40,50 @@ class KnowledgeViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, KnowledgeCategory.ALL)
 
     /**
+     * 重试触发器（P0-6 新增）。点击重试时自增，[flatMapLatest] 会重新订阅数据流。
+     */
+    private val _retryTrigger = MutableStateFlow(0)
+
+    /**
      * 知识点列表：合并 Repository 数据流与分类筛选流。
      *
      * 使用 [ReviewRepository.getVerifiedWithSubject] 获取知识点 + 科目名，
      * 按 [KnowledgeCategory] 筛选后映射为 UI 项。
+     *
+     * P0-6 修复：加 [catch] 捕获数据流异常（如数据库损坏），避免异常冒泡导致 app 崩溃。
+     * 捕获后 emit error 状态，UI 展示错误信息 + 重试按钮。
      */
-    val uiState: StateFlow<KnowledgeUiState> = combine(
-        reviewRepository.getVerifiedWithSubject(),
-        selectedCategory,
-    ) { pointsWithSubject, category ->
-        val filtered = filterByCategory(pointsWithSubject, category)
-        KnowledgeUiState(
-            isLoading = false,
-            knowledgePoints = filtered.map { toUiItem(it) },
-            selectedCategory = category,
+    val uiState: StateFlow<KnowledgeUiState> = _retryTrigger
+        .flatMapLatest {
+            combine(
+                reviewRepository.getVerifiedWithSubject(),
+                selectedCategory,
+            ) { pointsWithSubject, category ->
+                val filtered = filterByCategory(pointsWithSubject, category)
+                KnowledgeUiState(
+                    isLoading = false,
+                    knowledgePoints = filtered.map { toUiItem(it) },
+                    selectedCategory = category,
+                )
+            }
+        }
+        .catch { e ->
+            emit(KnowledgeUiState(error = e.message ?: "加载失败"))
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = KnowledgeUiState(isLoading = true),
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = KnowledgeUiState(isLoading = true),
-    )
 
     // 切换分类标签（NF-L1 修复：持久化到 SavedStateHandle）
     fun selectCategory(category: KnowledgeCategory) {
         savedStateHandle["selectedCategory"] = category.name
+    }
+
+    /** 重试加载（P0-6 新增） */
+    fun retry() {
+        _retryTrigger.value++
     }
 
     companion object {
@@ -103,6 +126,8 @@ data class KnowledgeUiState(
     val isLoading: Boolean = false,
     val knowledgePoints: List<KnowledgePointItem> = emptyList(),
     val selectedCategory: KnowledgeCategory = KnowledgeCategory.ALL,
+    /** 加载失败时的错误信息（P0-6 新增） */
+    val error: String? = null,
 )
 
 // 知识点列表项
