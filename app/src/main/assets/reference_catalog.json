@@ -1,0 +1,49 @@
+{
+  "metadata": {
+    "version": "2.0.0",
+    "generated_at": "2026-07-17T03:16:48.384649",
+    "description": "D级参考资料外链清单"
+  },
+  "references": [
+    {
+      "id": "ref_001",
+      "title": "鸿知考研网-南京师范大学文学考研真题",
+      "url": "https://www.hongzedu.com",
+      "type": "EXAM_PAPERS",
+      "description": "1998-2025年南师大文学考研真题电子版",
+      "level": "D"
+    },
+    {
+      "id": "ref_002",
+      "title": "南师大文学院官网-教师信息",
+      "url": "https://wxy.njnu.edu.cn/szdw/jsfc.htm",
+      "type": "TEACHER_INFO",
+      "description": "南京师范大学文学院教师风采页面",
+      "level": "D"
+    },
+    {
+      "id": "ref_003",
+      "title": "中国研究生招生信息网",
+      "url": "https://yz.chsi.com.cn",
+      "type": "OFFICIAL_INFO",
+      "description": "官方招生目录、复试分数线",
+      "level": "D"
+    },
+    {
+      "id": "ref_004",
+      "title": "维基文库-公共领域文学原典",
+      "url": "https://zh.wikisource.org",
+      "type": "ORIGINAL_TEXT",
+      "description": "《文心雕龙》等公共领域原典",
+      "level": "D"
+    },
+    {
+      "id": "ref_005",
+      "title": "EOL-文学理论名词解释",
+      "url": "https://www.eol.cn",
+      "type": "KNOWLEDGE_BASE",
+      "description": "文学理论名词解释资料",
+      "level": "D"
+    }
+  ]
+}
