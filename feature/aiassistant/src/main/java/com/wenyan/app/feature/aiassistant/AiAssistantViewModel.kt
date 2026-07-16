@@ -16,6 +16,9 @@ import com.wenyan.app.core.ai.recall.QuestionType
 import com.wenyan.app.core.ai.recall.RecallChecker
 import com.wenyan.app.core.ai.recall.RecallResult
 import com.wenyan.app.core.ai.recall.RoteCheckResult
+import com.wenyan.app.core.data.mapper.ChatMessageMapper
+import com.wenyan.app.core.data.repository.ChatRepository
+import com.wenyan.app.core.database.entity.ChatMessageEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +45,14 @@ import javax.inject.Inject
  * 3. 错题解释：[explainWrongAnswer] → "解释我的答案"机制
  * 4. 回忆检测：[checkRecall] → 三层渐进式检测
  * 5. 死记硬背检测：[checkRoteMemorization] → 关联卡片错误率分析
+ *
+ * NF-PP6 Wave 3.1 持久化改造：
+ * - [chatRepository] 持久化对话历史到 chat_conversations + chat_messages 表
+ * - 进程被杀重启后,init 调用 loadOrInitCurrent + 加载历史消息到 _uiState
+ * - sendMessage/clearMessages 双写(_uiState + chatRepository),保持 UI 响应同时持久化
+ * - 双写是过渡方案,后续可统一为 chatRepository.observeMessages 单源(需重构测试时序)
+ *
+ * @property chatRepository AI 对话仓库(NF-PP6 新增注入)
  */
 @HiltViewModel
 class AiAssistantViewModel @Inject constructor(
@@ -50,13 +61,23 @@ class AiAssistantViewModel @Inject constructor(
     private val ragEngine: RagEngine,
     private val recallChecker: RecallChecker,
     private val antiRoteMemorization: AntiRoteMemorization,
+    private val chatRepository: ChatRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AiAssistantUiState())
     val uiState: StateFlow<AiAssistantUiState> = _uiState.asStateFlow()
 
+    /**
+     * 当前对话 ID(内存缓存,与 chatRepository.currentConversationId DataStore 同步)。
+     *
+     * null 表示尚未加载或已清空。sendMessage 时如果为 null,会先 createConversation。
+     */
+    private var currentConversationId: String? = null
+
     init {
         checkAvailability()
+        // NF-PP6: 加载或初始化当前对话,恢复历史消息
+        restoreConversationIfNeeded()
     }
 
     // ── 普通问答（RAG + AI） ──────────────────────────────────────
@@ -65,11 +86,14 @@ class AiAssistantViewModel @Inject constructor(
      * 发送用户消息，获取 AI 回答。
      *
      * 流程：
-     * 1. 添加用户消息到列表
+     * 1. 添加用户消息到列表(同时持久化到 chatRepository)
      * 2. RAG 检索相关资料
      * 3. 检查 AI 可用性（离线降级）
      * 4. 构建 RAG prompt → 调用 AiService
-     * 5. 添加 AI 回复（标注引用来源）
+     * 5. 添加 AI 回复（标注引用来源,同时持久化）
+     *
+     * NF-PP6: 双写 — _uiState 更新(UI 响应) + chatRepository.appendMessage(持久化)。
+     * 如果 currentConversationId 为 null,先 createConversation。
      */
     fun sendMessage(text: String) {
         if (text.isBlank()) return
@@ -90,6 +114,20 @@ class AiAssistantViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
+                // NF-PP6: 确保当前对话存在,持久化用户消息
+                ensureConversation()
+                chatRepository.appendMessage(
+                    conversationId = currentConversationId!!,
+                    role = AiRole.USER.name,
+                    content = text,
+                    contentSource = CONTENT_SOURCE_USER_INPUT,
+                    stage = null,
+                    references = null,
+                    contextScreen = null,
+                    contextTitle = null,
+                    tokensUsed = null,
+                )
+
                 // 1. RAG 检索
                 val ragResult = ragEngine.search(text).first()
 
@@ -265,8 +303,37 @@ class AiAssistantViewModel @Inject constructor(
         _uiState.update { it.copy(inputText = text) }
     }
 
-    /** 清空对话消息 */
+    /** 清空对话消息(NF-PP6: 同时删除当前对话 + 清空 DataStore currentId) */
     fun clearMessages() {
+        val convId = currentConversationId
+        if (convId != null) {
+            viewModelScope.launch {
+                chatRepository.deleteConversation(convId)
+                chatRepository.setCurrentConversation(null)
+            }
+            currentConversationId = null
+        }
+        _uiState.update {
+            it.copy(
+                messages = emptyList(),
+                errorMessage = null,
+                roteWarning = null,
+            )
+        }
+    }
+
+    /**
+     * 开始新对话(NF-PP6 新增,供 Screen "新建对话"按钮调用)。
+     *
+     * 与 [clearMessages] 区别:
+     * - clearMessages:删除当前对话(历史不保留)
+     * - startNewConversation:保留当前对话历史,仅切换到新对话(下一次 sendMessage 时创建)
+     */
+    fun startNewConversation() {
+        currentConversationId = null
+        viewModelScope.launch {
+            chatRepository.setCurrentConversation(null)
+        }
         _uiState.update {
             it.copy(
                 messages = emptyList(),
@@ -302,8 +369,48 @@ class AiAssistantViewModel @Inject constructor(
 
     // ── 私有辅助方法 ──────────────────────────────────────────────
 
-    /** 添加 AI 助手消息 */
-    private fun addAssistantMessage(
+    /**
+     * 确保当前对话存在(NF-PP6)。
+     *
+     * 如果 currentConversationId 为 null,创建新对话并设为当前。
+     * 调用方需在协程内调用(内部调用 suspend 方法)。
+     */
+    private suspend fun ensureConversation() {
+        if (currentConversationId != null) return
+        val newId = chatRepository.createConversation(
+            title = "AI 对话",
+            apiConfigId = null,
+            model = null,
+        )
+        currentConversationId = newId
+        chatRepository.setCurrentConversation(newId)
+    }
+
+    /**
+     * 进程重启后恢复对话历史(NF-PP6)。
+     *
+     * - loadOrInitCurrent 返回非 null → 加载该对话消息到 _uiState
+     * - 返回 null → 无历史,保持 _uiState 空(等用户首次 sendMessage)
+     */
+    private fun restoreConversationIfNeeded() {
+        viewModelScope.launch {
+            try {
+                val convId = chatRepository.loadOrInitCurrent() ?: return@launch
+                currentConversationId = convId
+                val messages = chatRepository.observeMessages(convId).first()
+                if (messages.isNotEmpty()) {
+                    _uiState.update { it.copy(messages = messages.map { it.toAiMessage() }) }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // 恢复失败不阻塞主流程,用户可正常发起新对话
+            }
+        }
+    }
+
+    /** 添加 AI 助手消息(NF-PP6: 同时持久化到 chatRepository) */
+    private suspend fun addAssistantMessage(
         content: String,
         contentSource: String,
         references: List<RagReference> = emptyList(),
@@ -318,10 +425,26 @@ class AiAssistantViewModel @Inject constructor(
             stage = stage,
         )
         _uiState.update { it.copy(messages = it.messages + msg) }
+
+        // NF-PP6: 持久化 AI 消息(currentConversationId 应已由 sendMessage 的 ensureConversation 设置)
+        val convId = currentConversationId
+        if (convId != null) {
+            chatRepository.appendMessage(
+                conversationId = convId,
+                role = AiRole.ASSISTANT.name,
+                content = content,
+                contentSource = contentSource,
+                stage = stage?.name,
+                references = references,
+                contextScreen = null,
+                contextTitle = null,
+                tokensUsed = null,
+            )
+        }
     }
 
-    /** 添加苏格拉底引导消息（按阶段标注） */
-    private fun addSocraticGuideMessage(guide: SocraticGuide) {
+    /** 添加苏格拉底引导消息（按阶段标注,NF-PP6: 持久化通过 addAssistantMessage） */
+    private suspend fun addSocraticGuideMessage(guide: SocraticGuide) {
         val prefix = when (guide.stage) {
             SocraticStage.ANALYZE -> "【论证分析】"
             SocraticStage.SUGGEST -> "【改进建议】"
@@ -334,8 +457,8 @@ class AiAssistantViewModel @Inject constructor(
         )
     }
 
-    /** 离线降级：AI 不可用时显示友好提示（附 RAG 引用供参考） */
-    private fun addOfflineMessage(references: List<RagReference>) {
+    /** 离线降级：AI 不可用时显示友好提示（附 RAG 引用供参考,NF-PP6: 持久化通过 addAssistantMessage） */
+    private suspend fun addOfflineMessage(references: List<RagReference>) {
         val content = buildString {
             append("AI 服务当前不可用，请检查网络连接或 API 配置。\n")
             if (references.isNotEmpty()) {
@@ -367,7 +490,32 @@ class AiAssistantViewModel @Inject constructor(
     companion object {
         /** AI 生成内容来源标识 */
         private const val CONTENT_SOURCE_AI = "AI_GENERATED"
+
+        /** 用户输入内容来源标识(NF-PP6) */
+        private const val CONTENT_SOURCE_USER_INPUT = "USER_INPUT"
     }
+}
+
+/**
+ * 将 [ChatMessageEntity] 转换为 [AiMessage](NF-PP6 Wave 3.1)。
+ *
+ * 用于进程重启后从 chatRepository 恢复历史消息到 _uiState。
+ * referencesJson 通过 [ChatMessageMapper.deserializeReferences] 反序列化。
+ */
+private fun ChatMessageEntity.toAiMessage(): AiMessage {
+    val role = when (role.uppercase()) {
+        "USER" -> AiRole.USER
+        else -> AiRole.ASSISTANT // ASSISTANT / SYSTEM 都映射为 ASSISTANT(UI 只区分两类)
+    }
+    val stage = stage?.let { runCatching { SocraticStage.valueOf(it) }.getOrNull() }
+    return AiMessage(
+        id = id,
+        role = role,
+        content = content,
+        contentSource = contentSource,
+        references = ChatMessageMapper.deserializeReferences(referencesJson),
+        stage = stage,
+    )
 }
 
 /**

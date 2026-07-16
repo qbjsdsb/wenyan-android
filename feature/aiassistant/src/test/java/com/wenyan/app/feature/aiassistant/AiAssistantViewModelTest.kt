@@ -7,6 +7,8 @@ import com.wenyan.app.core.ai.recall.QuestionType
 import com.wenyan.app.core.ai.recall.RecallChecker
 import com.wenyan.app.core.ai.recall.RecallLevel
 import com.wenyan.app.core.ai.recall.RecallRating
+import com.wenyan.app.core.database.entity.ChatConversationEntity
+import com.wenyan.app.core.database.entity.ChatMessageEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.ReviewLogEntity
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +45,7 @@ class AiAssistantViewModelTest {
     private lateinit var socraticTutor: SocraticTutor
     private lateinit var recallChecker: RecallChecker
     private lateinit var antiRoteMemorization: AntiRoteMemorization
+    private lateinit var chatRepository: FakeChatRepository
     private lateinit var viewModel: AiAssistantViewModel
 
     @Before
@@ -55,6 +58,8 @@ class AiAssistantViewModelTest {
         socraticTutor = SocraticTutor(ragEngine, aiService)
         recallChecker = RecallChecker(aiService)
         antiRoteMemorization = AntiRoteMemorization(FakeReviewLogDao(emptyList()))
+        // NF-PP6: 默认无历史,init 的 loadOrInitCurrent 返回 null,不影响现有测试
+        chatRepository = FakeChatRepository()
 
         viewModel = AiAssistantViewModel(
             aiService = aiService,
@@ -62,6 +67,7 @@ class AiAssistantViewModelTest {
             ragEngine = ragEngine,
             recallChecker = recallChecker,
             antiRoteMemorization = antiRoteMemorization,
+            chatRepository = chatRepository,
         )
     }
 
@@ -118,6 +124,7 @@ class AiAssistantViewModelTest {
             ragEngine = emptyRagEngine,
             recallChecker = recallChecker,
             antiRoteMemorization = antiRoteMemorization,
+            chatRepository = FakeChatRepository(),
         )
 
         aiService.response = "AI 回复"
@@ -309,6 +316,7 @@ class AiAssistantViewModelTest {
             ragEngine = ragEngine,
             recallChecker = recallChecker,
             antiRoteMemorization = roteAnti,
+            chatRepository = FakeChatRepository(),
         )
 
         vm.checkRoteMemorization("card_001", listOf("card_002"))
@@ -362,6 +370,113 @@ class AiAssistantViewModelTest {
     fun `clearRoteWarning 清除死记硬背提示`() {
         viewModel.clearRoteWarning()
         assertNull("clearRoteWarning 后 roteWarning 应为 null", viewModel.uiState.value.roteWarning)
+    }
+
+    // ── NF-PP6 持久化测试(Wave 3.1 新增) ─────────────────────────
+
+    /**
+     * 场景 1:sendMessage 后 chatRepository 持久化了用户消息 + AI 消息。
+     *
+     * 验证双写:_uiState 更新(UI 响应) + chatRepository.appendMessage(持久化)。
+     * appendedMessages 应有 2 条:USER + ASSISTANT,顺序与内容正确。
+     */
+    @Test
+    fun `sendMessage 后 chatRepository 持久化用户和AI消息`() = runTest {
+        aiService.response = "AI 持久化回复"
+        viewModel.sendMessage("测试持久化")
+
+        // _uiState 应有 2 条(双写的 UI 侧)
+        assertEquals(2, viewModel.uiState.value.messages.size)
+
+        // chatRepository 应持久化 2 条(USER + ASSISTANT)
+        assertEquals("应持久化 2 条消息", 2, chatRepository.appendedMessages.size)
+        assertEquals("USER", chatRepository.appendedMessages[0].role)
+        assertEquals("测试持久化", chatRepository.appendedMessages[0].content)
+        assertEquals("USER_INPUT", chatRepository.appendedMessages[0].contentSource)
+        assertEquals("ASSISTANT", chatRepository.appendedMessages[1].role)
+        assertEquals("AI 持久化回复", chatRepository.appendedMessages[1].content)
+        assertEquals("AI_GENERATED", chatRepository.appendedMessages[1].contentSource)
+    }
+
+    /**
+     * 场景 2:clearMessages 后 chatRepository.deleteConversation 被调用。
+     *
+     * 验证 clearMessages 双写:_uiState 清空 + chatRepository.deleteConversation + setCurrentConversation(null)。
+     */
+    @Test
+    fun `clearMessages 后 chatRepository 删除当前对话`() = runTest {
+        aiService.response = "AI 回复"
+        viewModel.sendMessage("先发一条")
+        // sendMessage 后 currentConversationId 应非 null(ensureConversation 已创建)
+        assertTrue("应有 currentId", chatRepository.currentId != null)
+        val convId = chatRepository.currentId!!
+
+        viewModel.clearMessages()
+
+        // _uiState 清空
+        assertTrue("清空后消息应为空", viewModel.uiState.value.messages.isEmpty())
+        // chatRepository.deleteConversation 被调用
+        assertTrue("deleteConversation 应被调用", convId in chatRepository.deletedConversationIds)
+        // setCurrentConversation(null) 被调用
+        assertTrue("setCurrentConversation(null) 应被调用", null in chatRepository.setCurrentCalls)
+    }
+
+    /**
+     * 场景 3:进程重启(新 ViewModel 实例)后 init 加载历史消息到 _uiState。
+     *
+     * 验证 restoreConversationIfNeeded:
+     * - FakeChatRepository 预设 1 个对话 + 2 条历史消息
+     * - 新建 ViewModel 时 init 触发 loadOrInitCurrent + observeMessages
+     * - _uiState.messages 应恢复 2 条历史消息
+     */
+    @Test
+    fun `进程重启后 init 恢复历史消息到 uiState`() = runTest {
+        val convId = "conv_history_1"
+        val initialConv = ChatConversationEntity(
+            id = convId,
+            title = "历史对话",
+            apiConfigId = null,
+            model = null,
+            messageCount = 2,
+            createdAt = 1000L,
+            updatedAt = 2000L,
+        )
+        val initialMsgs = listOf(
+            ChatMessageEntity(
+                id = "msg_1", conversationId = convId, role = "USER",
+                content = "历史问题", contentSource = "USER_INPUT", stage = null,
+                referencesJson = null, contextScreen = null, contextTitle = null,
+                tokensUsed = null, createdAt = 1000L,
+            ),
+            ChatMessageEntity(
+                id = "msg_2", conversationId = convId, role = "ASSISTANT",
+                content = "历史回答", contentSource = "AI_GENERATED", stage = null,
+                referencesJson = null, contextScreen = null, contextTitle = null,
+                tokensUsed = null, createdAt = 1500L,
+            ),
+        )
+        val historyRepo = FakeChatRepository(
+            initialConversations = listOf(initialConv),
+            initialMessages = initialMsgs,
+        )
+
+        // 模拟进程重启:新建 ViewModel,init 应恢复历史
+        val restartedVm = AiAssistantViewModel(
+            aiService = aiService,
+            socraticTutor = socraticTutor,
+            ragEngine = ragEngine,
+            recallChecker = recallChecker,
+            antiRoteMemorization = antiRoteMemorization,
+            chatRepository = historyRepo,
+        )
+
+        // UnconfinedTestDispatcher 同步执行 init 协程,直接验证
+        val state = restartedVm.uiState.value
+        assertEquals("应恢复 2 条历史消息", 2, state.messages.size)
+        assertEquals(AiRole.USER, state.messages[0].role)
+        assertEquals("历史问题", state.messages[0].content)
+        assertEquals(AiRole.ASSISTANT, state.messages[1].role)
+        assertEquals("历史回答", state.messages[1].content)
     }
 
     // ── 辅助方法 ──────────────────────────────────────────────────

@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
@@ -160,6 +161,13 @@ fun AiAssistantScreen(
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "清空对话",
+                        )
+                    }
+                    // NF-PP6 Wave 3.1: 新建对话按钮(切换到新对话,保留历史)
+                    IconButton(onClick = viewModel::startNewConversation) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "新建对话",
                         )
                     }
                     // v0.6：MoreVert 改为 DropdownMenu 溢出菜单
