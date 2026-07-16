@@ -28,6 +28,9 @@ android {
     testOptions {
         unitTests {
             isReturnDefaultValues = true
+            // NF-PP4 Wave 2.2: SchedulingRepositoryTest 用 Robolectric + in-memory Room
+            // 做真实事务测试,需要 Android resources
+            isIncludeAndroidResources = true
         }
     }
 
@@ -77,4 +80,8 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
+    // NF-PP4 Wave 2.2: Robolectric + in-memory Room 用于 SchedulingRepositoryTest 真实事务测试
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.room.testing)
 }
