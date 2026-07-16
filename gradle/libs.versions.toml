@@ -50,9 +50,6 @@ datastore = "1.1.1"
 
 # FSRS-6 算法已由 FsrsWrapper.kt 自行实现，无需外部依赖
 
-# AndroidX Security + Keystore 加密存储
-securityCrypto = "1.1.0-alpha06"
-
 # MaterialKolor 动态色彩生成库（KSU 同款）
 materialKolor = "4.1.1"
 
@@ -131,9 +128,6 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 # DataStore
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 androidx-datastore-core = { group = "androidx.datastore", name = "datastore", version.ref = "datastore" }
-
-# AndroidX Security + Keystore
-androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 
 # FSRS-6 算法已由 FsrsWrapper.kt 自行实现，无需外部库
 

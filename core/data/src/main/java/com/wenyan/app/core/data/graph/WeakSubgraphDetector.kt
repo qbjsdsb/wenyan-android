@@ -1,5 +1,6 @@
 package com.wenyan.app.core.data.graph
 
+import android.util.Log
 import com.wenyan.app.core.data.repository.GraphRepository
 import com.wenyan.app.core.database.entity.GraphEdgeEntity
 import com.wenyan.app.core.database.entity.GraphNodeEntity
@@ -134,9 +135,21 @@ class WeakSubgraphDetector @Inject constructor(
             adjacency[node.id] = mutableListOf()
         }
         // 添加边（无向图，双向添加）
+        // NF-BB12 修复：孤儿边（sourceId 或 targetId 不在 nodes 列表中）静默丢弃，
+        // 数据一致性问题难发现。现加 Log.w 告警，便于排查图谱数据异常。
         for (edge in edges) {
-            adjacency[edge.sourceId]?.add(edge.targetId)
-            adjacency[edge.targetId]?.add(edge.sourceId)
+            val sourceAdj = adjacency[edge.sourceId]
+            val targetAdj = adjacency[edge.targetId]
+            if (sourceAdj == null || targetAdj == null) {
+                Log.w(
+                    TAG,
+                    "Orphan edge dropped: sourceId=${edge.sourceId}, targetId=${edge.targetId}, " +
+                        "type=${edge.type}. Node(s) not in current graph nodes list.",
+                )
+                continue
+            }
+            sourceAdj.add(edge.targetId)
+            targetAdj.add(edge.sourceId)
         }
         return adjacency
     }
@@ -208,6 +221,8 @@ class WeakSubgraphDetector @Inject constructor(
         private const val EXAM_FREQUENCY_HIGH = "HIGH"
         private const val EXAM_FREQUENCY_MEDIUM = "MEDIUM"
         private const val EXAM_FREQUENCY_LOW = "LOW"
+
+        private const val TAG = "WeakSubgraphDetector"
     }
 }
 

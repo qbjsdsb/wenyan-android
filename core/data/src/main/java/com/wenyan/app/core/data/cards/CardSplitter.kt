@@ -291,19 +291,31 @@ object CardSplitter {
         )
     }
 
-    /** 数字转中文（1-10），用于"第N组""第N点"展示 */
-    private fun indexToChinese(index: Int): String = when (index) {
-        1 -> "一"
-        2 -> "二"
-        3 -> "三"
-        4 -> "四"
-        5 -> "五"
-        6 -> "六"
-        7 -> "七"
-        8 -> "八"
-        9 -> "九"
-        10 -> "十"
-        else -> index.toString()
+    /**
+     * 数字转中文（1-99），用于"第N组""第N点"展示。
+     *
+     * NF-BB4 修复：原实现仅支持 1-10，index > 10 时返回阿拉伯数字字符串，
+     * 导致"第十一组""第十二点"等场景中文数字与阿拉伯数字混排，风格不统一。
+     * 现扩展到 1-99，覆盖实际业务场景（单卡片拆分点数极少超过 20）。
+     *
+     * 规则：
+     * - 1-10：一、二、...、十
+     * - 11-19：十一、十二、...、十九
+     * - 20/30/.../90：二十、三十、...、九十
+     * - 21-99（非整十）：二十一、二十二、...、九十九
+     * - ≤0 或 >99：回退阿拉伯数字（防御性，业务不应触达）
+     */
+    private fun indexToChinese(index: Int): String {
+        if (index <= 0 || index > 99) return index.toString()
+        val digits = arrayOf("零", "一", "二", "三", "四", "五", "六", "七", "八", "九")
+        val tens = index / 10
+        val ones = index % 10
+        return when {
+            tens == 0 -> digits[ones]
+            tens == 1 -> if (ones == 0) "十" else "十${digits[ones]}"
+            ones == 0 -> "${digits[tens]}十"
+            else -> "${digits[tens]}十${digits[ones]}"
+        }
     }
 
     /** 为两个易混淆项生成默认区别要点（占位提示，后续可由AI补全） */
