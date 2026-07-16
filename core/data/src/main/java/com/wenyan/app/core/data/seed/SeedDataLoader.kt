@@ -113,6 +113,18 @@ class SeedDataLoader @Inject constructor(
         importToDatabase(seedData, isUpgrade = isUpgrade)
         markInitialized()
         storeSeedVersion(currentVersion)
+
+        // v0.7.2 修复：图谱骨架导入移出主事务，用独立事务 + try-catch。
+        // 原实现在 [importToDatabase] 的 withTransaction 内调用 [importGraphSkeleton]，
+        // 一旦图谱 FK 约束失败（如 SUBJECT_ID 与 seed_data.json 不匹配），
+        // 整个事务回滚，909 条知识点全部丢失。
+        // 现在主事务已提交 + markInitialized 已执行，图谱失败只影响图谱功能，
+        // 知识点不受影响。图谱失败时 Log.w 记录，下次启动重试（@Upsert 幂等）。
+        try {
+            database.withTransaction { importGraphSkeleton() }
+        } catch (e: Exception) {
+            Log.w(TAG, "Graph skeleton import failed, knowledge points unaffected", e)
+        }
     }
 
     /**
@@ -347,9 +359,8 @@ class SeedDataLoader @Inject constructor(
             writingMaterialDao.insertAll(writingMaterialEntities)
         }
 
-        // 步骤7：保留科目代码历史 + 知识图谱骨架导入
+        // 步骤7：保留科目代码历史（图谱骨架导入移至主事务外，见 [ensureSeedDataLoaded]）
         examCodeHistoryDao.insertAll(ExamCodeHistoryData.EXAM_CODE_HISTORY)
-        importGraphSkeleton()
     }
 
     /**

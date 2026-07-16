@@ -17,10 +17,11 @@ android {
         minSdk = 26
         targetSdk = 35
         // P0-M2 修正：versionCode 必须每次发版递增，否则包安装器无法区分版本。
-        // v0.1.0=1, v0.2.0=2, v0.3.0=3, v0.4.0=4, v0.5.0=5, v0.6.0=6, v0.7.0=7, v0.7.1=8（修复导入超时）
-        versionCode = 8
+        // v0.1.0=1, v0.2.0=2, v0.3.0=3, v0.4.0=4, v0.5.0=5, v0.6.0=6, v0.7.0=7, v0.7.1=8, v0.7.2=9（修复图谱FK回滚）
+        versionCode = 9
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
-        versionName = "0.7.1"
+        // v0.7.2：修复 GraphSkeleton SUBJECT_ID FK 不匹配导致种子导入事务回滚、知识点全部丢失
+        versionName = "0.7.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

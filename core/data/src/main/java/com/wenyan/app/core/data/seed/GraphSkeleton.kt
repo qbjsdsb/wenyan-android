@@ -25,8 +25,14 @@ object GraphSkeleton {
 
     // ==================== 常量定义 ====================
 
-    /** 现当代文学科目 ID（固定 UUID，与 subjects 表对应） */
-    private const val SUBJECT_ID = "subject-modern-contemporary-literature"
+    /**
+     * 现当代文学科目 ID（必须与 seed_data.json 中 subjects 表 modern 科目的 id 一致）。
+     *
+     * v0.7.2 修复：原值 "subject-modern-contemporary-literature" 与 seed_data.json 的
+     * "subj_02" 不匹配，导致 GraphNodeEntity 的 subject_id FK 约束失败，
+     * 整个 withTransaction 回滚，909 条知识点全部丢失（详见 SESSION_LOG v0.7.2）。
+     */
+    private const val SUBJECT_ID = "subj_02"
 
     /** 节点颜色：作家（粉色） */
     private val COLOR_AUTHOR = 0xFFE91E63.toInt()
