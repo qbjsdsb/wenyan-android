@@ -58,10 +58,10 @@ data class ReviewLogEntity(
     val state: String?,
 
     @ColumnInfo(name = "stability")
-    val stability: Double?,
+    val stability: Float?,
 
     @ColumnInfo(name = "difficulty")
-    val difficulty: Double?,
+    val difficulty: Float?,
 
     @ColumnInfo(name = "reps")
     val reps: Int?,

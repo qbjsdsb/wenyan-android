@@ -262,43 +262,43 @@ class AiAssistantViewModelTest {
                 ReviewLogEntity(
                     id = "log1", pointId = "card_001", rating = "GOOD",
                     elapsedDays = 1, scheduledDays = 1, state = "REVIEW",
-                    stability = 10.0, difficulty = 5.0, reps = 5, createdAt = 1000L,
+                    stability = 10f, difficulty = 5f, reps = 5, createdAt = 1000L,
                 ),
                 ReviewLogEntity(
                     id = "log2", pointId = "card_001", rating = "GOOD",
                     elapsedDays = 1, scheduledDays = 1, state = "REVIEW",
-                    stability = 10.0, difficulty = 5.0, reps = 5, createdAt = 2000L,
+                    stability = 10f, difficulty = 5f, reps = 5, createdAt = 2000L,
                 ),
                 ReviewLogEntity(
                     id = "log3", pointId = "card_001", rating = "GOOD",
                     elapsedDays = 1, scheduledDays = 1, state = "REVIEW",
-                    stability = 10.0, difficulty = 5.0, reps = 5, createdAt = 3000L,
+                    stability = 10f, difficulty = 5f, reps = 5, createdAt = 3000L,
                 ),
                 ReviewLogEntity(
                     id = "log4", pointId = "card_001", rating = "GOOD",
                     elapsedDays = 1, scheduledDays = 1, state = "REVIEW",
-                    stability = 10.0, difficulty = 5.0, reps = 5, createdAt = 4000L,
+                    stability = 10f, difficulty = 5f, reps = 5, createdAt = 4000L,
                 ),
                 ReviewLogEntity(
                     id = "log5", pointId = "card_001", rating = "GOOD",
                     elapsedDays = 1, scheduledDays = 1, state = "REVIEW",
-                    stability = 10.0, difficulty = 5.0, reps = 5, createdAt = 5000L,
+                    stability = 10f, difficulty = 5f, reps = 5, createdAt = 5000L,
                 ),
                 // 关联卡片频繁出错
                 ReviewLogEntity(
                     id = "log6", pointId = "card_002", rating = "AGAIN",
                     elapsedDays = 1, scheduledDays = 1, state = "REVIEW",
-                    stability = 1.0, difficulty = 8.0, reps = 1, createdAt = 6000L,
+                    stability = 1f, difficulty = 8f, reps = 1, createdAt = 6000L,
                 ),
                 ReviewLogEntity(
                     id = "log7", pointId = "card_002", rating = "AGAIN",
                     elapsedDays = 1, scheduledDays = 1, state = "REVIEW",
-                    stability = 1.0, difficulty = 8.0, reps = 1, createdAt = 7000L,
+                    stability = 1f, difficulty = 8f, reps = 1, createdAt = 7000L,
                 ),
                 ReviewLogEntity(
                     id = "log8", pointId = "card_002", rating = "AGAIN",
                     elapsedDays = 1, scheduledDays = 1, state = "REVIEW",
-                    stability = 1.0, difficulty = 8.0, reps = 1, createdAt = 8000L,
+                    stability = 1f, difficulty = 8f, reps = 1, createdAt = 8000L,
                 ),
             ),
         )

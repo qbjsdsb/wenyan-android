@@ -49,10 +49,10 @@ data class MemoRecordEntity(
     val state: String,
 
     @ColumnInfo(name = "stability", defaultValue = "0.0")
-    val stability: Double = 0.0,
+    val stability: Float = 0f,
 
     @ColumnInfo(name = "difficulty", defaultValue = "5.0")
-    val difficulty: Double = 5.0,
+    val difficulty: Float = 5f,
 
     @ColumnInfo(name = "last_review_at")
     val lastReviewAt: Long,

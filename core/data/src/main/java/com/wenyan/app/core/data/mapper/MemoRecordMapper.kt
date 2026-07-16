@@ -60,8 +60,8 @@ object MemoRecordMapper {
 
         return FlashCard(
             dueDate = dueDate,
-            stability = memoRecord.stability.toFloat(),
-            difficulty = memoRecord.difficulty.toFloat(),
+            stability = memoRecord.stability,
+            difficulty = memoRecord.difficulty,
             interval = if (memoRecord.lastReviewAt > 0) {
                 ((memoRecord.nextReviewAt - memoRecord.lastReviewAt) / DAY_MS).toInt()
             } else 0,
@@ -103,8 +103,8 @@ object MemoRecordMapper {
         return MemoRecordEntity(
             pointId = pointId,
             state = flashCard.state.name,
-            stability = flashCard.stability.toDouble(),
-            difficulty = flashCard.difficulty.toDouble(),
+            stability = flashCard.stability,
+            difficulty = flashCard.difficulty,
             lastReviewAt = lastReviewAt,
             nextReviewAt = nextReviewAt,
             reviewCount = flashCard.reviewCount,

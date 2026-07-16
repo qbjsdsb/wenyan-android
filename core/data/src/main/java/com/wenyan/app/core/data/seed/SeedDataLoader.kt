@@ -285,8 +285,8 @@ class SeedDataLoader @Inject constructor(
                 MemoRecordEntity(
                     pointId = kp.id,
                     state = "NEW",
-                    stability = 0.0,
-                    difficulty = 5.0,
+                    stability = 0f,
+                    difficulty = 5f,
                     // P2-AUDIT-1 修正：lastReviewAt = 0L 表示"从未复习"，原为 now 语义错误
                     lastReviewAt = 0L,
                     nextReviewAt = now, // 立即到期，新知识点可立即进入复习队列

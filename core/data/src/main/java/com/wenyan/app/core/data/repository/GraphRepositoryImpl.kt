@@ -213,7 +213,7 @@ class GraphRepositoryImpl @Inject constructor(
         if (elapsedMillis <= 0L) return 1f
 
         val elapsedDays = (elapsedMillis.toDouble() / MILLIS_PER_DAY).toFloat().coerceAtLeast(0f)
-        val s = memo.stability.toFloat()
+        val s = memo.stability
         // FSRS-6 幂律公式：R = (1 + t/(9*S))^(-1)
         val r = (1f + elapsedDays / (9f * s)).pow(-1f)
         return r.coerceIn(0f, 1f)
