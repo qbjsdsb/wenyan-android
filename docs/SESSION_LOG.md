@@ -1827,4 +1827,120 @@ Phase 4 已将主题模式选择从 FilterChip 改为 SegmentedButton，但调�
 | `76c5084` | 第五轮深度审计 P1 第二批 2B 4 项架构修复（ContentSource 迁移 + ThemeViewModel 迁移 + tickFlow + 三阶段短路） |
 | `8ba2973` | 第五轮深度审计 P1 第二批 2C 2 项清理 + 1 项暂缓（chatResult 迁移 + 死代码删除 + R8 暂缓） |
 | `a0bd1cf` | 第五轮深度审计 P2 第一批 3 项低风险清理（securityCrypto 死声明 + indexToChinese 扩展 + 孤儿边日志） |
-| （待提交） | 启动图标重设计：展开的书 + "文"字负空间 + 版本 v0.5.0 |
+| `6a1175c` | 启动图标重设计：展开的书 + "文"字负空间 + 版本 v0.5.0 |
+
+---
+
+## Session 2026-07-16（续 2）：启动图标重设计 + v0.5.0 Release
+
+### 目标
+
+用户反馈现有"文"字几何拼块启动图标过于生硬，要求重做以符合 Android 设计规范、流畅大方、有谷歌产品气质。完成后发布新 Release。
+
+### 完成内容
+
+#### 1. 启动图标重设计（commit `6a1175c`）
+
+**设计流程**（按 brainstorming skill 引导）：
+1. 探索现状：发现 adaptive icon + monochrome 三层结构完整，问题在前景"文"字 path 过于方块化
+2. 用户选择：核心图形方向 = "书籍/书页抽象图形"，配色 = "保留墨黑 + 米色"
+3. 提出 3 方案：A 对称展开的书 / B 书页堆叠 + page curl / C **展开的书 + "文"字负空间**（推荐）
+4. 用户确认方案 C
+5. 写设计 spec：`docs/design/icon-redesign.md`
+6. 用户审查通过，要求发布
+
+**图标设计要点**：
+- **前景 path**（米色 `#F5F1E8`）：单一 path，外环 = 展开的书俯视图轮廓（V 形书脊凹槽顶 + 凸槽底），内环 = 极简"文"字 3 笔（横/撇/捺）
+- **evenOdd 镂空**：`android:fillType="evenOdd"` 让内环在书页上镂空，呈现墨黑"文"字负空间
+- **配色**：保留墨黑 `#2C2C2C` 背景 + 米色 `#F5F1E8` 书页（墨纸气质，与 App 窗口背景一致）
+- **谷歌感**：Bold silhouette + subtle detail，类比 Google Workspace（Play Books 的书形 + Docs 的字母负空间）
+- **规范**：所有图形在 safe zone（中心 72x72，x:18-90 y:18-90）内
+- **monochrome 同步**：themed icon 层 path 与 foreground 完全一致，Android 13+ 系统着色后保留识别度
+- **YAGNI**：不做 PNG fallback（minSdk 26+ 已覆盖）、不改 splash、不加动态主题
+
+**改动文件**：
+- `app/src/main/res/drawable/ic_launcher_foreground.xml`：替换 path + 加 `android:fillType="evenOdd"`
+- `app/src/main/res/drawable/ic_launcher_monochrome.xml`：同步替换 path
+- `app/build.gradle.kts`：versionCode 4→5, versionName 0.4.0→0.5.0
+- `docs/design/icon-redesign.md`：完整设计 spec（目标 + 方案 + path 坐标 + 风险 + YAGNI）
+
+#### 2. v0.5.0 Release 流程
+
+按 AGENTS.md 第 4 节硬约束 + Release tag 流程：
+1. ✅ 本地 `assembleDebug` BUILD SUCCESSFUL in 43s
+2. ✅ 本地 `testDebugUnitTest` 220 tests 0 failures 0 errors
+3. ✅ 检查 v0.5.0 tag 不存在（无需删 orphan tag）
+4. ✅ commit `6a1175c` + push origin main
+5. ✅ `git tag v0.5.0 && git push origin v0.5.0`
+6. ⏳ Release workflow 触发等待中
+
+### Release 监视情况（截至会话结束）
+
+- **tag push 时间**：2026-07-16（本会话末）
+- **GitHub API 限流**：沙箱 IP `45.78.224.19` 触发 API rate limit，无法用 `curl api.github.com` 查看 workflow 状态
+- **Release 页面状态**：`https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.5.0` 返回 404，说明 Release 尚未生成
+- **可能原因**：
+  1. Release workflow 正在运行（需几分钟完成 assembleRelease + 签名 + 上传）
+  2. CI 账单问题阻塞 workflow 执行（与 v0.3.0/v0.4.0 同情况）
+- **下次会话首要任务**：检查 v0.5.0 Release 状态，若 CI 账单问题已解决则正式签名 APK 可用，否则 debug 签名 fallback
+
+### 验证
+
+- `CI=false gradle assembleDebug --no-daemon` BUILD SUCCESSFUL in 43s
+- `CI=false gradle testDebugUnitTest --no-daemon` 220 tests 0 failures 0 errors
+- 图标视觉验证待 emulator 实测（沙箱无 emulator）
+
+### 关键技术决策
+
+| 决策 | 理由 |
+|------|------|
+| 用 evenOddFillType 实现负空间镂空 | 单一 path 同时表达"书"和"文"字，避免多 path 叠加渲染问题；API 1+ 支持无兼容性风险 |
+| "文"字简化为 3 笔（横/撇/捺） | 去掉"亠"头避免小尺寸糊成一团，3 笔在大尺寸可见细节、小尺寸退化为书页纹理 |
+| 保留墨黑/米色配色 | 与 App 窗口背景一致，墨纸气质；用户明确要求保留品牌色 |
+| monochrome path 与 foreground 一致 | themed icon 模式下系统着色后负空间保留，"文"字识别度不丢失 |
+| 不做 PNG fallback | minSdk 26+ 已覆盖 adaptive icon，anydpi-v26 足够；YAGNI |
+| versionCode 4→5, versionName 0.4.0→0.5.0 | v0.5.0 包含图标重做 + 第五轮深度审计 21 项修复，是显著版本升级 |
+
+### 待 emulator 实测验证项
+
+1. 启动屏图标显示正确
+2. 桌面图标显示正确（方形 + 圆形遮罩）
+3. 最近任务栏小尺寸图标清晰度
+4. Android 13+ themed icon 模式下"文"字负空间保留
+5. 深色模式下图标不变（adaptive icon 不跟随系统主题，只有 themed icon 模式才变色）
+
+如图标 path 在实测中发现小尺寸糊成一团或书形识别度不足，可调整 path 坐标后重新发 v0.5.1。
+
+### 下次继续
+
+1. **P0**：检查 v0.5.0 Release 状态 — 浏览器打开 https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.5.0
+   - 若已生成：下载 APK 验证图标显示
+   - 若 404：检查 https://github.com/qbjsdsb/wenyan-android/actions 看 workflow 是否被账单阻塞
+2. **P0**：跑 emulator 实测 v0.5.0 — 验证图标显示 + P0/P1/P2 修复（rateCard 事务 + 输入框 + Flow 刷新 + 三阶段短路 + ContentSource/Theme 迁移 + RecallChecker/AiAssistantViewModel 错误传播 + indexToChinese 扩展 + 孤儿边日志）
+3. **P1-10 待 emulator 实测后启用**：Release R8 + ProGuard 规则补全
+4. **P2 剩余项**（需 emulator 实测或 schema 迁移）：NF-UC7 BackHandler / NF-D6 schema 1.json / graph_edges UNIQUE 约束 / Certificate Pinning
+5. **P1 大型任务**（需用户确认优先级）：NF-PP4 复习日志双写 / NF-PP5 错题本 / NF-PP6 AiAssistantViewModel 持久化 / NF-T4 MemoRecordMapper 精度
+
+### 新会话快速恢复 Checklist
+
+新会话开始时按顺序执行：
+
+1. 读 `docs/00-STATUS.md`（10 秒状态快照）
+2. 读本节（SESSION_LOG 最后一节）
+3. 用浏览器打开 https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.5.0 确认 Release 状态
+4. 若 Release 已生成，下载 APK 准备 emulator 实测
+5. 若 Release 未生成，检查 Actions 页面确认是否被账单阻塞
+
+### 本次 commits
+
+| commit | 内容 |
+|--------|------|
+| `6a1175c` | 启动图标重设计 + 版本号升级到 v0.5.0 |
+
+**本会话继承的上一会话 commits**（已在 origin/main）：
+- `d6532e4` P0 第一批 6 项
+- `4496242` P1-2A 批 6 项
+- `76c5084` P1-2B 批 4 项
+- `8ba2973` P1-2C 批 2 项 + 1 暂缓
+- `a0bd1cf` P2 第一批 3 项
+- `4cfb03e` 文档更新

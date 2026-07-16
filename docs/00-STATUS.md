@@ -5,15 +5,23 @@
 
 ## ✅ 当前状态
 
-**启动图标重设计 + 第五轮深度审计完成** — v0.5.0 待发布（图标 + 21 项审计修复，6 commits），220 tests 0 failures。
+**v0.5.0 已 push tag，Release 待生成** — 图标重设计 + 第五轮深度审计 21 项修复全部完成，220 tests 0 failures。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | 待提交（启动图标重设计 v0.5.0） |
-| 最新 Release | [v0.4.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.4.0)（2026-07-14，debug 签名 fallback，17MB） — **v0.5.0 待发布** |
+| 最新 commit | `6a1175c`（main，启动图标重设计 + v0.5.0） |
+| 最新 Release | [v0.4.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.4.0)（2026-07-14，debug 签名 fallback）— **v0.5.0 tag 已 push，Release 生成中** |
 | 测试 | **220 tests 0 failures 0 errors** |
-| 阻塞 | **CI 账单问题** — 24 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + UI 修复 3 个 + 深度审计 5 个 + 图标 1 个，部分重叠） |
+| 阻塞 | **CI 账单问题** — 24 个 commit 待 CI 验证；v0.5.0 Release workflow 可能被阻塞（与 v0.3.0/v0.4.0 同情况） |
 | 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节 |
+
+## 🚨 新会话首要任务
+
+**检查 v0.5.0 Release 状态**（会话结束时尚未生成）：
+1. 浏览器打开 https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.5.0
+2. 若已生成：下载 APK 验证图标显示
+3. 若 404：打开 https://github.com/qbjsdsb/wenyan-android/actions 检查 workflow 是否被账单阻塞
+4. 若账单问题已解决：v0.5.0 可用正式签名 APK；否则 debug 签名 fallback（与 v0.3.0/v0.4.0 同）
 
 ## 🆕 最新改动（2026-07-16）
 
@@ -26,7 +34,7 @@
 | P1-2B 批 | `76c5084` | 4 | ContentSource 迁移到 core/common + ThemeViewModel 迁移到 designsystem + observeDue tickFlow 刷新 + SocraticTutor 三阶段短路 |
 | P1-2C 批 | `8ba2973` | 2+1 暂缓 | RecallChecker/AiAssistantViewModel 迁移到 chatResult + 删除 getAllVerifiedKnowledgePoints 死代码（P1-10 R8 暂缓待 emulator 实测） |
 | P2 第一批 | `a0bd1cf` | 3 | securityCrypto 死声明清理 + CardSplitter.indexToChinese 扩展到 1-99 + WeakSubgraphDetector 孤儿边日志 |
-| 图标重设计 | 待提交 | - | ic_launcher_foreground + monochrome 替换为"展开的书 + 文字负空间 evenOdd 镂空"，保留墨黑/米色品牌色，版本 v0.5.0 |
+| 图标重设计 | `6a1175c` | - | ic_launcher_foreground + monochrome 替换为"展开的书 + 文字负空间 evenOdd 镂空"，保留墨黑/米色品牌色，版本 v0.5.0 |
 
 详见 [SESSION_LOG.md](SESSION_LOG.md) 最后一节 + [docs/design/icon-redesign.md](design/icon-redesign.md)。
 
@@ -140,17 +148,18 @@
 
 ## 🎯 下一步优先级
 
-1. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 23 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + UI 修复 3 个 + 深度审计 5 个，部分重叠）
-2. **P0**：跑 emulator 实测 — 验证 v0.5.0 + v0.6 + UI 三批 + 第五轮深度审计 P0/P1/P2 修复（rateCard 事务 + 输入框受控 + Flow 刷新 + 三阶段短路 + ContentSource/Theme 迁移 + RecallChecker/AiAssistantViewModel 错误传播 + indexToChinese 扩展 + 孤儿边日志 + 卡片翻转 + AI 入口 + Tab/列表动画 + 深色模式 + 平板 WideNavigationRail + 主题切换颜色动画 + Push/Pop 弹簧 + LoadingIndicator + SegmentedButton + IME 适配 + 清空确认 + 错误重试 + 长文本省略 + 无障碍合并）
-3. **P0**：CI 账单问题解决后，删除 v0.4.0 tag 重新打 tag 触发正式签名 Release（`git push origin :refs/tags/v0.4.0 && git tag v0.4.0 && git push origin v0.4.0`）
-4. **P1-10 待 emulator 实测后启用**：Release R8 + ProGuard 规则补全（反射/序列化/规则遗漏风险，沙箱无 emulator 暂缓）
-5. **P2 剩余项**（需 emulator 实测或 schema 迁移）：
+1. **P0**：检查 v0.5.0 Release 状态（会话结束时尚未生成）— 浏览器打开 https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.5.0
+2. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 24 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + UI 修复 3 个 + 深度审计 5 个 + 图标 1 个，部分重叠）
+3. **P0**：跑 emulator 实测 v0.5.0 — 验证图标显示 + P0/P1/P2 修复（rateCard 事务 + 输入框受控 + Flow 刷新 + 三阶段短路 + ContentSource/Theme 迁移 + RecallChecker/AiAssistantViewModel 错误传播 + indexToChinese 扩展 + 孤儿边日志 + 卡片翻转 + AI 入口 + Tab/列表动画 + 深色模式 + 平板 WideNavigationRail + 主题切换颜色动画 + Push/Pop 弹簧 + LoadingIndicator + SegmentedButton + IME 适配 + 清空确认 + 错误重试 + 长文本省略 + 无障碍合并）
+4. **P0**：CI 账单问题解决后，删除 v0.5.0 tag 重新打 tag 触发正式签名 Release（`git push origin :refs/tags/v0.5.0 && git tag v0.5.0 && git push origin v0.5.0`）
+5. **P1-10 待 emulator 实测后启用**：Release R8 + ProGuard 规则补全（反射/序列化/规则遗漏风险，沙箱无 emulator 暂缓）
+6. **P2 剩余项**（需 emulator 实测或 schema 迁移）：
    - NF-UC7（BackHandler）：需 emulator 实测验证 UX
    - NF-D6/NF-DS12（schema 1.json）：需从 git 历史考古或反推
    - graph_edges / api_configs.is_current UNIQUE 约束：需 schema 迁移
    - Certificate Pinning：需 emulator 实测
    - NF-PP3/NF-PP7/NF-DS13：审计/调研任务（无代码改动）
-6. **P1 大型任务**（需用户确认优先级）：
+7. **P1 大型任务**（需用户确认优先级）：
    - P1-PG-1/2/3：启用 R8 + 补齐 ProGuard 规则（与 P1-10 同一问题）
    - NF-PP4：复习日志双写统一
    - NF-PP5：错题本实现
