@@ -1827,3 +1827,4 @@ Phase 4 已将主题模式选择从 FilterChip 改为 SegmentedButton，但调�
 | `76c5084` | 第五轮深度审计 P1 第二批 2B 4 项架构修复（ContentSource 迁移 + ThemeViewModel 迁移 + tickFlow + 三阶段短路） |
 | `8ba2973` | 第五轮深度审计 P1 第二批 2C 2 项清理 + 1 项暂缓（chatResult 迁移 + 死代码删除 + R8 暂缓） |
 | `a0bd1cf` | 第五轮深度审计 P2 第一批 3 项低风险清理（securityCrypto 死声明 + indexToChinese 扩展 + 孤儿边日志） |
+| （待提交） | 启动图标重设计：展开的书 + "文"字负空间 + 版本 v0.5.0 |

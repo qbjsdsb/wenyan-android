@@ -5,19 +5,19 @@
 
 ## ✅ 当前状态
 
-**第五轮深度审计 P0 + P1 + P2 第一批完成** — 21 项修复（5 commits），220 tests 0 failures。
+**启动图标重设计 + 第五轮深度审计完成** — v0.5.0 待发布（图标 + 21 项审计修复，6 commits），220 tests 0 failures。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `a0bd1cf`（main，P2 第一批 3 项低风险清理） |
-| 最新 Release | [v0.4.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.4.0)（2026-07-14，debug 签名 fallback，17MB） |
+| 最新 commit | 待提交（启动图标重设计 v0.5.0） |
+| 最新 Release | [v0.4.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.4.0)（2026-07-14，debug 签名 fallback，17MB） — **v0.5.0 待发布** |
 | 测试 | **220 tests 0 failures 0 errors** |
-| 阻塞 | **CI 账单问题** — 23 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + UI 修复 3 个 + 深度审计 5 个，部分重叠） |
+| 阻塞 | **CI 账单问题** — 24 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + UI 修复 3 个 + 深度审计 5 个 + 图标 1 个，部分重叠） |
 | 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节 |
 
 ## 🆕 最新改动（2026-07-16）
 
-第五轮深度审计 P0 + P1 + P2 第一批（21 项，5 commits）：
+**启动图标重设计 + 第五轮深度审计 P0 + P1 + P2 第一批（21 项 + 图标，6 commits）**：
 
 | 批次 | commit | 项数 | 核心内容 |
 |------|--------|------|----------|
@@ -26,8 +26,9 @@
 | P1-2B 批 | `76c5084` | 4 | ContentSource 迁移到 core/common + ThemeViewModel 迁移到 designsystem + observeDue tickFlow 刷新 + SocraticTutor 三阶段短路 |
 | P1-2C 批 | `8ba2973` | 2+1 暂缓 | RecallChecker/AiAssistantViewModel 迁移到 chatResult + 删除 getAllVerifiedKnowledgePoints 死代码（P1-10 R8 暂缓待 emulator 实测） |
 | P2 第一批 | `a0bd1cf` | 3 | securityCrypto 死声明清理 + CardSplitter.indexToChinese 扩展到 1-99 + WeakSubgraphDetector 孤儿边日志 |
+| 图标重设计 | 待提交 | - | ic_launcher_foreground + monochrome 替换为"展开的书 + 文字负空间 evenOdd 镂空"，保留墨黑/米色品牌色，版本 v0.5.0 |
 
-详见 [SESSION_LOG.md](SESSION_LOG.md) 最后一节。
+详见 [SESSION_LOG.md](SESSION_LOG.md) 最后一节 + [docs/design/icon-redesign.md](design/icon-redesign.md)。
 
 ## 📊 项目进度
 

@@ -2,7 +2,8 @@
 <!-- 启动图标 monochrome 层（Android 13+ themed icon）。
      系统会根据用户壁纸/主题自动着色此矢量图。
      使用白色（#FFFFFF），系统会替换为主题色。
-     与 ic_launcher_foreground 的"文"字 path 一致。 -->
+     与 ic_launcher_foreground 的 path 一致（书 + "文"字负空间 evenOdd 镂空）。
+     themed icon 模式下系统着色后，书的轮廓 + "文"字负空间保留识别度。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -10,5 +11,6 @@
     android:viewportHeight="108">
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M44,32 L64,32 L64,40 L56,40 L56,76 L64,76 L64,84 L44,84 L44,76 L52,76 L52,40 L44,40 Z" />
+        android:fillType="evenOdd"
+        android:pathData="M18,32 L52,32 L54,40 L56,32 L90,32 L90,72 L56,72 L54,80 L52,72 L18,72 Z M30,50 L74,50 L74,54 L30,54 Z M50,54 L54,54 L42,68 L38,68 Z M54,54 L58,54 L70,68 L66,68 Z" />
 </vector>

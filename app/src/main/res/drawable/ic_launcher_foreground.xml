@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 启动图标前景：墨色"文"字 -->
+<!-- 启动图标前景：展开的书 + "文"字负空间镂空（2026-07-16 重设计）
+     设计原理：
+     - 外环 = 展开的书俯视图轮廓（V 形书脊凹槽顶 + 凸槽底，两页如翅膀）
+     - 内环 = 极简"文"字 3 笔（横/撇/捺），用 evenOdd 镂空呈现墨黑负空间
+     - 米色书页 + 墨黑"文"字 = 墨纸气质，保留文研品牌
+     - Bold silhouette + subtle detail，类比 Google Workspace 图标设计原则
+     - 所有图形在 safe zone（中心 72x72，x:18-90 y:18-90）内
+     参见 docs/design/icon-redesign.md -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -7,5 +14,6 @@
     android:viewportHeight="108">
     <path
         android:fillColor="#F5F1E8"
-        android:pathData="M44,32 L64,32 L64,40 L56,40 L56,76 L64,76 L64,84 L44,84 L44,76 L52,76 L52,40 L44,40 Z" />
+        android:fillType="evenOdd"
+        android:pathData="M18,32 L52,32 L54,40 L56,32 L90,32 L90,72 L56,72 L54,80 L52,72 L18,72 Z M30,50 L74,50 L74,54 L30,54 Z M50,54 L54,54 L42,68 L38,68 Z M54,54 L58,54 L70,68 L66,68 Z" />
 </vector>
