@@ -179,7 +179,8 @@ private fun HeaderSection(point: KnowledgePointEntity) {
         Text(
             text = point.title,
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
+            // P2-2 修复：Bold(700) 过重，M3 Expressive 推荐 SemiBold(600)
+            fontWeight = FontWeight.SemiBold,
         )
 
         // 考频 + 难度 + 内容来源标签

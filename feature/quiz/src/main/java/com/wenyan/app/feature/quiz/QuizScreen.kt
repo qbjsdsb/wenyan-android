@@ -18,12 +18,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.SmartToy
 import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -338,7 +338,8 @@ private fun QuestionCard(
                         },
                     ) {
                         Icon(
-                            imageVector = Icons.Default.MenuBook,
+                            // P2-1 修复：Icons.Default.MenuBook 已 deprecated，改用 AutoMirrored 版本
+                            imageVector = Icons.AutoMirrored.Filled.MenuBook,
                             contentDescription = null,
                             modifier = Modifier.padding(end = Spacing.xs),
                         )

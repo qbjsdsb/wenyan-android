@@ -254,7 +254,8 @@ private fun StatItem(label: String, value: String) {
         Text(
             text = value,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
+            // P2-2 修复：Bold(700) 过重，M3 Expressive 推荐 SemiBold(600)
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
