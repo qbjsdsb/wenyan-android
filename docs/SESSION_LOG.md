@@ -1751,6 +1751,21 @@ Phase 4 已将主题模式选择从 FilterChip 改为 SegmentedButton，但调�
 - AiServiceImpl.chatResult() 复用 chat() 的 HTTP 错误码 + 网络异常差异化逻辑，但返回 Result 而非 emit errorString
 - SocraticTutor 三阶段短路：阶段1/2 失败 emit 错误提示并 return，阶段3（最后阶段）失败仍 emit 给用户反馈
 
+### P1 第二批 2C 批 2 项清理 + 1 项暂缓（commit `8ba2973`）
+
+| # | 问题 | 修复 |
+|---|------|------|
+| P1-5 | AiService.chat() 错误吞噬（剩余 2 处调用方） | RecallChecker.checkL3Llm + AiAssistantViewModel.sendMessage 迁移到 chatResult()；chat() 加 ⚠️ KDoc 警告保留向后兼容 |
+| P1-9 | ReviewRepository.getAllVerifiedKnowledgePoints 死代码 | 删除方法 + 清理 2 处 KDoc 引用；保留 chat_history/ai_conversations 表（NF-PP6 将用） |
+| P1-10 | Release R8 + ProGuard 未启用 | **暂缓** — 需 emulator 实测验证 release APK 不 crash（反射/序列化/规则遗漏风险） |
+
+**改动**：4 files，+35 -21，220 tests 0 failures 0 errors 0 skipped
+
+**关键技术点**：
+- RecallChecker 迁移后：chatResult 失败时抛异常，由 checkRecall 的 try-catch 捕获并降级为 L2 结果（原 chat() 错误字符串被当作 LLM 回复解析，score 误判为 0 → AGAIN）
+- AiAssistantViewModel 迁移后：chatResult 失败时设 errorMessage（原 chat() 错误字符串被当作 AI 回复添加到消息列表）
+- chat_history / ai_conversations 表保留：删除需 Room schema 迁移，NF-PP6 持久化将用到，等 emulator 实测后再决定
+
 ### 验证
 
 - `CI=false gradle assembleDebug` BUILD SUCCESSFUL
@@ -1763,13 +1778,11 @@ Phase 4 已将主题模式选择从 FilterChip 改为 SegmentedButton，但调�
 
 ### 下次继续
 
-1. **P1 第二批 2C 批（3 项需用户确认）**：
-   - P1-5：AiService.chat() 错误吞噬（注：P1-6 已部分解决，chatResult() 已新增；chat() 本身的错误吞噬是否完全废弃待定）
-   - P1-9：~800 行死代码清理（ReviewRepository.getAllVerifiedKnowledgePoints + chat_history/ai_conversations 表等）
-   - P1-10：Release R8 未启用 + ProGuard 规则补全
-2. **P2 第三批（16 项）**
-3. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 21 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + UI 修复 3 个 + 深度审计 3 个，部分重叠）
-4. **P0**：跑 emulator 实测 — 验证 P0/P1 修复（rateCard 事务 + 输入框 + Flow 刷新 + 三阶段短路 + ContentSource/Theme 迁移）
+1. **P1 第二批 2C 批已完成**（P1-5 + P1-9 已修复，P1-10 暂缓待 emulator 实测）
+2. **P1-10 待 emulator 实测后启用**：Release R8 + ProGuard 规则补全（反射/序列化/规则遗漏风险）
+3. **P2 第三批（16 项）**
+4. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 22 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + UI 修复 3 个 + 深度审计 4 个，部分重叠）
+5. **P0**：跑 emulator 实测 — 验证 P0/P1 修复（rateCard 事务 + 输入框 + Flow 刷新 + 三阶段短路 + ContentSource/Theme 迁移 + RecallChecker/AiAssistantViewModel 错误传播）
 
 ### 本次 commits
 
@@ -1778,3 +1791,4 @@ Phase 4 已将主题模式选择从 FilterChip 改为 SegmentedButton，但调�
 | `d6532e4` | 第五轮深度审计 P0 第一批 6 项修复（Converter 降级 + 事务 + 输入框 + 错误顺序 + opt-in + VERSION_NAME） |
 | `4496242` | 第五轮深度审计 P1 第二批 2A 6 项 bug 修复（LIKE 转义 + catch + retry loading + roundToInt + FakeDAO 契约） |
 | `76c5084` | 第五轮深度审计 P1 第二批 2B 4 项架构修复（ContentSource 迁移 + ThemeViewModel 迁移 + tickFlow + 三阶段短路） |
+| `8ba2973` | 第五轮深度审计 P1 第二批 2C 2 项清理 + 1 项暂缓（chatResult 迁移 + 死代码删除 + R8 暂缓） |
