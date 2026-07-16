@@ -1766,6 +1766,34 @@ Phase 4 已将主题模式选择从 FilterChip 改为 SegmentedButton，但调�
 - AiAssistantViewModel 迁移后：chatResult 失败时设 errorMessage（原 chat() 错误字符串被当作 AI 回复添加到消息列表）
 - chat_history / ai_conversations 表保留：删除需 Room schema 迁移，NF-PP6 持久化将用到，等 emulator 实测后再决定
 
+### P2 第一批 3 项低风险清理（commit `a0bd1cf`）
+
+| # | 问题 | 修复 |
+|---|------|------|
+| NF-B7 | libs.versions.toml 残留 securityCrypto 死声明 | 删除 version + library 2 处声明（build.gradle.kts 早已移除引用，但 toml 未清理） |
+| NF-BB4 | CardSplitter.indexToChinese 仅支持 1-10 | 扩展到 1-99（11-19 用"十一".."十九"，整十用"二十".."九十"，其他用"二十一".."九十九"） |
+| NF-BB12 | WeakSubgraphDetector 孤儿边静默丢弃 | buildAdjacencyList 加 Log.w 告警，输出 sourceId/targetId/type 便于排查 |
+
+**改动**：3 files，+42 -21，220 tests 0 failures 0 errors
+
+**P2-A 批核查结论（5 项无需修复）**：
+- NF-B8（wenyan-feature-* 死声明）：已修复（libs.versions.toml:156 注释说明）
+- NF-EE6（WenyanApplication Log.e tag）：已修复（用 companion TAG）
+- NF-BB15（InterferenceWarner 相似度 >1.0 未 clamp）：**误诊**（InterferenceWarner 无相似度计算，审计标"未读"）
+- NF-DS10（seed_color 硬编码）：已修复（DEFAULT_SEED_COLOR_ARGB 从 ThemeConfig 取）
+- NF-M3（AndroidManifest 缺 usesCleartextTraffic="false"）：已通过 networkSecurityConfig 修复
+- NF-M7（application 缺 android:label）：已修复
+- NF-BB13（PrerequisiteChecker 阈值硬编码 0.7f）：跳过（Spec 要求值，const val 已公开，过度工程）
+- NF-BB14（AntiRoteMemorization 阈值硬编码）：跳过（P1-AUDIT-3 生产链路未接通，过度工程）
+
+**P2-B 批核查结论（5 项候选全部跳过）**：
+- NF-D7（WenyanTypeConverters 空字符串与空集合不可逆）：跳过（需深度业务分析，当前 null/emptyList 在业务层等价）
+- NF-UM5（7 处 Crossfade 缺 contentKey）：跳过（当前 targetState 为 Pair/Triple/Boolean 稳定类型，加 contentKey 是冗余）
+- NF-UC7（全项目零 BackHandler）：跳过（需 emulator 实测验证 UX，沙箱无 emulator）
+- NF-BB11（CardSplitter 100+ 标题 O(n²)）：**误诊**（两两组合 C(n,2) 是算法本质，实际 n < 10）
+- NF-H1（WenyanApplication 未实现 Configuration.Provider）：跳过（当前无 WorkManager，预留技术债）
+- P2-1（AiAssistantViewModel 无 Mutex）：跳过（UI 层已禁用发送按钮 `enabled = text.isNotBlank() && !isLoading`）
+
 ### 验证
 
 - `CI=false gradle assembleDebug` BUILD SUCCESSFUL
@@ -1779,10 +1807,16 @@ Phase 4 已将主题模式选择从 FilterChip 改为 SegmentedButton，但调�
 ### 下次继续
 
 1. **P1 第二批 2C 批已完成**（P1-5 + P1-9 已修复，P1-10 暂缓待 emulator 实测）
-2. **P1-10 待 emulator 实测后启用**：Release R8 + ProGuard 规则补全（反射/序列化/规则遗漏风险）
-3. **P2 第三批（16 项）**
-4. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 22 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + UI 修复 3 个 + 深度审计 4 个，部分重叠）
-5. **P0**：跑 emulator 实测 — 验证 P0/P1 修复（rateCard 事务 + 输入框 + Flow 刷新 + 三阶段短路 + ContentSource/Theme 迁移 + RecallChecker/AiAssistantViewModel 错误传播）
+2. **P2 第一批已完成**（3 项修复 + 10 项核查后跳过/误诊/已修复）
+3. **P2 剩余项**（需 emulator 实测或 schema 迁移）：
+   - NF-UC7（BackHandler）：需 emulator 实测验证 UX
+   - NF-D6/NF-DS12（schema 1.json）：需从 git 历史考古或反推
+   - graph_edges / api_configs.is_current UNIQUE 约束：需 schema 迁移
+   - Certificate Pinning：需 emulator 实测
+   - NF-PP3/NF-PP7/NF-DS13：审计/调研任务（无代码改动）
+4. **P1-10 待 emulator 实测后启用**：Release R8 + ProGuard 规则补全（反射/序列化/规则遗漏风险）
+5. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 23 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + UI 修复 3 个 + 深度审计 5 个，部分重叠）
+6. **P0**：跑 emulator 实测 — 验证 P0/P1/P2 修复
 
 ### 本次 commits
 
@@ -1792,3 +1826,4 @@ Phase 4 已将主题模式选择从 FilterChip 改为 SegmentedButton，但调�
 | `4496242` | 第五轮深度审计 P1 第二批 2A 6 项 bug 修复（LIKE 转义 + catch + retry loading + roundToInt + FakeDAO 契约） |
 | `76c5084` | 第五轮深度审计 P1 第二批 2B 4 项架构修复（ContentSource 迁移 + ThemeViewModel 迁移 + tickFlow + 三阶段短路） |
 | `8ba2973` | 第五轮深度审计 P1 第二批 2C 2 项清理 + 1 项暂缓（chatResult 迁移 + 死代码删除 + R8 暂缓） |
+| `a0bd1cf` | 第五轮深度审计 P2 第一批 3 项低风险清理（securityCrypto 死声明 + indexToChinese 扩展 + 孤儿边日志） |
