@@ -5,6 +5,7 @@ import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.serialization.Serializable
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -183,6 +184,7 @@ data class RagResult(
  * @param excerpt 引用原文片段
  */
 @Immutable
+@Serializable
 data class RagReference(
     val sourceFile: String,
     val sourcePage: Int,
