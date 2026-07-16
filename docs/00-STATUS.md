@@ -5,25 +5,25 @@
 
 ## ✅ 当前状态
 
-**UI 全面审查 + P0/P1/P2 三批修复完成** — 14 项 UI 修复（3 commits），220 tests 0 failures。
+**第五轮深度审计 P0 + P1 2A/2B 批完成** — 16 项修复（3 commits），220 tests 0 failures。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `3948da1`（main，UI 审查 P2 第三批 deprecation + 字重统一） |
+| 最新 commit | `76c5084`（main，P1 第二批 2B 4 项架构修复） |
 | 最新 Release | [v0.4.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.4.0)（2026-07-14，debug 签名 fallback，17MB） |
 | 测试 | **220 tests 0 failures 0 errors** |
-| 阻塞 | **CI 账单问题** — 18 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + UI 修复 3 个） |
+| 阻塞 | **CI 账单问题** — 21 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + UI 修复 3 个 + 深度审计 3 个，部分重叠） |
 | 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节 |
 
 ## 🆕 最新改动（2026-07-16）
 
-UI 全面审查 + P0/P1/P2 三批修复（14 项）：
+第五轮深度审计 P0 + P1 2A/2B 批（16 项，3 commits）：
 
 | 批次 | commit | 项数 | 核心内容 |
 |------|--------|------|----------|
-| P0 第一批 | `fac5d39` | 6 | IME 适配 + 清空确认 + onBack + 种子色无障碍 + ModalBottomSheet + 错误处理 |
-| P1 第二批 | `a37f4fc` | 6 | 长文本溢出 + mergeDescendants + 文案去技术术语 + 字重统一 |
-| P2 第三批 | `3948da1` | 2 | MenuBook deprecation + FontWeight.Bold 残留清理 |
+| P0 第一批 | `d6532e4` | 6 | Converter 降级 + rateCard 事务 + 输入框受控 + 错误清理顺序 + flatMapLatest opt-in + VERSION_NAME 同步 |
+| P1-2A 批 | `4496242` | 6 | LIKE 转义 + ViewModel catch + retry loading 反馈 + roundToInt 对称 + FakeDAO 契约（P1-12 暂缓） |
+| P1-2B 批 | `76c5084` | 4 | ContentSource 迁移到 core/common + ThemeViewModel 迁移到 designsystem + observeDue tickFlow 刷新 + SocraticTutor 三阶段短路 |
 
 详见 [SESSION_LOG.md](SESSION_LOG.md) 最后一节。
 
@@ -137,25 +137,29 @@ UI 全面审查 + P0/P1/P2 三批修复（14 项）：
 
 ## 🎯 下一步优先级
 
-1. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 18 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + UI 修复 3 个）
-2. **P0**：跑 emulator 实测 — 验证 v0.5.0 + v0.6 + UI 三批修复（FSRS 调度 + 卡片翻转 + AI 入口 + Tab/列表动画 + 深色模式 + 底部 Tab 切换 + 平板 WideNavigationRail + 主题切换颜色动画 + Push/Pop 弹簧 + LoadingIndicator + SegmentedButton + IME 适配 + 清空确认 + 错误重试 + 长文本省略 + 无障碍合并）
+1. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 21 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + UI 修复 3 个 + 深度审计 3 个，部分重叠）
+2. **P0**：跑 emulator 实测 — 验证 v0.5.0 + v0.6 + UI 三批 + 第五轮深度审计 P0/P1 修复（rateCard 事务 + 输入框受控 + Flow 刷新 + 三阶段短路 + ContentSource/Theme 迁移 + 卡片翻转 + AI 入口 + Tab/列表动画 + 深色模式 + 平板 WideNavigationRail + 主题切换颜色动画 + Push/Pop 弹簧 + LoadingIndicator + SegmentedButton + IME 适配 + 清空确认 + 错误重试 + 长文本省略 + 无障碍合并）
 3. **P0**：CI 账单问题解决后，删除 v0.4.0 tag 重新打 tag 触发正式签名 Release（`git push origin :refs/tags/v0.4.0 && git tag v0.4.0 && git push origin v0.4.0`）
-4. **P1 大型任务**（需用户确认优先级）：
-   - P1-PG-1/2/3：启用 R8 + 补齐 ProGuard 规则
+4. **P1 第二批 2C 批（3 项需用户确认）**：
+   - P1-5：AiService.chat() 错误吞噬（注：P1-6 已部分解决，chatResult() 已新增；chat() 本身是否废弃待定）
+   - P1-9：~800 行死代码清理（ReviewRepository.getAllVerifiedKnowledgePoints + chat_history/ai_conversations 表等）
+   - P1-10：Release R8 未启用 + ProGuard 规则补全
+5. **P1 大型任务**（需用户确认优先级）：
+   - P1-PG-1/2/3：启用 R8 + 补齐 ProGuard 规则（与 P1-10 同一问题）
    - NF-PP4：复习日志双写统一
    - NF-PP5：错题本实现
    - NF-PP6：AiAssistantViewModel 消息持久化
    - NF-T4：MemoRecordMapper Float↔Double 精度（需 schema 迁移）
-   - NF-D3：observeDue Flow 不刷新（需架构调整）
-5. **P1**：v0.5.0 Phase 2 剩余维度审计（strings.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
-6. **P2 剩余 UI 项**（可选）：
+   - ~~NF-D3：observeDue Flow 不刷新~~ ✅ 已由 P1-1（commit `76c5084`）修复
+6. **P1**：v0.5.0 Phase 2 剩余维度审计（strings.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
+7. **P2 剩余 UI 项**（可选）：
    - ConfigCard 架构级冲突：整卡点击 + 内部编辑/删除按钮，需重构
    - CardRenderer FlipCard 超长背面答案溢出：加 `verticalScroll`
    - @Preview 补齐（6 个已有，可再补 4 个）
    - 平板双栏布局（已有 WideNavigationRail，可加 list-detail）
-7. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
-8. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
-9. **P4**：架构重构 — ReviewRepository.getAllVerifiedKnowledgePoints 已成事实死代码
+8. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+9. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
+10. **P4**：架构重构 — ReviewRepository.getAllVerifiedKnowledgePoints 已成事实死代码
 
 ## 📦 已交付
 
@@ -172,3 +176,4 @@ UI 全面审查 + P0/P1/P2 三批修复（14 项）：
 - **v0.6 M3 Expressive 精修 Phase 1-5**（5 commits：导航重构 + 动效字体 + 大屏自适应 + 组件升级 + 视觉精修，220 tests 保持）
 - **Release v0.4.0**（含 v0.5.0 + v0.6 全部改动，220 tests 0 failures 0 errors）
 - **UI 全面审查 + P0/P1/P2 三批修复**（3 commits：IME 适配 + 清空确认 + 错误处理 + 长文本溢出 + 无障碍 mergeDescendants + 文案/字重统一，220 tests 保持）
+- **第五轮深度审计 P0 + P1 2A/2B 批**（3 commits：Converter 降级 + rateCard 事务 + 输入框受控 + Flow 异常 catch + retry loading + roundToInt + LIKE 转义 + FakeDAO 契约 + ContentSource/ThemeViewModel 迁移 + observeDue tickFlow + SocraticTutor 三阶段短路，220 tests 保持）

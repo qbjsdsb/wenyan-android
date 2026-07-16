@@ -1699,3 +1699,82 @@ Phase 4 已将主题模式选择从 FilterChip 改为 SegmentedButton，但调�
 | `fac5d39` | UI 审查 P0 第一批 6 项核心修复（IME/确认/无障碍/错误处理） |
 | `a37f4fc` | UI 审查 P1 第二批 6 项修复（长文本溢出/无障碍/文案/字重） |
 | `3948da1` | UI 审查 P2 第三批 2 项修复（deprecation + 字重统一） |
+
+---
+
+## 第五轮深度审计 P0 + P1 2A/2B 批（2026-07-16）
+
+> 用户指令："现在检查整个项目的问题，一定仔细，深层探究，一行一行检查，把问题汇报给我"
+> 8 维度深度审计（编译/Kotlin/资源/Hilt/Room/异常链路/契约/死代码）→ 6 项 P0 + 13 项 P1 + 16 项 P2
+> 分批执行：P0 第一批 → P1 第二批 2A/2B/2C（2C 待用户确认）+ P2 第三批
+
+### P0 第一批 6 项修复（commit `d6532e4`）
+
+| # | 问题 | 修复 |
+|---|------|------|
+| P0-1 | WenyanTypeConverters JSON 解析异常让整表失败 | toStringList/toStringMap 用 runCatching 包裹，降级空集合 + Log.w |
+| P0-2 | SchedulingRepository.rateCard 跨表写入无事务 | 注入 WenyanDatabase + withTransaction 包裹 memo_records + review_logs |
+| P0-3 | ApiConfigScreen 温度/Token 输入框受控逻辑失效 | 本地 String state 缓冲 + onSave 时统一解析与 coerceIn |
+| P0-4 | ApiConfigScreen LaunchedEffect 错误清理顺序 | 先 clearError() 再 showSnackbar()，避免协程取消导致状态残留 |
+| P0-5 | 4 个 ViewModel 缺 flatMapLatest opt-in | Knowledge/Cards/Quiz/Graph ViewModel 加 @OptIn(ExperimentalCoroutinesApi) |
+| P0-6 | settings 模块 VERSION_NAME 不同步 | "0.3.0" → "0.4.0"，与 app/build.gradle.kts 对齐 |
+
+**改动**：13 files，220 tests 0 failures 0 errors 0 skipped
+
+### P1 第二批 2A 批 6 项 bug 修复（commit `4496242`）
+
+| # | 问题 | 修复 |
+|---|------|------|
+| P1-2 | WritingMaterialDao.observeByTag LIKE 未转义 | 加 ESCAPE '\\' 子句 + KDoc 说明调用方需转义 % _ \ |
+| P1-3 | KnowledgePointDetailViewModel/ApiConfigViewModel 缺 catch | 加 .catch + error 字段，Room Flow 异常不再 crash |
+| P1-4 | retry() 后 UI 无立即 loading 反馈（4 个 ViewModel） | stateIn 改 MutableStateFlow + collect，retry() 立即设 isLoading=true |
+| P1-11 | FsrsWrapper scheduleInternal fuzz 后 toInt() 截断非对称 | toInt() → roundToInt()，保证对称扰动 |
+| P1-13 | FakeReviewLogDao 3 处契约偏离 | find → firstOrNull + observeByPoint/observeAll 加 sortedByDescending |
+| P1-12 | WenyanAdaptiveNavigation 双重 padding | **暂缓** — 调研确认是误诊，需 emulator 实测 |
+
+**改动**：8 files，220 tests 0 failures 0 errors 0 skipped
+
+### P1 第二批 2B 批 4 项架构修复（commit `76c5084`）
+
+| # | 问题 | 修复 |
+|---|------|------|
+| P1-7 | ContentSource 双重定义（database enum 死代码 + designsystem object） | 统一迁移到 core/common/model/ContentSource.kt，消除 designsystem→database 反向依赖 |
+| P1-8 | ThemeViewModel 分层违规（core/data 操作 designsystem 类型） | ThemeViewModel/Repository/Impl/Module + 2 测试迁入 designsystem，消除 core/data→designsystem 反向依赖 |
+| P1-1 | observeDue Flow 不随时间刷新（Room @Query 仅表变化触发） | ReviewRepository 加 tickFlow（60s）+ flatMapLatest 重新订阅 + distinctUntilChanged |
+| P1-6 | SocraticTutor 三阶段错误字符串层层传播 | AiService 新增 chatResult(): Flow<Result<String>> + SocraticTutor 三阶段失败短路 |
+
+**改动**：21 files（含 6 个 rename，保留 history），+368 -107，220 tests 0 failures
+
+**关键技术点**：
+- ThemeRepositoryImpl 迁入 designsystem 后改为自包含 `.catch { }`，不引用 core/data 的 FlowExt.kt
+- designsystem testOptions.isReturnDefaultValues=true（ThemeRepositoryImpl 的 Log.e 在 JVM 测试需要）
+- AiServiceImpl.chatResult() 复用 chat() 的 HTTP 错误码 + 网络异常差异化逻辑，但返回 Result 而非 emit errorString
+- SocraticTutor 三阶段短路：阶段1/2 失败 emit 错误提示并 return，阶段3（最后阶段）失败仍 emit 给用户反馈
+
+### 验证
+
+- `CI=false gradle assembleDebug` BUILD SUCCESSFUL
+- `CI=false gradle testDebugUnitTest --rerun-tasks` 220 tests 0 failures 0 errors 0 skipped
+
+### 沙箱构建注意事项
+
+- `CI=true` 会触发 `app/build.gradle.kts` 的 signing 配置检查（"Release 签名未配置：CI 环境必须设置 KEYSTORE_PATH..."），本地编译需用 `CI=false gradle ...` 绕过
+- `assembleRelease` 需 `-x lintVitalAnalyzeRelease -x lintVitalRelease -x validateSigningRelease` 绕过沙箱 lint 和签名问题
+
+### 下次继续
+
+1. **P1 第二批 2C 批（3 项需用户确认）**：
+   - P1-5：AiService.chat() 错误吞噬（注：P1-6 已部分解决，chatResult() 已新增；chat() 本身的错误吞噬是否完全废弃待定）
+   - P1-9：~800 行死代码清理（ReviewRepository.getAllVerifiedKnowledgePoints + chat_history/ai_conversations 表等）
+   - P1-10：Release R8 未启用 + ProGuard 规则补全
+2. **P2 第三批（16 项）**
+3. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 21 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + UI 修复 3 个 + 深度审计 3 个，部分重叠）
+4. **P0**：跑 emulator 实测 — 验证 P0/P1 修复（rateCard 事务 + 输入框 + Flow 刷新 + 三阶段短路 + ContentSource/Theme 迁移）
+
+### 本次 commits
+
+| commit | 内容 |
+|--------|------|
+| `d6532e4` | 第五轮深度审计 P0 第一批 6 项修复（Converter 降级 + 事务 + 输入框 + 错误顺序 + opt-in + VERSION_NAME） |
+| `4496242` | 第五轮深度审计 P1 第二批 2A 6 项 bug 修复（LIKE 转义 + catch + retry loading + roundToInt + FakeDAO 契约） |
+| `76c5084` | 第五轮深度审计 P1 第二批 2B 4 项架构修复（ContentSource 迁移 + ThemeViewModel 迁移 + tickFlow + 三阶段短路） |
