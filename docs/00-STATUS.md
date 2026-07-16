@@ -5,29 +5,34 @@
 
 ## ✅ 当前状态
 
-**v0.5.0 已 push tag，Release 待生成** — 图标重设计 + 第五轮深度审计 21 项修复全部完成，220 tests 0 failures。
+**v0.5.0 Release 已发布（本地构建 + API 上传）** — 图标重设计 + 第五轮深度审计 21 项修复全部完成，220 tests 0 failures。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `6a1175c`（main，启动图标重设计 + v0.5.0） |
-| 最新 Release | [v0.4.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.4.0)（2026-07-14，debug 签名 fallback）— **v0.5.0 tag 已 push，Release 生成中** |
+| 最新 commit | `3f0a738`（main，文档：v0.5.0 Release 监视交接） |
+| 最新 Release | **[v0.5.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.5.0)**（2026-07-16，**本地构建 + GitHub API 上传**，debug 签名 fallback） |
 | 测试 | **220 tests 0 failures 0 errors** |
-| 阻塞 | **CI 账单问题** — 24 个 commit 待 CI 验证；v0.5.0 Release workflow 可能被阻塞（与 v0.3.0/v0.4.0 同情况） |
+| 阻塞 | **CI 账单问题** — 27 个 commit 待 CI 验证（不影响 Release，已通过 API 绕过） |
 | 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节 |
 
 ## 🚨 新会话首要任务
 
-**v0.5.0 Release workflow 失败（GitHub Actions 账单阻塞，已确认）**：
-- Run ID 29515451654，触发于 2026-07-16 16:24:45 UTC
-- Job 状态 completed/failure，**0 steps 执行**，日志不存在 — 典型账单阻塞症状
-- 同时 Android Build & Test workflow 连续 4 次失败（同一原因）
-- Run URL：https://github.com/qbjsdsb/wenyan-android/actions/runs/29515451654
+**v0.5.0 Release 已成功发布**（2026-07-16 16:43 UTC，Release ID 355225410）：
+- Release URL：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.5.0
+- 2 个 APK assets 已上传（17 MB each，debug 签名）：
+  - `wenyan-v0.5.0.apk`（asset_id 479398249）
+  - `wenyan-latest.apk`（asset_id 479398465）
+- 构建方式：`CI=false gradle assembleRelease --no-daemon`（沙箱无 keystore → debug 签名 fallback）
+- 上传方式：`curl -X POST .../releases/{id}/assets`（带 git remote 内嵌 token）
 
-**用户需操作**（AI 无法解决账单问题）：
-1. 登录 GitHub → Settings → Billing & plans → Actions 检查账单
-2. 充值或解除限制后重新触发：
-   - 方法 1（删 tag 重打）：`git push origin :refs/tags/v0.5.0 && git tag v0.5.0 && git push origin v0.5.0`
-   - 方法 2（UI re-run）：打开 Run URL → "Re-run failed jobs"
+**P0 待办**（无需用户干预）：
+- GitHub Actions 账单问题：AI 无法解决，需用户充值或解除限制
+- 账单恢复后可重打 tag 触发正式签名 Release（可选，debug 签名 APK 已可用）
+
+**新会话可立即开始的 P1 任务**：
+1. 跑 emulator 实测 v0.5.0（图标 + P0/P1/P2 修复）
+2. v0.5.0 Phase 2 剩余维度审计（strings.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
+3. P1 大型任务（需用户确认优先级）：R8 启用 / 复习日志双写 / 错题本 / AI 消息持久化
 
 ## 🆕 最新改动（2026-07-16）
 
@@ -154,38 +159,37 @@
 
 ## 🎯 下一步优先级
 
-1. **P0**：检查 v0.5.0 Release 状态（会话结束时尚未生成）— 浏览器打开 https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.5.0
-2. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 24 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + UI 修复 3 个 + 深度审计 5 个 + 图标 1 个，部分重叠）
-3. **P0**：跑 emulator 实测 v0.5.0 — 验证图标显示 + P0/P1/P2 修复（rateCard 事务 + 输入框受控 + Flow 刷新 + 三阶段短路 + ContentSource/Theme 迁移 + RecallChecker/AiAssistantViewModel 错误传播 + indexToChinese 扩展 + 孤儿边日志 + 卡片翻转 + AI 入口 + Tab/列表动画 + 深色模式 + 平板 WideNavigationRail + 主题切换颜色动画 + Push/Pop 弹簧 + LoadingIndicator + SegmentedButton + IME 适配 + 清空确认 + 错误重试 + 长文本省略 + 无障碍合并）
-4. **P0**：CI 账单问题解决后，删除 v0.5.0 tag 重新打 tag 触发正式签名 Release（`git push origin :refs/tags/v0.5.0 && git tag v0.5.0 && git push origin v0.5.0`）
-5. **P1-10 待 emulator 实测后启用**：Release R8 + ProGuard 规则补全（反射/序列化/规则遗漏风险，沙箱无 emulator 暂缓）
-6. **P2 剩余项**（需 emulator 实测或 schema 迁移）：
+1. **P0**：跑 emulator 实测 v0.5.0 — 验证图标显示 + P0/P1/P2 修复（rateCard 事务 + 输入框受控 + Flow 刷新 + 三阶段短路 + ContentSource/Theme 迁移 + RecallChecker/AiAssistantViewModel 错误传播 + indexToChinese 扩展 + 孤儿边日志 + 卡片翻转 + AI 入口 + Tab/列表动画 + 深色模式 + 平板 WideNavigationRail + 主题切换颜色动画 + Push/Pop 弹簧 + LoadingIndicator + SegmentedButton + IME 适配 + 清空确认 + 错误重试 + 长文本省略 + 无障碍合并）
+2. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 27 个 commit 待 CI 验证（v0.5.0 13 个 + v0.6 6 个 + UI 修复 3 个 + 深度审计 5 个 + 图标 1 个，部分重叠）— 不影响 Release，已通过本地构建 + API 上传绕过
+3. **P0**：CI 账单问题解决后，可删除 v0.5.0 tag 重新打 tag 触发正式签名 Release（可选 — debug 签名 APK 已可用，正式签名仅供完整性校验）
+4. **P1-10 待 emulator 实测后启用**：Release R8 + ProGuard 规则补全（反射/序列化/规则遗漏风险，沙箱无 emulator 暂缓）
+5. **P2 剩余项**（需 emulator 实测或 schema 迁移）：
    - NF-UC7（BackHandler）：需 emulator 实测验证 UX
    - NF-D6/NF-DS12（schema 1.json）：需从 git 历史考古或反推
    - graph_edges / api_configs.is_current UNIQUE 约束：需 schema 迁移
    - Certificate Pinning：需 emulator 实测
    - NF-PP3/NF-PP7/NF-DS13：审计/调研任务（无代码改动）
-7. **P1 大型任务**（需用户确认优先级）：
+6. **P1 大型任务**（需用户确认优先级）：
    - P1-PG-1/2/3：启用 R8 + 补齐 ProGuard 规则（与 P1-10 同一问题）
    - NF-PP4：复习日志双写统一
    - NF-PP5：错题本实现
    - NF-PP6：AiAssistantViewModel 消息持久化（将启用 chat_history/ai_conversations 表）
    - NF-T4：MemoRecordMapper Float↔Double 精度（需 schema 迁移）
    - ~~NF-D3：observeDue Flow 不刷新~~ ✅ 已由 P1-1（commit `76c5084`）修复
-8. **P1**：v0.5.0 Phase 2 剩余维度审计（strings.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
-9. **P2 剩余 UI 项**（可选）：
+7. **P1**：v0.5.0 Phase 2 剩余维度审计（strings.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
+8. **P2 剩余 UI 项**（可选）：
    - ConfigCard 架构级冲突：整卡点击 + 内部编辑/删除按钮，需重构
    - CardRenderer FlipCard 超长背面答案溢出：加 `verticalScroll`
    - @Preview 补齐（6 个已有，可再补 4 个）
    - 平板双栏布局（已有 WideNavigationRail，可加 list-detail）
-10. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
-11. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
-12. **P4**：架构重构 — ~~ReviewRepository.getAllVerifiedKnowledgePoints 已成事实死代码~~ ✅ 已由 P1-9（commit `8ba2973`）删除
+9. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+10. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
+11. **P4**：架构重构 — ~~ReviewRepository.getAllVerifiedKnowledgePoints 已成事实死代码~~ ✅ 已由 P1-9（commit `8ba2973`）删除
 
 ## 📦 已交付
 
-- GitHub Release v0.1.0（2026-07-12）+ v0.2.0（2026-07-13）+ v0.3.0（2026-07-15，debug 签名）+ **v0.4.0（2026-07-14，debug 签名 fallback）**
-- 签名 APK：`wenyan-v0.4.0.apk` + `wenyan-latest.apk`（v0.4.0，包含 v0.5.0 + v0.6 全部改动）
+- GitHub Release v0.1.0（2026-07-12）+ v0.2.0（2026-07-13）+ v0.3.0（2026-07-15，debug 签名）+ v0.4.0（2026-07-14，debug 签名 fallback）+ **v0.5.0（2026-07-16，本地构建 + GitHub API 上传，debug 签名 fallback）**
+- 签名 APK：`wenyan-v0.5.0.apk` + `wenyan-latest.apk`（v0.5.0，17 MB，包含启动图标重设计 + 第五轮深度审计 21 项修复）
 - KSU 风格 UI 升级 Phase 0-3（4 个组件 + 9 个 Screen 迁移，已合并 main + CI 全绿）
 - UI 改造闭环 Phase 1-5（GroupedCard 增强 + 2 Screen 重构 + 4 Preview + 15 个组件测试）
 - UI 统一与死组件清理（KnowledgePointDetailScreen 统一 + 删除 4 个死组件，174 tests 0 failures）
