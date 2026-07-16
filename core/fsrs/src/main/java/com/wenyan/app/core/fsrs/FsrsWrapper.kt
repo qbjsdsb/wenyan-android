@@ -176,7 +176,12 @@ class FsrsWrapper(
             dueDate = now.plusMinutes(minutes)
             scheduledDaysValue = 0
         } else {
-            scheduledDaysValue = fuzzedInterval.toInt().coerceAtLeast(1)
+            // P1-11 修复：fuzz 后用 roundToInt 而非 toInt，保证扰动对称。
+            // 原实现 toInt() 向零截断：interval=5.0, fuzz∈[-1,+1) → fuzzedInterval∈[4,6)
+            // toInt 得 P(4)=0.5, P(5)=0.5, P(6)=0，期望=4.5（偏少 0.5 天）。
+            // roundToInt: P(4)=0.25, P(5)=0.5, P(6)=0.25，期望=5.0（对称）。
+            // 与同文件 nextInterval（第 387-391 行，F-05 已修复）取整策略对齐。
+            scheduledDaysValue = fuzzedInterval.roundToInt().coerceAtLeast(1)
             dueDate = now.plusDays(scheduledDaysValue.toLong())
         }
 

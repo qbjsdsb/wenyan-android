@@ -10,6 +10,7 @@ import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
@@ -38,6 +39,12 @@ class KnowledgePointDetailViewModel @Inject constructor(
      * 详情 UI 状态。
      *
      * 观察 Repository 的合并流，数据库变更时自动刷新。
+     *
+     * P1-3 修复：加 [catch] 捕获数据流异常。
+     * [knowledgeRepository.observeKnowledgePointDetail] 是 Room Flow（多表 JOIN 合并），
+     * 任何 SQLiteException / CursorWindowAllocationException 都会冒泡到 [stateIn]
+     * 再传给 Compose 收集方，导致 app crash。现捕获并降级为 error 状态。
+     * 注意：catch 后流终止，用户需退出页面重进才能再次加载（无 retry 三件套）。
      */
     val uiState: StateFlow<KnowledgePointDetailUiState> = knowledgeRepository
         .observeKnowledgePointDetail(pointId)
@@ -51,6 +58,9 @@ class KnowledgePointDetailViewModel @Inject constructor(
                 )
             }
         }
+        .catch { e ->
+            emit(KnowledgePointDetailUiState(error = e.message ?: "加载失败"))
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -60,11 +70,15 @@ class KnowledgePointDetailViewModel @Inject constructor(
 
 /**
  * 知识点详情 UI 状态。
+ *
+ * P1-3 新增 [error] 字段：数据流加载失败时携带错误信息，UI 据此提示用户。
  */
 data class KnowledgePointDetailUiState(
     val isLoading: Boolean = false,
     val notFound: Boolean = false,
     val detail: KnowledgePointDetail? = null,
+    /** 加载失败时的错误信息（P1-3 新增） */
+    val error: String? = null,
 ) {
     /** 知识点实体（便捷访问） */
     val point: KnowledgePointEntity? get() = detail?.point

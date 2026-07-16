@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -61,7 +62,9 @@ class QuizViewModel @Inject constructor(
     private val _retryTrigger = MutableStateFlow(0)
 
     /**
-     * UI 状态：合并年份列表 + 选中年份的题目列表（含科目判定信息）。
+     * UI 状态（P1-4 改造为 MutableStateFlow 包装）。
+     *
+     * 合并年份列表 + 选中年份的题目列表（含科目判定信息）。
      *
      * 使用 flatMapLatest 在切换年份时自动取消上一个年份的订阅。
      * 使用 [ExamRepository.getExamQuestionsWithSubjectInfo] 获取科目判定信息，
@@ -71,52 +74,65 @@ class QuizViewModel @Inject constructor(
      * 此处映射回 nullable 供 UI 使用。
      *
      * P0-6 修复：加 [catch] 捕获数据流异常，避免异常冒泡导致 app 崩溃。
+     *
+     * P1-4 修复：原 [stateIn] 模式 retry() 后 UI 无立即 loading 反馈，
+     * 现改为 MutableStateFlow + [collect]，retry() 可立即设置 isLoading=true，
+     * 保留 selectedYear 等其他字段不清空。
      */
-    val uiState: StateFlow<QuizUiState> = _retryTrigger
-        .flatMapLatest {
-            combine(
-                examRepository.getAvailableYears(),
-                _selectedYear,
-            ) { years, selected ->
-                years to selected
-            }.flatMapLatest { (years, selected) ->
-                if (selected != -1) {
-                    examRepository.getExamQuestionsWithSubjectInfo(selected).map { questionsWithSubject ->
-                        QuizUiState(
-                            isLoading = false,
-                            availableYears = years,
-                            selectedYear = selected,
-                            questions = questionsWithSubject.map { it.toUiItem() },
-                        )
+    private val _uiState = MutableStateFlow<QuizUiState>(QuizUiState(isLoading = true))
+    val uiState: StateFlow<QuizUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            _retryTrigger
+                .flatMapLatest {
+                    combine(
+                        examRepository.getAvailableYears(),
+                        _selectedYear,
+                    ) { years, selected ->
+                        years to selected
+                    }.flatMapLatest { (years, selected) ->
+                        if (selected != -1) {
+                            examRepository.getExamQuestionsWithSubjectInfo(selected).map { questionsWithSubject ->
+                                QuizUiState(
+                                    isLoading = false,
+                                    availableYears = years,
+                                    selectedYear = selected,
+                                    questions = questionsWithSubject.map { it.toUiItem() },
+                                )
+                            }
+                        } else {
+                            flowOf(
+                                QuizUiState(
+                                    isLoading = false,
+                                    availableYears = years,
+                                    selectedYear = null,
+                                    questions = emptyList(),
+                                ),
+                            )
+                        }
                     }
-                } else {
-                    flowOf(
-                        QuizUiState(
-                            isLoading = false,
-                            availableYears = years,
-                            selectedYear = null,
-                            questions = emptyList(),
-                        ),
-                    )
                 }
-            }
+                .catch { e ->
+                    emit(QuizUiState(error = e.message ?: "加载失败"))
+                }
+                .collect { _uiState.value = it }
         }
-        .catch { e ->
-            emit(QuizUiState(error = e.message ?: "加载失败"))
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = QuizUiState(isLoading = true),
-        )
+    }
 
     /** 选择某年份，加载对应题目（NF-L3 修复：持久化到 SavedStateHandle） */
     fun selectYear(year: Int) {
         savedStateHandle["selectedYear"] = year
     }
 
-    /** 重试加载（P0-6 新增） */
+    /**
+     * 重试加载（P0-6 新增，P1-4 增强）。
+     *
+     * P1-4 修复：先立即设置 isLoading=true 并清空 error，保留 selectedYear 不变，
+     * 让 UI 立即显示 loading 反馈；再增加 [_retryTrigger] 触发数据流重新订阅。
+     */
     fun retry() {
+        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
         _retryTrigger.value++
     }
 

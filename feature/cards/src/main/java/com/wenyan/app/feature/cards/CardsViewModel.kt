@@ -78,37 +78,44 @@ class CardsViewModel @Inject constructor(
      * 用户无法区分"加载中"和"已完成"。现当 currentIndex >= cards.size 时标记 isFinished=true。
      *
      * P0-6 修复：加 [catch] 捕获数据流异常，避免异常冒泡导致 app 崩溃。
+     *
+     * P1-4 修复：原 [stateIn] 模式 retry() 后 UI 仍显示旧 error 状态无 loading 反馈，
+     * 现改为 MutableStateFlow + [collect]，retry() 可立即设置 isLoading=true，
+     * 保留 cards/currentIndex/isFlipped 等其他字段不清空。
      */
-    val uiState: StateFlow<CardsUiState> = _retryTrigger
-        .flatMapLatest {
-            combine(
-                cardRepository.getCardsForReview(),
-                _isFlipped,
-                _currentIndex,
-            ) { cards, isFlipped, currentIndex ->
-                val isFinished = cards.isNotEmpty() && currentIndex >= cards.size
-                val safeIndex = if (cards.isEmpty()) {
-                    0
-                } else {
-                    currentIndex.coerceIn(0, cards.size - 1)
+    private val _uiState = MutableStateFlow<CardsUiState>(CardsUiState(isLoading = true))
+    val uiState: StateFlow<CardsUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            _retryTrigger
+                .flatMapLatest {
+                    combine(
+                        cardRepository.getCardsForReview(),
+                        _isFlipped,
+                        _currentIndex,
+                    ) { cards, isFlipped, currentIndex ->
+                        val isFinished = cards.isNotEmpty() && currentIndex >= cards.size
+                        val safeIndex = if (cards.isEmpty()) {
+                            0
+                        } else {
+                            currentIndex.coerceIn(0, cards.size - 1)
+                        }
+                        CardsUiState(
+                            isLoading = false,
+                            cards = cards.mapIndexed { index, card -> card.toUiItem(index) },
+                            currentIndex = safeIndex,
+                            isFlipped = isFlipped,
+                            isFinished = isFinished,
+                        )
+                    }
                 }
-                CardsUiState(
-                    isLoading = false,
-                    cards = cards.mapIndexed { index, card -> card.toUiItem(index) },
-                    currentIndex = safeIndex,
-                    isFlipped = isFlipped,
-                    isFinished = isFinished,
-                )
-            }
+                .catch { e ->
+                    emit(CardsUiState(error = e.message ?: "加载失败"))
+                }
+                .collect { _uiState.value = it }
         }
-        .catch { e ->
-            emit(CardsUiState(error = e.message ?: "加载失败"))
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = CardsUiState(isLoading = true),
-        )
+    }
 
     /** 翻转当前卡片 */
     fun flipCard() {
@@ -171,8 +178,14 @@ class CardsViewModel @Inject constructor(
         _errorMessage.value = null
     }
 
-    /** 重试加载（P0-6 新增） */
+    /**
+     * 重试加载（P0-6 新增，P1-4 增强）。
+     *
+     * P1-4 修复：先立即设置 isLoading=true 并清空 error，保留 cards/currentIndex/isFlipped 不变，
+     * 让 UI 立即显示 loading 反馈；再增加 [_retryTrigger] 触发数据流重新订阅。
+     */
     fun retry() {
+        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
         _retryTrigger.value++
     }
 

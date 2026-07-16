@@ -9,12 +9,12 @@ import com.wenyan.app.core.database.entity.GraphEdgeEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -41,36 +41,47 @@ class GraphViewModel @Inject constructor(
     private val _retryTrigger = MutableStateFlow(0)
 
     /**
-     * 图谱 UI 状态。
+     * 图谱 UI 状态（P1-4 改造为 MutableStateFlow 包装）。
      *
      * 合并节点流（含 R 值）与边流，数据库变更时自动刷新。
      *
      * P0-6 修复：加 [catch] 捕获数据流异常，避免异常冒泡导致 app 崩溃。
+     *
+     * P1-4 修复：原 [stateIn] 模式 retry() 后 UI 仍显示旧 error 状态无 loading 反馈，
+     * 现改为 MutableStateFlow + [collect]，retry() 可立即设置 isLoading=true。
      */
-    val uiState: StateFlow<GraphUiState> = _retryTrigger
-        .flatMapLatest {
-            combine(
-                graphRepository.getNodesWithRetrievability(),
-                graphRepository.getAllEdges(),
-            ) { nodesWithR, edges ->
-                GraphUiState(
-                    isLoading = false,
-                    nodes = nodesWithR.map { it.toUiItem() },
-                    edges = edges.map { it.toUiItem() },
-                )
-            }
-        }
-        .catch { e ->
-            emit(GraphUiState(error = e.message ?: "加载失败"))
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = GraphUiState(isLoading = true),
-        )
+    private val _uiState = MutableStateFlow<GraphUiState>(GraphUiState(isLoading = true))
+    val uiState: StateFlow<GraphUiState> = _uiState.asStateFlow()
 
-    /** 重试加载（P0-6 新增） */
+    init {
+        viewModelScope.launch {
+            _retryTrigger
+                .flatMapLatest {
+                    combine(
+                        graphRepository.getNodesWithRetrievability(),
+                        graphRepository.getAllEdges(),
+                    ) { nodesWithR, edges ->
+                        GraphUiState(
+                            isLoading = false,
+                            nodes = nodesWithR.map { it.toUiItem() },
+                            edges = edges.map { it.toUiItem() },
+                        )
+                    }
+                }
+                .catch { e ->
+                    emit(GraphUiState(error = e.message ?: "加载失败"))
+                }
+                .collect { _uiState.value = it }
+        }
+    }
+
+    /**
+     * 重试加载（P0-6 新增，P1-4 增强）。
+     *
+     * P1-4 修复：先立即设置 isLoading=true 并清空 error，再触发数据流重新订阅。
+     */
     fun retry() {
+        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
         _retryTrigger.value++
     }
 

@@ -10,11 +10,13 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -47,44 +49,58 @@ class KnowledgeViewModel @Inject constructor(
     private val _retryTrigger = MutableStateFlow(0)
 
     /**
-     * 知识点列表：合并 Repository 数据流与分类筛选流。
+     * 知识点列表 UI 状态（P1-4 改造为 MutableStateFlow 包装）。
      *
      * 使用 [ReviewRepository.getVerifiedWithSubject] 获取知识点 + 科目名，
      * 按 [KnowledgeCategory] 筛选后映射为 UI 项。
      *
      * P0-6 修复：加 [catch] 捕获数据流异常（如数据库损坏），避免异常冒泡导致 app 崩溃。
      * 捕获后 emit error 状态，UI 展示错误信息 + 重试按钮。
+     *
+     * P1-4 修复：原实现用 [stateIn] 包裹，retry() 只增加 [_retryTrigger]，
+     * 但 StateFlow 当前值仍是上次的 error 状态，UI 无立即 loading 反馈。
+     * 现改为 MutableStateFlow + [collect]，retry() 可立即设置 isLoading=true，
+     * 保留 selectedCategory 等其他字段不清空。
      */
-    val uiState: StateFlow<KnowledgeUiState> = _retryTrigger
-        .flatMapLatest {
-            combine(
-                reviewRepository.getVerifiedWithSubject(),
-                selectedCategory,
-            ) { pointsWithSubject, category ->
-                val filtered = filterByCategory(pointsWithSubject, category)
-                KnowledgeUiState(
-                    isLoading = false,
-                    knowledgePoints = filtered.map { toUiItem(it) },
-                    selectedCategory = category,
-                )
-            }
+    private val _uiState = MutableStateFlow<KnowledgeUiState>(KnowledgeUiState(isLoading = true))
+    val uiState: StateFlow<KnowledgeUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            _retryTrigger
+                .flatMapLatest {
+                    combine(
+                        reviewRepository.getVerifiedWithSubject(),
+                        selectedCategory,
+                    ) { pointsWithSubject, category ->
+                        val filtered = filterByCategory(pointsWithSubject, category)
+                        KnowledgeUiState(
+                            isLoading = false,
+                            knowledgePoints = filtered.map { toUiItem(it) },
+                            selectedCategory = category,
+                        )
+                    }
+                }
+                .catch { e ->
+                    emit(KnowledgeUiState(error = e.message ?: "加载失败"))
+                }
+                .collect { _uiState.value = it }
         }
-        .catch { e ->
-            emit(KnowledgeUiState(error = e.message ?: "加载失败"))
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = KnowledgeUiState(isLoading = true),
-        )
+    }
 
     // 切换分类标签（NF-L1 修复：持久化到 SavedStateHandle）
     fun selectCategory(category: KnowledgeCategory) {
         savedStateHandle["selectedCategory"] = category.name
     }
 
-    /** 重试加载（P0-6 新增） */
+    /**
+     * 重试加载（P0-6 新增，P1-4 增强）。
+     *
+     * P1-4 修复：先立即设置 isLoading=true 并清空 error，保留 selectedCategory 不变，
+     * 让 UI 立即显示 loading 反馈；再增加 [_retryTrigger] 触发数据流重新订阅。
+     */
     fun retry() {
+        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
         _retryTrigger.value++
     }
 

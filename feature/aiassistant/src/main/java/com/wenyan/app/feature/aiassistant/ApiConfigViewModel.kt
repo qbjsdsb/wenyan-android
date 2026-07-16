@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -54,9 +55,19 @@ class ApiConfigViewModel @Inject constructor(
      *
      * 配置列表中 apiKey 已由 ApiConfigRepository 解密，
      * 但 UI 层不展示完整 apiKey（仅显示掩码），避免泄露。
+     *
+     * P1-3 修复：加 [catch] 捕获数据流异常。
+     * [apiConfigRepository.observeAllConfigs] 内部会做 apiKey 解密（DES key 由 Android Keystore 提供），
+     * 解密失败抛 GeneralSecurityException / IllegalBlockSizeException 会冒泡导致 app crash。
+     * 现捕获并降级为 error 状态。
+     * 注意：本 [error] 与 [_errorMessage] 不同维度——后者是用户操作（save/delete）反馈，
+     * 前者是流加载错误。两者不应混用。
      */
     val uiState: StateFlow<ApiConfigUiState> = apiConfigRepository.observeAllConfigs()
         .map { configs -> ApiConfigUiState(isLoading = false, configs = configs) }
+        .catch { e ->
+            emit(ApiConfigUiState(error = e.message ?: "加载失败"))
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -209,13 +220,18 @@ class ApiConfigViewModel @Inject constructor(
 /**
  * API 配置 UI 状态。
  *
+ * P1-3 新增 [error] 字段：数据流加载失败时携带错误信息，UI 据此提示用户。
+ *
  * @param isLoading 加载中标记
  * @param configs 所有配置列表（apiKey 已解密，但 UI 层应掩码展示）
  * @param currentConfigId 当前选中配置 ID（null 表示无）
+ * @param error 加载失败时的错误信息（P1-3 新增，与 [ApiConfigViewModel._errorMessage] 不同维度）
  */
 data class ApiConfigUiState(
     val isLoading: Boolean = false,
     val configs: List<ApiConfigEntity> = emptyList(),
+    /** 加载失败时的错误信息（P1-3 新增） */
+    val error: String? = null,
 ) {
     /** 当前选中的配置 ID */
     val currentConfigId: String? get() = configs.firstOrNull { it.isCurrent == 1 }?.id

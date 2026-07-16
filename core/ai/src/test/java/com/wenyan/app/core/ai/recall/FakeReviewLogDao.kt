@@ -40,16 +40,20 @@ class FakeReviewLogDao(
         }
     }
 
+    // P1-13 修复：3 处偏离真实 DAO 契约（与 feature/aiassistant 的 Fakes.kt 对齐）：
+    // 1. getById: find → firstOrNull（find 在无匹配时抛 NoSuchElementException，偏离 nullable 契约）
+    // 2. observeByPoint: 加 sortedByDescending（真实 DAO 的 @Query 有 ORDER BY created_at DESC）
+    // 3. observeAll: 加 sortedByDescending（同上）
     override suspend fun getById(id: String): ReviewLogEntity? {
-        return store.values.flatten().find { it.id == id }
+        return store.values.flatten().firstOrNull { it.id == id }
     }
 
     override fun observeByPoint(pointId: String): Flow<List<ReviewLogEntity>> {
-        return flowOf(store[pointId]?.toList() ?: emptyList())
+        return flowOf(store[pointId]?.sortedByDescending { it.createdAt }?.toList() ?: emptyList())
     }
 
     override fun observeAll(): Flow<List<ReviewLogEntity>> {
-        return flowOf(store.values.flatten())
+        return flowOf(store.values.flatten().sortedByDescending { it.createdAt })
     }
 
     override suspend fun countByPoint(pointId: String): Int {

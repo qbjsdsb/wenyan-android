@@ -32,7 +32,21 @@ interface WritingMaterialDao {
     @Query("SELECT * FROM writing_materials WHERE category = :category ORDER BY created_at DESC")
     fun observeByCategory(category: String): Flow<List<WritingMaterialEntity>>
 
-    @Query("SELECT * FROM writing_materials WHERE tags LIKE '%' || :tag || '%' ORDER BY created_at DESC")
+    /**
+     * 按标签模糊查询写作素材。
+     *
+     * P1-2 修复：加 `ESCAPE '\\'` 子句，调用方需在传入 [tag] 前转义 LIKE 通配符
+     * （`%` / `_` / `\`），否则这些字符会被当通配符解释，导致查询结果错误。
+     *
+     * 转义参考实现（与 [com.wenyan.app.core.ai.RagEngine] 内部一致）：
+     * ```kotlin
+     * fun escapeLikeWildcards(input: String): String =
+     *     input.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+     * ```
+     *
+     * @param tag 已转义的标签字符串
+     */
+    @Query("SELECT * FROM writing_materials WHERE tags LIKE '%' || :tag || '%' ESCAPE '\\' ORDER BY created_at DESC")
     fun observeByTag(tag: String): Flow<List<WritingMaterialEntity>>
 
     @Query("SELECT * FROM writing_materials ORDER BY created_at DESC")
