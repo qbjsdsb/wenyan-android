@@ -54,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -263,7 +264,11 @@ private fun ConfigCard(
                 Text(
                     text = config.displayName,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    // P1-6 修复：Bold(700) 过重，M3 Expressive 推荐 SemiBold(600)
+                    fontWeight = FontWeight.SemiBold,
+                    // P1-2 修复：长显示名限 1 行 + 省略号，避免与右侧 CheckCircle 错位
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
                 if (isCurrent) {
@@ -293,6 +298,9 @@ private fun ConfigCard(
                 text = "接口：${config.baseUrl}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                // P1-2 修复：长 URL 限 1 行 + 省略号，避免换行撑高卡片
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
 
             // API Key 掩码展示（避免泄露完整密钥）

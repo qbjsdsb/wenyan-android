@@ -392,7 +392,9 @@ private fun AnswerSection(
                 .padding(top = Spacing.sm),
         ) {
             Text(
-                text = "该真题暂无参考答案，可使用AI助手辅助分析（AI生成内容标注为AI_GENERATED）",
+                // P1-5 修复：去除面向用户文案中的技术术语 AI_GENERATED，
+                // 改为用户友好的表述
+                text = "该真题暂无参考答案，可使用AI助手辅助分析（AI 生成内容仅供参考）",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer,
                 modifier = Modifier.padding(Spacing.sm),

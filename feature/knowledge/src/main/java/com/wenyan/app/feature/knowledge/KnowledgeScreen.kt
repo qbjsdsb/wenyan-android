@@ -33,6 +33,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.designsystem.component.EmptyState
@@ -193,6 +195,9 @@ private fun KnowledgePointCard(
     TonalCard(
         modifier = modifier
             .fillMaxWidth()
+            // P1-3 修复：mergeDescendants 合并卡片内 3 个 Text 为单一语义节点，
+            // TalkBack 一次性朗读"标题，科目，摘要"而非逐个滑动 3 次。
+            .semantics(mergeDescendants = true) {}
             // NF-UA4 修复：加 role=Role.Button 语义，TalkBack 朗读"按钮"，
             // 视障用户才能识别卡片可点击。原 .clickable 无 role，TalkBack 不朗读"按钮"。
             .clickable(role = Role.Button, onClick = onClick),
@@ -201,6 +206,9 @@ private fun KnowledgePointCard(
             Text(
                 text = item.title,
                 style = MaterialTheme.typography.titleMedium,
+                // P1-1 修复：长标题限 2 行 + 省略号，保持列表卡片高度一致
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = item.subject,
@@ -211,6 +219,9 @@ private fun KnowledgePointCard(
                 text = item.summary,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                // P1-1 修复：长摘要限 3 行 + 省略号，点击进详情看全文
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

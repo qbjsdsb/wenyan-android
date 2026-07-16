@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
 /**
@@ -106,9 +107,17 @@ fun GroupedCardItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            // NF-UA4 修复：加 role=Role.Button 语义，TalkBack 朗读"按钮"，
-            // 视障用户才能识别该项可点击。原 .clickable 无 role，TalkBack 不朗读"按钮"。
-            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+            // P1-4 修复：onClick != null 时加 mergeDescendants，合并 title/description/subtitle
+            // 为单一语义节点，TalkBack 一次性朗读而非逐个滑动。
+            // trailing 为 Switch 时 onClick 通常为 null，不影响 Switch 独立语义。
+            .then(
+                if (onClick != null) {
+                    Modifier.semantics(mergeDescendants = true) {}
+                        .clickable(role = Role.Button, onClick = onClick)
+                } else {
+                    Modifier
+                },
+            )
             .padding(
                 start = Spacing.lg,
                 end = Spacing.lg,
