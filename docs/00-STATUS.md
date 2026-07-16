@@ -9,15 +9,20 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `f297344`（main，P1-PG Wave 4 ProGuard 规则补齐） |
-| 最新 Release | **[v0.5.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.5.0)**（2026-07-16，本地构建 + GitHub API 上传，debug 签名 fallback） |
+| 最新 commit | `a25abbb`（main，Wave 5 文档 + 版本号 v0.6.0） |
+| 最新 Release | **[v0.6.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.6.0)**（2026-07-16 19:10 UTC，本地构建 + GitHub API 上传，debug 签名 fallback） |
 | 测试 | **258 tests 0 failures 0 errors**（220 现有 + 38 P1 大型任务新增） |
 | 阻塞 | **CI 账单问题** — 33 个 commit 待 CI 验证（不影响 Release，已通过 API 绕过） |
 | 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节 |
 
 ## 🚨 新会话首要任务
 
-**v0.6.0 Release 待发布**（P1 大型任务全部完成，需本地构建 + API 上传）：
+**v0.6.0 Release 已成功发布**（2026-07-16 19:10 UTC，Release ID 355305907）：
+- Release URL：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.6.0
+- 2 个 APK assets 已上传（17 MB each，debug 签名 fallback）：
+  - `wenyan-v0.6.0.apk`（asset_id 479529845）
+  - `wenyan-latest.apk`（asset_id 479529905）
+- 构建方式：`CI=false gradle assembleRelease --no-daemon`（沙箱无 keystore → debug 签名 fallback）
 - 5 Wave 全部完成：
   - Wave 1（`148dad6`）：数据库 schema v4→v5 统一迁移
   - Wave 2.1-2.4（`302165e`/`6adeb40`/`55001c0`/`eb944a5`）：NF-T4 Float 统一 + NF-PP4 复习日志 + NF-PP6 ChatRepository + NF-PP5 WrongAnswerRepository

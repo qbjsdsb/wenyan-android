@@ -2163,21 +2163,29 @@ Wave 5（全量验证 + 文档 + Release v0.6.0）。用户指令："继续"。
 
 ### 下次继续
 
-1. **Wave 5.3-5.5：Release v0.6.0**：
-   - 升级版本号 versionCode 5→6 / versionName 0.5.0→0.6.0
-   - 本地构建 release APK（`CI=false gradle assembleRelease`，沙箱 debug 签名 fallback）
-   - GitHub API 创建 v0.6.0 Release + 上传 APK（沿用 v0.5.0 流程）
-2. **P0**：跑 emulator 实测 v0.6.0（错题本 + AI 对话持久化 + FSRS 调度 + 卡片翻转 + Tab 动画）
-3. **P0 阻塞**：GitHub Actions 账单问题（AI 无法解决，需用户充值或解除限制）
-4. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换）
-5. **P1**：v0.5.0 Phase 2 剩余维度审计（strings.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
+1. **P0**：跑 emulator 实测 v0.6.0（错题本 + AI 对话持久化 + FSRS 调度 + 卡片翻转 + Tab 动画）
+2. **P0 阻塞**：GitHub Actions 账单问题（AI 无法解决，需用户充值或解除限制）
+3. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换）
+4. **P1**：v0.5.0 Phase 2 剩余维度审计（strings.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
+
+### v0.6.0 Release 发布（2026-07-16 19:10 UTC）
+
+**Release 已成功发布**（Release ID 355305907）：
+- Release URL：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.6.0
+- 2 个 APK assets 已上传（17 MB each，debug 签名 fallback）：
+  - `wenyan-v0.6.0.apk`（asset_id 479529845，sha256: 38f6ac74107f123c604d15b94bb7b9f5f8acff4ca881e8be8e40b079e61a5992）
+  - `wenyan-latest.apk`（asset_id 479529905）
+- 构建方式：`CI=false gradle assembleRelease --no-daemon`（沙箱无 keystore → debug 签名 fallback）
+- 构建耗时：5m 38s，554 actionable tasks
+- 上传方式：`curl -X POST .../releases/{id}/assets`（带 git remote 内嵌 token）
+- tag `v0.6.0` 已推送（commit `a25abbb`）
 
 ### 本次 commits
 
 | commit | 内容 |
 |--------|------|
 | `f297344` | feat: P1-PG Wave 4 ProGuard 规则补齐（13 个 .pro，不启用 minify） |
-| （待 commit） | docs: Wave 5.2 文档更新（00-STATUS + SESSION_LOG） |
+| `a25abbb` | docs: Wave 5.2-5.3 文档更新 + 版本号升级 v0.5.0 → v0.6.0 |
 
 **继承的上一会话 commits**（已在 origin/main）：
 - `c829e4f` NF-PP5 Wave 3.2 错题本完整闭环（接口提取 + 业务层 + UI 层 + 8 测试）
