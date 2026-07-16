@@ -1,10 +1,7 @@
 package com.wenyan.app.core.data.mapper
 
-import android.util.Log
 import com.wenyan.app.core.database.entity.MemoRecordEntity
 import com.wenyan.app.core.fsrs.FlashCard
-import com.wenyan.app.core.fsrs.Rating
-import com.wenyan.app.core.fsrs.ReviewLog
 import com.wenyan.app.core.fsrs.State
 import java.time.Instant
 import java.time.LocalDateTime
@@ -30,13 +27,14 @@ import java.time.ZoneId
  * - elapsed_days    ↔ FlashCard.elapsedDays
  * - scheduled_days  ↔ FlashCard.scheduledDays
  * - reps            ↔ FlashCard.reps
- * - history         ↔ JSON 序列化的复习日志列表
  * - in_priority_queue ↔ 是否在优先攻坚队列 (Int 0/1 ↔ Boolean)
+ *
+ * NF-PP4 修复：移除 history JSON 双写逻辑（appendReviewLog / formatReviewLogJson），
+ * 复习历史统一由 review_logs 表维护（SchedulingRepository.withTransaction 双写）。
  */
 object MemoRecordMapper {
 
     private const val DAY_MS = 86_400_000L
-    private const val TAG = "MemoRecordMapper"
 
     /**
      * Room MemoRecordEntity → FlashCard
@@ -83,31 +81,24 @@ object MemoRecordMapper {
      * 将 FSRS 调度后的卡片对象转换回数据库记录。
      * 内部做 Float→Double / Boolean→Int 转换以适配 Room 实体类型。
      *
-     * @param flashCard           FSRS FlashCard 对象（调度后）
-     * @param pointId             知识点 ID（主键）
-     * @param inPriorityQueue     是否在优先攻坚队列
-     * @param reviewLog           本次复习日志（可选，传入则追加到 history）
-     * @param existingHistoryJson 已有的复习历史 JSON（默认 "[]"，传入新日志时追加到其中）
+     * NF-PP4 修复：移除 reviewLog / existingHistoryJson 参数，复习历史由
+     * SchedulingRepository 单独写入 review_logs 表（不再双写 history JSON）。
+     *
+     * @param flashCard       FSRS FlashCard 对象（调度后）
+     * @param pointId         知识点 ID（主键）
+     * @param inPriorityQueue 是否在优先攻坚队列
      * @return Room 数据库背诵记录
      */
     fun toMemoRecord(
         flashCard: FlashCard,
         pointId: String,
         inPriorityQueue: Boolean = false,
-        reviewLog: ReviewLog? = null,
-        existingHistoryJson: String = "[]",
     ): MemoRecordEntity {
         val lastReviewAt = flashCard.lastReview?.let {
             localDateTimeToMillis(it)
         } ?: 0L
 
         val nextReviewAt = localDateTimeToMillis(flashCard.dueDate)
-
-        val historyJson = if (reviewLog != null) {
-            appendReviewLog(existingHistoryJson, reviewLog)
-        } else {
-            existingHistoryJson
-        }
 
         return MemoRecordEntity(
             pointId = pointId,
@@ -121,56 +112,8 @@ object MemoRecordMapper {
             elapsedDays = flashCard.elapsedDays,
             scheduledDays = flashCard.scheduledDays,
             reps = flashCard.reps,
-            history = historyJson,
             inPriorityQueue = if (inPriorityQueue) 1 else 0,
         )
-    }
-
-    /**
-     * 将一条复习日志追加到已有的历史 JSON 数组中
-     */
-    private fun appendReviewLog(existingJson: String, log: ReviewLog): String {
-        val entry = formatReviewLogJson(log)
-        val trimmed = existingJson.trim()
-        return when {
-            trimmed.isEmpty() || trimmed == "[]" -> "[$entry]"
-            trimmed.startsWith("[") && trimmed.endsWith("]") -> {
-                val inner = trimmed.dropLast(1).trimEnd()
-                if (inner == "[") {
-                    "[$entry]"
-                } else {
-                    "$inner,$entry]"
-                }
-            }
-            else -> {
-                // P0-EE1 修正：原实现静默重置丢历史，现记录警告日志。
-                // 旧历史因格式损坏无法安全解析，只能保留新 entry，但日志可追溯。
-                // TODO(Batch 7): 引入 kotlinx.serialization 替代 StringBuilder，做健壮 JSON 解析。
-                Log.w(TAG, "History JSON 格式异常，已重置并保留新 entry，旧历史丢失: $trimmed")
-                "[$entry]"
-            }
-        }
-    }
-
-    /**
-     * 将单条 ReviewLog 序列化为 JSON 对象字符串
-     */
-    private fun formatReviewLogJson(log: ReviewLog): String {
-        val dueMillis = localDateTimeToMillis(log.dueDate)
-        val rtMillis = localDateTimeToMillis(log.reviewTime)
-        return StringBuilder(128)
-            .append('{')
-            .append("\"rating\":").append(log.rating.value).append(',')
-            .append("\"state\":\"").append(log.state.name).append("\",")
-            .append("\"dueDate\":").append(dueMillis).append(',')
-            .append("\"stability\":").append(log.stability).append(',')
-            .append("\"difficulty\":").append(log.difficulty).append(',')
-            .append("\"elapsedDays\":").append(log.elapsedDays).append(',')
-            .append("\"lastElapsedDays\":").append(log.lastElapsedDays).append(',')
-            .append("\"scheduledDays\":").append(log.scheduledDays).append(',')
-            .append("\"reviewTime\":").append(rtMillis)
-            .append('}')
-            .toString()
     }
 
     // ===================== 时间转换工具 =====================

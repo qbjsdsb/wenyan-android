@@ -40,8 +40,10 @@ import javax.inject.Singleton
  *
  * P0-2 修复：注入 [WenyanDatabase] 用 [withTransaction] 包裹 memo_records 与 review_logs
  * 两步写入。原实现两步独立写入，memo upsert 成功后 review_log insert 失败（磁盘满 /
- * SQLite 锁竞争 / 约束错误）会导致 memo.history JSON 有记录但 review_logs 表没有，
- * AntiRoteMemorization 读取 review_logs 计算连续正确次数会拿到不完整数据，功能失效。
+ * SQLite 锁竞争 / 约束错误）会导致数据不一致，AntiRoteMemorization 读取 review_logs
+ * 计算连续正确次数会拿到不完整数据，功能失效。
+ *
+ * NF-PP4 修复：移除 memo_records.history JSON 双写，复习历史统一由 review_logs 表维护。
  *
  * @property memoRecordDao 背诵记录 DAO（读写 memo_records 表）
  * @property clockGuard 时钟守卫（检测回拨，返回单调不减的有效时间戳）
@@ -117,18 +119,15 @@ class SchedulingRepository @Inject constructor(
         )
 
         // 6. FlashCard → MemoRecord（调度后状态）+ 持久化
+        // NF-PP4 修复：不再写 history JSON，复习历史统一由 review_logs 表维护。
         val updatedMemo = MemoRecordMapper.toMemoRecord(
             flashCard = flashCardAfter,
             pointId = pointId,
             inPriorityQueue = existingMemo.inPriorityQueue != 0,
-            reviewLog = reviewLog,
-            existingHistoryJson = existingMemo.history ?: "[]",
         )
 
         // P0-2 修复：memo_records 与 review_logs 两步写入包进 withTransaction，
-        // 要么全成要么全败。原实现两步独立，review_log 失败时 memo.history 已写入，
-        // 导致 AntiRoteMemorization 读取 review_logs 表数据不完整，功能静默失效。
-        // 事务失败时向上抛异常，UI 层可提示用户重试，而非静默分裂。
+        // 要么全成要么全败。事务失败时向上抛异常，UI 层可提示用户重试。
         database.withTransaction {
             memoRecordDao.upsert(updatedMemo)
             reviewLogDao.insert(
@@ -192,7 +191,6 @@ class SchedulingRepository @Inject constructor(
             elapsedDays = 0,
             scheduledDays = 0,
             reps = 0,
-            history = "[]",
             inPriorityQueue = 0,
         )
     }

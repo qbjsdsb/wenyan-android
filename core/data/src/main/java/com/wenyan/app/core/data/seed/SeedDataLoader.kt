@@ -292,8 +292,6 @@ class SeedDataLoader @Inject constructor(
                     nextReviewAt = now, // 立即到期，新知识点可立即进入复习队列
                     reviewCount = 0,
                     failCount = 0,
-                    // P2-AUDIT-2 修正：统一为 "[]"，与 createDefaultMemoRecord 一致（原为 null）
-                    history = "[]",
                     inPriorityQueue = 0,
                 )
             }

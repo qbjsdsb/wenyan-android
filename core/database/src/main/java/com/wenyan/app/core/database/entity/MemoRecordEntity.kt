@@ -20,8 +20,9 @@ import androidx.room.PrimaryKey
  * - elapsed_days: 距上次复习天数（阶段3新增，FSRS调度状态）
  * - scheduled_days: 上次调度的间隔天数（阶段3新增）
  * - reps: 总复习次数（阶段3新增，与 review_count 同步）
- * - history: 复习历史，JSON 字符串（结构复杂，业务层解析）
  * - in_priority_queue: 是否在优先队列，默认 0
+ *
+ * NF-PP4 修复：移除 history 字段（全项目零读取死数据），复习历史统一由 review_logs 表维护。
  */
 @Entity(
     tableName = "memo_records",
@@ -76,10 +77,6 @@ data class MemoRecordEntity(
     /** 总复习次数（FSRS调度状态，阶段3新增，与 review_count 同步） */
     @ColumnInfo(name = "reps", defaultValue = "0")
     val reps: Int = 0,
-
-    /** 复习历史，JSON 字符串（结构复杂，业务层解析） */
-    @ColumnInfo(name = "history")
-    val history: String?,
 
     @ColumnInfo(name = "in_priority_queue", defaultValue = "0")
     val inPriorityQueue: Int = 0,
