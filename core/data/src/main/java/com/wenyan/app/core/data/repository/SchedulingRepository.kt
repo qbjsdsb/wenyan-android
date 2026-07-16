@@ -48,13 +48,38 @@ import javax.inject.Singleton
  * @property memoRecordDao 背诵记录 DAO（读写 memo_records 表）
  * @property clockGuard 时钟守卫（检测回拨，返回单调不减的有效时间戳）
  */
+/**
+ * 调度仓库接口(NF-PP5 Wave 3.2 提取,便于测试替换)。
+ *
+ * 桥接 UI 卡片评分与 FSRS 调度算法。生产实现见 [SchedulingRepositoryImpl]。
+ *
+ * @see SchedulingRepositoryImpl
+ */
+interface SchedulingRepository {
+
+    /**
+     * 评分调度:根据用户评分更新知识点的 FSRS 调度状态。
+     *
+     * @param pointId  知识点 ID(对应 memo_records.point_id 主键)
+     * @param rating   用户评分(AGAIN/HARD/GOOD/EASY)
+     * @param cardType 卡片模板类型(用于推断 tier,决定 FSRS 参数)
+     *
+     * @return 更新后的 MemoRecordEntity(已写入数据库),调用方可读取 nextReviewAt 等
+     */
+    suspend fun rateCard(
+        pointId: String,
+        rating: Rating,
+        cardType: CardTemplateType,
+    ): MemoRecordEntity?
+}
+
 @Singleton
-class SchedulingRepository @Inject constructor(
+class SchedulingRepositoryImpl @Inject constructor(
     private val database: WenyanDatabase,
     private val memoRecordDao: MemoRecordDao,
     private val reviewLogDao: ReviewLogDao,
     private val clockGuard: ClockGuard,
-) {
+) : SchedulingRepository {
     /**
      * 评分调度：根据用户评分更新知识点的 FSRS 调度状态。
      *
@@ -64,7 +89,7 @@ class SchedulingRepository @Inject constructor(
      *
      * @return 更新后的 MemoRecordEntity（已写入数据库），调用方可读取 nextReviewAt 等
      */
-    suspend fun rateCard(
+    override suspend fun rateCard(
         pointId: String,
         rating: Rating,
         cardType: CardTemplateType,

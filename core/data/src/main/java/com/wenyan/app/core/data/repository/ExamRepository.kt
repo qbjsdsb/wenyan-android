@@ -30,12 +30,51 @@ import javax.inject.Singleton
  * P1 审计修复：combine/observe 链加 .catchAndLog，DAO 异常时降级为空列表，
  * 避免 ViewModel collect 崩溃导致 UI 永久 failed。
  */
+/**
+ * 真题仓库接口(NF-PP5 Wave 3.2 提取,便于测试替换)。
+ *
+ * 生产实现见 [ExamRepositoryImpl]。
+ *
+ * @see ExamRepositoryImpl
+ */
+interface ExamRepository {
+
+    /**
+     * 查询某年所有真题,附带科目判定信息(Task 26.6)。
+     *
+     * @param year 年份
+     * @return 真题列表(含科目判定信息)
+     */
+    fun getExamQuestionsWithSubjectInfo(year: Int): Flow<List<ExamQuestionWithSubject>>
+
+    /**
+     * 获取某年所有真题(Task 16.2)。
+     *
+     * @param year 年份
+     * @return 真题列表
+     */
+    fun getExamQuestionsByYear(year: Int): Flow<List<ExamQuestionEntity>>
+
+    /**
+     * 获取所有可用年份列表(降序)。
+     */
+    fun getAvailableYears(): Flow<List<Int>>
+
+    /**
+     * 获取真题的关联知识点,仅返回 ocr_status='VERIFIED' 的知识点(Task 16.2)。
+     *
+     * @param questionId 真题ID
+     * @return 已VERIFIED的关联知识点列表(PENDING被过滤)
+     */
+    fun getRelatedKnowledgePoints(questionId: String): Flow<List<KnowledgePointEntity>>
+}
+
 @Singleton
-class ExamRepository @Inject constructor(
+class ExamRepositoryImpl @Inject constructor(
     private val examQuestionDao: ExamQuestionDao,
     private val examCodeHistoryDao: ExamCodeHistoryDao,
     private val knowledgePointDao: KnowledgePointDao,
-) {
+) : ExamRepository {
 
     private companion object {
         private const val TAG = "ExamRepository"
@@ -51,7 +90,7 @@ class ExamRepository @Inject constructor(
      * @param year 年份
      * @return 真题列表（含科目判定信息）
      */
-    fun getExamQuestionsWithSubjectInfo(year: Int): Flow<List<ExamQuestionWithSubject>> {
+    override fun getExamQuestionsWithSubjectInfo(year: Int): Flow<List<ExamQuestionWithSubject>> {
         return combine(
             examQuestionDao.observeByYear(year),
             examCodeHistoryDao.observeAll(),
@@ -69,7 +108,7 @@ class ExamRepository @Inject constructor(
      * @param year 年份
      * @return 真题列表
      */
-    fun getExamQuestionsByYear(year: Int): Flow<List<ExamQuestionEntity>> =
+    override fun getExamQuestionsByYear(year: Int): Flow<List<ExamQuestionEntity>> =
         examQuestionDao.observeByYear(year)
             .catchAndLog(TAG, "getExamQuestionsByYear") { emptyList() }
 
@@ -78,7 +117,7 @@ class ExamRepository @Inject constructor(
      *
      * 用于真题练习模块的年份选择器。
      */
-    fun getAvailableYears(): Flow<List<Int>> =
+    override fun getAvailableYears(): Flow<List<Int>> =
         examQuestionDao.observeYears()
             .catchAndLog(TAG, "getAvailableYears") { emptyList() }
 
@@ -93,7 +132,7 @@ class ExamRepository @Inject constructor(
      * @param questionId 真题ID
      * @return 已VERIFIED的关联知识点列表（PENDING被过滤）
      */
-    fun getRelatedKnowledgePoints(questionId: String): Flow<List<KnowledgePointEntity>> =
+    override fun getRelatedKnowledgePoints(questionId: String): Flow<List<KnowledgePointEntity>> =
         combine(
             examQuestionDao.observeById(questionId),
             knowledgePointDao.observeVerifiedForReview(),

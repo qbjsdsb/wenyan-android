@@ -2028,3 +2028,79 @@ Phase 4 已将主题模式选择从 FilterChip 改为 SegmentedButton，但调�
 - `6a1175c` 启动图标重设计 + 版本号升级到 v0.5.0
 - `b59a661` 文档：交接记录 v0.5.0 Release 监视状态
 - `3f0a738` 文档：确认 v0.5.0 Release workflow 账单阻塞
+
+---
+
+## Session 2026-07-16（续 4）：P1 大型任务 Wave 3.2 完成（NF-PP5 错题本完整闭环）
+
+### 目标
+
+承接续 3 会话：执行 P1 大型任务 Wave 3.2 — NF-PP5 错题本完整版（业务层 + UI 层 + 测试）。
+用户指令："行，开始执行，严谨一点，反复检查不要出问题，完了做好交接工作" + "继续"。
+
+### 完成内容
+
+**1. 接口提取（core:data 三仓库）**：
+- `SchedulingRepository`：从 final class 重构为 `interface + SchedulingRepositoryImpl`，参照 `GraphRepository`/`GraphRepositoryImpl` 先例
+- `ExamRepository`：同上，提取 4 方法接口（getExamQuestionsWithSubjectInfo / getExamQuestionsByYear / getAvailableYears / getRelatedKnowledgePoints）
+- `CardRepository`：提取 1 方法接口（getCardsForReview），原 class 重命名为 `CardRepositoryImpl`
+- `DataModule`：3 个 `@Binds @Singleton abstract fun` 绑定 Impl → 接口
+- `SchedulingRepositoryTest`：更新 import 引用 Impl 类（保留真实事务验证）
+
+**2. 业务层（CardsViewModel + QuizViewModel）**：
+- `CardsViewModel`：加 `wrongAnswerRepository` 依赖，`rateCard(AGAIN)` 时调 `recordWrongAnswer(SOURCE_CARD_AGAIN)`，correctAnswer = 卡片背面；错题记录失败不阻塞调度（仅设置 errorMessage）
+- `QuizViewModel`：加 `wrongAnswerRepository` + `_answers: MutableStateFlow<Map<String, QuizAnswerState>>` 独立存储答题状态（避免流重发丢失用户输入）+ 三方法：
+  - `updateAnswer(qid, text)`：未提交时更新 userAnswer
+  - `submitAnswer(qid)`：标记 isSubmitted=true + 自动展开参考答案区
+  - `selfEvaluate(qid, isCorrect)`：标记 isSelfEvaluated + 答错时调 `recordWrongAnswer(SOURCE_QUIZ_WRONG)`，correctAnswer 优先 sampleEssay 否则 answerFramework
+
+**3. UI 层（QuizScreen + WrongAnswerScreen）**：
+- `QuizScreen`：TopBar 加 Inbox 图标"错题本"入口，AnswerSection 改造为三层状态机 UI（未提交输入 → 已提交自评 → 自评完成反馈），参数透传 QuestionList → QuestionCard → AnswerSection
+- `WrongAnswerScreen`（新建，放 feature/quiz）：TopBar + 过滤行（未解决/全部 FilterChip）+ 列表（每张卡片显示来源/答错次数/解决状态/用户答案/正确答案/时间/操作行：标记已解决/删除）
+- `WrongAnswerViewModel`（新建）：`flatMapLatest` 按 filter 切换 observeUnresolved/observeAll + markResolved/deleteById/clearError
+- `WenyanNavHost`：注册 `ROUTE_WRONG_ANSWER = "wrong_answer"` + `wrongAnswerDestination` 扩展（Push/Pop slide transition）+ `quizDestination` 加 `onNavigateToWrongAnswer` 参数
+
+**4. 测试（8 个新测试，2 个 Fakes 文件）**：
+- `feature/cards/src/test/.../Fakes.kt`：FakeCardRepository + FakeSchedulingRepository + FakeWrongAnswerRepository + testClozeCard 辅助
+- `feature/cards/src/test/.../CardsViewModelTest.kt`：2 测试（AGAIN 记录错题 / GOOD 不记录）
+- `feature/quiz/src/test/.../Fakes.kt`：FakeExamRepository + FakeWrongAnswerRepository + testExamQuestion + TEST_SUBJECT_RESOLUTION
+- `feature/quiz/src/test/.../QuizViewModelTest.kt`：4 测试（updateAnswer / submitAnswer 锁定+展开 / selfEvaluate 答对 / selfEvaluate 答错记录）
+- `feature/quiz/src/test/.../WrongAnswerViewModelTest.kt`：2 测试（默认 UNRESOLVED / setFilter ALL + markResolved + deleteById）
+
+### 关键技术决策
+
+1. **接口提取参照 GraphRepository 先例** — `@Binds @Singleton abstract fun` 绑定 Impl 到接口，Impl 类保留 `@Singleton` 注解。这是项目既有模式，保持一致性。
+2. **答题状态独立存储** — `_answers: MutableStateFlow<Map<String, QuizAnswerState>>` 独立于 `uiState`（从 examRepository 流重建）存放，避免流重发覆盖用户输入。生命周期：输入中 → isSubmitted=true（提交，展示参考答案）→ isSelfEvaluated=true（自评完成，不可更改）。
+3. **自评判定模式** — 简化判定：用户提交答案后对照参考答案自评对错，答错时调 recordWrongAnswer。阶段2接 AI 批改后可替换为自动判定。
+4. **错题记录容错** — 错题记录失败不阻塞主流程（调度/自评已完成），仅设置 errorMessage 或静默吞异常。这与 P0-AUDIT 的"数据一致性"原则不冲突（错题本是辅助功能，调度/自评是核心）。
+5. **双 source 区分** — `SOURCE_CARD_AGAIN`（卡片复习 AGAIN）+ `SOURCE_QUIZ_WRONG`（真题自评答错），同一未解决错题递增 wrongCount 不重复插入（Wave 2.4 已实现）。
+6. **CI 环境绕过** — 沙箱 `CI=true` 会触发 release 签名检查，命令前加 `CI=` 清空绕过（`CI= gradle testDebugUnitTest --no-daemon`）。
+7. **Fakes.kt 字符串插值修复** — `quote = "$front____"` 被 Kotlin 解析为变量名 `front____`（下划线是合法标识符字符），改为 `quote = "${front}____"` 显式界定变量名。这是 Kotlin 字符串模板的常见陷阱。
+
+### 验证
+
+- `assembleDebug`：BUILD SUCCESSFUL（exit 0）
+- `testDebugUnitTest`：BUILD SUCCESSFUL in 48s
+- 测试总数：**258 tests = 250 现有 + 8 新增**，0 failures / 0 errors / 0 skipped
+
+### 下次继续
+
+1. **Wave 4（P1-PG ProGuard 规则补齐）**：13 个 .pro 规则文件，不启用 minify（仅预置规则为 R8 启用做准备）
+2. **Wave 5（全量验证 + 文档 + Release v0.6.0）**：
+   - 全量验证：assembleDebug + testDebugUnitTest + lint
+   - 文档：00-STATUS + 03-FAILED-ATTEMPTS（如遇新坑）+ 02-VERSION-MATRIX（如遇版本信息）
+   - Release v0.6.0：本地构建 + GitHub API 上传（账单阻塞未解除，沿用 v0.5.0 模式）
+
+### 本次 commits
+
+| commit | 内容 |
+|--------|------|
+| （待 commit） | feat: NF-PP5 Wave 3.2 错题本完整闭环（接口提取 + 业务层 + UI 层 + 8 测试） |
+
+**继承的上一会话 commits**（已在 origin/main）：
+- `26ae190` NF-PP6 Wave 3.1 AiAssistantViewModel 持久化 + Screen 新建对话按钮 +3 测试
+- `eb944a5` NF-PP5 Wave 2.4 WrongAnswerRepository + Hilt 绑定 + 7 测试
+- `55001c0` NF-PP6 Wave 2.3 ChatRepository Hilt 绑定 + ChatRepositoryImplTest +6 测试
+- `6adeb40` NF-PP4 SchedulingRepositoryTest 真实事务验证 +3 测试
+- `302165e` NF-T4 Float 类型统一消除 DB↔FSRS 精度损失
+- `148dad6` Wave 1 数据库 schema v4→v5 统一迁移 (NF-PP4/PP5/PP6)

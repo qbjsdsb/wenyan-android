@@ -1,11 +1,17 @@
 package com.wenyan.app.core.data.di
 
 import com.wenyan.app.core.ai.LlmConfigProvider
+import com.wenyan.app.core.data.repository.CardRepository
+import com.wenyan.app.core.data.repository.CardRepositoryImpl
 import com.wenyan.app.core.data.repository.ChatRepository
 import com.wenyan.app.core.data.repository.ChatRepositoryImpl
+import com.wenyan.app.core.data.repository.ExamRepository
+import com.wenyan.app.core.data.repository.ExamRepositoryImpl
 import com.wenyan.app.core.data.repository.GraphRepository
 import com.wenyan.app.core.data.repository.GraphRepositoryImpl
 import com.wenyan.app.core.data.repository.LlmConfigProviderImpl
+import com.wenyan.app.core.data.repository.SchedulingRepository
+import com.wenyan.app.core.data.repository.SchedulingRepositoryImpl
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.data.repository.WrongAnswerRepositoryImpl
 import dagger.Binds
@@ -64,4 +70,35 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindWrongAnswerRepository(impl: WrongAnswerRepositoryImpl): WrongAnswerRepository
+
+    /**
+     * 绑定 [SchedulingRepository] 到 [SchedulingRepositoryImpl](NF-PP5 Wave 3.2 提取接口)。
+     *
+     * SchedulingRepositoryImpl 通过 @Inject constructor 注入 WenyanDatabase +
+     * MemoRecordDao + ReviewLogDao + ClockGuard,DAO 由 DatabaseModule 提供,
+     * ClockGuard 由本模块 @Provides 提供,ClockGuard 由 DatabaseModule 提供 AppMetaDao。
+     */
+    @Binds
+    @Singleton
+    abstract fun bindSchedulingRepository(impl: SchedulingRepositoryImpl): SchedulingRepository
+
+    /**
+     * 绑定 [ExamRepository] 到 [ExamRepositoryImpl](NF-PP5 Wave 3.2 提取接口)。
+     *
+     * ExamRepositoryImpl 通过 @Inject constructor 注入 ExamQuestionDao +
+     * ExamCodeHistoryDao + KnowledgePointDao,DAO 由 DatabaseModule 提供。
+     */
+    @Binds
+    @Singleton
+    abstract fun bindExamRepository(impl: ExamRepositoryImpl): ExamRepository
+
+    /**
+     * 绑定 [CardRepository] 到 [CardRepositoryImpl](NF-PP5 Wave 3.2 提取接口)。
+     *
+     * CardRepositoryImpl 通过 @Inject constructor 注入 KnowledgePointDao,
+     * DAO 由 DatabaseModule 提供。
+     */
+    @Binds
+    @Singleton
+    abstract fun bindCardRepository(impl: CardRepositoryImpl): CardRepository
 }

@@ -6,7 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.repository.ExamQuestionWithSubject
 import com.wenyan.app.core.data.repository.ExamRepository
+import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -43,6 +45,7 @@ import javax.inject.Inject
 class QuizViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val examRepository: ExamRepository,
+    private val wrongAnswerRepository: WrongAnswerRepository,
 ) : ViewModel() {
 
     // NF-L3 修复：selectedYear 持久化到 SavedStateHandle（用 -1 表示 null，避免可空类型序列化问题）
@@ -55,6 +58,15 @@ class QuizViewModel @Inject constructor(
         (savedStateHandle.get<ArrayList<String>>("expandedQuestionIds") ?: emptyList()).toSet(),
     )
     val expandedQuestionIds: StateFlow<Set<String>> = _expandedQuestionIds.asStateFlow()
+
+    /**
+     * 答题状态(NF-PP5 Wave 3.2):每道题的答题/自评状态。
+     *
+     * 独立于 [uiState](从 examRepository 流重建)存放,避免流重发时丢失用户输入。
+     * key = questionId,value = [QuizAnswerState]。
+     */
+    private val _answers = MutableStateFlow<Map<String, QuizAnswerState>>(emptyMap())
+    val answers: StateFlow<Map<String, QuizAnswerState>> = _answers.asStateFlow()
 
     /**
      * 重试触发器（P0-6 新增）。点击重试时自增，[flatMapLatest] 会重新订阅数据流。
@@ -145,6 +157,83 @@ class QuizViewModel @Inject constructor(
             newIds
         }
     }
+
+    /**
+     * 更新答题输入文本(NF-PP5 Wave 3.2)。
+     *
+     * 仅在未提交时允许编辑。提交后答案锁定,需通过自评判定对错。
+     */
+    fun updateAnswer(questionId: String, text: String) {
+        _answers.update { current ->
+            val existing = current[questionId] ?: QuizAnswerState()
+            if (existing.isSubmitted) return@update current  // 已提交,不允许编辑
+            current + (questionId to existing.copy(userAnswer = text))
+        }
+    }
+
+    /**
+     * 提交答案(NF-PP5 Wave 3.2)。
+     *
+     * 标记答案为已提交,UI 随后展示参考答案 + 自评按钮。
+     * 空白答案不允许提交。仅对有参考答案(answerFramework/sampleEssay)的题目有效。
+     */
+    fun submitAnswer(questionId: String) {
+        val question = _uiState.value.questions.find { it.id == questionId } ?: return
+        // 仅对有参考答案的题目允许答题
+        val hasReference = !question.answerFramework.isNullOrBlank() || !question.sampleEssay.isNullOrBlank()
+        if (!hasReference) return
+
+        val currentAnswer = _answers.value[questionId]?.userAnswer ?: ""
+        if (currentAnswer.isBlank()) return
+
+        _answers.update { current ->
+            val existing = current[questionId] ?: QuizAnswerState()
+            if (existing.isSubmitted) return@update current  // 防重复提交
+            current + (questionId to existing.copy(isSubmitted = true))
+        }
+
+        // 自动展开参考答案区(让用户对照参考答案自评)
+        _expandedQuestionIds.update { it + questionId }
+        savedStateHandle["expandedQuestionIds"] = ArrayList(_expandedQuestionIds.value)
+    }
+
+    /**
+     * 自评对错(NF-PP5 Wave 3.2)。
+     *
+     * 用户提交答案后对照参考答案自评。判定为"错"时记录到错题本。
+     * 自评是一次性的:已自评后不允许更改(避免重复记录/删除逻辑复杂化)。
+     *
+     * @param questionId 题目 ID
+     * @param isCorrect  用户自评是否正确
+     */
+    fun selfEvaluate(questionId: String, isCorrect: Boolean) {
+        val question = _uiState.value.questions.find { it.id == questionId } ?: return
+        val answer = _answers.value[questionId] ?: return
+        if (!answer.isSubmitted || answer.isSelfEvaluated) return  // 未提交或已自评,忽略
+
+        _answers.update { current ->
+            current + (questionId to answer.copy(isCorrect = isCorrect, isSelfEvaluated = true))
+        }
+
+        // 答错时记录到错题本
+        if (!isCorrect) {
+            viewModelScope.launch {
+                try {
+                    wrongAnswerRepository.recordWrongAnswer(
+                        pointId = null,
+                        examQuestionId = questionId,
+                        userAnswer = answer.userAnswer,
+                        correctAnswer = question.sampleEssay ?: question.answerFramework,
+                        source = WrongAnswerRepository.SOURCE_QUIZ_WRONG,
+                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // 错题记录失败不阻塞主流程(自评状态已更新)
+                }
+            }
+        }
+    }
 }
 
 /** 真题 UI 状态 */
@@ -207,4 +296,22 @@ private fun ExamQuestionWithSubject.toUiItem() = QuizQuestionItem(
     relatedPointIds = question.relatedPointIds,
     subjectDisplayName = subjectResolution.displayName,
     subjectWarning = subjectResolution.warningMessage,
+)
+
+/**
+ * 答题状态(NF-PP5 Wave 3.2)。
+ *
+ * 生命周期:输入中 → [isSubmitted]=true(提交,展示参考答案) → [isSelfEvaluated]=true(自评完成)。
+ *
+ * @property userAnswer       用户输入的答案
+ * @property isSubmitted      是否已提交(提交后锁定编辑,展示参考答案 + 自评按钮)
+ * @property isCorrect        自评结果(仅在 [isSelfEvaluated]=true 时有效)
+ * @property isSelfEvaluated  是否已完成自评(自评后不可更改)
+ */
+@Immutable
+data class QuizAnswerState(
+    val userAnswer: String = "",
+    val isSubmitted: Boolean = false,
+    val isCorrect: Boolean = false,
+    val isSelfEvaluated: Boolean = false,
 )

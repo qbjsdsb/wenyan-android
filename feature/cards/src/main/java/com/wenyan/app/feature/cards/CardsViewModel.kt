@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.cards.CardTemplate
 import com.wenyan.app.core.data.repository.CardRepository
 import com.wenyan.app.core.data.repository.SchedulingRepository
+import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.database.entity.CardTemplateType
 import com.wenyan.app.core.fsrs.Rating
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -46,6 +47,7 @@ class CardsViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val cardRepository: CardRepository,
     private val schedulingRepository: SchedulingRepository,
+    private val wrongAnswerRepository: WrongAnswerRepository,
 ) : ViewModel() {
 
     // 翻转状态（UI 交互层，NF-L2 修复：持久化到 SavedStateHandle）
@@ -169,6 +171,26 @@ class CardsViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 _errorMessage.value = "评分调度失败：${e.message ?: "未知错误"}"
+            }
+
+            // NF-PP5 Wave 3.2: AGAIN 评分时记录错题(无论调度成功与否)。
+            // 卡片复习场景:用户看到 front(问题)→ 翻面 → 评分 AGAIN(未回忆)。
+            // userAnswer 用占位文本(用户未实际输入),correctAnswer 用卡片背面(正确答案)。
+            if (fsrsRating == Rating.AGAIN) {
+                try {
+                    wrongAnswerRepository.recordWrongAnswer(
+                        pointId = pointId,
+                        examQuestionId = null,
+                        userAnswer = "（评分AGAIN：未回忆）",
+                        correctAnswer = current.back,
+                        source = WrongAnswerRepository.SOURCE_CARD_AGAIN,
+                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // 错题记录失败不阻塞主流程(调度已完成),仅设置错误提示
+                    _errorMessage.value = "错题记录失败：${e.message ?: "未知错误"}"
+                }
             }
         }
     }

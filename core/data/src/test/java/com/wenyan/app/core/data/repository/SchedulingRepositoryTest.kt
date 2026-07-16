@@ -51,7 +51,7 @@ class SchedulingRepositoryTest {
         val memoRecordDao = db.memoRecordDao()
         val reviewLogDao = db.reviewLogDao()
         val clockGuard = ClockGuard(db.appMetaDao())
-        repository = SchedulingRepository(db, memoRecordDao, reviewLogDao, clockGuard)
+        repository = SchedulingRepositoryImpl(db, memoRecordDao, reviewLogDao, clockGuard)
 
         // 插入 FK 依赖链:Subject → Chapter → KnowledgePoint
         // MemoRecord FK→KnowledgePoint,reviewLog FK→KnowledgePoint,必须先有 KnowledgePoint

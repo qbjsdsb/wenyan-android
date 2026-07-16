@@ -26,13 +26,16 @@ import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.SmartToy
 import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -74,10 +77,12 @@ import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 fun QuizScreen(
     onNavigateToAiAssistant: () -> Unit = {},
     onNavigateToDetail: (String) -> Unit = {},
+    onNavigateToWrongAnswer: () -> Unit = {},
     viewModel: QuizViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val expandedIds by viewModel.expandedQuestionIds.collectAsStateWithLifecycle()
+    val answers by viewModel.answers.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
     )
@@ -87,6 +92,13 @@ fun QuizScreen(
             WenyanLargeTopAppBar(
                 title = "真题练习",
                 actions = {
+                    // NF-PP5 Wave 3.2: 错题本入口
+                    IconButton(onClick = onNavigateToWrongAnswer) {
+                        Icon(
+                            imageVector = Icons.Default.Inbox,
+                            contentDescription = "错题本",
+                        )
+                    }
                     IconButton(onClick = onNavigateToAiAssistant) {
                         Icon(
                             imageVector = Icons.Default.SmartToy,
@@ -154,7 +166,11 @@ fun QuizScreen(
                         QuestionList(
                             questions = uiState.questions,
                             expandedIds = expandedIds,
+                            answers = answers,
                             onToggleExpanded = viewModel::toggleExpanded,
+                            onUpdateAnswer = viewModel::updateAnswer,
+                            onSubmitAnswer = viewModel::submitAnswer,
+                            onSelfEvaluate = viewModel::selfEvaluate,
                             onNavigateToAiAssistant = onNavigateToAiAssistant,
                             onNavigateToDetail = onNavigateToDetail,
                             contentPadding = PaddingValues(Spacing.lg),
@@ -200,7 +216,11 @@ private fun YearSelector(
 private fun QuestionList(
     questions: List<QuizQuestionItem>,
     expandedIds: Set<String>,
+    answers: Map<String, QuizAnswerState>,
     onToggleExpanded: (String) -> Unit,
+    onUpdateAnswer: (String, String) -> Unit,
+    onSubmitAnswer: (String) -> Unit,
+    onSelfEvaluate: (String, Boolean) -> Unit,
     onNavigateToAiAssistant: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
     contentPadding: PaddingValues,
@@ -214,7 +234,11 @@ private fun QuestionList(
             QuestionCard(
                 question = question,
                 isExpanded = question.id in expandedIds,
+                answerState = answers[question.id] ?: QuizAnswerState(),
                 onToggleExpanded = { onToggleExpanded(question.id) },
+                onUpdateAnswer = { text -> onUpdateAnswer(question.id, text) },
+                onSubmitAnswer = { onSubmitAnswer(question.id) },
+                onSelfEvaluate = { isCorrect -> onSelfEvaluate(question.id, isCorrect) },
                 onNavigateToAiAssistant = onNavigateToAiAssistant,
                 onNavigateToDetail = onNavigateToDetail,
                 modifier = Modifier.animateItem(),
@@ -243,7 +267,11 @@ private fun QuestionList(
 private fun QuestionCard(
     question: QuizQuestionItem,
     isExpanded: Boolean,
+    answerState: QuizAnswerState,
     onToggleExpanded: () -> Unit,
+    onUpdateAnswer: (String) -> Unit,
+    onSubmitAnswer: () -> Unit,
+    onSelfEvaluate: (Boolean) -> Unit,
     onNavigateToAiAssistant: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -314,11 +342,15 @@ private fun QuestionCard(
                 )
             }
 
-            // 7. 答题区（折叠/展开）
+            // 7. 答题区（NF-PP5: 答题输入 + 提交 + 自评 + 折叠/展开参考答案）
             AnswerSection(
                 question = question,
                 isExpanded = isExpanded,
+                answerState = answerState,
                 onToggleExpanded = onToggleExpanded,
+                onUpdateAnswer = onUpdateAnswer,
+                onSubmitAnswer = onSubmitAnswer,
+                onSelfEvaluate = onSelfEvaluate,
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.sm))
@@ -367,110 +399,229 @@ private fun QuestionCard(
 }
 
 /**
- * 答题区组件（折叠/展开）。
+ * 答题区组件（NF-PP5 Wave 3.2 增强：答题输入 + 提交 + 自评 + 参考答案展示）。
  *
- * - HAS_ANSWER 且有答题框架/范文 → 展示"查看答题框架"按钮，展开后显示答题框架 + 范文
- * - NO_ANSWER → 提示"暂无参考答案，可使用AI助手辅助分析"
- * - AI_GENERATED → 展示"查看AI解析"按钮，展开后显示答题框架（标注AI生成）
+ * 三层状态机（由 [answerState] 驱动）：
+ * 1. **未提交**([QuizAnswerState.isSubmitted] = false):
+ *    - OutlinedTextField 答题输入框
+ *    - "提交答案" Button（空白时禁用）
+ * 2. **已提交未自评**([isSubmitted] = true, [isSelfEvaluated] = false):
+ *    - 展示用户答案(锁定不可编辑)
+ *    - 展示参考答案(答题框架 + 范文)
+ *    - "答对了" / "答错了" 两个 FilledTonalButton
+ * 3. **已自评**([isSelfEvaluated] = true):
+ *    - 展示用户答案 + 参考答案
+ *    - 对错反馈(绿色"答对了" / 红色"答错了")
+ *
+ * 无参考答案(answerFramework + sampleEssay 都为空)时:
+ * - NO_ANSWER 状态 → 提示使用AI助手(原 Spec 行为)
+ * - 其他状态 → 不显示答题交互区,仅保留折叠/展开参考答案的逻辑(实际上无内容可展示)
  */
 @Composable
 private fun AnswerSection(
     question: QuizQuestionItem,
     isExpanded: Boolean,
+    answerState: QuizAnswerState,
     onToggleExpanded: () -> Unit,
+    onUpdateAnswer: (String) -> Unit,
+    onSubmitAnswer: () -> Unit,
+    onSelfEvaluate: (Boolean) -> Unit,
 ) {
     val hasFramework = !question.answerFramework.isNullOrBlank()
     val hasEssay = !question.sampleEssay.isNullOrBlank()
+    val hasReference = hasFramework || hasEssay
     val isNoAnswer = question.answerStatus == "NO_ANSWER"
 
-    if (isNoAnswer && !hasFramework) {
-        // Spec：NO_ANSWER 且无答题框架 → 提示使用AI助手
-        Surface(
-            color = MaterialTheme.colorScheme.errorContainer,
-            shape = MaterialTheme.shapes.small,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = Spacing.sm),
-        ) {
-            Text(
-                // P1-5 修复：去除面向用户文案中的技术术语 AI_GENERATED，
-                // 改为用户友好的表述
-                text = "该真题暂无参考答案，可使用AI助手辅助分析（AI 生成内容仅供参考）",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.padding(Spacing.sm),
-            )
+    // 无参考答案 → 提示使用AI助手(原 Spec 行为,不显示答题交互)
+    if (!hasReference) {
+        if (isNoAnswer) {
+            Surface(
+                color = MaterialTheme.colorScheme.errorContainer,
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = Spacing.sm),
+            ) {
+                Text(
+                    // P1-5 修复：去除面向用户文案中的技术术语 AI_GENERATED
+                    text = "该真题暂无参考答案，可使用AI助手辅助分析（AI 生成内容仅供参考）",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(Spacing.sm),
+                )
+            }
         }
         return
     }
 
-    if (!hasFramework && !hasEssay) return
-
-    // 展开/收起按钮
-    TextButton(
-        onClick = onToggleExpanded,
-        modifier = Modifier.padding(top = Spacing.xs),
-    ) {
-        Icon(
-            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-            contentDescription = null,
-            modifier = Modifier.padding(end = Spacing.xs),
-        )
-        Text(if (isExpanded) "收起答案" else "查看答题框架")
-    }
-
-    // 展开内容：答题框架 + 范文
-    AnimatedVisibility(visible = isExpanded) {
-        Column(modifier = Modifier.padding(top = Spacing.xs)) {
-            // 答题框架
-            if (hasFramework) {
+    // ── 答题交互区(NF-PP5 Wave 3.2 新增)─────────────────────────
+    Column(modifier = Modifier.padding(top = Spacing.sm)) {
+        // ── 状态 1: 未提交 → 输入框 + 提交按钮 ──
+        if (!answerState.isSubmitted) {
+            OutlinedTextField(
+                value = answerState.userAnswer,
+                onValueChange = onUpdateAnswer,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("你的答案") },
+                placeholder = { Text("在此输入答案，提交后对照参考答案自评") },
+                minLines = 3,
+                maxLines = 8,
+            )
+            Button(
+                onClick = onSubmitAnswer,
+                enabled = answerState.userAnswer.isNotBlank(),
+                modifier = Modifier
+                    .padding(top = Spacing.xs)
+                    .align(Alignment.End),
+            ) {
+                Text("提交答案")
+            }
+        } else {
+            // ── 状态 2/3: 已提交 → 展示用户答案(锁定) ──
+            Text(
+                text = "你的答案：",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.tertiary,
+            )
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = Spacing.xs),
+            ) {
                 Text(
-                    text = "答题框架：",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.tertiary,
-                )
-                Text(
-                    // P0-T6 修正：原 `question.answerFramework!!`，已由 hasFramework 守护非 null，
-                    // 但用 orEmpty() 更安全（避免重构时守护条件被改而遗留 NPE）。
-                    text = question.answerFramework.orEmpty(),
+                    text = answerState.userAnswer,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = Spacing.xs),
+                    modifier = Modifier.padding(Spacing.sm),
                 )
             }
+        }
 
-            // 范文（标注"范文，非标准答案"）
-            if (hasEssay) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = Spacing.sm),
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                ) {
+        // ── 参考答案区(展开/折叠) ───────────────────────────────
+        TextButton(
+            onClick = onToggleExpanded,
+            modifier = Modifier.padding(top = Spacing.xs),
+        ) {
+            Icon(
+                imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = null,
+                modifier = Modifier.padding(end = Spacing.xs),
+            )
+            Text(if (isExpanded) "收起参考答案" else "查看参考答案")
+        }
+
+        AnimatedVisibility(visible = isExpanded) {
+            Column(modifier = Modifier.padding(top = Spacing.xs)) {
+                // 答题框架
+                if (hasFramework) {
                     Text(
-                        text = "范文",
+                        text = "答题框架：",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.tertiary,
                     )
-                    ContentSourceBadge(
-                        contentSource = ContentSource.TEXTBOOK_NATIVE,
+                    Text(
+                        // P0-T6 修正：用 orEmpty() 替代 !!，更安全
+                        text = question.answerFramework.orEmpty(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = Spacing.xs),
                     )
                 }
+
+                // 范文(标注"范文，非标准答案")
+                if (hasEssay) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = Spacing.sm),
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    ) {
+                        Text(
+                            text = "范文",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.tertiary,
+                        )
+                        ContentSourceBadge(
+                            contentSource = ContentSource.TEXTBOOK_NATIVE,
+                        )
+                    }
+                    Text(
+                        text = "（范文，非标准答案）",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        // P0-T6 修正：用 orEmpty() 替代 !!
+                        text = question.sampleEssay.orEmpty(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = Spacing.xs),
+                    )
+                }
+            }
+        }
+
+        // ── 自评区(仅状态 2/3 显示) ─────────────────────────────
+        if (answerState.isSubmitted) {
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = Spacing.sm),
+                color = MaterialTheme.colorScheme.outlineVariant,
+            )
+
+            if (!answerState.isSelfEvaluated) {
+                // ── 状态 2: 已提交未自评 → 自评按钮 ──
                 Text(
-                    text = "（范文，非标准答案）",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = "对照参考答案，请自评：",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
                 )
-                Text(
-                    // P0-T6 修正：原 `question.sampleEssay!!`，已由 hasEssay 守护非 null，
-                    // 用 orEmpty() 更安全。
-                    text = question.sampleEssay.orEmpty(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = Spacing.xs),
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = Spacing.xs),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    FilledTonalButton(
+                        onClick = { onSelfEvaluate(true) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text("答对了")
+                    }
+                    FilledTonalButton(
+                        onClick = { onSelfEvaluate(false) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text("答错了")
+                    }
+                }
+            } else {
+                // ── 状态 3: 已自评 → 对错反馈 ──
+                val (feedbackText, feedbackColor) = if (answerState.isCorrect) {
+                    "✓ 自评：答对了" to MaterialTheme.colorScheme.primary
+                } else {
+                    "✗ 自评：答错了（已加入错题本）" to MaterialTheme.colorScheme.error
+                }
+                Surface(
+                    color = if (answerState.isCorrect) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.errorContainer
+                    },
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = feedbackText,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = feedbackColor,
+                        modifier = Modifier.padding(Spacing.sm),
+                    )
+                }
             }
         }
     }

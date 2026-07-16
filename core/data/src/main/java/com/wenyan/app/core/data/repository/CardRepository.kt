@@ -13,56 +13,75 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * 卡片仓库（Task 18.3）。
+ * 卡片仓库接口(Task 18.3)。
  *
- * 职责：
- * - 获取今日待复习卡片（[getCardsForReview]）：将 ocr_status='VERIFIED' 的知识点
+ * 职责:
+ * - 获取今日待复习卡片([getCardsForReview]):将 ocr_status='VERIFIED' 的知识点
  *   经 [CardSplitter] 按最小信息原则拆分后转为卡片流。
- * - 根据知识点自动生成卡片（[generateCardsFromKnowledgePoint]）：
- *   名词解释拆5-6张、集合题转分组枚举、易混淆生成区分卡。
  *
- * 遵循 Wozniak 20条规则：严格最小信息原则，避免集合题。
- * 通过构造函数注入 [KnowledgePointDao]（Hilt @Inject），与 [ReviewRepository] 同一约定。
+ * 抽象为接口便于测试替换(Fake 实现),生产环境由 [CardRepositoryImpl] 实现。
+ * 与 [SchedulingRepository] / [ExamRepository] / [GraphRepository] 同一约定。
  *
- * P1 审计修复：map 内含 suspend DAO 查询（generateCardsFromKnowledgePoint → getByIds），
- * 加 .catchAndLog 降级为空列表，避免卡片复习界面崩溃。
+ * @see CardRepositoryImpl
+ */
+interface CardRepository {
+
+    /**
+     * 获取今日待复习卡片流。
+     *
+     * 取 ocr_status='VERIFIED' 的知识点(PENDING 不进复习队列,防背错字),
+     * 逐个调用 [CardRepositoryImpl.generateCardsFromKnowledgePoint] 生成卡片后展平。
+     *
+     * @return 今日待复习卡片流(已按最小信息原则拆分)
+     */
+    fun getCardsForReview(): Flow<List<CardTemplate>>
+}
+
+/**
+ * 卡片仓库实现([CardRepository] 接口的生产实现)。
+ *
+ * 遵循 Wozniak 20条规则:严格最小信息原则,避免集合题。
+ * 通过构造函数注入 [KnowledgePointDao](Hilt @Inject),与 [ReviewRepository] 同一约定。
+ *
+ * P1 审计修复:map 内含 suspend DAO 查询(generateCardsFromKnowledgePoint → getByIds),
+ * 加 .catchAndLog 降级为空列表,避免卡片复习界面崩溃。
  */
 @Singleton
-class CardRepository @Inject constructor(
+class CardRepositoryImpl @Inject constructor(
     private val knowledgePointDao: KnowledgePointDao,
-) {
+) : CardRepository {
 
     private companion object {
-        private const val TAG = "CardRepository"
+        private const val TAG = "CardRepositoryImpl"
     }
 
     /**
      * 获取今日待复习卡片流。
      *
-     * 取 ocr_status='VERIFIED' 的知识点（PENDING 不进复习队列，防背错字），
+     * 取 ocr_status='VERIFIED' 的知识点(PENDING 不进复习队列,防背错字),
      * 逐个调用 [generateCardsFromKnowledgePoint] 生成卡片后展平。
      *
-     * [generateCardsFromKnowledgePoint] 为 suspend 函数（需查询对比知识点标题），
+     * [generateCardsFromKnowledgePoint] 为 suspend 函数(需查询对比知识点标题),
      * 此处利用 [Flow.map] 的 suspend lambda + [Iterable.map] 的 inline 特性
      * 在 Flow 链内安全调用 suspend 函数。
      *
-     * @return 今日待复习卡片流（已按最小信息原则拆分）
+     * @return 今日待复习卡片流(已按最小信息原则拆分)
      */
-    fun getCardsForReview(): Flow<List<CardTemplate>> =
+    override fun getCardsForReview(): Flow<List<CardTemplate>> =
         knowledgePointDao.observeVerifiedForReview().map { verifiedPoints ->
-            // Iterable.map 是 inline 函数，其 lambda 在 suspend 上下文中可调用 suspend 函数
+            // Iterable.map 是 inline 函数,其 lambda 在 suspend 上下文中可调用 suspend 函数
             verifiedPoints.map { generateCardsFromKnowledgePoint(it) }.flatten()
         }.catchAndLog(TAG, "getCardsForReview") { emptyList() }
 
     /**
-     * 根据知识点自动生成卡片（Task 18.3）。
+     * 根据知识点自动生成卡片(Task 18.3)。
      *
-     * 生成策略（遵循 Wozniak 最小信息原则）：
-     * 1. 名词解释：以 [KnowledgePointEntity.title] 为名词、
-     *    [KnowledgePointEntity.fullContent]（缺省取 coreConclusion）为解释，
+     * 生成策略(遵循 Wozniak 最小信息原则):
+     * 1. 名词解释:以 [KnowledgePointEntity.title] 为名词、
+     *    [KnowledgePointEntity.fullContent](缺省取 coreConclusion)为解释,
      *    调 [CardSplitter.splitTermExplanation] 拆成5-6张。
-     * 2. 易混淆区分：若 [KnowledgePointEntity.contrastIds] 非空，通过 DAO 批量查询
-     *    对比知识点的真实标题后生成区分卡（不再用 ID 占位）。
+     * 2. 易混淆区分:若 [KnowledgePointEntity.contrastIds] 非空,通过 DAO 批量查询
+     *    对比知识点的真实标题后生成区分卡(不再用 ID 占位)。
      *
      * @param knowledgePoint 知识点实体
      * @return 自动生成的卡片列表
@@ -71,7 +90,7 @@ class CardRepository @Inject constructor(
         val cards = mutableListOf<CardTemplate>()
         val pointId = knowledgePoint.id
 
-        // 1. 名词解释拆卡（最小信息原则：5-6张）
+        // 1. 名词解释拆卡(最小信息原则:5-6张)
         val definition = knowledgePoint.fullContent.ifBlank {
             knowledgePoint.coreConclusion
         }
@@ -81,7 +100,7 @@ class CardRepository @Inject constructor(
             )
         }
 
-        // 2. 论述要点卡：coreConclusion 作为论述题，summary 拆为关键词
+        // 2. 论述要点卡:coreConclusion 作为论述题,summary 拆为关键词
         val summary = knowledgePoint.summary
         if (!summary.isNullOrBlank()) {
             cards.add(
@@ -97,7 +116,7 @@ class CardRepository @Inject constructor(
             )
         }
 
-        // 3. 易混淆区分卡：对比项 ID 非空时，查询真实标题后生成
+        // 3. 易混淆区分卡:对比项 ID 非空时,查询真实标题后生成
         val contrastIds = knowledgePoint.contrastIds
         if (!contrastIds.isNullOrEmpty()) {
             val distinctionCards = buildDistinctionFromContrast(
@@ -114,9 +133,9 @@ class CardRepository @Inject constructor(
     /**
      * 由对比知识点 ID 列表生成区分卡。
      *
-     * 通过 [KnowledgePointDao.getByIds] 批量查询对比知识点的真实标题，
+     * 通过 [KnowledgePointDao.getByIds] 批量查询对比知识点的真实标题,
      * 确保区分卡正面显示"建安风骨 与 正始风骨"而非"建安风骨 与 kp_0123"。
-     * 若某个对比 ID 无法解析（已删除/无效），跳过该对比项而非用 ID 占位。
+     * 若某个对比 ID 无法解析(已删除/无效),跳过该对比项而非用 ID 占位。
      */
     private suspend fun buildDistinctionFromContrast(
         mainTerm: String,
