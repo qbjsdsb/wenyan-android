@@ -1,10 +1,6 @@
-package com.wenyan.app.core.data
+package com.wenyan.app.core.designsystem.theme
 
 import app.cash.turbine.test
-import com.wenyan.app.core.data.repository.ThemeRepository
-import com.wenyan.app.core.designsystem.theme.ColorMode
-import com.wenyan.app.core.designsystem.theme.ThemeConfig
-import com.wenyan.app.core.designsystem.theme.WenyanPaletteStyle
 import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,6 +17,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * ThemeViewModel 单元测试（P1-8 修复：从 core/data 迁入 core/designsystem）。
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ThemeViewModelTest {
 

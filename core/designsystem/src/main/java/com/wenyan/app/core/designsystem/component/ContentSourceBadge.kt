@@ -15,18 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-
-/**
- * 内容来源标注类型（Spec Task 24 五级标注 + 1 特殊状态）。
- */
-object ContentSource {
-    const val TEXTBOOK_NATIVE = "TEXTBOOK_NATIVE"
-    const val TEXTBOOK_OCR = "TEXTBOOK_OCR"
-    const val AI_GENERATED = "AI_GENERATED"
-    const val HYBRID = "HYBRID"
-    const val USER_CREATED = "USER_CREATED"
-    const val MISSING = "MISSING"
-}
+import com.wenyan.app.core.common.model.ContentSource
 
 /**
  * 内容来源五级颜色标签组件（M3 Expressive 主题角色色版）。

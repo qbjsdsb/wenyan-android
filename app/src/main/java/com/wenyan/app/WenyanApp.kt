@@ -8,13 +8,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.wenyan.app.core.data.ThemeViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.wenyan.app.core.designsystem.component.WenyanAdaptiveNavigation
 import com.wenyan.app.core.designsystem.component.WenyanNavItem
+import com.wenyan.app.core.designsystem.theme.ThemeViewModel
 import com.wenyan.app.core.designsystem.theme.WenyanTheme
 import com.wenyan.app.navigation.TopLevelDestination
 import com.wenyan.app.navigation.WenyanNavHost

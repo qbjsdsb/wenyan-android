@@ -35,7 +35,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.wenyan.app.core.data.ThemeViewModel
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.GroupedCard
 import com.wenyan.app.core.designsystem.component.GroupedCardDivider
@@ -43,6 +42,7 @@ import com.wenyan.app.core.designsystem.component.GroupedCardItem
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.designsystem.theme.ColorMode
+import com.wenyan.app.core.designsystem.theme.ThemeViewModel
 import com.wenyan.app.core.designsystem.theme.WenyanPaletteStyle
 import com.wenyan.app.feature.settings.BuildConfig
 

@@ -470,5 +470,7 @@ private class FakeAiService(
 
     override fun chat(query: String): Flow<String> = flowOf(response)
 
+    override fun chatResult(query: String): Flow<Result<String>> = flowOf(Result.success(response))
+
     override fun isAvailable(): Flow<Boolean> = flowOf(true)
 }

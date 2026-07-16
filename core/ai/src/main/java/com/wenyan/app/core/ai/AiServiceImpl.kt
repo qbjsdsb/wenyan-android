@@ -111,6 +111,69 @@ class AiServiceImpl @Inject constructor(
     }.flowOn(Dispatchers.IO)
 
     /**
+     * 发送对话消息，返回 Result 包装的响应（P1-6 修复）。
+     *
+     * 与 [chat] 的逻辑一致，但失败时 emit `Result.failure(exception)` 而非
+     * emit 错误字符串，让调用方可区分成功/失败做短路。
+     *
+     * 错误信息与 [chat] 保持一致（HTTP 错误码差异化 + 网络异常差异化），
+     * 调用方可用 `result.exceptionOrNull()?.message` 获取提示。
+     */
+    override fun chatResult(query: String): Flow<Result<String>> = flow {
+        val config = llmConfigProvider.getCurrentConfig()
+        if (config == null) {
+            emit(Result.failure(IllegalStateException(OFFLINE_MESSAGE)))
+            return@flow
+        }
+
+        try {
+            val service = createLlmApiService(config)
+            val request = ChatRequest(
+                model = config.model,
+                messages = listOf(
+                    ChatMessage(role = "system", content = SYSTEM_PROMPT),
+                    ChatMessage(role = "user", content = query),
+                ),
+                temperature = config.temperature,
+                maxTokens = config.maxTokens,
+                stream = false,
+            )
+            val authorization = "Bearer ${config.apiKey}"
+            val response = service.chatCompletion(authorization, request)
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                val content = body?.choices?.firstOrNull()?.message?.content
+                if (content != null) {
+                    emit(Result.success(content))
+                } else {
+                    emit(Result.failure(IllegalStateException(EMPTY_RESPONSE_MESSAGE)))
+                }
+            } else {
+                val code = response.code()
+                val msg = when (code) {
+                    401, 403 -> "API Key 无效或已过期（HTTP $code），请检查配置"
+                    in 500..599 -> "AI 服务端错误（HTTP $code），请稍后重试"
+                    else -> "API 调用失败（HTTP $code）：${response.message()}"
+                }
+                emit(Result.failure(IllegalStateException(msg)))
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: SocketTimeoutException) {
+            emit(Result.failure(SocketTimeoutException("请求超时，请检查网络连接后重试")))
+        } catch (e: UnknownHostException) {
+            emit(Result.failure(UnknownHostException("无法连接到 AI 服务，请检查网络或 baseUrl 配置")))
+        } catch (e: SerializationException) {
+            emit(Result.failure(SerializationException("AI 响应解析失败：${e.message}")))
+        } catch (e: IOException) {
+            emit(Result.failure(IOException("网络错误，请检查网络连接：${e.message}")))
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    /**
      * 检查 AI 服务是否可用。
      *
      * @return true 表示有配置的 API 服务商（不代表网络一定通）

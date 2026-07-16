@@ -35,7 +35,10 @@ android {
 
 dependencies {
     implementation(project(":core:common"))
-    implementation(project(":core:designsystem"))
+    // P1-8 修复：删除 implementation(project(":core:designsystem")) 反向依赖。
+    // 原依赖仅为 ThemeViewModel / ThemeRepository 服务，相关类已迁入 core/designsystem。
+    // core/data 现仅用 androidx.compose.runtime.Immutable（@Immutable 注解，由
+    // androidx.compose.runtime 提供），无需 designsystem 模块。
     api(project(":core:database"))
     api(project(":core:fsrs"))
     api(project(":core:ai"))

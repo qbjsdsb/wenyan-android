@@ -1,12 +1,8 @@
-package com.wenyan.app.core.data
+package com.wenyan.app.core.designsystem.theme
 
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.wenyan.app.core.data.repository.ThemeRepository
-import com.wenyan.app.core.designsystem.theme.ColorMode
-import com.wenyan.app.core.designsystem.theme.ThemeConfig
-import com.wenyan.app.core.designsystem.theme.WenyanPaletteStyle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.SharingStarted
@@ -20,7 +16,10 @@ import javax.inject.Inject
  *
  * 将 [ThemeRepository] 的 [ThemeConfig] Flow 转换为 [StateFlow] 供 Compose 消费。
  *
- * 放在 core:data 模块中以避免 :app → :feature:settings → :app 循环依赖。
+ * P1-8 修复：从 core/data 迁入 core/designsystem。
+ * 原注释"放在 core/data 模块中以避免 :app → :feature:settings → :app 循环依赖"
+ * 已不成立——迁入 designsystem 后，:app / :feature:settings 通过 :core:designsystem
+ * 共享 ThemeViewModel，仍无循环依赖，且消除了 core/data → core/designsystem 反向依赖。
  */
 @HiltViewModel
 class ThemeViewModel @Inject constructor(

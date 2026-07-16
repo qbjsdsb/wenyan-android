@@ -5,8 +5,13 @@ import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.dao.MemoRecordDao
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,7 +29,13 @@ import javax.inject.Singleton
  *
  * P1 审计修复：combine/map 链加 .catchAndLog，DAO 异常时降级为空列表/0，
  * 避免 ViewModel collect 崩溃导致 UI 永久 failed。
+ *
+ * P1-1 修复：[getReviewQueue] / [getPendingReviewCount] 加 [tickFlow] + [flatMapLatest]
+ * 周期刷新。Room @Query 返回的 Flow 仅在表数据变化时重新查询，即使 SQL 内用
+ * `strftime('%s','now')` 也不会随时间推移自动触发。每 60s 重新订阅 [MemoRecordDao.observeDue]
+ * 让新到期的卡片自动进入复习队列，无需用户手动刷新或评分触发。
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class ReviewRepository @Inject constructor(
     private val knowledgePointDao: KnowledgePointDao,
@@ -33,6 +44,30 @@ class ReviewRepository @Inject constructor(
 
     private companion object {
         private const val TAG = "ReviewRepository"
+
+        /**
+         * 复习队列自动刷新间隔（P1-1 修复）。
+         *
+         * 60s 足以让用户感知"卡片到期"的及时性（FSRS 最小间隔为分钟级学习步），
+         * 同时避免过于频繁的数据库查询消耗电量。
+         */
+        private const val REFRESH_INTERVAL_MS = 60_000L
+    }
+
+    /**
+     * 周期性 tick 流（P1-1 修复）。
+     *
+     * 每 [REFRESH_INTERVAL_MS] 发射一次，用于触发 [flatMapLatest] 重新订阅
+     * 依赖时间的 DAO Flow（[MemoRecordDao.observeDue]）。
+     *
+     * 注意：tickFlow 是冷流，仅在有订阅者时才发射，无订阅者时不消耗资源。
+     * 订阅者取消时（如 ViewModel onCleared）自动停止 delay。
+     */
+    private val tickFlow: Flow<Unit> = flow {
+        while (true) {
+            emit(Unit)
+            delay(REFRESH_INTERVAL_MS)
+        }
     }
 
     /**
@@ -45,14 +80,27 @@ class ReviewRepository @Inject constructor(
      * 与 [getPendingReviewCount] 保持语义一致：队列长度 = 待复习数量。
      *
      * 如需获取全部 VERIFIED 知识点（含未到期），使用 [getAllVerifiedKnowledgePoints]。
+     *
+     * P1-1 修复：原实现直接 `combine(observeVerifiedForReview, observeDue)`，
+     * Room Flow 仅在表数据变化时重新查询，observeDue 内的 `strftime('%s','now')`
+     * 不会随时间推移自动触发刷新。用户长时间不操作时，新到期的卡片不会进入队列。
+     * 现用 [tickFlow] + [flatMapLatest] 每 60s 重新订阅 observeDue，
+     * 让到期的卡片自动进入复习队列。
+     *
+     * [distinctUntilChanged] 过滤重复值，避免 tick 触发但内容未变时 UI 无谓重组。
      */
-    fun getReviewQueue(): Flow<List<KnowledgePointEntity>> = combine(
-        knowledgePointDao.observeVerifiedForReview(),
-        memoRecordDao.observeDue(),
-    ) { verifiedPoints, dueRecords ->
-        val dueIds = dueRecords.map { it.pointId }.toSet()
-        verifiedPoints.filter { it.id in dueIds }
-    }.catchAndLog(TAG, "getReviewQueue") { emptyList() }
+    fun getReviewQueue(): Flow<List<KnowledgePointEntity>> = tickFlow
+        .flatMapLatest {
+            combine(
+                knowledgePointDao.observeVerifiedForReview(),
+                memoRecordDao.observeDue(),
+            ) { verifiedPoints, dueRecords ->
+                val dueIds = dueRecords.map { it.pointId }.toSet()
+                verifiedPoints.filter { it.id in dueIds }
+            }
+        }
+        .distinctUntilChanged()
+        .catchAndLog(TAG, "getReviewQueue") { emptyList() }
 
     /**
      * 获取所有已 VERIFIED 的知识点（不过滤到期状态）。
@@ -80,14 +128,22 @@ class ReviewRepository @Inject constructor(
      * 合并 VERIFIED 知识点流与到期记忆记录流，过滤出 VERIFIED 中到期的数量。
      * 到期判断使用 SQLite 内置时间（strftime），避免 System.currentTimeMillis()
      * 在 Flow 构建时固定导致长时间运行后计数失效。
+     *
+     * P1-1 修复：同 [getReviewQueue]，用 [tickFlow] + [flatMapLatest] 周期刷新。
+     * [distinctUntilChanged] 过滤重复值，避免 tick 触发但数量未变时 UI 无谓重组。
      */
-    fun getPendingReviewCount(): Flow<Int> = combine(
-        knowledgePointDao.observeVerifiedForReview(),
-        memoRecordDao.observeDue(),
-    ) { verifiedPoints, dueRecords ->
-        val verifiedIds = verifiedPoints.map { it.id }.toSet()
-        dueRecords.count { it.pointId in verifiedIds }
-    }.catchAndLog(TAG, "getPendingReviewCount") { 0 }
+    fun getPendingReviewCount(): Flow<Int> = tickFlow
+        .flatMapLatest {
+            combine(
+                knowledgePointDao.observeVerifiedForReview(),
+                memoRecordDao.observeDue(),
+            ) { verifiedPoints, dueRecords ->
+                val verifiedIds = verifiedPoints.map { it.id }.toSet()
+                dueRecords.count { it.pointId in verifiedIds }
+            }
+        }
+        .distinctUntilChanged()
+        .catchAndLog(TAG, "getPendingReviewCount") { 0 }
 
     /**
      * "待校对"区：返回所有 ocr_status='PENDING' 的知识点。

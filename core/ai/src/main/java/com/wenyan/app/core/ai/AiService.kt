@@ -33,10 +33,28 @@ interface AiService {
      * - 增强点：区分资料原文与 AI 生成内容（内容来源五级标注）
      * - 增强点：RAG 无结果时不编造答案，明确告知用户
      *
+     * 注意：本方法把所有异常吞为 emit(errorString)，调用方无法区分"AI 真实回复"
+     * vs"错误提示字符串"。需要区分的场景请用 [chatResult]。
+     *
      * @param query 用户提问
-     * @return 流式 AI 回复片段
+     * @return 流式 AI 回复片段（失败时 emit 错误提示字符串）
      */
     fun chat(query: String): Flow<String>
+
+    /**
+     * 发送对话消息，返回 Result 包装的流式响应（P1-6 修复）。
+     *
+     * 与 [chat] 的区别：
+     * - 成功：emit `Result.success(content)`
+     * - 失败：emit `Result.failure(exception)`，异常 message 含差异化提示
+     *
+     * 用途：调用方需要区分成功/失败以做短路（如 [SocraticTutor.guideEssayAnswer]
+     * 三阶段：阶段1失败时不执行阶段2/3，避免错误字符串层层传播）。
+     *
+     * @param query 用户提问
+     * @return 流式 Result，success 为 AI 回复内容，failure 为异常（含差异化错误信息）
+     */
+    fun chatResult(query: String): Flow<Result<String>>
 
     /**
      * 判断当前是否在线可用（设计文档 3.6.5 离线降级支持）。

@@ -28,6 +28,11 @@ class FakeAiService(
         emit(response)
     }
 
+    override fun chatResult(query: String): Flow<Result<String>> = flow {
+        throwException?.let { emit(Result.failure(it)); return@flow }
+        emit(Result.success(response))
+    }
+
     override fun isAvailable(): Flow<Boolean> = flowOf(available)
 }
 

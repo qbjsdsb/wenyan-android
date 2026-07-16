@@ -1,5 +1,6 @@
-package com.wenyan.app.core.data.repository
+package com.wenyan.app.core.designsystem.theme
 
+import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.core.DataStore
@@ -8,11 +9,8 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.wenyan.app.core.data.util.catchAndLog
-import com.wenyan.app.core.designsystem.theme.ColorMode
-import com.wenyan.app.core.designsystem.theme.ThemeConfig
-import com.wenyan.app.core.designsystem.theme.WenyanPaletteStyle
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
@@ -31,8 +29,13 @@ import javax.inject.Inject
  * valueOf 抛 IllegalArgumentException → themeConfig Flow 崩溃 → 整个 App 主题系统瘫痪。
  * 改为 runCatching { valueOf(...) }.getOrNull() ?: DEFAULT，遇到非法值降级为默认值。
  *
- * P1 审计修复：themeConfig Flow 加 .catchAndLog，DataStore IO 异常（磁盘满/文件损坏）
+ * P1 审计修复：themeConfig Flow 加 .catch，DataStore IO 异常（磁盘满/文件损坏）
  * 时降级为默认 ThemeConfig，避免 App 启动时主题系统崩溃导致白屏。
+ *
+ * P1-8 修复：从 core/data 迁入 core/designsystem。
+ * 原 `.catchAndLog(TAG, ...) { ThemeConfig() }` 扩展在 core/data/util/FlowExt.kt，
+ * 迁移后 designsystem 不应反向依赖 core/data。改为直接用 `.catch { }` 内联实现，
+ * 保持行为一致（记日志 + emit 降级值）。
  */
 class ThemeRepositoryImpl @Inject constructor(
     private val dataStore: DataStore<Preferences>,
@@ -47,7 +50,10 @@ class ThemeRepositoryImpl @Inject constructor(
             dynamicColor = prefs[DYNAMIC_COLOR_KEY] ?: true,
             seedColor = Color(prefs[SEED_COLOR_KEY] ?: DEFAULT_SEED_COLOR_ARGB),
         )
-    }.catchAndLog(TAG, "themeConfig") { ThemeConfig() }
+    }.catch { e ->
+        Log.e(TAG, "themeConfig failed: ${e.message}", e)
+        emit(ThemeConfig())
+    }
 
     /** 解析 ColorMode，非法值降级为 SYSTEM */
     private fun parseColorMode(name: String): ColorMode? =

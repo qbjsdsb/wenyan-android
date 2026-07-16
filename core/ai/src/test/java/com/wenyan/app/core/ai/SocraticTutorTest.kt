@@ -160,12 +160,21 @@ class SocraticTutorTest {
 
 /**
  * [AiService] 的 Fake 实现，供单元测试使用。
+ *
+ * P1-6 修复：新增 [chatResult] 实现，支持 [failureException] 模拟失败场景。
+ * - [failureException] 非 null 时，chatResult() emit Result.failure(exception)
+ * - 否则 emit Result.success(response)
  */
 class FakeAiService(
     var response: String = "默认 AI 回复",
+    var failureException: Throwable? = null,
 ) : AiService {
 
     override fun chat(query: String): Flow<String> = flowOf(response)
+
+    override fun chatResult(query: String): Flow<Result<String>> = flowOf(
+        failureException?.let { Result.failure(it) } ?: Result.success(response),
+    )
 
     override fun isAvailable(): Flow<Boolean> = flowOf(true)
 }
