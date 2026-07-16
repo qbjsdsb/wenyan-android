@@ -1,6 +1,8 @@
 package com.wenyan.app.core.data.di
 
 import com.wenyan.app.core.ai.LlmConfigProvider
+import com.wenyan.app.core.data.repository.ChatRepository
+import com.wenyan.app.core.data.repository.ChatRepositoryImpl
 import com.wenyan.app.core.data.repository.GraphRepository
 import com.wenyan.app.core.data.repository.GraphRepositoryImpl
 import com.wenyan.app.core.data.repository.LlmConfigProviderImpl
@@ -39,4 +41,15 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindLlmConfigProvider(impl: LlmConfigProviderImpl): LlmConfigProvider
+
+    /**
+     * 绑定 [ChatRepository] 到 [ChatRepositoryImpl](NF-PP6 Wave 2.3)。
+     *
+     * ChatRepositoryImpl 通过 @Inject constructor 注入 ChatConversationDao +
+     * ChatMessageDao + DataStore<Preferences>,DAO 由 DatabaseModule 提供,
+     * DataStore 由 DataStoreModule 提供。
+     */
+    @Binds
+    @Singleton
+    abstract fun bindChatRepository(impl: ChatRepositoryImpl): ChatRepository
 }
