@@ -172,16 +172,21 @@ class QuizViewModel @Inject constructor(
     }
 
     /**
-     * 提交答案(NF-PP5 Wave 3.2)。
+     * 提交答案(NF-PP5 Wave 3.2 + v0.7.3 P0 修复)。
      *
      * 标记答案为已提交,UI 随后展示参考答案 + 自评按钮。
-     * 空白答案不允许提交。仅对有参考答案(answerFramework/sampleEssay)的题目有效。
+     * 空白答案不允许提交。
+     *
+     * v0.7.3 P0 修复:移除 `if (!hasReference) return` 阻断逻辑。
+     * 原实现要求题目必须有参考答案才允许提交,导致 481 道无答案真题
+     * (answerFramework/sampleEssay 均为 null)无法进入自评流程,
+     * 错题本(SOURCE_QUIZ_WRONG)永不写入。
+     * 现允许无答案题目也提交:用户输入答案后可自评,
+     * 自评错误时 correctAnswer 字段降级为"暂无参考答案"占位文本,
+     * 错题本仍会记录用户答案与题目关联,后续可通过 AI 助手补全。
      */
     fun submitAnswer(questionId: String) {
         val question = _uiState.value.questions.find { it.id == questionId } ?: return
-        // 仅对有参考答案的题目允许答题
-        val hasReference = !question.answerFramework.isNullOrBlank() || !question.sampleEssay.isNullOrBlank()
-        if (!hasReference) return
 
         val currentAnswer = _answers.value[questionId]?.userAnswer ?: ""
         if (currentAnswer.isBlank()) return
@@ -192,7 +197,7 @@ class QuizViewModel @Inject constructor(
             current + (questionId to existing.copy(isSubmitted = true))
         }
 
-        // 自动展开参考答案区(让用户对照参考答案自评)
+        // 自动展开参考答案区(让用户对照参考答案自评;无答案时展示自评引导)
         _expandedQuestionIds.update { it + questionId }
         savedStateHandle["expandedQuestionIds"] = ArrayList(_expandedQuestionIds.value)
     }
@@ -219,11 +224,16 @@ class QuizViewModel @Inject constructor(
         if (!isCorrect) {
             viewModelScope.launch {
                 try {
+                    // v0.7.3 P0:无参考答案时 correctAnswer 降级为占位文本,
+                    // 避免传 null 到错题本导致 UI 显示异常,后续可通过 AI 助手补全
+                    val correctAnswer = question.sampleEssay
+                        ?: question.answerFramework
+                        ?: "（暂无参考答案，可使用 AI 助手生成）"
                     wrongAnswerRepository.recordWrongAnswer(
                         pointId = null,
                         examQuestionId = questionId,
                         userAnswer = answer.userAnswer,
-                        correctAnswer = question.sampleEssay ?: question.answerFramework,
+                        correctAnswer = correctAnswer,
                         source = WrongAnswerRepository.SOURCE_QUIZ_WRONG,
                     )
                 } catch (e: CancellationException) {

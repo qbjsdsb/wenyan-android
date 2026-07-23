@@ -229,18 +229,31 @@ private fun FlipCard(
             // template 为 null 时降级为 front/back 纯文本（向后兼容）
             //
             // 关键：用 showBack（derivedStateOf）而非 isFlipped 决定显示正/反面，
-            // 确保内容切换与动画同步在 rotation>90° 那一帧发生（卡侧消失瞬间），
-            // 用户视觉上感知不到内容切换，也不会看到镜像文字。
+            // 确保内容切换与动画同步在 rotation>90° 那一帧发生（卡侧消失瞬间）。
+            //
+            // v0.7.3 P0 修复（镜像文字）：父 Card 容器 rotationY=0→180° 翻转，
+            // 背面内容（rotation=180° 时）会被父层镜像投影成左右翻转的文字。
+            // 原注释声称"背面内容本身是正向的,所以用户看到的是正常的背面"是错误推断——
+            // graphicsLayer 的 rotationY 会镜像所有子内容,无论子内容本身是否正向。
+            // 修复：给内容层加反向 rotationY=180° 抵消父层镜像（180+180=360=0）。
+            // 仅在 showBack=true 时应用反向旋转,正面内容不受影响。
             val template = card.template
-            if (template != null) {
-                CardContent(card = template, isFlipped = showBack)
-            } else {
-                Text(
-                    text = if (showBack) card.back else card.front,
-                    style = MaterialTheme.typography.headlineMedium,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(Spacing.xl),
-                )
+            Box(
+                modifier = Modifier.graphicsLayer {
+                    rotationY = if (showBack) 180f else 0f
+                },
+                contentAlignment = Alignment.Center,
+            ) {
+                if (template != null) {
+                    CardContent(card = template, isFlipped = showBack)
+                } else {
+                    Text(
+                        text = if (showBack) card.back else card.front,
+                        style = MaterialTheme.typography.headlineMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(Spacing.xl),
+                    )
+                }
             }
         }
     }
@@ -285,10 +298,9 @@ private fun RatingButtons(onRate: (CardRating) -> Unit) {
  * 提取为纯函数便于测试。注意 [androidx.compose.animation.core.animateFloatAsState]
  * 会在每帧更新 rotation，本函数在每帧被调用以决定内容切换时机。
  *
- * 修复镜像 bug 的核心：原实现用 [if (isFlipped)] 硬切内容，与 rotation 动画时序错位，
- * 导致用户在 rotation 0→90° 区间看到背面内容（被正向投影渲染），
- * 在 rotation 90°→180° 区间看到镜像文字（被 3D 投影左右镜像）。
- * 用本函数后，内容切换发生在 rotation>90° 那一帧，背面内容立即以正向方向渲染（虽然外层
- * graphicsLayer 仍在 rotation，但背面内容本身是正向的，所以用户看到的是正常的背面）。
+ * v0.7.3 修正注释：原注释声称"背面内容立即以正向方向渲染（虽然外层 graphicsLayer
+ * 仍在 rotation，但背面内容本身是正向的）"——这是错误推断。graphicsLayer 的 rotationY
+ * 会镜像所有子内容。真正的镜像修复在 FlipCard 的内容层加了反向 rotationY=180° 抵消。
+ * 本函数仅决定何时切换正/反面内容，不负责解除镜像。
  */
 internal fun shouldShowBack(rotation: Float): Boolean = rotation > 90f

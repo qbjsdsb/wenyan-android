@@ -367,8 +367,12 @@ class SeedDataLoader @Inject constructor(
      * 导入知识图谱骨架数据。
      *
      * 包括：
-     * - 南师大现当代文学考点骨架（7 位作家节点 + 作家关系）
+     * - 南师大现当代文学考点骨架（13 位作家节点 + 12 条作家关系）
      * - 体裁×时段二维矩阵骨架（6 节点 + 8 关系）
+     * - 文学流派/社团骨架（v0.7.3 新增：14 节点 + 流派关系）
+     *
+     * v0.7.3 更新：节点总数从 13 扩充至 40+，大部分节点关联真实知识点 ID，
+     * 用户点击图谱节点可跳转到对应知识点详情页。
      */
     private suspend fun importGraphSkeleton() {
         // 南师大现当代文学考点骨架
@@ -378,6 +382,10 @@ class SeedDataLoader @Inject constructor(
         // 体裁×时段二维矩阵骨架
         GraphSkeleton.GENRE_PERIOD_MATRIX.forEach { graphRepository.insertNode(it) }
         GraphSkeleton.GENRE_PERIOD_RELATIONS.forEach { graphRepository.insertEdge(it) }
+
+        // v0.7.3 新增：文学流派/社团骨架
+        GraphSkeleton.LITERARY_SCHOOLS.forEach { graphRepository.insertNode(it) }
+        GraphSkeleton.LITERARY_SCHOOL_RELATIONS.forEach { graphRepository.insertEdge(it) }
     }
 
     companion object {
