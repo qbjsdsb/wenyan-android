@@ -145,8 +145,30 @@ git push origin main
 
 - **沙箱路径**：`/workspace`（不是 `D:\wenyan`）
 - **JDK 17 路径**：`/root/.local/share/mise/installs/java/17.0.2`
-- **Android SDK 路径**：`/opt/android-sdk`
-- **Gradle 8.14.4**：通过 mise 安装，命令 `gradle`（无 gradlew wrapper）
-- **JAVA_TOOL_OPTIONS**：必须设置 `-XX:-UseContainerSupport`（JDK 17.0.2 cgroup v2 bug）
+- **Android SDK 路径**：`/opt/android-sdk`（cmdline-tools/latest + platform-tools 37.0.0 + platforms;android-35 + build-tools;35.0.0）
+- **Gradle 8.14.4**：通过 mise 安装（命令 `gradle`），仓库也含 `./gradlew` wrapper（2026-07-23 补齐）
+- **JAVA_TOOL_OPTIONS**：必须设置 `-XX:-UseContainerSupport`（JDK 17.0.2 cgroup v2 bug），且 Robolectric 测试需代理 `-Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=18080`（已写入 mise.toml）
+- **环境变量**：每次新会话需重新 source（沙箱不持久化）：`export ANDROID_HOME=/opt/android-sdk && export ANDROID_SDK_ROOT=/opt/android-sdk && export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH && export JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2`
+- **CI=true 绕过**：`app/build.gradle.kts` 第 71 行 release keystore fail-fast 在配置阶段抛异常，沙箱跑 debug 任务需 `unset CI && export CI=false`
+- **4GB cgroup OOM**：默认 `-Xmx2048m -XX:MaxMetaspaceSize=1g` + 多 worker 会 OOM，沙箱用 `-Xmx1536m -XX:MaxMetaspaceSize=768m --max-workers=1 -Dorg.gradle.parallel=false` 覆盖（详见 [03-FAILED-ATTEMPTS.md #015](03-FAILED-ATTEMPTS.md)）
 - **沙箱不保留状态**：会话结束即清空，所有改动必须 commit + push 到 GitHub
 - **GitHub token**：由用户提供，不写入仓库（环境变量或临时使用）
+
+### 沙箱构建命令模板（已验证可用）
+
+```bash
+# 环境准备（每次新会话）
+export ANDROID_HOME=/opt/android-sdk
+export ANDROID_SDK_ROOT=/opt/android-sdk
+export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+export JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2
+unset CI && export CI=false
+
+# 编译验证
+./gradlew assembleDebug --no-daemon --max-workers=1 -Dorg.gradle.parallel=false \
+  -Dorg.gradle.jvmargs="-Xmx1536m -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8 -XX:+UseParallelGC -XX:-UseContainerSupport"
+
+# 测试验证
+./gradlew testDebugUnitTest --no-daemon --max-workers=1 -Dorg.gradle.parallel=false \
+  -Dorg.gradle.jvmargs="-Xmx1536m -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8 -XX:+UseParallelGC -XX:-UseContainerSupport"
+```

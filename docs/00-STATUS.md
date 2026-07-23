@@ -1,41 +1,62 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-07-16
+> 最后更新：2026-07-23
 
 ## ✅ 当前状态
 
-**v0.7.0 已发布 — 909 知识点逐字校对版，App 首次有实际学习内容** — 258 tests 0 failures。
+**v0.7.2 已发布 + 沙箱编译验证全绿** — 909 知识点正常导入（FK 回滚 bug 已修），258 tests 0 failures。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `2f2621b`（main，接入 909 知识点 + study_text + v0.7.0） |
-| 最新 Release | **[v0.7.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.7.0)**（2026-07-16 19:50 UTC，本地构建 + GitHub API 上传，debug 签名 fallback） |
-| 测试 | **258 tests 0 failures 0 errors** |
-| 知识点 | **909 个**（古代文学 460 / 文学理论 183 / 现当代 149 / 外国 117） |
-| 阻塞 | **CI 账单问题** — 35 个 commit 待 CI 验证（不影响 Release，已通过 API 绕过） |
-| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节 |
+| 最新 commit | `bdb4473`（main，沙箱验证文档） |
+| 最新 Release | **[v0.7.2](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.7.2)**（2026-07-16，debug 签名 fallback，修复 GraphSkeleton FK 回滚） |
+| 沙箱验证 | **assembleDebug SUCCESSFUL**（4m 34s，APK 27MB）+ **testDebugUnitTest 258 tests 0 failures 0 errors** |
+| 知识点 | **909 个**（古代文学 460 / 文学理论 183 / 现当代 149 / 外国 117）— v0.7.2 修复后正常导入 |
+| 阻塞 | **CI 账单问题** — 38+ commit 待 CI 验证（不影响 Release，已通过 API 绕过） |
+| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-23 沙箱验证） |
 
 ## 🚨 新会话首要任务
 
-**v0.7.0 Release 已成功发布**（2026-07-16，Release ID 355323043）：
-- Release URL：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.7.0
-- 2 个 APK assets 已上传（18.7 MB each，debug 签名 fallback）：
-  - `wenyan-v0.7.0.apk`（asset_id 479566728）
-  - `wenyan-latest.apk`（asset_id 479566777）
-- 核心更新：接入 909 知识点（0→909）+ study_text 字段 + seed version 2.1.0 触发升级
+**v0.7.2 已修复知识点不显示根因**（2026-07-16）：
+- 根因：`GraphSkeleton.SUBJECT_ID = "subject-modern-contemporary-literature"` 与 seed_data.json 实际 id `"subj_02"` 不匹配，FK 约束失败导致整个 `withTransaction` 回滚，909 知识点 + memo_records + exam_questions 全部丢失
+- 修复（双保险）：① SUBJECT_ID 改为 `"subj_02"` ② `importGraphSkeleton` 移出主 `withTransaction` 独立 try-catch ③ seed version 2.1.0 → 2.2.0 触发重新导入
+- Release URL：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.7.2
+
+**v0.7.2 沙箱编译验证已完成**（2026-07-23，详见 [03-FAILED-ATTEMPTS.md #015](03-FAILED-ATTEMPTS.md)）：
+- 沙箱环境：JDK 17.0.2 + Android SDK 35 + Gradle 8.14.4
+- 补齐缺失的 `gradlew` / `gradlew.bat` / `gradle-wrapper.jar`（之前从未入仓库，CI runner 无法用 wrapper 启动）
+- 修复 `CardsViewModelTest.kt` 类型错误（`FakeStudyProgressRepository` 是工厂函数不能用作类型）
+- assembleDebug + testDebugUnitTest 全绿，258 tests 0 failures
 
 **P0 待办**（无需用户干预）：
 - GitHub Actions 账单问题：AI 无法解决，需用户充值或解除限制
 - 账单恢复后可重打 tag 触发正式签名 Release（可选，debug 签名 APK 已可用）
 
 **新会话可立即开始的 P1 任务**：
-1. 跑 emulator 实测 v0.7.0（909 知识点展示 + 错题本 + AI 对话持久化 + FSRS 调度）
-2. 接入 3 个新资源文件（exam_code_history.json 替代数据库表 / reference_catalog.json 设置页展示来源 / error_dict.json OCR 修正展示）
+1. 跑 emulator 实测 v0.7.2（909 知识点展示 + FSRS 调度 + 错题本 + AI 对话持久化 + 图谱 R 值）
+2. **P2 优化项（非阻塞）**：`app/build.gradle.kts` 第 71 行 release keystore fail-fast 应移到 task 执行阶段（当前在配置阶段抛异常，即使只跑 debug 任务也会触发，沙箱需 `unset CI` 绕过）
 3. v0.5.0 Phase 2 剩余维度审计（strings.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
 4. 启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
 
-## 🆕 最新改动（2026-07-16）
+## 🆕 最新改动（2026-07-23 沙箱验证）
+
+**沙箱编译验证 v0.7.2 全部通过**（2 commits）：
+
+| commit | 内容 |
+|--------|------|
+| `447d404` | fix(build): 补齐缺失的 gradlew wrapper + 修复 CardsViewModelTest 类型错误 |
+| `bdb4473` | docs: 记录沙箱编译验证 v0.7.2 结果与构建踩坑 |
+
+**v0.7.0 → v0.7.1 → v0.7.2 知识点不显示排查链**（详见 [SESSION_LOG.md](SESSION_LOG.md) 2026-07-16 条目）：
+
+| 版本 | commit | 状态 | 内容 |
+|------|--------|------|------|
+| v0.7.0 | `2f2621b` | ❌ 知识点不显示 | 接入 909 知识点 + study_text + seed v2.1.0 |
+| v0.7.1 | （已 supersede） | ❌ 知识点仍不显示 | 精简 JSON + withTimeout 120s（误判为超时） |
+| v0.7.2 | `5518933` | ✅ 修复 | GraphSkeleton.SUBJECT_ID 改 `subj_02` + 移出主事务 + seed v2.2.0 |
+
+---
 
 **P1 大型任务 5 Wave 全部完成（7 commits，38 测试新增，258 tests 0 failures）**：
 
@@ -206,8 +227,10 @@
 
 ## 📦 已交付
 
-- GitHub Release v0.1.0（2026-07-12）+ v0.2.0（2026-07-13）+ v0.3.0（2026-07-15，debug 签名）+ v0.4.0（2026-07-14，debug 签名 fallback）+ **v0.5.0（2026-07-16，本地构建 + GitHub API 上传，debug 签名 fallback）**
-- 签名 APK：`wenyan-v0.5.0.apk` + `wenyan-latest.apk`（v0.5.0，17 MB，包含启动图标重设计 + 第五轮深度审计 21 项修复）
+- GitHub Release v0.1.0（2026-07-12）+ v0.2.0（2026-07-13）+ v0.3.0（2026-07-15，debug 签名）+ v0.4.0（2026-07-14，debug 签名 fallback）+ v0.5.0（2026-07-16，本地构建 + GitHub API 上传）+ **v0.7.0（2026-07-16，909 知识点）+ v0.7.2（2026-07-16，修复 FK 回滚）**
+- 签名 APK：`wenyan-v0.7.2.apk`（v0.7.2，debug 签名 fallback，修复 GraphSkeleton FK 回滚导致知识点全部丢失）
+- **沙箱编译验证 v0.7.2 通过**（2026-07-23）：assembleDebug + 258 tests 0 failures，详见 [03-FAILED-ATTEMPTS.md #015](03-FAILED-ATTEMPTS.md)
+- **gradlew wrapper 补齐**（2026-07-23）：`gradlew` / `gradlew.bat` / `gradle-wrapper.jar` 三件套此前从未入仓库，CI runner 无法用 wrapper 启动，现已修复
 - KSU 风格 UI 升级 Phase 0-3（4 个组件 + 9 个 Screen 迁移，已合并 main + CI 全绿）
 - UI 改造闭环 Phase 1-5（GroupedCard 增强 + 2 Screen 重构 + 4 Preview + 15 个组件测试）
 - UI 统一与死组件清理（KnowledgePointDetailScreen 统一 + 删除 4 个死组件，174 tests 0 failures）

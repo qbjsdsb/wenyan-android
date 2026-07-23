@@ -2356,11 +2356,59 @@ v0.7.0 / v0.7.1 发布后，用户多次重新安装，知识点列表始终为�
 
 | commit | 内容 |
 |--------|------|
-| (待提交) | fix(test): CardsViewModelTest 类型错误——FakeStudyProgressRepository 是工厂函数不能用作类型 |
-| (待提交) | chore(build): 补齐缺失的 gradlew / gradle-wrapper.jar（CI 构建必需） |
+| `447d404` | fix(build): 补齐缺失的 gradlew wrapper + 修复 CardsViewModelTest 类型错误 |
+| `bdb4473` | docs: 记录沙箱编译验证 v0.7.2 结果与构建踩坑 |
+| (最新 HEAD) | docs(handover): 交接文档同步——00-STATUS / AGENTS / 01-QUICK-RECOVERY 同步 v0.7.2 沙箱验证状态 |
 
 ### 教训
 
 1. **wrapper 文件必须入仓库**——gradlew、gradlew.bat、gradle/wrapper/gradle-wrapper.jar 是 wrapper 启动的三件套，缺一不可。本次发现仓库只有 .properties，CI runner 即使有 gradle 也会因找不到 wrapper jar 失败
 2. **release fail-fast 校验应在 task 执行阶段而非配置阶段**——当前实现即使只跑 debug 任务也会触发，需调整（P2 优化项，非阻塞）
 3. **沙箱内存配置应保守**——4GB cgroup 下用 1536m heap + 768m metaspace + 单 worker 是稳定配置
+
+---
+
+## 2026-07-23 交接说明（新会话起点）
+
+### 当前状态总结
+
+- **代码**：v0.7.2 已发布并经沙箱编译验证全绿（assembleDebug + 258 tests 0 failures）
+- **远程**：`origin/main` HEAD = 交接 commit（本次会话最后一个，hash 见 `git log -1`）
+- **CI**：GitHub Actions 账单问题仍未解决，38+ commit 待 CI 验证（不影响 Release）
+- **本地工作树**：clean，所有修改已提交
+
+### 下次会话第一步
+
+1. **读 [00-STATUS.md](00-STATUS.md)** — 已更新到 2026-07-23
+2. **读 [01-QUICK-RECOVERY.md](01-QUICK-RECOVERY.md) "沙箱构建命令模板"** — 已附完整可复制的环境配置 + 编译命令
+3. **沙箱环境准备**（如需重新构建）：
+   ```bash
+   export ANDROID_HOME=/opt/android-sdk
+   export ANDROID_SDK_ROOT=/opt/android-sdk
+   export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+   export JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2
+   unset CI && export CI=false
+   ```
+4. **拉最新代码**：`git pull origin main`
+5. **可选编译验证**：
+   ```bash
+   ./gradlew assembleDebug --no-daemon --max-workers=1 -Dorg.gradle.parallel=false \
+     -Dorg.gradle.jvmargs="-Xmx1536m -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8 -XX:+UseParallelGC -XX:-UseContainerSupport"
+   ```
+
+### 已知遗留问题（非阻塞，可按优先级处理）
+
+| 优先级 | 问题 | 文件位置 |
+|--------|------|----------|
+| P2 | release keystore fail-fast 在配置阶段抛异常，沙箱需 `unset CI` 绕过 | [app/build.gradle.kts:71](file:///workspace/app/build.gradle.kts) |
+| P2 | WritingPattern / AiGradingRecord 死表未接入（v0.7.x 阶段遗留） | core/database/entity/ |
+| P1 | 启用 R8（需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true） | app/build.gradle.kts |
+| P0 | emulator 实测 v0.7.2（909 知识点展示 + FSRS 调度 + 错题本 + AI 持久化 + 图谱 R 值） | — |
+| P0 | GitHub Actions 账单问题（需用户处理） | — |
+
+### 关键文档索引
+
+- 状态快照：[00-STATUS.md](00-STATUS.md)
+- 快速恢复 + 沙箱命令模板：[01-QUICK-RECOVERY.md](01-QUICK-RECOVERY.md)
+- 失败方案档案（含本次 #015）：[03-FAILED-ATTEMPTS.md](03-FAILED-ATTEMPTS.md)
+- 本次会话完整日志：本文档上方"2026-07-23 沙箱编译验证 v0.7.2"条目

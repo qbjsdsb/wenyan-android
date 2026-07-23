@@ -139,16 +139,17 @@ tools/                           # Python 管线脚本
 - commit message 说清"为什么改"，不只是"改了什么"
 - 用户偏好：中文交流、严谨验证、反复检查、有趣的教学风格、M3 谷歌味道 UI
 
-## 7. 当前状态（2026-07-15）
+## 7. 当前状态（2026-07-23）
 
-**✅ Release v0.3.0 已发布 + v0.5.0 Phase 2 第三批修复完成** — 13 commits，59 项修复，220 tests 0 failures。
+**✅ Release v0.7.2 已发布 + 沙箱编译验证全绿** — 909 知识点正常导入（FK 回滚 bug 已修），258 tests 0 failures。
 
-- 最新 commit：`40972fc`（main，v0.5.0 Phase 2 第三批 NF-T7/T8/A2/E8）
-- 最新 Release：[v0.3.0](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.3.0)（2026-07-15，debug 签名，17MB）
-- 验证：`assembleDebug` SUCCESSFUL + `testDebugUnitTest` **220 tests 0 failures**（lint 阶段在沙箱因 Java 17 兼容性失败，CI 环境无此问题）
-- CI 阻塞：GitHub Actions 账单问题，Release workflow 无法执行正式签名，v0.3.0 APK 使用 debug 签名
-- v0.5.0 修复：13 commits（59 项 P1/P2 修复 + 2 项构建修复），详见 [docs/plans/full-audit-v0.5.0-deep.md](docs/plans/full-audit-v0.5.0-deep.md)
-- 详见 [docs/00-STATUS.md](docs/00-STATUS.md)
+- 最新 commit：`bdb4473`（main，沙箱验证文档）
+- 最新 Release：[v0.7.2](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.7.2)（2026-07-16，debug 签名，修复 GraphSkeleton FK 回滚导致知识点全部丢失）
+- 沙箱验证（2026-07-23）：`assembleDebug` SUCCESSFUL（4m 34s，APK 27MB）+ `testDebugUnitTest` **258 tests 0 failures 0 errors**
+- 关键修复：`GraphSkeleton.SUBJECT_ID` 从 `"subject-modern-contemporary-literature"` 改为 `"subj_02"`（与 seed_data.json 一致），`importGraphSkeleton` 移出主 `withTransaction` 独立 try-catch
+- 沙箱补丁：补齐缺失的 `gradlew` / `gradlew.bat` / `gradle-wrapper.jar`（此前从未入仓库，CI runner 无法用 wrapper 启动）+ 修复 `CardsViewModelTest.kt` 类型错误
+- CI 阻塞：GitHub Actions 账单问题，38+ commit 待 CI 验证（不影响 Release，已通过 API 绕过）
+- 详见 [docs/00-STATUS.md](docs/00-STATUS.md) + [docs/03-FAILED-ATTEMPTS.md #015](docs/03-FAILED-ATTEMPTS.md)
 
 ## 8. 项目阶段总览
 
@@ -169,24 +170,24 @@ tools/                           # Python 管线脚本
 | UI 精修 v0.3 | ✅ 完成 | 卡片镜像修复 + 导师信息删除 + AI 入口调整 + 全面动画优化（190 tests） |
 | 第三轮深度审计 v0.4.2 | ✅ 完成 | 4 Batch 修复：FSRS 算法 4 bug + 数据安全 7 项 + 测试有效 3 项 + UX/契约 10+ 文件（207 tests） |
 | 第四轮深度审计 v0.5.0 | ✅ Phase 2 P1/P2 修复完成 | 13 commits，59 项修复，Release v0.3.0 已发布 |
+| v0.6 M3 Expressive 精修 | ✅ 完成 | 5 commits：导航重构 + 动效字体 + 大屏自适应 + 组件升级 + 视觉精修 |
+| 第五轮深度审计 P0/P1/P2 | ✅ 完成 | 5 commits：Converter 降级 + rateCard 事务 + Flow 异常 + LIKE 转义 + ContentSource 迁移 + 死代码清理 |
+| P1 大型任务 5 Wave | ✅ 完成 | 7 commits：schema v5 + Float 精度 + 复习日志 + AI 对话持久化 + 错题本 + ProGuard 规则（258 tests） |
+| Release v0.7.0 | ✅ 完成 | 接入 909 知识点 + study_text + seed v2.1.0 |
+| Release v0.7.2 | ✅ 完成 | 修复 GraphSkeleton FK 回滚导致知识点全部丢失，seed v2.2.0 触发重新导入 |
+| 沙箱编译验证 v0.7.2 | ✅ 完成（2026-07-23） | 补齐 gradlew wrapper + 修复 CardsViewModelTest + assembleDebug + 258 tests 全绿 |
 
 ## 9. 下一步优先级
 
-1. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 13 个 commit（`dd3ff06`~`40972fc`）CI 验证
-2. **P0**：跑 emulator 实测 v0.3 + v0.4.2 + v0.5.0 修复 — 验证 FSRS 调度 + 卡片翻转 + AI 入口 + Tab/列表动画 + 深色模式
-3. **P1 大型任务**（需用户确认优先级）：
-   - P1-PG-1/2/3：启用 R8 + 补齐 ProGuard 规则
-   - NF-PP4：复习日志双写统一
-   - NF-PP5：错题本实现
-   - NF-PP6：AiAssistantViewModel 消息持久化
-   - NF-T4：MemoRecordMapper Float↔Double 精度（需 schema 迁移）
-   - NF-D3：observeDue Flow 不刷新（需架构调整）
+1. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 38+ commit 待 CI 验证
+2. **P0**：跑 emulator 实测 v0.7.2 — 验证 909 知识点展示 + FSRS 调度 + 错题本 + AI 对话持久化 + 图谱 R 值
+3. **P2 优化项（非阻塞）**：`app/build.gradle.kts` 第 71 行 release keystore fail-fast 应移到 task 执行阶段（当前在配置阶段抛异常，沙箱跑 debug 任务也触发，需 `unset CI` 绕过）
 4. **P1 Phase 2 剩余维度审计**：
    - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）
    - 2.L：错误处理一致性 + 日志规范（sealed AppError + Timber + Snackbar 统一）
    - 2.M：Compose 副作用 + Accessibility + M3 Expressive
    - 2.N 剩余：NF-DS7-13 DataStore Key 治理
-5. **P1**：可选 — 发 Release v0.3.0（确认 CI 全绿后 `git tag v0.3.0 && git push origin v0.3.0`）
+5. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
 6. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
 7. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
-8. **P4**：架构重构 — ReviewRepository.getAllVerifiedKnowledgePoints 已成事实死代码；getVerifiedWithSubject 职责应在 KnowledgeRepository（详见 SESSION_LOG 第四条）
+8. **P4**：架构重构 — getVerifiedWithSubject 职责应在 KnowledgeRepository（详见 SESSION_LOG 第四条）
