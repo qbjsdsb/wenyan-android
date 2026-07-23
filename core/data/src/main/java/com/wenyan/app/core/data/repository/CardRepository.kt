@@ -104,7 +104,13 @@ class CardRepositoryImpl @Inject constructor(
         }
         if (definition.isNotBlank()) {
             cards.addAll(
-                CardSplitter.splitTermExplanation(knowledgePoint.title, definition, pointId),
+                CardSplitter.splitTermExplanation(
+                    term = knowledgePoint.title,
+                    definition = definition,
+                    pointId = pointId,
+                    fullExplanation = knowledgePoint.coreConclusion.takeIf { it.isNotBlank() && it != definition },
+                    studyText = knowledgePoint.studyText,
+                ),
             )
         }
 

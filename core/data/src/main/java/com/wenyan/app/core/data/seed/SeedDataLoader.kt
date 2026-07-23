@@ -261,7 +261,7 @@ class SeedDataLoader @Inject constructor(
                 summary = seed.summary,
                 coreConclusion = seed.coreConclusion,
                 fullContent = seed.fullContent.ifBlank { seed.coreConclusion },
-                multiPerspectives = null,
+                multiPerspectives = seed.multiPerspectives?.toPerspectiveMap(),
                 relatedIds = null,
                 contrastIds = null,
                 extensionIds = null,
@@ -472,7 +472,58 @@ data class KnowledgePointSeed(
     /** 学习文本（逐字校对的教材原文，导入到 KnowledgePointEntity.studyText） */
     @SerialName("study_text")
     val studyText: String? = null,
+    /** 多维视角分析（不同教材来源的核心结论） */
+    @SerialName("multi_perspectives")
+    val multiPerspectives: List<MultiPerspectiveSeed>? = null,
 )
+
+/** 多维视角单条数据（对应 seed_data.json 的 multi_perspectives 数组元素） */
+@kotlinx.serialization.Serializable
+data class MultiPerspectiveSeed(
+    val source: String = "",
+    @SerialName("core_conclusion")
+    val coreConclusion: String = "",
+    @SerialName("full_content")
+    val fullContent: String = "",
+    @SerialName("source_file")
+    val sourceFile: String? = null,
+    @SerialName("is_main")
+    val isMain: Boolean = false,
+    @SerialName("is_conclusion_base")
+    val isConclusionBase: Boolean = false,
+)
+
+/**
+ * 将多维视角列表转为 Map<source, coreConclusion>。
+ *
+ * Entity.multiPerspectives 声明为 Map<String, String>?，
+ * 而 seed_data.json 中是 List<{source, core_conclusion, ...}>。
+ * 此扩展函数完成类型转换：
+ * - key = source（若为空或"其他"，用"视角N"占位）
+ * - value = coreConclusion（若为空，取 fullContent 前 200 字符）
+ *
+ * 重复的 source 会追加序号后缀（如"马工程(2)"）避免 key 覆盖。
+ */
+private fun List<MultiPerspectiveSeed>.toPerspectiveMap(): Map<String, String> {
+    val result = mutableMapOf<String, String>()
+    var fallbackIndex = 1
+    for (p in this) {
+        val conclusion = p.coreConclusion.ifBlank {
+            p.fullContent.take(200)
+        }.ifBlank { continue }
+        val rawSource = p.source.ifBlank { "其他" }
+        // 重复 source 追加序号
+        val key = if (result.containsKey(rawSource)) {
+            "$rawSource(${result.keys.count { it.startsWith(rawSource) } + 1})"
+        } else {
+            rawSource
+        }
+        result[key] = conclusion
+        fallbackIndex++
+    }
+    return result.ifEmpty { mapOf("视角1" to this.firstOrNull()?.coreConclusion.orEmpty()) }
+        .filterValues { it.isNotBlank() }
+}
 
 /**
  * 真题种子数据（对应 ExamQuestionEntity）。

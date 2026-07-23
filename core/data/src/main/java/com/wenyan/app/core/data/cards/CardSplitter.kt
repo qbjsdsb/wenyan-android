@@ -40,6 +40,8 @@ object CardSplitter {
         term: String,
         definition: String,
         pointId: String = "",
+        fullExplanation: String? = null,
+        studyText: String? = null,
     ): List<CardTemplate> {
         val dimensions = parseStructuredDimensions(term, definition)
 
@@ -59,13 +61,13 @@ object CardSplitter {
         val cards = if (dimensions.isNotEmpty()) {
             // 结构化标签命中：每个维度一张卡（附带完整结构化字段供渲染上下文）
             dimensions.map { (question, answer) ->
-                buildTermDimensionCard(term, question, answer, pointId, category, societyFields, workFields)
+                buildTermDimensionCard(term, question, answer, pointId, category, societyFields, workFields, fullExplanation, studyText)
             }
         } else {
             // 无标签：按分句拆分（无结构化字段）
             val sentences = splitSentences(definition)
             sentences.mapIndexed { index, sentence ->
-                buildTermDimensionCard(term, "第${indexToChinese(index + 1)}点", sentence, pointId)
+                buildTermDimensionCard(term, "第${indexToChinese(index + 1)}点", sentence, pointId, fullExplanation = fullExplanation, studyText = studyText)
             }
         }
 
@@ -74,13 +76,13 @@ object CardSplitter {
             val head = cards.take(TARGET_SPLIT_MAX - 1)
             val tail = cards.drop(TARGET_SPLIT_MAX - 1)
             val mergedBack = tail.joinToString(separator = "\n") { it.back }
-            head + buildTermDimensionCard(term, "其他要点", mergedBack, pointId, category, societyFields, workFields)
+            head + buildTermDimensionCard(term, "其他要点", mergedBack, pointId, category, societyFields, workFields, fullExplanation, studyText)
         } else {
             cards
         }
 
         // 不足5张时不强行拆分（保持信息完整，避免碎片化）
-        return trimmed.ifEmpty { listOf(buildTermDimensionCard(term, "解释", definition, pointId)) }
+        return trimmed.ifEmpty { listOf(buildTermDimensionCard(term, "解释", definition, pointId, fullExplanation = fullExplanation, studyText = studyText)) }
     }
 
     /**
@@ -241,6 +243,8 @@ object CardSplitter {
         category: TermCategory = TermCategory.SOCIETY,
         society: SocietyTermFields? = null,
         work: WorkTermFields? = null,
+        fullExplanation: String? = null,
+        studyText: String? = null,
     ): CardTemplate = TermExplanationCard(
         front = "$term — $dimension",
         back = answer,
@@ -248,6 +252,8 @@ object CardSplitter {
         category = category,
         society = society,
         work = work,
+        fullExplanation = fullExplanation,
+        studyText = studyText,
     )
 
     /**

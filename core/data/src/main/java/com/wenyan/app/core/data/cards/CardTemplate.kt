@@ -75,6 +75,10 @@ data class TermExplanationCard(
     val society: SocietyTermFields? = null,
     /** 作品类字段（category == WORK 时非空） */
     val work: WorkTermFields? = null,
+    /** 完整解释（coreConclusion），背面折叠展示，解决拆分后片段信息密度低的问题 */
+    val fullExplanation: String? = null,
+    /** 教材原文（studyText，袁行霈版），背面折叠展示 */
+    val studyText: String? = null,
 ) : CardTemplate()
 
 /**

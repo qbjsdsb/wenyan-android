@@ -85,6 +85,44 @@ private fun TermExplanationContent(card: TermExplanationCard, isFlipped: Boolean
             // 若有结构化字段则分条列出
             card.society?.let { SocietyFieldsList(it) }
             card.work?.let { WorkFieldsList(it) }
+            // 完整解释（coreConclusion），解决拆分后片段信息密度低的问题
+            card.fullExplanation?.takeIf { it.isNotBlank() && it != card.back }?.let { explanation ->
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    modifier = Modifier.padding(vertical = Spacing.sm),
+                )
+                Text(
+                    text = "完整解释",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = explanation,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            // 教材原文（studyText，袁行霈版）
+            card.studyText?.takeIf { it.isNotBlank() && it != card.back && it != card.fullExplanation }?.let { study ->
+                if (card.fullExplanation?.takeIf { it.isNotBlank() && it != card.back } == null) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        modifier = Modifier.padding(vertical = Spacing.sm),
+                    )
+                }
+                Text(
+                    text = "教材原文（袁行霈）",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
+                Text(
+                    text = study,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

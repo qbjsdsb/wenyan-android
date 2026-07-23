@@ -189,6 +189,19 @@ class AiAssistantViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
+                // P1-AUDIT-5 修复：持久化用户消息（原实现只更新 UI 未入库，重启后上下文丢失）
+                ensureConversation()
+                chatRepository.appendMessage(
+                    conversationId = currentConversationId!!,
+                    role = AiRole.USER.name,
+                    content = "【论述题】$question\n\n我的答案：$userAnswer",
+                    contentSource = CONTENT_SOURCE_USER_INPUT,
+                    stage = null,
+                    references = null,
+                    contextScreen = null,
+                    contextTitle = null,
+                    tokensUsed = null,
+                )
                 socraticTutor.guideEssayAnswer(question, userAnswer).collect { guide ->
                     addSocraticGuideMessage(guide)
                 }
@@ -224,6 +237,19 @@ class AiAssistantViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
+                // P1-AUDIT-5 修复：持久化用户消息（原实现只更新 UI 未入库，重启后上下文丢失）
+                ensureConversation()
+                chatRepository.appendMessage(
+                    conversationId = currentConversationId!!,
+                    role = AiRole.USER.name,
+                    content = "【错题解释】$question\n\n我的答案：$userAnswer\n正确答案：$correctAnswer",
+                    contentSource = CONTENT_SOURCE_USER_INPUT,
+                    stage = null,
+                    references = null,
+                    contextScreen = null,
+                    contextTitle = null,
+                    tokensUsed = null,
+                )
                 val explanation: WrongAnswerExplanation = socraticTutor
                     .explainWrongAnswer(question, userAnswer, correctAnswer)
                     .first()
