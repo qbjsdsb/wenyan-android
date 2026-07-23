@@ -34,7 +34,8 @@ class CardsViewModelTest {
     private lateinit var cardRepository: FakeCardRepository
     private lateinit var schedulingRepository: FakeSchedulingRepository
     private lateinit var wrongAnswerRepository: FakeWrongAnswerRepository
-    private lateinit var studyProgressRepository: FakeStudyProgressRepository
+    // 注意:类型为 StudyProgressRepository(无 Fake 类,通过工厂函数 + FakeDao 实现)
+    private lateinit var studyProgressRepository: StudyProgressRepository
     private lateinit var viewModel: CardsViewModel
 
     @Before
