@@ -264,6 +264,41 @@ class AiAssistantViewModel @Inject constructor(
         return recallChecker.checkRecall(userAnswer, correctAnswer, questionType).first()
     }
 
+    /**
+     * 主动回忆检测的 UI 入口(P0 v0.7.2 新增)。
+     *
+     * [checkRecall] 是 suspend 返回 RecallResult,UI 无法直接调用。
+     * 此方法内部 launch 协程,结果写入 [AiAssistantUiState.recallResult],
+     * Screen 观察状态展示结果。保留 [checkRecall] 原签名以兼容测试。
+     */
+    fun launchCheckRecall(
+        userAnswer: String,
+        correctAnswer: String,
+        questionType: QuestionType,
+    ) {
+        if (userAnswer.isBlank() || correctAnswer.isBlank()) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                val result = checkRecall(userAnswer, correctAnswer, questionType)
+                _uiState.update { it.copy(recallResult = result) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(errorMessage = "回忆检测失败：${e.message ?: "未知错误"}")
+                }
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    /** 清除回忆检测结果(P0 v0.7.2 新增) */
+    fun clearRecallResult() {
+        _uiState.update { it.copy(recallResult = null) }
+    }
+
     // ── 防死记硬背检测 ────────────────────────────────────────────
 
     /**
@@ -527,6 +562,7 @@ private fun ChatMessageEntity.toAiMessage(): AiMessage {
  * @param isAvailable AI 服务是否可用（离线降级）
  * @param errorMessage 错误提示（可清除）
  * @param roteWarning 死记硬背提示（可清除）
+ * @param recallResult 主动回忆检测结果(P0 v0.7.2 新增,可清除)
  */
 data class AiAssistantUiState(
     val messages: List<AiMessage> = emptyList(),
@@ -535,6 +571,7 @@ data class AiAssistantUiState(
     val isAvailable: Boolean = true,
     val errorMessage: String? = null,
     val roteWarning: String? = null,
+    val recallResult: RecallResult? = null,
 )
 
 /**

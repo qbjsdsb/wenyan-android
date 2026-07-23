@@ -28,6 +28,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,6 +45,8 @@ import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.designsystem.theme.ColorMode
 import com.wenyan.app.core.designsystem.theme.ThemeViewModel
 import com.wenyan.app.core.designsystem.theme.WenyanPaletteStyle
+import com.wenyan.app.core.fsrs.ExamCountdownManager
+import com.wenyan.app.core.fsrs.StudyPhase
 import com.wenyan.app.feature.settings.BuildConfig
 
 /**
@@ -93,6 +96,12 @@ fun SettingsScreen(
                 .padding(padding),
             verticalArrangement = Arrangement.spacedBy(Spacing.xl),
         ) {
+            // P0 v0.7.2: 考研倒计时卡片(接通 ExamCountdownManager,原完全未接入)
+            item { ExamCountdownCard() }
+
+            // P0 v0.7.2: 学习进度卡片(接通 study_progress 表,原死表)
+            item { StudyProgressCard() }
+
             // 外观
             item {
                 GroupedCard(title = "外观") {
@@ -271,5 +280,119 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+}
+
+// ── 考研倒计时卡片(P0 v0.7.2:接通 ExamCountdownManager) ──────────
+
+/**
+ * 考研倒计时与学习阶段展示卡片。
+ *
+ * 接通 [com.wenyan.app.core.fsrs.ExamCountdownManager](原完全未接入生产代码)。
+ * 展示:距考研天数、当前学习阶段(基础/强化/冲刺)、目标保持率。
+ */
+@Composable
+private fun ExamCountdownCard() {
+    val today = remember { java.time.LocalDate.now() }
+    val daysToExam = remember { ExamCountdownManager.getDaysToExam(today) }
+    val phase = remember { ExamCountdownManager.getStudyPhase(daysToExam) }
+    val retention = remember { ExamCountdownManager.getGlobalRetention(daysToExam) }
+    val examDate = remember {
+        val currentYearExam = ExamCountdownManager.getExamDate(today.year)
+        if (today.isAfter(currentYearExam)) {
+            ExamCountdownManager.getExamDate(today.year + 1)
+        } else {
+            currentYearExam
+        }
+    }
+
+    val phaseLabel = when (phase) {
+        StudyPhase.BASIC -> "基础阶段"
+        StudyPhase.INTENSIVE -> "强化阶段"
+        StudyPhase.SPRINT -> "冲刺阶段"
+    }
+    val phaseSubtitle = when (phase) {
+        StudyPhase.BASIC -> "全面打牢基础，构建知识网络"
+        StudyPhase.INTENSIVE -> "重点强化，提升答题能力"
+        StudyPhase.SPRINT -> "最后冲刺，查漏补缺"
+    }
+
+    GroupedCard(title = "考研倒计时") {
+        GroupedCardItem(
+            title = "距考研还有 $daysToExam 天",
+            subtitle = "考试日期：${examDate.year}年${examDate.monthValue}月${examDate.dayOfMonth}日",
+        )
+        GroupedCardDivider()
+        GroupedCardItem(
+            title = phaseLabel,
+            subtitle = phaseSubtitle,
+        )
+        GroupedCardDivider()
+        GroupedCardItem(
+            title = "目标保持率",
+            subtitle = "${"%.0f".format(retention * 100)}%（FSRS 调度依据此值动态调整复习间隔）",
+        )
+    }
+}
+
+// ── 学习进度卡片(P0 v0.7.2:接通 study_progress 死表) ──────────
+
+/**
+ * 学习进度展示卡片。
+ *
+ * 展示:连续学习天数、累计学习时长、上次学习的知识点 ID。
+ * 数据由 [StudyProgressViewModel] 观察 study_progress 表,
+ * 卡片复习评分时由 CardsViewModel 调用 StudyProgressRepository.recordStudySession 写入。
+ */
+@Composable
+private fun StudyProgressCard(
+    viewModel: StudyProgressViewModel = hiltViewModel(),
+) {
+    val progress by viewModel.progress.collectAsStateWithLifecycle()
+    val streak = progress?.streakDays ?: 0
+    val totalSeconds = progress?.totalStudyTime ?: 0
+    val totalHours = totalSeconds / 3600
+    val totalMinutes = (totalSeconds % 3600) / 60
+    val timeText = if (totalHours > 0) {
+        "${totalHours}小时${totalMinutes}分钟"
+    } else {
+        "${totalMinutes}分钟"
+    }
+    val lastVisited = progress?.lastVisitedAt
+
+    GroupedCard(title = "学习进度") {
+        GroupedCardItem(
+            title = "连续学习 $streak 天",
+            subtitle = if (streak == 0) "开始今天的学习吧" else "保持下去！",
+        )
+        GroupedCardDivider()
+        GroupedCardItem(
+            title = "累计学习时长",
+            subtitle = timeText,
+        )
+        if (lastVisited != null) {
+            GroupedCardDivider()
+            GroupedCardItem(
+                title = "上次学习",
+                subtitle = formatRelativeTime(lastVisited),
+            )
+        }
+    }
+}
+
+/** 将时间戳格式化为相对时间文本(如"3小时前"/"昨天"/"3天前") */
+private fun formatRelativeTime(timestamp: Long): String {
+    val now = System.currentTimeMillis()
+    val diffMillis = now - timestamp
+    val diffMinutes = diffMillis / (60 * 1000)
+    val diffHours = diffMillis / (60 * 60 * 1000)
+    val diffDays = diffMillis / (24 * 60 * 60 * 1000)
+    return when {
+        diffMinutes < 1 -> "刚刚"
+        diffMinutes < 60 -> "${diffMinutes}分钟前"
+        diffHours < 24 -> "${diffHours}小时前"
+        diffDays == 1L -> "昨天"
+        diffDays < 30 -> "${diffDays}天前"
+        else -> "${diffDays / 30}个月前"
     }
 }

@@ -1,6 +1,7 @@
 package com.wenyan.app.feature.cards
 
 import androidx.lifecycle.SavedStateHandle
+import com.wenyan.app.core.data.repository.StudyProgressRepository
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.fsrs.Rating
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +34,7 @@ class CardsViewModelTest {
     private lateinit var cardRepository: FakeCardRepository
     private lateinit var schedulingRepository: FakeSchedulingRepository
     private lateinit var wrongAnswerRepository: FakeWrongAnswerRepository
+    private lateinit var studyProgressRepository: FakeStudyProgressRepository
     private lateinit var viewModel: CardsViewModel
 
     @Before
@@ -43,12 +45,14 @@ class CardsViewModelTest {
         cardRepository = FakeCardRepository(listOf(testClozeCard()))
         schedulingRepository = FakeSchedulingRepository()
         wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
 
         viewModel = CardsViewModel(
             savedStateHandle = SavedStateHandle(),
             cardRepository = cardRepository,
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
         )
 
         // 等待 init 块的 combine + collect 完成,加载卡片
@@ -111,4 +115,17 @@ class CardsViewModelTest {
             wrongAnswerRepository.recordedWrongAnswers.isEmpty(),
         )
     }
+}
+
+/** 测试用 StudyProgressRepository(P0 v0.7.2 新增,直接实例化 + Fake DAO) */
+private fun FakeStudyProgressRepository() = StudyProgressRepository(FakeStudyProgressDao())
+
+/** 测试用空 DAO,不实际读写数据库 */
+private class FakeStudyProgressDao : com.wenyan.app.core.database.dao.StudyProgressDao {
+    override suspend fun upsert(entity: com.wenyan.app.core.database.entity.StudyProgressEntity) {}
+    override suspend fun update(entity: com.wenyan.app.core.database.entity.StudyProgressEntity) {}
+    override suspend fun deleteById(id: String) {}
+    override suspend fun getById(id: String): com.wenyan.app.core.database.entity.StudyProgressEntity? = null
+    override fun observeById(id: String): kotlinx.coroutines.flow.Flow<com.wenyan.app.core.database.entity.StudyProgressEntity?> =
+        kotlinx.coroutines.flow.flowOf(null)
 }

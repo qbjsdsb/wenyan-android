@@ -37,6 +37,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,6 +50,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.foundation.layout.Spacer
+import com.wenyan.app.core.ai.recall.QuestionType
+import com.wenyan.app.core.ai.recall.RecallRating
+import com.wenyan.app.core.ai.recall.RecallResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -104,6 +109,8 @@ fun AiAssistantScreen(
     // P0-3 修复：清空对话确认弹窗状态。原实现点击清空按钮直接清空，
     // 误触即丢失全部对话不可恢复。现加二次确认 Dialog。
     var showClearConfirmDialog by remember { mutableStateOf(false) }
+    // P0 v0.7.2: 学习工具 Dialog 模式(null=不显示)
+    var showLearningToolDialog by remember { mutableStateOf<LearningToolMode?>(null) }
 
     // 错误提示 → Snackbar
     // NF-UC4 修复：原 LaunchedEffect 在 Composable 离开时 showSnackbar 协程被取消，
@@ -193,6 +200,36 @@ fun AiAssistantScreen(
                                         imageVector = Icons.Default.Settings,
                                         contentDescription = null,
                                     )
+                                },
+                            )
+                            HorizontalDivider()
+                            // P0 v0.7.2: 4 个学习工具入口,接通 ViewModel 已有但未接 UI 的方法
+                            DropdownMenuItem(
+                                text = { Text("论述题引导") },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showLearningToolDialog = LearningToolMode.ESSAY_GUIDE
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("错题解释") },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showLearningToolDialog = LearningToolMode.WRONG_ANSWER
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("回忆检测") },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showLearningToolDialog = LearningToolMode.RECALL_CHECK
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("死记硬背检测") },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showLearningToolDialog = LearningToolMode.ROTE_CHECK
                                 },
                             )
                         }
@@ -295,6 +332,184 @@ fun AiAssistantScreen(
             },
         )
     }
+
+    // P0 v0.7.2: 学习工具 Dialog
+    showLearningToolDialog?.let { mode ->
+        LearningToolDialog(
+            mode = mode,
+            onDismiss = { showLearningToolDialog = null },
+            onEssayGuide = { question, answer ->
+                viewModel.guideEssayAnswer(question, answer)
+                showLearningToolDialog = null
+            },
+            onWrongAnswer = { question, userAnswer, correctAnswer ->
+                viewModel.explainWrongAnswer(question, userAnswer, correctAnswer)
+                showLearningToolDialog = null
+            },
+            onRecallCheck = { userAnswer, correctAnswer, questionType ->
+                viewModel.launchCheckRecall(userAnswer, correctAnswer, questionType)
+                showLearningToolDialog = null
+            },
+            onRoteCheck = { pointId, relatedIds ->
+                viewModel.checkRoteMemorization(pointId, relatedIds)
+                showLearningToolDialog = null
+            },
+        )
+    }
+
+    // P0 v0.7.2: 回忆检测结果展示
+    uiState.recallResult?.let { result ->
+        RecallResultDialog(
+            result = result,
+            onDismiss = viewModel::clearRecallResult,
+        )
+    }
+}
+
+// ── 学习工具 Dialog ────────────────────────────────────────────
+
+/** 学习工具模式(P0 v0.7.2) */
+private enum class LearningToolMode {
+    ESSAY_GUIDE,
+    WRONG_ANSWER,
+    RECALL_CHECK,
+    ROTE_CHECK,
+}
+
+@Composable
+private fun LearningToolDialog(
+    mode: LearningToolMode,
+    onDismiss: () -> Unit,
+    onEssayGuide: (question: String, userAnswer: String) -> Unit,
+    onWrongAnswer: (question: String, userAnswer: String, correctAnswer: String) -> Unit,
+    onRecallCheck: (userAnswer: String, correctAnswer: String, questionType: QuestionType) -> Unit,
+    onRoteCheck: (pointId: String, relatedIds: List<String>) -> Unit,
+) {
+    val title = when (mode) {
+        LearningToolMode.ESSAY_GUIDE -> "论述题引导"
+        LearningToolMode.WRONG_ANSWER -> "错题解释"
+        LearningToolMode.RECALL_CHECK -> "回忆检测"
+        LearningToolMode.ROTE_CHECK -> "死记硬背检测"
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        title = { Text(title) },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                when (mode) {
+                    LearningToolMode.ESSAY_GUIDE -> EssayGuideFields(onEssayGuide)
+                    LearningToolMode.WRONG_ANSWER -> WrongAnswerFields(onWrongAnswer)
+                    LearningToolMode.RECALL_CHECK -> RecallCheckFields(onRecallCheck)
+                    LearningToolMode.ROTE_CHECK -> RoteCheckFields(onRoteCheck)
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        },
+    )
+}
+
+@Composable
+private fun EssayGuideFields(onSubmit: (String, String) -> Unit) {
+    var question by remember { mutableStateOf("") }
+    var answer by remember { mutableStateOf("") }
+    Text("输入论述题和你的答案，AI 会以苏格拉底式三阶段引导改进", style = MaterialTheme.typography.bodySmall)
+    OutlinedTextField(value = question, onValueChange = { question = it }, label = { Text("论述题") }, modifier = Modifier.fillMaxWidth())
+    OutlinedTextField(value = answer, onValueChange = { answer = it }, label = { Text("你的答案") }, modifier = Modifier.fillMaxWidth())
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        TextButton(
+            onClick = { onSubmit(question, answer) },
+            enabled = question.isNotBlank() && answer.isNotBlank(),
+        ) { Text("开始引导") }
+    }
+}
+
+@Composable
+private fun WrongAnswerFields(onSubmit: (String, String, String) -> Unit) {
+    var question by remember { mutableStateOf("") }
+    var userAnswer by remember { mutableStateOf("") }
+    var correctAnswer by remember { mutableStateOf("") }
+    Text("输入题目、你的错误答案和正确答案，AI 会分析错误思路", style = MaterialTheme.typography.bodySmall)
+    OutlinedTextField(value = question, onValueChange = { question = it }, label = { Text("题目") }, modifier = Modifier.fillMaxWidth())
+    OutlinedTextField(value = userAnswer, onValueChange = { userAnswer = it }, label = { Text("你的答案（错误）") }, modifier = Modifier.fillMaxWidth())
+    OutlinedTextField(value = correctAnswer, onValueChange = { correctAnswer = it }, label = { Text("正确答案") }, modifier = Modifier.fillMaxWidth())
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        TextButton(
+            onClick = { onSubmit(question, userAnswer, correctAnswer) },
+            enabled = question.isNotBlank() && userAnswer.isNotBlank() && correctAnswer.isNotBlank(),
+        ) { Text("请求解释") }
+    }
+}
+
+@Composable
+private fun RecallCheckFields(onSubmit: (String, String, QuestionType) -> Unit) {
+    var userAnswer by remember { mutableStateOf("") }
+    var correctAnswer by remember { mutableStateOf("") }
+    var questionType by remember { mutableStateOf(QuestionType.TERM_EXPLANATION) }
+    Text("输入你的答案和标准答案，系统会检测回忆质量（三层渐进式）", style = MaterialTheme.typography.bodySmall)
+    OutlinedTextField(value = userAnswer, onValueChange = { userAnswer = it }, label = { Text("你的答案") }, modifier = Modifier.fillMaxWidth())
+    OutlinedTextField(value = correctAnswer, onValueChange = { correctAnswer = it }, label = { Text("标准答案") }, modifier = Modifier.fillMaxWidth())
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        FilterChip(selected = questionType == QuestionType.TERM_EXPLANATION, onClick = { questionType = QuestionType.TERM_EXPLANATION }, label = { Text("名词解释") })
+        Spacer(modifier = Modifier.size(Spacing.sm))
+        FilterChip(selected = questionType == QuestionType.ESSAY, onClick = { questionType = QuestionType.ESSAY }, label = { Text("论述题") })
+    }
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        TextButton(
+            onClick = { onSubmit(userAnswer, correctAnswer, questionType) },
+            enabled = userAnswer.isNotBlank() && correctAnswer.isNotBlank(),
+        ) { Text("开始检测") }
+    }
+}
+
+@Composable
+private fun RoteCheckFields(onSubmit: (String, List<String>) -> Unit) {
+    var pointId by remember { mutableStateOf("") }
+    var relatedIdsText by remember { mutableStateOf("") }
+    Text("输入知识点 ID 和关联知识点 ID（逗号分隔），检测是否疑似死记硬背", style = MaterialTheme.typography.bodySmall)
+    OutlinedTextField(value = pointId, onValueChange = { pointId = it }, label = { Text("知识点 ID") }, modifier = Modifier.fillMaxWidth())
+    OutlinedTextField(value = relatedIdsText, onValueChange = { relatedIdsText = it }, label = { Text("关联知识点 ID（逗号分隔）") }, modifier = Modifier.fillMaxWidth())
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        TextButton(
+            onClick = {
+                val ids = relatedIdsText.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                onSubmit(pointId, ids)
+            },
+            enabled = pointId.isNotBlank(),
+        ) { Text("开始检测") }
+    }
+}
+
+@Composable
+private fun RecallResultDialog(result: RecallResult, onDismiss: () -> Unit) {
+    val ratingText = when (result.rating) {
+        RecallRating.AGAIN -> "需要重学"
+        RecallRating.HARD -> "勉强记住"
+        RecallRating.GOOD -> "记得不错"
+        RecallRating.EASY -> "记忆牢固"
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        title = { Text("回忆检测结果") },
+        text = {
+            Column {
+                Text("检测层级：${result.level}")
+                Text("覆盖率：${"%.0f".format(result.coverage * 100)}%")
+                Text("评分：$ratingText")
+                result.score?.let { Text("LLM 评分：$it / 100") }
+                result.reason?.let { Text("理由：$it") }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("知道了") }
+        },
+    )
 }
 
 // ── 输入栏 ──────────────────────────────────────────────────────

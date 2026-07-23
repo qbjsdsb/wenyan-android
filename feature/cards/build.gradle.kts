@@ -58,4 +58,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
+    // P0 v0.7.2: 测试需要访问 StudyProgressDao/StudyProgressEntity(Fake 实现)
+    testImplementation(project(":core:database"))
 }

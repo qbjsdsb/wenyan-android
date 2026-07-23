@@ -48,6 +48,7 @@ class CardsViewModel @Inject constructor(
     private val cardRepository: CardRepository,
     private val schedulingRepository: SchedulingRepository,
     private val wrongAnswerRepository: WrongAnswerRepository,
+    private val studyProgressRepository: com.wenyan.app.core.data.repository.StudyProgressRepository,
 ) : ViewModel() {
 
     // 翻转状态（UI 交互层，NF-L2 修复：持久化到 SavedStateHandle）
@@ -167,6 +168,8 @@ class CardsViewModel @Inject constructor(
             } ?: return@launch
             try {
                 schedulingRepository.rateCard(pointId, fsrsRating, templateType)
+                // P0 v0.7.2: 评分成功后记录学习会话(接通 study_progress 表)
+                studyProgressRepository.recordStudySession(pointId)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
