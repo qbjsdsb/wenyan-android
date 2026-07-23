@@ -2317,3 +2317,50 @@ v0.7.0 / v0.7.1 发布后，用户多次重新安装，知识点列表始终为�
 | commit | 内容 |
 |--------|------|
 | `5518933` | fix(v0.7.2): 修复知识点不显示根因——GraphSkeleton FK 约束失败导致种子导入事务回滚 |
+
+---
+
+## 2026-07-23 沙箱编译验证 v0.7.2（P0 阻塞解除）
+
+### 背景
+
+用户要求在沙箱环境配备 Android SDK + JDK 17 后执行编译与测试验证，严谨仔细反复检查。v0.7.2 修复（GraphSkeleton FK 回滚）已在仓库中但未经沙箱验证。
+
+### 沙箱环境配置
+
+- JDK 17.0.2（mise 锁定，沙箱默认 25.0.2 会导致 AGP 8.6.0 加载失败）
+- Android SDK `/opt/android-sdk`：cmdline-tools/latest + platform-tools 37.0.0 + platforms;android-35 + build-tools;35.0.0
+- JAVA_TOOL_OPTIONS：`-XX:-UseContainerSupport`（避免 cgroup v2 JvmWideVariable 初始化失败）+ HTTPS 代理 127.0.0.1:18080（Robolectric 测试 worker JVM 需要）
+- Gradle 8.14.4（mise 安装，路径 `/root/.local/share/mise/installs/gradle/8.14.4/gradle-8.14.4/`）
+
+### 发现的构建问题
+
+1. **gradlew 脚本和 gradle-wrapper.jar 从未提交到 git** — 仅 `gradle-wrapper.properties` 在仓库中，CI runner 无法直接用 wrapper 启动构建
+2. **CI=true 触发 release keystore fail-fast** — app/build.gradle.kts 第 71 行在配置阶段就抛 GradleException，即使只跑 assembleDebug 也会失败。沙箱用 `unset CI && export CI=false` 绕过（仅本地验证，不影响 CI 行为）
+3. **4GB cgroup OOM** — 默认 `-Xmx2048m -XX:MaxMetaspaceSize=1g` + 多 worker 导致 daemon 被 kill。改为 `-Xmx1536m -XX:MaxMetaspaceSize=768m --max-workers=1 -Dorg.gradle.parallel=false` 后稳定
+4. **CardsViewModelTest.kt 类型错误** — 第 37 行 `private lateinit var studyProgressRepository: FakeStudyProgressRepository` 用了函数名当类型，应为 `StudyProgressRepository`。修复后通过
+
+### 验证结果
+
+- **assembleDebug**: BUILD SUCCESSFUL in 4m 34s，421 tasks（171 executed, 250 up-to-date）
+- **APK 产物**: `app/build/outputs/apk/debug/app-debug.apk` 27MB
+- **testDebugUnitTest**: BUILD SUCCESSFUL in 39s，334 tasks，**258 tests, 0 failures, 0 errors**（29 个测试类）
+- v0.7.2 关键修复对应测试全部通过：
+  - CardsViewModelTest（2 tests，P0 StudyProgress + AGAIN 错题记录）
+  - SchedulingRepositoryTest（3 tests，FSRS 调度）
+  - WrongAnswerRepositoryImplTest（7 tests，错题本）
+  - ExamCountdownManagerTest（8 tests，考研倒计时）
+  - AiAssistantViewModelTest（24 tests，AI 工具入口）
+
+### 本次 commits
+
+| commit | 内容 |
+|--------|------|
+| (待提交) | fix(test): CardsViewModelTest 类型错误——FakeStudyProgressRepository 是工厂函数不能用作类型 |
+| (待提交) | chore(build): 补齐缺失的 gradlew / gradle-wrapper.jar（CI 构建必需） |
+
+### 教训
+
+1. **wrapper 文件必须入仓库**——gradlew、gradlew.bat、gradle/wrapper/gradle-wrapper.jar 是 wrapper 启动的三件套，缺一不可。本次发现仓库只有 .properties，CI runner 即使有 gradle 也会因找不到 wrapper jar 失败
+2. **release fail-fast 校验应在 task 执行阶段而非配置阶段**——当前实现即使只跑 debug 任务也会触发，需调整（P2 优化项，非阻塞）
+3. **沙箱内存配置应保守**——4GB cgroup 下用 1536m heap + 768m metaspace + 单 worker 是稳定配置

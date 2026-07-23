@@ -233,6 +233,43 @@
 
 ---
 
+## #015 沙箱构建环境踩坑合集（gradlew 缺失 / CI fail-fast / OOM / 测试类型错误）
+
+- **日期**：2026-07-23
+- **现象**：在沙箱（4GB cgroup、JDK 17.0.2、Android SDK 35）执行 `./gradlew assembleDebug` 与 `testDebugUnitTest` 验证 v0.7.2 修复，连续遇到 4 个阻塞问题。
+- **根因 + 修复**：
+
+  1. **`gradlew` 与 `gradle-wrapper.jar` 从未入仓库**
+     - 现象：`zsh: no such file or directory: ./gradlew`
+     - 根因：仓库只提交了 `gradle/wrapper/gradle-wrapper.properties`，缺少 wrapper 启动三件套中的另两件
+     - 修复：用 `gradle wrapper --gradle-version 8.14.4 --distribution-type bin` 重新生成，并补提交到 git
+
+  2. **`CI=true` 在配置阶段触发 release keystore fail-fast**
+     - 现象：跑 `assembleDebug` 抛 `GradleException: Release 签名未配置`
+     - 根因：`app/build.gradle.kts` 第 71 行在 buildTypes 配置块内（配置阶段执行）就 `throw GradleException`，而不是在 release task 执行阶段。即使只跑 debug 任务也会触发
+     - 修复（沙箱）：`unset CI && export CI=false` 绕过。CI 环境本身是预期行为，沙箱需要显式覆盖
+     - **后续优化（P2 非阻塞）**：应改为在 `assembleRelease` task 配置时检查，或用 `gradle.startParameter.taskNames` 判断是否包含 release 任务
+
+  3. **4GB cgroup OOM 导致 daemon 被 kill**
+     - 现象：`Gradle build daemon disappeared unexpectedly`，daemon 日志显示 `429496729 physical memory requested, 21213184 free`
+     - 根因：`gradle.properties` 配置 `-Xmx2048m -XX:MaxMetaspaceSize=1g` + `org.gradle.workers.max=3` + `org.gradle.parallel=true`，KSP workers 各自起 JVM，总内存超过 4GB cgroup 限制
+     - 修复（沙箱）：命令行覆盖 `-Xmx1536m -XX:MaxMetaspaceSize=768m --max-workers=1 -Dorg.gradle.parallel=false`
+     - **注意**：项目 `gradle.properties` 不修改，CI runner 内存更充裕（8GB+），保留原有配置
+
+  4. **`CardsViewModelTest.kt` 类型错误**
+     - 现象：`e: CardsViewModelTest.kt:37:51 Unresolved reference 'FakeStudyProgressRepository'`
+     - 根因：第 37 行 `private lateinit var studyProgressRepository: FakeStudyProgressRepository` 把工厂函数 `FakeStudyProgressRepository()` 当作类型使用。Kotlin 不允许函数名作为类型
+     - 修复：类型改为 `StudyProgressRepository`（工厂函数返回类型），调用 `FakeStudyProgressRepository()` 创建实例保持不变
+
+- **教训**：
+  1. **wrapper 三件套必须入仓库**——`gradlew`、`gradlew.bat`、`gradle/wrapper/gradle-wrapper.jar` 缺一不可，CI runner 没有 gradle 时只能靠 wrapper 启动
+  2. **fail-fast 校验应在 task 执行阶段**——配置阶段抛异常会影响所有任务，即使是 debug 任务
+  3. **沙箱内存配置应保守**——cgroup 限制下用 1536m heap + 768m metaspace + 单 worker 是稳定配置
+  4. **工厂函数不能用作类型**——Kotlin 中 `fun FakeXxx() = Xxx()` 定义的 `FakeXxx` 是函数，不是类型；变量类型应用返回类型 `Xxx`
+- **相关文件**：`gradlew`、`gradlew.bat`、`gradle/wrapper/gradle-wrapper.jar`、`app/build.gradle.kts`、`gradle.properties`、`feature/cards/src/test/java/com/wenyan/app/feature/cards/CardsViewModelTest.kt`
+
+---
+
 ## 模板（新失败方案按此格式记录）
 
 ```markdown
