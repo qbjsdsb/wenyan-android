@@ -20,6 +20,7 @@
    - 要跑 OCR 管线 → [docs/reference/OCR_PIPELINE.md](docs/reference/OCR_PIPELINE.md)
    - 不懂术语 → [docs/reference/GLOSSARY.md](docs/reference/GLOSSARY.md)
    - 上次进度 → [docs/SESSION_LOG.md](docs/SESSION_LOG.md) 最后一节
+   - **看最新巡检报告** → [docs/auto-check/README.md](docs/auto-check/README.md) → 按时间倒序读最新报告
 
 ## 3. 文档地图
 
@@ -41,6 +42,9 @@ docs/
 │   ├── m3-expressive-implementation.md # M3 改造 26 Task（旧版）
 │   ├── code-fix-implementation.md      # 代码修复计划
 │   └── early-phase-plan.md             # 早期 Phase 1-7 计划
+│
+├── auto-check/                  # 自动巡检报告（每小时生成，AI 接手必读）
+│   └── README.md                # 巡检机制说明 + 历史问题索引
 │
 ├── research/                    # 调研文档
 │   ├── exam-deep-research.md    # 考研深度调研
