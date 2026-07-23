@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.SmartToy
@@ -221,8 +223,14 @@ private fun FlipCard(
         colors = CardDefaults.cardColors(containerColor = containerColor),
         onClick = onClick,
     ) {
+        // v0.7.4 修复：长答案（如论述题范文、名词解释）超出卡片可视区时被截断，
+        // 用户无法看到完整答案。给内容容器加 verticalScroll，长内容可在卡片内滚动阅读。
+        // 滚动放在外层 Box（未受 graphicsLayer rotationY 影响），
+        // 避免背面 180° 旋转后滚动方向反向（ swipe up 反而向下）的体验问题。
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
             contentAlignment = Alignment.Center,
         ) {
             // 阶段5：优先使用 CardContent 结构化渲染（6种模板专属样式）

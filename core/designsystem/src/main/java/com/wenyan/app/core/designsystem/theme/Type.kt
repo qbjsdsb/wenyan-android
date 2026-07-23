@@ -92,7 +92,10 @@ val WenyanTypography = Typography(
     ),
     labelSmall = TextStyle(
         fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
+        // v0.7.4 修复：11.sp 低于 WCAG 推荐最小可读字号 12.sp，
+        // 图例/统计/页码等关键信息视力不佳用户难阅读。升至 12.sp 与 labelMedium 一致字号、
+        // 仅以字重差异区分；同时与 GraphCanvas 节点标签字号统一，避免视觉碎片化。
+        fontSize = 12.sp,
         lineHeight = 16.sp,
     ),
 )

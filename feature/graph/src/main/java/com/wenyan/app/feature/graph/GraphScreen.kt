@@ -188,6 +188,18 @@ fun GraphScreen(
 
 // ── 图例 ──────────────────────────────────────────────────────
 
+/**
+ * 图例颜色（v0.7.4 重构）。
+ *
+ * 原图例只显示 R 值 4 色（已掌握/需巩固/薄弱/未学习），但 Canvas 改用分类色后
+ * 节点不再按 R 值着色，图例与实际渲染脱节。
+ *
+ * 现按 [com.wenyan.app.core.data.seed.GraphSkeleton] 的 5 类分类色显示：
+ * - 作者（粉） / 体裁（蓝） / 时段（绿） / 流派（紫） / 作品（橙）
+ * - 薄弱光晕（红）：薄弱节点外圈光晕，与节点填充色叠加显示
+ *
+ * 颜色值与 GraphSkeleton 常量保持一致（ARGB Int），避免硬编码重复。
+ */
 @Composable
 private fun LegendBar() {
     val colorScheme = MaterialTheme.colorScheme
@@ -199,13 +211,15 @@ private fun LegendBar() {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            LegendItem(colorScheme.primary, "已掌握")
-            LegendItem(colorScheme.tertiary, "需巩固")
-            LegendItem(colorScheme.error, "薄弱")
-            LegendItem(colorScheme.outline, "未学习")
+            LegendItem(Color(0xFFE91E63), "作者")
+            LegendItem(Color(0xFF2196F3), "体裁")
+            LegendItem(Color(0xFF4CAF50), "时段")
+            LegendItem(Color(0xFF9C27B0), "流派")
+            LegendItem(Color(0xFFFF9800), "作品")
+            LegendItem(colorScheme.error.copy(alpha = 0.4f), "薄弱光晕")
         }
     }
 }

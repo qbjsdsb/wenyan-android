@@ -91,6 +91,12 @@ class GraphViewModel @Inject constructor(
         label = node.label,
         retrievability = retrievability,
         relatedPointId = node.relatedPointId,
+        // v0.7.4 修复：传递实体颜色 + 类型，让 Canvas 启用分类色（作家粉/流派紫/体裁蓝/时段绿）
+        // 并按类型分组布局。原实现丢弃这两字段，Canvas 退化为单圆周布局 + 仅按 R 值着色，
+        // 33 节点全部挤在一个圆上，边交叉严重、视觉杂乱（用户反馈"看不清"）。
+        color = node.color,
+        type = node.type,
+        subtitle = node.subtitle,
     )
 
     /** 将 [GraphEdgeEntity] 映射为 UI 层 [GraphEdgeItem] */
@@ -118,6 +124,18 @@ data class GraphNodeItem(
     val retrievability: Float,
     /** 关联知识点 ID,非空时点击节点可跳转知识点详情 */
     val relatedPointId: String? = null,
+    /**
+     * 实体颜色（ARGB Int）。v0.7.4 新增：用于按分类着色（作家粉/流派紫/体裁蓝/时段绿/作品橙）。
+     * 0 表示未设置，Canvas 退化为按 R 值着色。
+     */
+    val color: Int = 0,
+    /**
+     * 节点类型（GraphNodeType.name）：AUTHOR / WORK / SCHOOL / MOVEMENT / CONCEPT / KNOWLEDGE_POINT。
+     * v0.7.4 新增：用于分组布局（同类型节点聚集在同一扇区）。
+     */
+    val type: String = "",
+    /** 副标题（如生卒年/流派年代），v0.7.4 新增：节点选中时可展示更多上下文 */
+    val subtitle: String? = null,
 )
 
 // 图谱边项（UI 层模型）
