@@ -145,15 +145,15 @@ tools/                           # Python 管线脚本
 
 ## 7. 当前状态（2026-07-23）
 
-**✅ Release v0.7.2 已发布 + 沙箱编译验证全绿** — 909 知识点正常导入（FK 回滚 bug 已修），258 tests 0 failures。
+**✅ v0.7.5 用户体验深度修复完成 + 数据质量全绿** — 5 轮迭代修复题目答案错位/合并题/图谱杂乱/UI 字号/610 科目错标，485 真题数据全绿，258 tests 0 failures。
 
-- 最新 commit：`bdb4473`（main，沙箱验证文档）
-- 最新 Release：[v0.7.2](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.7.2)（2026-07-16，debug 签名，修复 GraphSkeleton FK 回滚导致知识点全部丢失）
-- 沙箱验证（2026-07-23）：`assembleDebug` SUCCESSFUL（4m 34s，APK 27MB）+ `testDebugUnitTest` **258 tests 0 failures 0 errors**
-- 关键修复：`GraphSkeleton.SUBJECT_ID` 从 `"subject-modern-contemporary-literature"` 改为 `"subj_02"`（与 seed_data.json 一致），`importGraphSkeleton` 移出主 `withTransaction` 独立 try-catch
-- 沙箱补丁：补齐缺失的 `gradlew` / `gradlew.bat` / `gradle-wrapper.jar`（此前从未入仓库，CI runner 无法用 wrapper 启动）+ 修复 `CardsViewModelTest.kt` 类型错误
+- 最新 commit：待提交（v0.7.5 610综合卷科目深度修复）
+- 最新 Release：**v0.7.5**（待打 tag） — v0.7.2 修复知识点导入，v0.7.4 修复体验，v0.7.5 修复 610 科目错标
+- 沙箱验证（2026-07-23）：`clean assembleDebug` SUCCESSFUL + `testDebugUnitTest` **258 tests 0 failures 0 errors**
+- v0.7.5 核心修复：610 综合卷 127 题科目重新分类（古代36/现当代32/外国26/理论33），seed 2.7.0→2.8.0 触发重新导入
+- v0.7.4 核心修复：4 道合并题拆分 + 2022年806答案错位修复 + 50+ OCR 噪音清洗 + GraphCanvas 分组径向布局 + labelSmall 12sp WCAG + CardsScreen verticalScroll
 - CI 阻塞：GitHub Actions 账单问题，38+ commit 待 CI 验证（不影响 Release，已通过 API 绕过）
-- 详见 [docs/00-STATUS.md](docs/00-STATUS.md) + [docs/03-FAILED-ATTEMPTS.md #015](docs/03-FAILED-ATTEMPTS.md)
+- 详见 [docs/00-STATUS.md](docs/00-STATUS.md) + [docs/SESSION_LOG.md](docs/SESSION_LOG.md) 最后一节
 
 ## 8. 项目阶段总览
 
@@ -180,11 +180,13 @@ tools/                           # Python 管线脚本
 | Release v0.7.0 | ✅ 完成 | 接入 909 知识点 + study_text + seed v2.1.0 |
 | Release v0.7.2 | ✅ 完成 | 修复 GraphSkeleton FK 回滚导致知识点全部丢失，seed v2.2.0 触发重新导入 |
 | 沙箱编译验证 v0.7.2 | ✅ 完成（2026-07-23） | 补齐 gradlew wrapper + 修复 CardsViewModelTest + assembleDebug + 258 tests 全绿 |
+| v0.7.4 用户体验深度修复 | ✅ 完成 | 4 道合并题拆分 + 2022年806答案错位修复 + OCR 清洗 + GraphCanvas 重写 + UI 修复，seed 2.4.0→2.7.0 |
+| v0.7.5 610 综合卷科目深度修复 | ✅ 完成（2026-07-23） | 610 综合卷 127 题科目重新分类（古代36/现当代32/外国26/理论33），seed 2.7.0→2.8.0 |
 
 ## 9. 下一步优先级
 
 1. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 38+ commit 待 CI 验证
-2. **P0**：跑 emulator 实测 v0.7.2 — 验证 909 知识点展示 + FSRS 调度 + 错题本 + AI 对话持久化 + 图谱 R 值
+2. **P0**：跑 emulator 实测 v0.7.5 — 验证 610 综合卷科目分布 + 图谱"花瓣"布局 + 长答案滚动 + 2022年806题目-答案对应 + 909 知识点展示 + FSRS 调度
 3. **P2 优化项（非阻塞）**：`app/build.gradle.kts` 第 71 行 release keystore fail-fast 应移到 task 执行阶段（当前在配置阶段抛异常，沙箱跑 debug 任务也触发，需 `unset CI` 绕过）
 4. **P1 Phase 2 剩余维度审计**：
    - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）

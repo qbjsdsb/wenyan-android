@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "version": "2.7.0",
-    "generated_at": "2026-07-24T00:30:00.000000",
-    "description": "文研App种子数据（南师大文学考研）- v10 含真题答案错位修复+合并题拆分+OCR清洗+科目分类+分值提取",
+    "version": "2.8.0",
+    "generated_at": "2026-07-23T23:44:09.000000",
+    "description": "文研App种子数据（南师大文学考研）- v11 含610综合卷科目重新分类+真题答案错位修复+合并题拆分+OCR清洗",
     "source": "Phase 1 资料数字化管线输出",
     "fixes": [
       "subjects使用全称",
@@ -21,7 +21,8 @@
       "v2.6.0 从content提取score分值，UNKNOWN题型按规则推断",
       "v2.7.0 拆分合并题：eq_0320(历史散文+诗经)→eq_0320+eq_0320b，eq_0399(杨朔+20世纪文学)→eq_0399+eq_0399b",
       "v2.7.0 清理OCR残留：eq_0342(科目名称行)、eq_0454(和获乔《》乱码)、eq_0349/eq_0378(孤立\"团\"字)、eq_0363(关类抢类众形关)、eq_0311(串入下一题题干)",
-      "v2.7.0 全局清理孤立单字行OCR杂讯"
+      "v2.7.0 全局清理孤立单字行OCR杂讯",
+      "v2.8.0 610综合卷127题按内容重新分类subject（原2010-2012全标中国古代文学、2013-2016全标文学理论，实际含4科：古代36/现当代32/外国26/理论33；含2道人工复核修正：eq_0116陶渊明饮酒赏析→古代、eq_0290巫术发生说→理论）"
     ]
   },
   "subjects": [
@@ -57463,7 +57464,7 @@
     {
       "id": "eq_0060",
       "year": 2010,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "TERM_EXPLANATION",
       "content": "3. 杨朔模式",
       "score": 0,
@@ -57474,7 +57475,7 @@
     {
       "id": "eq_0061",
       "year": 2010,
-      "subject": "中国古代文学",
+      "subject": "外国文学",
       "question_type": "TERM_EXPLANATION",
       "content": "4. 意识流小说",
       "score": 0,
@@ -57496,7 +57497,7 @@
     {
       "id": "eq_0063",
       "year": 2010,
-      "subject": "中国古代文学",
+      "subject": "文学理论",
       "question_type": "SHORT_ANSWER",
       "content": "2. 举例简述灵感在文章写作中的作用。",
       "score": 0,
@@ -57507,7 +57508,7 @@
     {
       "id": "eq_0064",
       "year": 2010,
-      "subject": "中国古代文学",
+      "subject": "外国文学",
       "question_type": "SHORT_ANSWER",
       "content": "3. 荷马史诗的艺术特色有哪些？",
       "score": 0,
@@ -57518,7 +57519,7 @@
     {
       "id": "eq_0065",
       "year": 2010,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "SHORT_ANSWER",
       "content": "4. 简述1980年代问题报告文学的基本特点。\n第二部分：各自专业必做部分（90分）\n中国古代文学、中国文学与文化专业必做题",
       "score": 90,
@@ -57573,7 +57574,7 @@
     {
       "id": "eq_0070",
       "year": 2010,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "SHORT_ANSWER",
       "content": "1. 简述《文学改良刍议》与《文学革命论》的异与同。",
       "score": 0,
@@ -57584,7 +57585,7 @@
     {
       "id": "eq_0071",
       "year": 2010,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "SHORT_ANSWER",
       "content": "2.同样以上海为书写对象，“新感觉派”小说与茅盾的《子夜》有何差异？",
       "score": 0,
@@ -57595,7 +57596,7 @@
     {
       "id": "eq_0072",
       "year": 2010,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "SHORT_ANSWER",
       "content": "3. 谈谈“新写实小说”与传统现实主义小说的关系。",
       "score": 0,
@@ -57606,7 +57607,7 @@
     {
       "id": "eq_0073",
       "year": 2010,
-      "subject": "中国古代文学",
+      "subject": "外国文学",
       "question_type": "ESSAY",
       "content": "二、分析题（30分）\n比较文学与世界文学必做题",
       "score": 30,
@@ -57617,7 +57618,7 @@
     {
       "id": "eq_0074",
       "year": 2010,
-      "subject": "中国古代文学",
+      "subject": "外国文学",
       "question_type": "ESSAY",
       "content": "1. 但丁的《神曲》在艺术上有哪些重要特征？\n2疑类；交关校",
       "score": 0,
@@ -57628,7 +57629,7 @@
     {
       "id": "eq_0075",
       "year": 2010,
-      "subject": "中国古代文学",
+      "subject": "外国文学",
       "question_type": "ESSAY",
       "content": "3. 意识流小说在艺术上主要有哪些特征？它取得了怎样的成就？",
       "score": 0,
@@ -57639,7 +57640,7 @@
     {
       "id": "eq_0076",
       "year": 2010,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "ESSAY",
       "content": "1. 在20世纪中国文学向现代转型的进程中，西方文学资源对其产生了怎样的影响？\n文艺学专业必做题",
       "score": 0,
@@ -57650,7 +57651,7 @@
     {
       "id": "eq_0077",
       "year": 2010,
-      "subject": "中国古代文学",
+      "subject": "外国文学",
       "question_type": "ESSAY",
       "content": "1. 试论述欧美文学的批判精神及其在当前的意义。",
       "score": 0,
@@ -57661,7 +57662,7 @@
     {
       "id": "eq_0078",
       "year": 2010,
-      "subject": "中国古代文学",
+      "subject": "文学理论",
       "question_type": "ESSAY",
       "content": "2. 结合具体作品，试述文学在戏剧影视影视艺术中的作用。",
       "score": 0,
@@ -57672,7 +57673,7 @@
     {
       "id": "eq_0079",
       "year": 2010,
-      "subject": "中国古代文学",
+      "subject": "文学理论",
       "question_type": "ESSAY",
       "content": "3. 试析应用文的文本特征及其在文学史上的地位。",
       "score": 0,
@@ -57694,7 +57695,7 @@
     {
       "id": "eq_0081",
       "year": 2011,
-      "subject": "中国古代文学",
+      "subject": "文学理论",
       "question_type": "TERM_EXPLANATION",
       "content": "1. 文学风格",
       "score": 0,
@@ -57716,7 +57717,7 @@
     {
       "id": "eq_0083",
       "year": 2011,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "TERM_EXPLANATION",
       "content": "3. 问题小说",
       "score": 0,
@@ -57727,7 +57728,7 @@
     {
       "id": "eq_0084",
       "year": 2011,
-      "subject": "中国古代文学",
+      "subject": "外国文学",
       "question_type": "TERM_EXPLANATION",
       "content": "4. 黑色幽默",
       "score": 0,
@@ -57738,7 +57739,7 @@
     {
       "id": "eq_0085",
       "year": 2011,
-      "subject": "中国古代文学",
+      "subject": "文学理论",
       "question_type": "SHORT_ANSWER",
       "content": "1. 列举文学批评模式",
       "score": 0,
@@ -57760,7 +57761,7 @@
     {
       "id": "eq_0087",
       "year": 2011,
-      "subject": "中国古代文学",
+      "subject": "外国文学",
       "question_type": "SHORT_ANSWER",
       "content": "3. 简述十九世纪现实主义文学的思想特征",
       "score": 0,
@@ -57771,7 +57772,7 @@
     {
       "id": "eq_0088",
       "year": 2011,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "SHORT_ANSWER",
       "content": "4. 简述二十世纪五、六十年代中国散文的政治品格和审美价值取向。\n第二部分：各自专业必做部分(90分)\n中国古代文学、中国文学与文化专业必做题",
       "score": 90,
@@ -57804,7 +57805,7 @@
     {
       "id": "eq_0091",
       "year": 2011,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "ESSAY",
       "content": "3. 近代急剧变化的社会状况给文学带来的变化",
       "score": 0,
@@ -57826,7 +57827,7 @@
     {
       "id": "eq_0093",
       "year": 2011,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "ESSAY",
       "content": "1. 三十年代的京海之争；",
       "score": 0,
@@ -57837,7 +57838,7 @@
     {
       "id": "eq_0094",
       "year": 2011,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "ESSAY",
       "content": "2. 结合具体作品对鲁迅思想的理解；",
       "score": 0,
@@ -57848,7 +57849,7 @@
     {
       "id": "eq_0095",
       "year": 2011,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "ESSAY",
       "content": "3. 胡风文学理论及其意义的理解",
       "score": 0,
@@ -57859,7 +57860,7 @@
     {
       "id": "eq_0096",
       "year": 2011,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "ESSAY",
       "content": "二、分析题（30分）\n分析老舍，赵树理，汪曾祺三位小说家的小说语言在口语运用方面的特点及彼此间的异同。\n比较文学与世界文学必做题",
       "score": 30,
@@ -57870,7 +57871,7 @@
     {
       "id": "eq_0097",
       "year": 2011,
-      "subject": "中国古代文学",
+      "subject": "外国文学",
       "question_type": "TERM_EXPLANATION",
       "content": "1. 歌德《浮士德》中同名主人公经历的各种悲剧并对其他悲剧内涵的解释以及歌德安排浮士\n德灵魂最终得救的深意。",
       "score": 0,
@@ -57881,7 +57882,7 @@
     {
       "id": "eq_0098",
       "year": 2011,
-      "subject": "中国古代文学",
+      "subject": "外国文学",
       "question_type": "TERM_EXPLANATION",
       "content": "2.狄更斯的《双城记》体现了作家怎样的探索精神。",
       "score": 0,
@@ -57892,7 +57893,7 @@
     {
       "id": "eq_0099",
       "year": 2011,
-      "subject": "中国古代文学",
+      "subject": "外国文学",
       "question_type": "TERM_EXPLANATION",
       "content": "3. 荒原的艺术成就有哪些。",
       "score": 0,
@@ -57903,7 +57904,7 @@
     {
       "id": "eq_0100",
       "year": 2011,
-      "subject": "中国古代文学",
+      "subject": "文学理论",
       "question_type": "ESSAY",
       "content": "二、分析题（30分）\n和昂\n文艺学专业必做题",
       "score": 30,
@@ -57925,7 +57926,7 @@
     {
       "id": "eq_0102",
       "year": 2011,
-      "subject": "中国古代文学",
+      "subject": "文学理论",
       "question_type": "ESSAY",
       "content": "2.举一文体为例，试论述其形式要素之美学特征或社会价值。",
       "score": 0,
@@ -57936,7 +57937,7 @@
     {
       "id": "eq_0103",
       "year": 2011,
-      "subject": "中国古代文学",
+      "subject": "文学理论",
       "question_type": "ESSAY",
       "content": "3.试释“三一律”。“三一律”对于当代影视艺术是否有借鉴意义？说说你的看法和理由。",
       "score": 0,
@@ -57947,7 +57948,7 @@
     {
       "id": "eq_0104",
       "year": 2011,
-      "subject": "中国古代文学",
+      "subject": "文学理论",
       "question_type": "ESSAY",
       "content": "二、分析题（30分）\n试析论王国维“能写真景物、真感情者，谓之有境界，否则谓之无境界”。",
       "score": 30,
@@ -57958,7 +57959,7 @@
     {
       "id": "eq_0105",
       "year": 2012,
-      "subject": "中国古代文学",
+      "subject": "文学理论",
       "question_type": "TERM_EXPLANATION",
       "content": "1. 艺术构思",
       "score": 0,
@@ -57980,7 +57981,7 @@
     {
       "id": "eq_0107",
       "year": 2012,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "TERM_EXPLANATION",
       "content": "3. 样板戏",
       "score": 0,
@@ -57991,7 +57992,7 @@
     {
       "id": "eq_0108",
       "year": 2012,
-      "subject": "中国古代文学",
+      "subject": "外国文学",
       "question_type": "TERM_EXPLANATION",
       "content": "4. 欧洲骑士文学",
       "score": 0,
@@ -58002,7 +58003,7 @@
     {
       "id": "eq_0109",
       "year": 2012,
-      "subject": "中国古代文学",
+      "subject": "文学理论",
       "question_type": "SHORT_ANSWER",
       "content": "1. 举例说明艺术夸张。",
       "score": 0,
@@ -58024,7 +58025,7 @@
     {
       "id": "eq_0111",
       "year": 2012,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "SHORT_ANSWER",
       "content": "3. 戴望舒诗歌的艺术特征。",
       "score": 0,
@@ -58035,7 +58036,7 @@
     {
       "id": "eq_0112",
       "year": 2012,
-      "subject": "中国古代文学",
+      "subject": "外国文学",
       "question_type": "SHORT_ANSWER",
       "content": "4. 简述18 世纪英国文学成就。\n第二部分：各自专业必做部分（90分）\n中国古代文学、中国文学与文化专业必做题",
       "score": 90,
@@ -58090,7 +58091,7 @@
     {
       "id": "eq_0117",
       "year": 2012,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "ESSAY",
       "content": "1. 五四文学的基本特征。",
       "score": 0,
@@ -58101,7 +58102,7 @@
     {
       "id": "eq_0118",
       "year": 2012,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "ESSAY",
       "content": "2. 曹禺《雷雨》中人性的复杂性及其表现。",
       "score": 0,
@@ -58112,7 +58113,7 @@
     {
       "id": "eq_0119",
       "year": 2012,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "ESSAY",
       "content": "3. 朦胧诗的美学特征。",
       "score": 0,
@@ -58123,7 +58124,7 @@
     {
       "id": "eq_0120",
       "year": 2012,
-      "subject": "中国古代文学",
+      "subject": "中国现当代文学",
       "question_type": "ESSAY",
       "content": "1. 从对地域文化表现的角度，分析比较中国现当代文学各个时期的小说创作。\n比较文学与世界文学必做题",
       "score": 0,
@@ -58134,7 +58135,7 @@
     {
       "id": "eq_0121",
       "year": 2012,
-      "subject": "中国古代文学",
+      "subject": "外国文学",
       "question_type": "ESSAY",
       "content": "1. 比较高乃依和拉辛悲剧创作的异同。",
       "score": 0,
@@ -58145,7 +58146,7 @@
     {
       "id": "eq_0122",
       "year": 2012,
-      "subject": "中国古代文学",
+      "subject": "外国文学",
       "question_type": "ESSAY",
       "content": "2. 狄更斯《双城记》的主题思想。",
       "score": 0,
@@ -58156,7 +58157,7 @@
     {
       "id": "eq_0123",
       "year": 2012,
-      "subject": "中国古代文学",
+      "subject": "外国文学",
       "question_type": "ESSAY",
       "content": "3. 为什么说屠格涅夫的长篇小说在总体上构成了19世纪40年代到70年代俄罗斯社会精神\n生活的一部艺术编年史？",
       "score": 0,
@@ -58167,7 +58168,7 @@
     {
       "id": "eq_0124",
       "year": 2012,
-      "subject": "中国古代文学",
+      "subject": "外国文学",
       "question_type": "ESSAY",
       "content": "二、分析题（30分）\n结合T.S.艾略特《荒原》的具体内容，谈谈它的艺术特色。\n文艺学专业必做题",
       "score": 30,
@@ -58189,7 +58190,7 @@
     {
       "id": "eq_0126",
       "year": 2012,
-      "subject": "中国古代文学",
+      "subject": "文学理论",
       "question_type": "ESSAY",
       "content": "2. 举一作品或作品片段为例，试论述其话语特征。",
       "score": 0,
@@ -58200,7 +58201,7 @@
     {
       "id": "eq_0127",
       "year": 2012,
-      "subject": "中国古代文学",
+      "subject": "文学理论",
       "question_type": "ESSAY",
       "content": "二、分析题（30分）\n试析论鲁迅“凡人之心，无不有诗，如诗人作诗，是不为诗人独有，凡一读其诗，心即会解\n者，即无不自有诗人之诗。”",
       "score": 30,
@@ -58585,7 +58586,7 @@
     {
       "id": "eq_0162",
       "year": 2013,
-      "subject": "文学理论",
+      "subject": "外国文学",
       "question_type": "TERM_EXPLANATION",
       "content": "1. “狂飙与突进”运动",
       "score": 0,
@@ -58596,7 +58597,7 @@
     {
       "id": "eq_0163",
       "year": 2013,
-      "subject": "文学理论",
+      "subject": "中国古代文学",
       "question_type": "TERM_EXPLANATION",
       "content": "2. 西厢记",
       "score": 0,
@@ -58607,7 +58608,7 @@
     {
       "id": "eq_0164",
       "year": 2013,
-      "subject": "文学理论",
+      "subject": "中国现当代文学",
       "question_type": "TERM_EXPLANATION",
       "content": "3. 新生代文学思潮",
       "score": 0,
@@ -58618,7 +58619,7 @@
     {
       "id": "eq_0165",
       "year": 2013,
-      "subject": "文学理论",
+      "subject": "中国古代文学",
       "question_type": "TERM_EXPLANATION",
       "content": "4. 《诗经》",
       "score": 0,
@@ -58640,7 +58641,7 @@
     {
       "id": "eq_0167",
       "year": 2013,
-      "subject": "文学理论",
+      "subject": "外国文学",
       "question_type": "SHORT_ANSWER",
       "content": "2. 说说你对《红与黑》中于连形象的理解",
       "score": 0,
@@ -58673,7 +58674,7 @@
     {
       "id": "eq_0170",
       "year": 2013,
-      "subject": "文学理论",
+      "subject": "中国古代文学",
       "question_type": "ESSAY",
       "content": "1. 论述陈子昂文学思想革新意义",
       "score": 0,
@@ -59080,7 +59081,7 @@
     {
       "id": "eq_0207",
       "year": 2014,
-      "subject": "文学理论",
+      "subject": "中国古代文学",
       "question_type": "TERM_EXPLANATION",
       "content": "1. 《离骚》",
       "score": 0,
@@ -59091,7 +59092,7 @@
     {
       "id": "eq_0208",
       "year": 2014,
-      "subject": "文学理论",
+      "subject": "中国古代文学",
       "question_type": "TERM_EXPLANATION",
       "content": "2. 《桃花扇》",
       "score": 0,
@@ -59102,7 +59103,7 @@
     {
       "id": "eq_0209",
       "year": 2014,
-      "subject": "文学理论",
+      "subject": "外国文学",
       "question_type": "TERM_EXPLANATION",
       "content": "3. 《堂吉诃德》",
       "score": 0,
@@ -59113,7 +59114,7 @@
     {
       "id": "eq_0210",
       "year": 2014,
-      "subject": "文学理论",
+      "subject": "中国现当代文学",
       "question_type": "TERM_EXPLANATION",
       "content": "4. 朦胧诗",
       "score": 0,
@@ -59135,7 +59136,7 @@
     {
       "id": "eq_0212",
       "year": 2014,
-      "subject": "文学理论",
+      "subject": "中国古代文学",
       "question_type": "SHORT_ANSWER",
       "content": "1. 试论苏轼的文艺观",
       "score": 0,
@@ -59146,7 +59147,7 @@
     {
       "id": "eq_0213",
       "year": 2014,
-      "subject": "文学理论",
+      "subject": "外国文学",
       "question_type": "SHORT_ANSWER",
       "content": "2. 如何看待福楼拜冷静而无动于衷的叙事",
       "score": 0,
@@ -59157,7 +59158,7 @@
     {
       "id": "eq_0214",
       "year": 2014,
-      "subject": "文学理论",
+      "subject": "中国现当代文学",
       "question_type": "SHORT_ANSWER",
       "content": "3. 先锋小说的创作特点",
       "score": 0,
@@ -59179,7 +59180,7 @@
     {
       "id": "eq_0216",
       "year": 2014,
-      "subject": "文学理论",
+      "subject": "中国古代文学",
       "question_type": "ESSAY",
       "content": "1. 陶渊明的艺术精神内涵",
       "score": 0,
@@ -59982,7 +59983,7 @@
     {
       "id": "eq_0289",
       "year": 2015,
-      "subject": "文学理论",
+      "subject": "外国文学",
       "question_type": "TERM_EXPLANATION",
       "content": "2. 现代主义文学",
       "score": 0,
@@ -60004,7 +60005,7 @@
     {
       "id": "eq_0291",
       "year": 2015,
-      "subject": "文学理论",
+      "subject": "中国现当代文学",
       "question_type": "TERM_EXPLANATION",
       "content": "4. 创造社",
       "score": 0,
@@ -60015,7 +60016,7 @@
     {
       "id": "eq_0292",
       "year": 2015,
-      "subject": "文学理论",
+      "subject": "外国文学",
       "question_type": "TERM_EXPLANATION",
       "content": "5. 狂飙突进运动",
       "score": 0,
@@ -60026,7 +60027,7 @@
     {
       "id": "eq_0293",
       "year": 2015,
-      "subject": "文学理论",
+      "subject": "中国古代文学",
       "question_type": "SHORT_ANSWER",
       "content": "1. 《诗经》对后世诗歌的影响",
       "score": 0,
@@ -60037,7 +60038,7 @@
     {
       "id": "eq_0294",
       "year": 2015,
-      "subject": "文学理论",
+      "subject": "外国文学",
       "question_type": "SHORT_ANSWER",
       "content": "2. 《恶之花》在西方近代文学史上的地位",
       "score": 0,
@@ -60059,7 +60060,7 @@
     {
       "id": "eq_0296",
       "year": 2015,
-      "subject": "文学理论",
+      "subject": "中国现当代文学",
       "question_type": "SHORT_ANSWER",
       "content": "4. 《故事新编》的创新之处",
       "score": 0,
@@ -60070,7 +60071,7 @@
     {
       "id": "eq_0297",
       "year": 2015,
-      "subject": "文学理论",
+      "subject": "中国现当代文学",
       "question_type": "SHORT_ANSWER",
       "content": "5. 张爱玲小说的艺术特色",
       "score": 0,
@@ -60609,7 +60610,7 @@
     {
       "id": "eq_0345",
       "year": 2016,
-      "subject": "文学理论",
+      "subject": "中国古代文学",
       "question_type": "ESSAY",
       "content": "1. 从历史文化角度论“赠别诗”现象",
       "score": 0,
@@ -60620,7 +60621,7 @@
     {
       "id": "eq_0346",
       "year": 2016,
-      "subject": "文学理论",
+      "subject": "中国古代文学",
       "question_type": "ESSAY",
       "content": "2. 分析陶渊明“纵浪大化中，不喜亦不惧”与他归隐选择",
       "score": 0,
@@ -60664,7 +60665,7 @@
     {
       "id": "eq_0350",
       "year": 2016,
-      "subject": "文学理论",
+      "subject": "外国文学",
       "question_type": "TERM_EXPLANATION",
       "content": "1. 现代主义文学",
       "score": 0,
@@ -60675,7 +60676,7 @@
     {
       "id": "eq_0351",
       "year": 2016,
-      "subject": "文学理论",
+      "subject": "中国古代文学",
       "question_type": "TERM_EXPLANATION",
       "content": "2. “发愤著书”说",
       "score": 0,
@@ -60686,7 +60687,7 @@
     {
       "id": "eq_0352",
       "year": 2016,
-      "subject": "文学理论",
+      "subject": "中国古代文学",
       "question_type": "TERM_EXPLANATION",
       "content": "3. 建安风骨",
       "score": 0,
@@ -60708,7 +60709,7 @@
     {
       "id": "eq_0354",
       "year": 2016,
-      "subject": "文学理论",
+      "subject": "中国现当代文学",
       "question_type": "TERM_EXPLANATION",
       "content": "5. 新写实主义思潮",
       "score": 0,
@@ -60719,7 +60720,7 @@
     {
       "id": "eq_0355",
       "year": 2016,
-      "subject": "文学理论",
+      "subject": "中国现当代文学",
       "question_type": "ESSAY",
       "content": "1. 分析老舍《茶馆》的艺术结构。",
       "score": 0,
@@ -60730,7 +60731,7 @@
     {
       "id": "eq_0356",
       "year": 2016,
-      "subject": "文学理论",
+      "subject": "中国古代文学",
       "question_type": "ESSAY",
       "content": "2. 论述唐代古文运动的影响。",
       "score": 0,
@@ -60741,7 +60742,7 @@
     {
       "id": "eq_0357",
       "year": 2016,
-      "subject": "文学理论",
+      "subject": "外国文学",
       "question_type": "ESSAY",
       "content": "3.结合《复活》分析托尔斯泰主义的主要内涵。",
       "score": 0,
@@ -60774,7 +60775,7 @@
     {
       "id": "eq_0360",
       "year": 2016,
-      "subject": "文学理论",
+      "subject": "中国古代文学",
       "question_type": "ESSAY",
       "content": "1. 赏析王维的《渭川田家》。\n渭川田家\n王维\n斜阳照墟落，穷巷牛羊归。\n野老念牧童，倚杖候荆扉。\n雉雊麦苗秀，蚕眠桑叶稀。\n田夫荷锄至，相见语依依。\n即此羡闲逸，怅然吟式微。",
       "score": 0,
@@ -60785,7 +60786,7 @@
     {
       "id": "eq_0361",
       "year": 2016,
-      "subject": "文学理论",
+      "subject": "中国古代文学",
       "question_type": "ESSAY",
       "content": "2. 赏析《儒林外史》的讽刺艺术。",
       "score": 0,
@@ -60796,7 +60797,7 @@
     {
       "id": "eq_0362",
       "year": 2016,
-      "subject": "文学理论",
+      "subject": "中国现当代文学",
       "question_type": "SHORT_ANSWER",
       "content": "1. 郁达夫与废名在小说创作中的不同。",
       "score": 0,
@@ -60807,7 +60808,7 @@
     {
       "id": "eq_0363",
       "year": 2016,
-      "subject": "文学理论",
+      "subject": "中国现当代文学",
       "question_type": "SHORT_ANSWER",
       "content": "2. 就林徽因与刘呐鸥的小说创作谈谈京派与海派的现代叙事。",
       "score": 0,
@@ -60818,7 +60819,7 @@
     {
       "id": "eq_0364",
       "year": 2016,
-      "subject": "文学理论",
+      "subject": "中国现当代文学",
       "question_type": "SHORT_ANSWER",
       "content": "4. 简要分析蒋纯祖，朱老忠，庄之蝶，倪可，四个中国现当代小说的人物形象。",
       "score": 0,
@@ -60829,7 +60830,7 @@
     {
       "id": "eq_0365",
       "year": 2016,
-      "subject": "文学理论",
+      "subject": "中国现当代文学",
       "question_type": "ESSAY",
       "content": "1. 你认为鲁迅的贡献体现在哪些方面？他的写作是不是存在中国文学从古典向现代转换过\n渡时期的局限性？请作出判断，并说出你的理由。近些年，王朔，余华，陈丹青和周令飞等\n人对各自理解的鲁迅均发表了看法，请举出一种观点，谈谈你自己的看法。",
       "score": 0,
@@ -60840,7 +60841,7 @@
     {
       "id": "eq_0366",
       "year": 2016,
-      "subject": "文学理论",
+      "subject": "中国现当代文学",
       "question_type": "ESSAY",
       "content": "2.1917年2月胡适在《新青年》发表了八篇新诗至今，中国新诗已经历一百年，请结合中\n国新诗史，选取具有代表性的诗人和诗作，论述中国新诗如何处理传统与现代的关系。",
       "score": 0,

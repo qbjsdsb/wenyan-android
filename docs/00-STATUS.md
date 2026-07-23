@@ -5,56 +5,70 @@
 
 ## ✅ 当前状态
 
-**v0.7.2 已发布 + 沙箱编译验证全绿** — 909 知识点正常导入（FK 回滚 bug 已修），258 tests 0 failures。
+**v0.7.5 610综合卷科目深度修复完成** — 5 轮迭代修复题目答案错位/合并题/图谱杂乱/UI 字号/科目错标，485 真题数据质量全绿。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `bdb4473`（main，沙箱验证文档） |
-| 最新 Release | **[v0.7.2](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.7.2)**（2026-07-16，debug 签名 fallback，修复 GraphSkeleton FK 回滚） |
-| 沙箱验证 | **assembleDebug SUCCESSFUL**（4m 34s，APK 27MB）+ **testDebugUnitTest 258 tests 0 failures 0 errors** |
-| 知识点 | **909 个**（古代文学 460 / 文学理论 183 / 现当代 149 / 外国 117）— v0.7.2 修复后正常导入 |
-| 阻塞 | **CI 账单问题** — 38+ commit 待 CI 验证（不影响 Release，已通过 API 绕过） |
-| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-23 沙箱验证） |
+| 最新 commit | 待提交（v0.7.5 610综合卷科目深度修复） |
+| 最新 Release | **v0.7.5**（待打 tag） — v0.7.2 修复知识点导入，v0.7.4 修复体验，v0.7.5 修复 610 科目错标 |
+| 编译验证 | **assembleDebug SUCCESSFUL**（clean 后重建） + **testDebugUnitTest 258 tests 0 failures** |
+| 知识点 | **909 个**（古代文学 460 / 文学理论 183 / 现当代 149 / 外国 117） |
+| 真题 | **485 道**（古代135 / 现当代147 / 外国167 / 理论36）— v0.7.5 修复 610 综合卷 127 题科目错标 |
+| seed 版本 | **2.8.0**（触发重新导入，保留用户 FSRS 学习进度） |
+| 阻塞 | **CI 账单问题** — 需用户处理，不影响 Release（debug 签名可用） |
+| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-23 v0.7.5 610综合卷科目深度修复） |
 
 ## 🚨 新会话首要任务
 
-**v0.7.2 已修复知识点不显示根因**（2026-07-16）：
-- 根因：`GraphSkeleton.SUBJECT_ID = "subject-modern-contemporary-literature"` 与 seed_data.json 实际 id `"subj_02"` 不匹配，FK 约束失败导致整个 `withTransaction` 回滚，909 知识点 + memo_records + exam_questions 全部丢失
-- 修复（双保险）：① SUBJECT_ID 改为 `"subj_02"` ② `importGraphSkeleton` 移出主 `withTransaction` 独立 try-catch ③ seed version 2.1.0 → 2.2.0 触发重新导入
-- Release URL：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.7.2
+**v0.7.5 已完成用户反馈三大问题的彻底修复**（2026-07-23）：
 
-**v0.7.2 沙箱编译验证已完成**（2026-07-23，详见 [03-FAILED-ATTEMPTS.md #015](03-FAILED-ATTEMPTS.md)）：
-- 沙箱环境：JDK 17.0.2 + Android SDK 35 + Gradle 8.14.4
-- 补齐缺失的 `gradlew` / `gradlew.bat` / `gradle-wrapper.jar`（之前从未入仓库，CI runner 无法用 wrapper 启动）
-- 修复 `CardsViewModelTest.kt` 类型错误（`FakeStudyProgressRepository` 是工厂函数不能用作类型）
-- assembleDebug + testDebugUnitTest 全绿，258 tests 0 failures
+1. **题目答案不匹配**（5 轮修复）：
+   - 根因1：综合卷（604/605）57 道题全部错标为"中国古代文学"
+   - 根因2：2022年806试卷 answer_framework 系统性下移一条错位
+   - 根因3：4 道合并题（eq_0463苏轼+姚鼐 / eq_0419鲁迅+婉约词 / eq_0320历史散文+诗经 / eq_0399杨朔+20世纪）
+   - 根因4：610 综合卷 127 题科目错标（2010-2012 全标古代、2013-2016 全标理论）
+   - 修复：5 轮迭代修复，seed 2.4.0 → 2.8.0，科目重新分类 156 道（604/605 共 64 + 610 共 92）
+
+2. **知识图谱杂乱看不清**：
+   - 根因：单圆周布局 + 丢弃分类色 + 无缩放平移
+   - 修复：分组径向布局 + 启用分类色 + 双指缩放平移 + 标签径向外定位
+
+3. **UI 看不清**：
+   - 根因：labelSmall 11sp 低于 WCAG 标准 + 卡片无滚动
+   - 修复：labelSmall → 12sp + FlipCard 加 verticalScroll
 
 **P0 待办**（无需用户干预）：
 - GitHub Actions 账单问题：AI 无法解决，需用户充值或解除限制
-- 账单恢复后可重打 tag 触发正式签名 Release（可选，debug 签名 APK 已可用）
+- 跑 emulator 实测 v0.7.5（610 科目分布 + 图谱布局 + 长答案滚动 + 2022年806答案对应）
 
 **新会话可立即开始的 P1 任务**：
-1. 跑 emulator 实测 v0.7.2（909 知识点展示 + FSRS 调度 + 错题本 + AI 对话持久化 + 图谱 R 值）
-2. **P2 优化项（非阻塞）**：`app/build.gradle.kts` 第 71 行 release keystore fail-fast 应移到 task 执行阶段（当前在配置阶段抛异常，即使只跑 debug 任务也会触发，沙箱需 `unset CI` 绕过）
-3. v0.5.0 Phase 2 剩余维度审计（strings.xml / 错误处理 / Compose 副作用 / DataStore Key 治理）
-4. 启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
+1. emulator 实测 v0.7.5
+2. **P2**：release keystore fail-fast 移到 task 执行阶段
+3. v0.5.0 Phase 2 剩余维度审计
+4. 启用 R8（需 emulator 实测验证无崩溃后切换）
 
-## 🆕 最新改动（2026-07-23 沙箱验证）
+## 🆕 最新改动（2026-07-23 v0.7.5 610综合卷科目深度修复）
 
-**沙箱编译验证 v0.7.2 全部通过**（2 commits）：
+**5 轮迭代修复**（详见 [SESSION_LOG.md](SESSION_LOG.md) 2026-07-23 v0.7.5 条目）：
 
-| commit | 内容 |
-|--------|------|
-| `447d404` | fix(build): 补齐缺失的 gradlew wrapper + 修复 CardsViewModelTest 类型错误 |
-| `bdb4473` | docs: 记录沙箱编译验证 v0.7.2 结果与构建踩坑 |
+| 轮次 | 内容 | seed 版本 |
+|------|------|-----------|
+| 第1轮 | UI 修复：Type.kt 字号 + CardsScreen 滚动 + GraphCanvas 重写 | — |
+| 第2轮 | 综合卷 604/605 科目标签重新分类（57 题） | 2.4.0 → 2.5.0 |
+| 第3轮 | 2022年806答案错位修复 + 合并题拆分(苏轼+姚鼐/鲁迅+婉约词) + OCR清洗 | 2.5.0 → 2.6.0 |
+| 第4轮 | 深度复查 + 合并题拆分(历史散文+诗经/杨朔+20世纪) + OCR残留清理 | 2.6.0 → 2.7.0 |
+| 第5轮 | 610 综合卷 127 题科目重新分类（古代36/现当代32/外国26/理论33） | 2.7.0 → 2.8.0 |
 
-**v0.7.0 → v0.7.1 → v0.7.2 知识点不显示排查链**（详见 [SESSION_LOG.md](SESSION_LOG.md) 2026-07-16 条目）：
+**累计修复统计**：拆分合并题 4 道 / 修复答案错位 5 道 / 清理 OCR 噪音 50+ 处 / 科目重新分类 156 道 / 分值提取 36 道 / 题型推断 9 道
 
-| 版本 | commit | 状态 | 内容 |
-|------|--------|------|------|
-| v0.7.0 | `2f2621b` | ❌ 知识点不显示 | 接入 909 知识点 + study_text + seed v2.1.0 |
-| v0.7.1 | （已 supersede） | ❌ 知识点仍不显示 | 精简 JSON + withTimeout 120s（误判为超时） |
-| v0.7.2 | `5518933` | ✅ 修复 | GraphSkeleton.SUBJECT_ID 改 `subj_02` + 移出主事务 + seed v2.2.0 |
+**v0.7.0 → v0.7.2 → v0.7.4 → v0.7.5 演进**：
+
+| 版本 | 状态 | 内容 |
+|------|------|------|
+| v0.7.0 | ❌ 知识点不显示 | 接入 909 知识点 + seed v2.1.0 |
+| v0.7.2 | ✅ 修复导入 | GraphSkeleton.SUBJECT_ID 改 `subj_02` + seed v2.2.0 |
+| v0.7.4 | ✅ 修复体验 | 答案错位+合并题+图谱+UI + seed v2.7.0 |
+| v0.7.5 | ✅ 修复科目 | 610 综合卷 127 题科目重新分类 + seed v2.8.0 |
 
 ---
 
