@@ -57,12 +57,13 @@ import kotlinx.coroutines.launch
  * - 薄弱子图高亮（红色光晕 + 红色边）
  * - 图例说明
  * - 底部统计栏（总节点 / 薄弱节点 / 平均 R）
- * - 节点点击 → Snackbar 提示（后续接通知识点详情页跳转）
+ * - 节点点击 → 有关联知识点则跳转详情,否则 Snackbar 提示(P0 v0.7.2 修复)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GraphScreen(
     onNavigateToAiAssistant: () -> Unit = {},
+    onNavigateToDetail: (String) -> Unit = {},
     viewModel: GraphViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -140,15 +141,19 @@ fun GraphScreen(
                                 nodes = uiState.nodes,
                                 edges = uiState.edges,
                                 onNodeClick = { nodeId ->
-                                    // 阶段5：Snackbar 提示；后续 5.3 接通详情页跳转
+                                    // P0 修复(v0.7.2):有关联知识点 → 跳转详情;无关联 → Snackbar 提示
                                     val node = uiState.nodes.find { it.id == nodeId }
-                                    val message = if (node != null) {
-                                        "${node.label}（R=%.2f）".format(node.retrievability)
+                                    if (node != null && node.relatedPointId != null) {
+                                        onNavigateToDetail(node.relatedPointId)
                                     } else {
-                                        "未知节点"
-                                    }
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar(message)
+                                        val message = if (node != null) {
+                                            "${node.label}（R=%.2f，导航性节点）".format(node.retrievability)
+                                        } else {
+                                            "未知节点"
+                                        }
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar(message)
+                                        }
                                     }
                                 },
                             )

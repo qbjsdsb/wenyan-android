@@ -90,6 +90,7 @@ class GraphViewModel @Inject constructor(
         id = node.id,
         label = node.label,
         retrievability = retrievability,
+        relatedPointId = node.relatedPointId,
     )
 
     /** 将 [GraphEdgeEntity] 映射为 UI 层 [GraphEdgeItem] */
@@ -115,6 +116,8 @@ data class GraphNodeItem(
     val id: String,
     val label: String,
     val retrievability: Float,
+    /** 关联知识点 ID,非空时点击节点可跳转知识点详情 */
+    val relatedPointId: String? = null,
 )
 
 // 图谱边项（UI 层模型）

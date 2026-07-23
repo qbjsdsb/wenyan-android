@@ -45,10 +45,17 @@ interface CardRepository {
  *
  * P1 审计修复:map 内含 suspend DAO 查询(generateCardsFromKnowledgePoint → getByIds),
  * 加 .catchAndLog 降级为空列表,避免卡片复习界面崩溃。
+ *
+ * P0 修复(v0.7.2):原 [getCardsForReview] 只查 ocr_status='VERIFIED' 的知识点,
+ * 完全不读 memo_records.next_review_at,导致 FSRS 调度被旁路——用户每次打开卡片页
+ * 看到全部 909 知识点拆出的 ~4500 张卡,评分后卡片不消失,FSRS 形同摆设。
+ * 现改为复用 [ReviewRepository.getReviewQueue](已实现 due 过滤 + 60s tickFlow 刷新),
+ * 仅对到期知识点拆卡,真正实现 FSRS 间隔重复。
  */
 @Singleton
 class CardRepositoryImpl @Inject constructor(
     private val knowledgePointDao: KnowledgePointDao,
+    private val reviewRepository: ReviewRepository,
 ) : CardRepository {
 
     private companion object {
@@ -56,9 +63,10 @@ class CardRepositoryImpl @Inject constructor(
     }
 
     /**
-     * 获取今日待复习卡片流。
+     * 获取今日待复习卡片流(P0 修复)。
      *
-     * 取 ocr_status='VERIFIED' 的知识点(PENDING 不进复习队列,防背错字),
+     * 复用 [ReviewRepository.getReviewQueue]:仅返回 ocr_status='VERIFIED' 且到期
+     * (next_review_at <= 当前时间)的知识点,并每 60s 自动刷新让新到期卡片进入队列。
      * 逐个调用 [generateCardsFromKnowledgePoint] 生成卡片后展平。
      *
      * [generateCardsFromKnowledgePoint] 为 suspend 函数(需查询对比知识点标题),
@@ -68,9 +76,9 @@ class CardRepositoryImpl @Inject constructor(
      * @return 今日待复习卡片流(已按最小信息原则拆分)
      */
     override fun getCardsForReview(): Flow<List<CardTemplate>> =
-        knowledgePointDao.observeVerifiedForReview().map { verifiedPoints ->
+        reviewRepository.getReviewQueue().map { duePoints ->
             // Iterable.map 是 inline 函数,其 lambda 在 suspend 上下文中可调用 suspend 函数
-            verifiedPoints.map { generateCardsFromKnowledgePoint(it) }.flatten()
+            duePoints.map { generateCardsFromKnowledgePoint(it) }.flatten()
         }.catchAndLog(TAG, "getCardsForReview") { emptyList() }
 
     /**

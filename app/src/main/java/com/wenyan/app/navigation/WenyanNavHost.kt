@@ -107,6 +107,14 @@ fun WenyanNavHost(
                     launchSingleTop = true
                 }
             },
+            onNavigateToDetail = { pointId ->
+                navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId") {
+                    popUpTo("$ROUTE_KNOWLEDGE_DETAIL/{pointId}") {
+                        inclusive = true
+                    }
+                    launchSingleTop = true
+                }
+            },
         )
         settingsDestination(
             onNavigateToApiConfig = {
@@ -184,9 +192,13 @@ private fun NavGraphBuilder.cardsDestination(
 
 private fun NavGraphBuilder.graphDestination(
     onNavigateToAiAssistant: () -> Unit,
+    onNavigateToDetail: (String) -> Unit,
 ) {
     composable(TopLevelDestination.ROUTE_GRAPH) {
-        GraphScreen(onNavigateToAiAssistant = onNavigateToAiAssistant)
+        GraphScreen(
+            onNavigateToAiAssistant = onNavigateToAiAssistant,
+            onNavigateToDetail = onNavigateToDetail,
+        )
     }
 }
 

@@ -413,9 +413,10 @@ private fun QuestionCard(
  *    - 展示用户答案 + 参考答案
  *    - 对错反馈(绿色"答对了" / 红色"答错了")
  *
- * 无参考答案(answerFramework + sampleEssay 都为空)时:
- * - NO_ANSWER 状态 → 提示使用AI助手(原 Spec 行为)
- * - 其他状态 → 不显示答题交互区,仅保留折叠/展开参考答案的逻辑(实际上无内容可展示)
+ * 无参考答案(answerFramework + sampleEssay 都为空)时(P0 v0.7.2 修复):
+ * - 显示非阻断提示,用户仍可输入答案并自评(原实现直接 return 导致 481 题无法答题)
+ * - 展开参考答案区显示"暂无参考答案,请根据自身理解自评"
+ * - 自评文案调整为"请根据你的理解自评"
  */
 @Composable
 private fun AnswerSection(
@@ -432,26 +433,23 @@ private fun AnswerSection(
     val hasReference = hasFramework || hasEssay
     val isNoAnswer = question.answerStatus == "NO_ANSWER"
 
-    // 无参考答案 → 提示使用AI助手(原 Spec 行为,不显示答题交互)
-    if (!hasReference) {
-        if (isNoAnswer) {
-            Surface(
-                color = MaterialTheme.colorScheme.errorContainer,
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = Spacing.sm),
-            ) {
-                Text(
-                    // P1-5 修复：去除面向用户文案中的技术术语 AI_GENERATED
-                    text = "该真题暂无参考答案，可使用AI助手辅助分析（AI 生成内容仅供参考）",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.padding(Spacing.sm),
-                )
-            }
+    // P0 修复(v0.7.2):原实现在无参考答案时直接 return,导致 481 题全部无法答题/自评,
+    // 错题本(真题来源)永不写入。现改为非阻断提示,用户仍可输入答案并自评。
+    if (!hasReference && isNoAnswer) {
+        Surface(
+            color = MaterialTheme.colorScheme.errorContainer,
+            shape = MaterialTheme.shapes.small,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = Spacing.sm),
+        ) {
+            Text(
+                text = "该真题暂无参考答案，可输入你的答案后自评，或使用AI助手辅助分析",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.padding(Spacing.sm),
+            )
         }
-        return
     }
 
     // ── 答题交互区(NF-PP5 Wave 3.2 新增)─────────────────────────
@@ -514,6 +512,15 @@ private fun AnswerSection(
 
         AnimatedVisibility(visible = isExpanded) {
             Column(modifier = Modifier.padding(top = Spacing.xs)) {
+                // P0 修复:无参考答案时显示提示,而非空白
+                if (!hasReference) {
+                    Text(
+                        text = "暂无参考答案，请根据自身理解自评",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
                 // 答题框架
                 if (hasFramework) {
                     Text(
@@ -575,7 +582,7 @@ private fun AnswerSection(
             if (!answerState.isSelfEvaluated) {
                 // ── 状态 2: 已提交未自评 → 自评按钮 ──
                 Text(
-                    text = "对照参考答案，请自评：",
+                    text = if (hasReference) "对照参考答案，请自评：" else "请根据你的理解自评：",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Medium,
                 )

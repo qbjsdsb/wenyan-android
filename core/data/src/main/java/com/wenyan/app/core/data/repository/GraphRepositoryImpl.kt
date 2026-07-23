@@ -166,8 +166,16 @@ class GraphRepositoryImpl @Inject constructor(
         ) { nodes, memos ->
             val memoMap = memos.associateBy { it.pointId }
             val now = clockGuard.effectiveNowMillis()
+            // P0 修复(v0.7.2):计算全局平均 R(仅已学过的卡片 stability>0),
+            // 供无关联知识点的导航性节点(作家/体裁)使用,让图谱能随评分变化。
+            // 原实现这些节点恒返回 0f,图谱退化为全灰色,薄弱高亮失效。
+            val avgR = memos
+                .filter { it.stability > 0 }
+                .map { calculateRetrievability(it, now) }
+                .takeIf { it.isNotEmpty() }
+                ?.average()?.toFloat() ?: 0f
             nodes.map { node ->
-                val r = calculateRetrievabilityForNode(node, memoMap, now)
+                val r = calculateRetrievabilityForNode(node, memoMap, now, avgR)
                 NodeWithRetrievability(node = node, retrievability = r)
             }
         }.catchAndLog(TAG, "getNodesWithRetrievability") { emptyList() }
@@ -178,16 +186,24 @@ class GraphRepositoryImpl @Inject constructor(
      * @param node    图谱节点
      * @param memoMap pointId → MemoRecordEntity 映射
      * @param now     当前时间戳（毫秒）
-     * @return 可提取性 R（0-1），无关联知识点或无记录返回 0f
+     * @param avgR    全局平均 R 值(已学卡片),供无关联知识点的导航性节点使用
+     * @return 可提取性 R（0-1）
      */
     private fun calculateRetrievabilityForNode(
         node: GraphNodeEntity,
         memoMap: Map<String, MemoRecordEntity>,
         now: Long,
+        avgR: Float,
     ): Float {
-        val pointId = node.relatedPointId ?: return 0f
-        val memo = memoMap[pointId] ?: return 0f
-        return calculateRetrievability(memo, now)
+        val pointId = node.relatedPointId
+        // P0 修复:有关联知识点 → 用该知识点的 R;无关联 → 用全局平均 R(而非 0f)
+        if (pointId != null) {
+            val memo = memoMap[pointId]
+            if (memo != null) {
+                return calculateRetrievability(memo, now)
+            }
+        }
+        return avgR
     }
 
     /**
