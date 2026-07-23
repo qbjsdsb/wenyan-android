@@ -17,11 +17,11 @@ android {
         minSdk = 26
         targetSdk = 35
         // P0-M2 修正：versionCode 必须每次发版递增，否则包安装器无法区分版本。
-        // v0.1.0=1, v0.2.0=2, v0.3.0=3, v0.4.0=4, v0.5.0=5, v0.6.0=6, v0.7.0=7, v0.7.1=8, v0.7.2=9（修复图谱FK回滚）
-        versionCode = 9
+        // v0.1.0=1, v0.2.0=2, v0.3.0=3, v0.4.0=4, v0.5.0=5, v0.6.0=6, v0.7.0=7, v0.7.1=8, v0.7.2=9（修复图谱FK回滚）, v0.7.3=10（481真题答案+卡片镜像+图谱扩充）
+        versionCode = 10
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
-        // v0.7.2：修复 GraphSkeleton SUBJECT_ID FK 不匹配导致种子导入事务回滚、知识点全部丢失
-        versionName = "0.7.2"
+        // v0.7.3：481真题答案框架全量补充（古代198+现当代107+外国119+理论57）+ 记忆卡片翻转镜像修复 + 知识图谱扩充至40+节点 + QuizViewModel允许无答案题提交
+        versionName = "0.7.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
