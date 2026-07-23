@@ -1,0 +1,835 @@
+[
+  {
+    "id": "eq_0151",
+    "year": 2013,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "1.“命运悲剧”"
+  },
+  {
+    "id": "eq_0152",
+    "year": 2013,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "2. “心灵的辩证法”"
+  },
+  {
+    "id": "eq_0153",
+    "year": 2013,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "3. 《红字》"
+  },
+  {
+    "id": "eq_0154",
+    "year": 2013,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "4. “人物再现法”"
+  },
+  {
+    "id": "eq_0155",
+    "year": 2013,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "5.“路德不但扫清了教会这个奥古亚斯的牛圈，而且也扫清了德国语言这个奥吉亚斯的牛圈，\n创造了现代德国散文，并且撰写了成为16世纪《马赛曲》的赞美诗的词和曲”"
+  },
+  {
+    "id": "eq_0156",
+    "year": 2013,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "1.19世纪初期欧洲浪漫主义文学的产生有哪些主要条件？\n说明。"
+  },
+  {
+    "id": "eq_0157",
+    "year": 2013,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "3.为什么说屠格涅夫的6部长篇小说构成了19世纪40-70年代俄国知识分子精神生活的艺\n术编年史？"
+  },
+  {
+    "id": "eq_0158",
+    "year": 2013,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "4. 美国文学有哪些基本特色？"
+  },
+  {
+    "id": "eq_0159",
+    "year": 2013,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "1. 试对莎士比亚的戏剧创作道路进行描述，对他各个时期的创作成就和特色进行评说。"
+  },
+  {
+    "id": "eq_0160",
+    "year": 2013,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "2. 试论歌德笔下的浮士德一生各个阶段的追求及这一形象的意义。"
+  },
+  {
+    "id": "eq_0161",
+    "year": 2013,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "3. 结合小说《高老头》的几条主要情节线索，谈谈巴尔扎克这部作品的主题。\n扫描全能王创建"
+  },
+  {
+    "id": "eq_0195",
+    "year": 2014,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "1. 《埃涅阿斯纪》"
+  },
+  {
+    "id": "eq_0196",
+    "year": 2014,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "2. 福斯塔夫式的背景"
+  },
+  {
+    "id": "eq_0197",
+    "year": 2014,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "3. 巴罗克文学"
+  },
+  {
+    "id": "eq_0198",
+    "year": 2014,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "4. “忏悔的贵族”"
+  },
+  {
+    "id": "eq_0199",
+    "year": 2014,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "5. “新小说”"
+  },
+  {
+    "id": "eq_0200",
+    "year": 2014,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "1. 简要谈谈《巴黎圣母院》如何体现了雨果文艺思想中的美丑对照原则。"
+  },
+  {
+    "id": "eq_0201",
+    "year": 2014,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "2. 如何认识19世纪浪漫主义文学是对古典主义的反拨？"
+  },
+  {
+    "id": "eq_0202",
+    "year": 2014,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "3. 如何理解美国自然主义文学的创作特点？"
+  },
+  {
+    "id": "eq_0203",
+    "year": 2014,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "4. 前后期象征主义诗歌有哪些不同之处？"
+  },
+  {
+    "id": "eq_0204",
+    "year": 2014,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "1. 谈谈欧洲中世纪文学的主要成就（提示：写出主要的文学类型、各类型文学的基本主题和\n代表作品）"
+  },
+  {
+    "id": "eq_0205",
+    "year": 2014,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "2. 试对18世纪英国文学的发展进程进行纵向描述。"
+  },
+  {
+    "id": "eq_0206",
+    "year": 2014,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "3. 结合加西亚、马尔克斯的《百年孤独》的具体内容，谈谈这部作品的艺术特色。\n扫描全能王创建"
+  },
+  {
+    "id": "eq_0276",
+    "year": 2015,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "1. 骑士文学"
+  },
+  {
+    "id": "eq_0277",
+    "year": 2015,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "2. “墓园派”诗歌"
+  },
+  {
+    "id": "eq_0278",
+    "year": 2015,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "3.“世纪病”形象"
+  },
+  {
+    "id": "eq_0279",
+    "year": 2015,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "4. 威塞克斯小说"
+  },
+  {
+    "id": "eq_0280",
+    "year": 2015,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "5. 垮掉的一代"
+  },
+  {
+    "id": "eq_0281",
+    "year": 2015,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "1. 简述古典主义文学与人文主义文学的关系。"
+  },
+  {
+    "id": "eq_0282",
+    "year": 2015,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "2.简要说明俄国十九世纪文学中“小人物”形象描写传统是如何发展的。"
+  },
+  {
+    "id": "eq_0283",
+    "year": 2015,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "3. 霍桑的《红字》体现了怎样的浪漫主义色彩？"
+  },
+  {
+    "id": "eq_0284",
+    "year": 2015,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "4. 简要分析乔伊斯在《尤利西斯》中展示的意识流创作风格。"
+  },
+  {
+    "id": "eq_0285",
+    "year": 2015,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "1. 论述《荷马史诗》的基本内容以及两部作品各自的特色。"
+  },
+  {
+    "id": "eq_0286",
+    "year": 2015,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "2.关于哈姆雷特复仇的延宕，泰纳在《英国文学史》中写道：“过分活跃的想象由于积累了\n各种意象和热衷于专注的思考以至消耗了一切活力。你可以看到他是一个善于幻想而不善于\n行动的人，他沉醉于自己心造幻影的冥想里面，他把想象的世界看得太清晰了，以至无法在\n现实世界中担负起自己的命运。”谈谈你对这一阐释的评价。"
+  },
+  {
+    "id": "eq_0287",
+    "year": 2015,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "3. 谈谈你对19世纪法国文学发展脉络与主要成就的理解。\n扫描全能王创建"
+  },
+  {
+    "id": "eq_0331",
+    "year": 2016,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "1.“命运悲剧”"
+  },
+  {
+    "id": "eq_0332",
+    "year": 2016,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "2. 《红字》"
+  },
+  {
+    "id": "eq_0333",
+    "year": 2016,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "3. 《恶之花》"
+  },
+  {
+    "id": "eq_0334",
+    "year": 2016,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "4. “心灵的辩证法”"
+  },
+  {
+    "id": "eq_0335",
+    "year": 2016,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "5. 黑色幽默"
+  },
+  {
+    "id": "eq_0336",
+    "year": 2016,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "1. 简述莎士比亚早期历史剧和喜剧作品的基本主题和主要特点。"
+  },
+  {
+    "id": "eq_0337",
+    "year": 2016,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "2.19世纪初期欧洲浪漫主义文学的产生有哪些主要条件？"
+  },
+  {
+    "id": "eq_0338",
+    "year": 2016,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "3.为什么说屠格涅夫的六部长篇小说构成了19世纪40-70年代俄国知识分子精神生活的艺\n术编年史？"
+  },
+  {
+    "id": "eq_0339",
+    "year": 2016,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "4. 卡夫卡的短篇小说有哪些基本主题？（举出相关的作品名称）"
+  },
+  {
+    "id": "eq_0340",
+    "year": 2016,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "1. 试论歌德笔下的浮士德一生各个阶段的追求及这一形象的意义。"
+  },
+  {
+    "id": "eq_0341",
+    "year": 2016,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "2. 试对19世纪后期（约1870-1900年间）欧美文学的基本格局（提示：包括主要的文学思\n潮和流派、各思潮和流派的代表作家及其代表作品）进行评述。"
+  },
+  {
+    "id": "eq_0342",
+    "year": 2016,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "3. 结合T.S. 艾略特的长诗《荒原》的具体内容，谈谈这部诗作的艺术特色。\n科目名称：文学理论基础与文学评论写作 满分：150分\n第一部分：文学理论基础（50分）"
+  },
+  {
+    "id": "eq_0343",
+    "year": 2016,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "1. 简答题：文学消费与文学接受之间的区别是什么？(20分)"
+  },
+  {
+    "id": "eq_0344",
+    "year": 2016,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "2. 分析题：试以一位外国作家为例，说明文学风格与作家创作个性的关系。（30分）\n扫描全能王创建"
+  },
+  {
+    "id": "eq_0379",
+    "year": 2017,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "1. 福斯塔夫式背景"
+  },
+  {
+    "id": "eq_0380",
+    "year": 2017,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "2. 《十日谈》"
+  },
+  {
+    "id": "eq_0381",
+    "year": 2017,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "3. 浮士德精神"
+  },
+  {
+    "id": "eq_0382",
+    "year": 2017,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "4. 巴洛克文学"
+  },
+  {
+    "id": "eq_0383",
+    "year": 2017,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "5. 威塞克斯小说"
+  },
+  {
+    "id": "eq_0384",
+    "year": 2017,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "1. 请简要分析《埃涅阿斯纪》对荷马史诗有什么继承和创新。"
+  },
+  {
+    "id": "eq_0385",
+    "year": 2017,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "2. 但丁《神曲》有哪些突出的艺术特色。"
+  },
+  {
+    "id": "eq_0386",
+    "year": 2017,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "3.18世纪欧洲文学中出现哪些新的小说形式？结合作家作品予以说明。"
+  },
+  {
+    "id": "eq_0387",
+    "year": 2017,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "4. 《悲惨世界》是如何集中体现雨果的人道主义。"
+  },
+  {
+    "id": "eq_0388",
+    "year": 2017,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "1. 结合《爱玛》谈简奥斯汀作品的在内容和艺术方面的基本特点。"
+  },
+  {
+    "id": "eq_0389",
+    "year": 2017,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "2. 谈谈波德莱尔的《恶之花》在诗歌艺术方面体现的创新。"
+  },
+  {
+    "id": "eq_0390",
+    "year": 2017,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "3. 谈谈你对陀思妥耶夫斯基小说《卡拉马佐夫兄弟》的重要人物形象的理解。\n扫描全能王创建"
+  },
+  {
+    "id": "eq_0400",
+    "year": 2018,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "1. 骑士文学"
+  },
+  {
+    "id": "eq_0401",
+    "year": 2018,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "2. 流浪汉小说"
+  },
+  {
+    "id": "eq_0402",
+    "year": 2018,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "3. 自然派"
+  },
+  {
+    "id": "eq_0403",
+    "year": 2018,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "4. 《荒原》"
+  },
+  {
+    "id": "eq_0404",
+    "year": 2018,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "5. 黑色幽默"
+  },
+  {
+    "id": "eq_0405",
+    "year": 2018,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "1. 如何理解弥尔顿《失乐园》中撒旦形象的塑造？"
+  },
+  {
+    "id": "eq_0406",
+    "year": 2018,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "2. 《安娜·卡列尼娜》结构艺术"
+  },
+  {
+    "id": "eq_0407",
+    "year": 2018,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "3.19世纪后法国文学成就"
+  },
+  {
+    "id": "eq_0408",
+    "year": 2018,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "4. 《喧哗与骚动》艺术特色"
+  },
+  {
+    "id": "eq_0409",
+    "year": 2018,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "1. 《虹》分析劳伦斯的创作主题"
+  },
+  {
+    "id": "eq_0410",
+    "year": 2018,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "2. 浮士德的人物形象"
+  },
+  {
+    "id": "eq_0411",
+    "year": 2018,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "3. 《包法利夫人》的艺术特色\n扫描全能王创建"
+  },
+  {
+    "id": "eq_0422",
+    "year": 2019,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "1. 变形计（奥维德）"
+  },
+  {
+    "id": "eq_0423",
+    "year": 2019,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "2. 福斯塔夫式背景"
+  },
+  {
+    "id": "eq_0424",
+    "year": 2019,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "3. 《草叶集》"
+  },
+  {
+    "id": "eq_0425",
+    "year": 2019,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "4. 心灵的辩证法"
+  },
+  {
+    "id": "eq_0426",
+    "year": 2019,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "5. 黑色幽默"
+  },
+  {
+    "id": "eq_0427",
+    "year": 2019,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "1. 简述高乃依与拉辛悲剧的异同点。"
+  },
+  {
+    "id": "eq_0428",
+    "year": 2019,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "2.18世纪德国文学有哪几个阶段，各个阶段的代表作家作品是什么？"
+  },
+  {
+    "id": "eq_0429",
+    "year": 2019,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "3.19世纪初欧洲浪漫主义文学产生的条件主要是哪些？"
+  },
+  {
+    "id": "eq_0430",
+    "year": 2019,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "4. 美国作家海明威作品的艺术特征"
+  },
+  {
+    "id": "eq_0431",
+    "year": 2019,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "2. 加西亚马尔克斯的《百年孤独》体现了哪些的艺术特色？"
+  },
+  {
+    "id": "eq_0432",
+    "year": 2019,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "3. 结合《高老头》中的几条主要线索，谈谈巴尔扎克这部作品的主题。\n扫描全能王创建"
+  },
+  {
+    "id": "eq_0435",
+    "year": 2020,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "1. 埃涅阿斯纪"
+  },
+  {
+    "id": "eq_0436",
+    "year": 2020,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "2. 中世纪英雄史诗"
+  },
+  {
+    "id": "eq_0437",
+    "year": 2020,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "3. 哲理小说"
+  },
+  {
+    "id": "eq_0438",
+    "year": 2020,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "4. 唯美主义文学"
+  },
+  {
+    "id": "eq_0439",
+    "year": 2020,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "5. 荒诞派戏剧"
+  },
+  {
+    "id": "eq_0440",
+    "year": 2020,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "1.“描写的时候模仿真实，模仿得愈亲切，作品就愈好。”说说《堂吉诃德》中的模仿和戏\n仿的艺术效果"
+  },
+  {
+    "id": "eq_0441",
+    "year": 2020,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "2. 拉斯柯尔尼科夫形象"
+  },
+  {
+    "id": "eq_0442",
+    "year": 2020,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "3. 哈代小说的乡土特征"
+  },
+  {
+    "id": "eq_0443",
+    "year": 2020,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "4. 海明威艺术特色"
+  },
+  {
+    "id": "eq_0444",
+    "year": 2020,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "1. 17世纪有什么文学流派"
+  },
+  {
+    "id": "eq_0445",
+    "year": 2020,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "2.19世纪浪漫主义文学出现之前的因素"
+  },
+  {
+    "id": "eq_0446",
+    "year": 2020,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "3. 《荒原》如何用“破碎意象”表达主题\n扫描全能王创建"
+  },
+  {
+    "id": "eq_0449",
+    "year": 2021,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "1. 悲剧《俄狄浦斯王》"
+  },
+  {
+    "id": "eq_0450",
+    "year": 2021,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "2. 文人史诗"
+  },
+  {
+    "id": "eq_0451",
+    "year": 2021,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "3. 《神曲》"
+  },
+  {
+    "id": "eq_0452",
+    "year": 2021,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "4. 意识流文学"
+  },
+  {
+    "id": "eq_0453",
+    "year": 2021,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "5. 超现实主义"
+  },
+  {
+    "id": "eq_0454",
+    "year": 2021,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "1. 结合《红与黑》的内容谈谈这部小说的艺术特色。\n和获乔《》"
+  },
+  {
+    "id": "eq_0455",
+    "year": 2021,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "3. 《包法利夫人》的创作特色。"
+  },
+  {
+    "id": "eq_0456",
+    "year": 2021,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "4.T.S. 艾略特诗歌的代表作是什么？请分析其创作手法和特点。"
+  },
+  {
+    "id": "eq_0457",
+    "year": 2021,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "1. 为什么说《堂吉诃德》是一部反骑士文学的小说？骑士文学作品的特点是什么？结合小说\n谈谈你的理解。"
+  },
+  {
+    "id": "eq_0458",
+    "year": 2021,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "2. 比较分析弥尔顿《失乐园》中撒旦和歌德《浮士德》中靡菲斯特的形象。"
+  },
+  {
+    "id": "eq_0459",
+    "year": 2021,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "3. 请分析卡夫卡《城堡》中主人公K和城堡的关系。\n扫描全能王创建"
+  },
+  {
+    "id": "eq_0470",
+    "year": 2022,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "1. 人文主义思潮"
+  },
+  {
+    "id": "eq_0471",
+    "year": 2022,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "2. 托尔斯泰主义"
+  },
+  {
+    "id": "eq_0472",
+    "year": 2022,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "3. 社会问题剧"
+  },
+  {
+    "id": "eq_0473",
+    "year": 2022,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "4. 多余人"
+  },
+  {
+    "id": "eq_0474",
+    "year": 2022,
+    "subject": "外国文学",
+    "question_type": "TERM_EXPLANATION",
+    "content": "5. 狂飙突进运动"
+  },
+  {
+    "id": "eq_0475",
+    "year": 2022,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "1. 欧洲 19 世纪浪漫主义的特征"
+  },
+  {
+    "id": "eq_0476",
+    "year": 2022,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "2. 列举几个巴尔扎克创作的历史内容"
+  },
+  {
+    "id": "eq_0477",
+    "year": 2022,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "3. 埃涅阿斯纪和荷马史诗的相似点"
+  },
+  {
+    "id": "eq_0478",
+    "year": 2022,
+    "subject": "外国文学",
+    "question_type": "SHORT_ANSWER",
+    "content": "4. 卡夫卡小说的艺术成就"
+  },
+  {
+    "id": "eq_0479",
+    "year": 2022,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "1. 神曲二重性"
+  },
+  {
+    "id": "eq_0480",
+    "year": 2022,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "2. 哈姆雷特形象"
+  },
+  {
+    "id": "eq_0481",
+    "year": 2022,
+    "subject": "外国文学",
+    "question_type": "ESSAY",
+    "content": "3. 喧哗与骚动的艺术特色\n扫描全能王创建"
+  }
+]
