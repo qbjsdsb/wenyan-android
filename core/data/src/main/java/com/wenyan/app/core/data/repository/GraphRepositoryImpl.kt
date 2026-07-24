@@ -206,6 +206,18 @@ class GraphRepositoryImpl @Inject constructor(
         return avgR
     }
 
+    override suspend fun getKnowledgePointTitles(ids: List<String>): Map<String, String> =
+        try {
+            if (ids.isEmpty()) {
+                emptyMap()
+            } else {
+                knowledgePointDao.getByIds(ids).associate { it.id to it.title }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "getKnowledgePointTitles failed for ids=${ids.take(3)}...", e)
+            emptyMap()
+        }
+
     /**
      * 计算可提取性 R（FSRS-6 幂律公式）。
      *

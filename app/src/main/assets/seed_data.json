@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "version": "2.9.0",
+    "version": "2.11.0",
     "generated_at": "2026-07-24T00:01:38.475972",
-    "description": "文研App种子数据（南师大文学考研）- v12 删除冗余字段（multi_perspectives全\"其他\"/sample_essay范文）+ 知识图谱时间轴重构",
+    "description": "文研App种子数据（南师大文学考研）- v14 知识图谱考频接通（KnowledgePointSeed 解析 exam_frequency 字段，图谱节点 metadata 写入 examFrequency + sourceKpCount）",
     "source": "Phase 1 资料数字化管线输出",
     "fixes": [
       "subjects使用全称",
@@ -24,7 +24,9 @@
       "v2.7.0 全局清理孤立单字行OCR杂讯",
       "v2.8.0 610综合卷127题按内容重新分类subject（原2010-2012全标中国古代文学、2013-2016全标文学理论，实际含4科：古代36/现当代32/外国26/理论33；含2道人工复核修正：eq_0116陶渊明饮酒赏析→古代、eq_0290巫术发生说→理论）",
       "v2.9.0 删除所有 910 知识点的 multi_perspectives 字段（source 全为\"其他\"，零信息量冗余字段）",
-      "v2.9.0 删除所有 485 真题的 sample_essay 字段（范文冗余，answer_framework 答题框架已足够；总字符 216133）"
+      "v2.9.0 删除所有 485 真题的 sample_essay 字段（范文冗余，answer_framework 答题框架已足够；总字符 216133）",
+      "v2.10.0 知识图谱自动建图：解析 910 知识点的 entities（3336 条去重 2123 个）+ relations（968 条），自动生成图谱节点和边，覆盖率从 4.4%（40 硬编码）→ 100%",
+      "v2.11.0 知识图谱考频接通：SeedDataLoader 解析 KnowledgePointSeed.exam_frequency 字段（原硬编码 NEVER 导致 8 LOW+3 MEDIUM 考频丢失），图谱节点 metadata 写入 examFrequency（取关联知识点最高频）+ sourceKpCount（关联知识点数，用于节点尺寸编码）"
     ]
   },
   "subjects": [

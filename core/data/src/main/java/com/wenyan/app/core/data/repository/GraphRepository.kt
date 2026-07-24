@@ -122,4 +122,16 @@ interface GraphRepository {
      * @return 节点 + R 值列表的 Flow
      */
     fun getNodesWithRetrievability(): Flow<List<NodeWithRetrievability>>
+
+    /**
+     * 批量查询知识点标题（v0.8.1 新增：替代 NodeDetailSheet 显示 UUID 的问题）。
+     *
+     * 用于图谱节点详情 BottomSheet：节点的 `sourceKpIds` 存储知识点 ID 列表，
+     * 原实现直接显示 ID（如 "kp_00613"），用户体验差。
+     * 现通过此方法批量查询标题，显示如"《呐喊》与新小说的奠基"。
+     *
+     * @param ids 知识点 ID 列表
+     * @return id → title 映射；未找到的 ID 不出现在 map 中
+     */
+    suspend fun getKnowledgePointTitles(ids: List<String>): Map<String, String>
 }

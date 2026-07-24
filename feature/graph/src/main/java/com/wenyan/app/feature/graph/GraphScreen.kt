@@ -1,35 +1,68 @@
 package com.wenyan.app.feature.graph
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
-import com.wenyan.app.core.designsystem.motion.WenyanMotion
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.LocationSearching
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SmartToy
-import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,47 +75,101 @@ import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ErrorState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.Spacing
+import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
+import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
+import com.wenyan.app.feature.graph.ui.EDGE_TYPE_LABELS
+import com.wenyan.app.feature.graph.ui.GRAPH_SUBJECT_COLORS
+import com.wenyan.app.feature.graph.ui.GRAPH_SUBJECT_DISPLAY_NAME
+import com.wenyan.app.feature.graph.ui.GRAPH_TYPE_COLORS
+import com.wenyan.app.feature.graph.ui.GRAPH_TYPE_DISPLAY_NAME
 import com.wenyan.app.feature.graph.ui.GraphCanvas
 import kotlinx.coroutines.launch
 
-// 图例颜色（从主题获取，与 GraphCanvas 一致）
-
 /**
- * 知识图谱界面（v0.7.6 时间轴布局）。
+ * 知识图谱界面（v0.8.0 重构：学习导向 + 3 档显示范围 + 边标签图例）。
  *
- * 功能：
- * - Canvas 可视化节点 + 边（v0.7.6 文学史时间轴泳道布局）
- * - 横轴 = 时间（1915-2030，覆盖现当代文学全周期）
- * - 纵轴 = 4 条泳道（时段/流派/作家/体裁）
- * - 跨类边纵向连接泳道，形成"作家↔流派↔体裁↔时段"知识链路
- * - 顶部时间刻度线（8 个关键年份）+ 泳道分割线
- * - 分类色映射（作家粉/体裁蓝/时段绿/流派紫/作品橙）
- * - 薄弱子图高亮（红色光晕 + 红色边）
- * - 图例说明（v0.7.6 新增布局提示）
- * - 底部统计栏（总节点 / 薄弱节点 / 平均 R）
- * - 双指缩放 + 单指平移（v0.7.4 保留）
- * - 节点点击 → 有关联知识点则跳转详情,否则 Snackbar 提示(P0 v0.7.2 修复)
+ * ## v0.8.0 核心改进
+ *
+ * - **3 档显示范围 Tab**：核心 / 重要 / 全部（替代二元开关）
+ * - **简化图例**：移除薄弱光晕等冗余图例项
+ * - **学习导向 BottomSheet**：增加"开始复习"和"查看真题"入口
+ * - **掌握度统计**：底部显示已掌握/巩固/薄弱/未学分布
+ * - **边标签图例**：显示常见关系类型
+ *
+ * 布局：
+ * - TopAppBar：标题 + 搜索 + 筛选 + 重置 + AI 助手
+ * - 显示范围 Tab：核心 / 重要 / 全部
+ * - 搜索栏（可展开）
+ * - 筛选面板（可展开）：科目 + 类型 + 薄弱
+ * - 图例栏
+ * - GraphCanvas（主内容区）
+ * - 底部掌握度统计栏
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GraphScreen(
     onNavigateToAiAssistant: () -> Unit = {},
     onNavigateToDetail: (String) -> Unit = {},
+    onNavigateToReview: (String) -> Unit = {},
     viewModel: GraphViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val subjects by viewModel.subjects.collectAsStateWithLifecycle()
+    val selectedTypes by viewModel.selectedTypes.collectAsStateWithLifecycle()
+    val selectedSubjectId by viewModel.selectedSubjectId.collectAsStateWithLifecycle()
+    val showWeakOnly by viewModel.showWeakOnly.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val displayScope by viewModel.displayScope.collectAsStateWithLifecycle()
+    val layoutMode by viewModel.layoutMode.collectAsStateWithLifecycle()
+
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    var showFilterPanel by remember { mutableStateOf(false) }
+    var showSearchBar by remember { mutableStateOf(false) }
+    var resetTrigger by remember { mutableStateOf(0) }
+    var selectedNodeId by remember { mutableStateOf<String?>(null) }
+
+    val selectedNode = remember(uiState.nodes, selectedNodeId) {
+        if (selectedNodeId == null) null
+        else uiState.nodes.find { it.id == selectedNodeId }
+    }
+
     ExpressiveScaffold(
         topBar = {
-            // 图谱 Canvas 固定布局不滚动，仅享受 Large 标题样式
             WenyanLargeTopAppBar(
                 title = "知识图谱",
-                // v0.7.6 新增：副标题提示时间轴范围
-                subtitle = "文学史时间轴 · 1915-2030",
+                subtitle = "${uiState.nodes.size}/${uiState.totalCount} 节点 · " +
+                    "${layoutMode.displayName} · ${displayScope.displayName}",
                 actions = {
+                    IconButton(onClick = {
+                        showSearchBar = !showSearchBar
+                        if (!showSearchBar) viewModel.setSearchQuery("")
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = if (showSearchBar) "关闭搜索" else "搜索节点",
+                            tint = if (showSearchBar) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                    IconButton(onClick = { showFilterPanel = !showFilterPanel }) {
+                        Icon(
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = if (showFilterPanel) "收起筛选" else "展开筛选",
+                            tint = if (showFilterPanel || selectedTypes.isNotEmpty() ||
+                                selectedSubjectId != null || showWeakOnly)
+                                MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                    IconButton(onClick = { resetTrigger++ }) {
+                        Icon(
+                            imageVector = Icons.Default.LocationSearching,
+                            contentDescription = "重置视图",
+                        )
+                    }
                     IconButton(onClick = onNavigateToAiAssistant) {
                         Icon(
                             imageVector = Icons.Default.SmartToy,
@@ -99,8 +186,54 @@ fun GraphScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            // 图例（v0.7.6 紧凑化：单行分类色 + 泳道说明）
-            LegendBar()
+            // 布局模式选择器（v0.8.0 新增：三模式可切换）
+            LayoutModeSelector(
+                selectedMode = layoutMode,
+                onModeSelected = viewModel::setLayoutMode,
+            )
+
+            // 显示范围 Tab（v0.8.0 新增：3 档）
+            DisplayScopeTabRow(
+                selectedScope = displayScope,
+                onScopeSelected = viewModel::setDisplayScope,
+            )
+
+            // 搜索栏（可展开收起）
+            AnimatedVisibility(
+                visible = showSearchBar,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut(),
+            ) {
+                SearchBar(
+                    query = searchQuery,
+                    onQueryChange = viewModel::setSearchQuery,
+                    onClear = {
+                        viewModel.setSearchQuery("")
+                        showSearchBar = false
+                    },
+                )
+            }
+
+            // 筛选面板
+            AnimatedVisibility(
+                visible = showFilterPanel,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut(),
+            ) {
+                FilterPanel(
+                    subjects = subjects,
+                    selectedSubjectId = selectedSubjectId,
+                    onSubjectSelected = viewModel::setSubjectFilter,
+                    selectedTypes = selectedTypes,
+                    onTypeToggled = viewModel::toggleTypeFilter,
+                    showWeakOnly = showWeakOnly,
+                    onWeakToggled = viewModel::toggleWeakOnly,
+                    onClearAll = viewModel::clearAllFilters,
+                )
+            }
+
+            // 图例（v0.8.0：根据布局模式显示不同说明）
+            LegendBar(layoutMode = layoutMode)
 
             // 主内容区
             Box(
@@ -123,7 +256,6 @@ fun GraphScreen(
                                 WenyanLoadingIndicator()
                             }
                         }
-                        // P0-6 修复：加 error 分支，数据加载失败时展示错误信息 + 重试按钮
                         error != null -> {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
@@ -140,26 +272,29 @@ fun GraphScreen(
                         isEmpty -> {
                             EmptyState(
                                 icon = Icons.Filled.Inbox,
-                                title = "暂无图谱数据，请先导入知识点",
+                                title = if (searchQuery.isNotBlank()) "未找到匹配的节点"
+                                        else "当前范围无节点，尝试切换显示范围或调整筛选",
                             )
                         }
                         else -> {
                             GraphCanvas(
                                 nodes = uiState.nodes,
                                 edges = uiState.edges,
+                                layoutMode = layoutMode,
+                                highlightedNodeIds = uiState.highlightedNodeIds,
+                                focusedNodeId = uiState.focusedNodeId,
+                                resetTrigger = resetTrigger,
                                 onNodeClick = { nodeId ->
-                                    // P0 修复(v0.7.2):有关联知识点 → 跳转详情;无关联 → Snackbar 提示
                                     val node = uiState.nodes.find { it.id == nodeId }
-                                    if (node != null && node.relatedPointId != null) {
-                                        onNavigateToDetail(node.relatedPointId)
-                                    } else {
-                                        val message = if (node != null) {
-                                            "${node.label}（R=%.2f，导航性节点）".format(node.retrievability)
-                                        } else {
-                                            "未知节点"
+                                    if (node != null) {
+                                        selectedNodeId = nodeId
+                                        // NEIGHBORHOOD 模式下点击节点即设为聚焦点
+                                        if (layoutMode == LayoutMode.NEIGHBORHOOD) {
+                                            viewModel.setFocusedNode(nodeId)
                                         }
+                                    } else {
                                         scope.launch {
-                                            snackbarHostState.showSnackbar(message)
+                                            snackbarHostState.showSnackbar("未知节点")
                                         }
                                     }
                                 },
@@ -169,47 +304,289 @@ fun GraphScreen(
                 }
             }
 
-            // 底部统计栏
-            // P2 性能修复：统计计算包裹 remember(uiState.nodes)，避免每次重组重复 O(n) 遍历 + 堆分配。
-            // 原 map{}.average() 每次重组分配新 List<Float> + 两次 O(n) 遍历，
-            // 节点列表未变时完全无需重算。
-            val stats = remember(uiState.nodes) {
-                val nodes = uiState.nodes
-                if (nodes.isEmpty()) null
-                else Triple(
-                    nodes.size,
-                    nodes.count { it.retrievability > 0f && it.retrievability < 0.5f },
-                    nodes.map { it.retrievability }.average().toFloat(),
+            // 底部掌握度统计栏（v0.8.0 增强）
+            if (!uiState.isLoading && uiState.totalCount > 0) {
+                MasteryStatsBar(
+                    displayedNodes = uiState.nodes.size,
+                    totalNodes = uiState.totalCount,
+                    masteredCount = uiState.masteredCount,
+                    consolidatingCount = uiState.nodes.size - uiState.masteredCount -
+                        uiState.weakCount - uiState.unlearnedCount,
+                    weakCount = uiState.weakCount,
+                    unlearnedCount = uiState.unlearnedCount,
                 )
             }
-            if (!uiState.isLoading && stats != null) {
-                StatsBar(
-                    totalNodes = stats.first,
-                    weakNodes = stats.second,
-                    avgRetrievability = stats.third,
+        }
+    }
+
+    // 节点详情 BottomSheet（v0.8.0 学习导向重构）
+    selectedNode?.let { node ->
+        NodeDetailSheet(
+            node = node,
+            onDismiss = { selectedNodeId = null },
+            onNavigateToDetail = { pointId ->
+                selectedNodeId = null
+                onNavigateToDetail(pointId)
+            },
+            onNavigateToReview = { pointId ->
+                selectedNodeId = null
+                onNavigateToReview(pointId)
+            },
+            onFocusNode = { nodeId ->
+                viewModel.setFocusedNode(nodeId)
+                selectedNodeId = null
+                resetTrigger++
+            },
+        )
+    }
+}
+
+// ── 布局模式选择器（v0.8.0 新增）──────────────────────────────
+
+/**
+ * 布局模式 SegmentedButton 选择器（v0.8.0 新增）。
+ *
+ * 三模式对应不同学习任务：
+ * - TIMELINE：文学史脉络（默认）
+ * - NEIGHBORHOOD：深挖某节点关系
+ * - RADIAL：鸟瞰科目全局
+ */
+@Composable
+private fun LayoutModeSelector(
+    selectedMode: LayoutMode,
+    onModeSelected: (LayoutMode) -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+        ) {
+            LayoutMode.entries.forEachIndexed { index, mode ->
+                SegmentedButton(
+                    selected = selectedMode == mode,
+                    onClick = { onModeSelected(mode) },
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = LayoutMode.entries.size,
+                    ),
+                    label = {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                text = mode.displayName,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (selectedMode == mode) FontWeight.SemiBold
+                                    else FontWeight.Normal,
+                            )
+                        }
+                    },
                 )
             }
         }
     }
 }
 
-// ── 图例 ──────────────────────────────────────────────────────
+// ── 显示范围 Tab ──────────────────────────────────────────────
 
 /**
- * 图例（v0.7.6 重构：时间轴泳道布局说明）。
+ * 显示范围 Tab Row（v0.8.0 新增）。
  *
- * 原图例仅显示 5 类分类色（v0.7.4 实现），未说明布局含义。
- * v0.7.6 改为两层信息：
- * - 上层：横向时间轴 / 纵向泳道 提示
- * - 下层：5 类分类色 + 薄弱光晕
+ * 3 档：核心 / 重要 / 全部
+ * - 核心：40-60 节点，首次浏览与全局理解
+ * - 重要：200-400 节点，科目内深入
+ * - 全部：2000+ 节点，搜索特定实体
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DisplayScopeTabRow(
+    selectedScope: DisplayScope,
+    onScopeSelected: (DisplayScope) -> Unit,
+) {
+    PrimaryTabRow(
+        selectedTabIndex = selectedScope.ordinal,
+    ) {
+        DisplayScope.entries.forEach { scope ->
+            Tab(
+                selected = selectedScope == scope,
+                onClick = { onScopeSelected(scope) },
+                text = {
+                    Text(
+                        text = scope.displayName,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                },
+            )
+        }
+    }
+}
+
+// ── 搜索栏 ──────────────────────────────────────────────
+
+@Composable
+private fun SearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClear: () -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+            placeholder = { Text("搜索节点名称（作家/作品/概念）") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            trailingIcon = {
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = onClear) {
+                        Icon(Icons.Default.Close, contentDescription = "清除")
+                    }
+                }
+            },
+            singleLine = true,
+        )
+    }
+}
+
+// ── 筛选面板 ──────────────────────────────────────────────
+
+@Composable
+private fun FilterPanel(
+    subjects: List<com.wenyan.app.core.database.entity.SubjectEntity>,
+    selectedSubjectId: String?,
+    onSubjectSelected: (String?) -> Unit,
+    selectedTypes: Set<String>,
+    onTypeToggled: (String) -> Unit,
+    showWeakOnly: Boolean,
+    onWeakToggled: () -> Unit,
+    onClearAll: () -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+        ) {
+            // 科目筛选 + 清空按钮
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "科目",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                TextButton(onClick = onClearAll) {
+                    Text("清空筛选")
+                }
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                FilterChip(
+                    selected = selectedSubjectId == null,
+                    onClick = { onSubjectSelected(null) },
+                    label = { Text("全部") },
+                )
+                subjects.forEach { subject ->
+                    FilterChip(
+                        selected = selectedSubjectId == subject.id,
+                        onClick = {
+                            onSubjectSelected(
+                                if (selectedSubjectId == subject.id) null else subject.id,
+                            )
+                        },
+                        label = { Text(subject.name) },
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.sm))
+
+            // 类型筛选
+            Text(
+                text = "节点类型",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                GRAPH_TYPE_DISPLAY_NAME.forEach { (type, name) ->
+                    FilterChip(
+                        selected = type in selectedTypes,
+                        onClick = { onTypeToggled(type) },
+                        label = { Text(name) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = GRAPH_TYPE_COLORS[type]
+                                ?.let { Color(it).copy(alpha = 0.2f) }
+                                ?: MaterialTheme.colorScheme.primaryContainer,
+                        ),
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.sm))
+
+            // 薄弱筛选
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                FilterChip(
+                    selected = showWeakOnly,
+                    onClick = onWeakToggled,
+                    label = { Text("仅薄弱（R<0.5）") },
+                    leadingIcon = if (showWeakOnly) {
+                        { Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    } else null,
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.errorContainer,
+                    ),
+                )
+            }
+        }
+    }
+}
+
+// ── 图例（v0.8.0 简化 + 模式感知）──────────────────────────────
+
+/**
+ * 图例（v0.8.0 简化：移除冗余项 + 根据布局模式显示不同说明）。
  *
- * 配合 [GraphCanvas] 的文学史时间轴布局，让用户立刻理解图谱组织方式：
- * - 横轴 = 时间（1915-2030，覆盖现当代文学全周期）
- * - 纵轴 = 4 条泳道（时段/流派/作家/体裁）
- * - 跨类边纵向连接泳道，形成"作家↔流派↔体裁↔时段"知识链路
+ * 只显示 3 类信息：
+ * 1. 掌握度色（灰/红/橙/绿）—— 主视觉编码
+ * 2. 类型描边色（粉/橙/蓝/紫）—— 次要编码
+ * 3. 常见边标签 —— 关系语义
+ *
+ * 顶部提示文案根据 [layoutMode] 变化：
+ * - TIMELINE：横轴年份 + 纵轴体裁泳道
+ * - NEIGHBORHOOD：聚焦节点 + 1-3 跳邻居
+ * - RADIAL：按科目分扇区 + 扇区内按类型聚类
  */
 @Composable
-private fun LegendBar() {
+private fun LegendBar(layoutMode: LayoutMode) {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
         color = colorScheme.surfaceContainerLow,
@@ -220,26 +597,84 @@ private fun LegendBar() {
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
         ) {
-            // 上层：布局说明
+            // 布局说明（根据模式变化）
             Text(
-                text = "横轴：时间  ·  纵轴：泳道（时段 / 流派 / 作家 / 体裁）",
+                text = layoutMode.description,
+                style = MaterialTheme.typography.labelSmall,
+                color = colorScheme.primary,
+                fontWeight = FontWeight.Medium,
+            )
+
+            // 掌握度色图例（主视觉编码）
+            Text(
+                text = "节点颜色 = 掌握度",
                 style = MaterialTheme.typography.labelSmall,
                 color = colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(top = Spacing.xs),
             )
-            // 下层：分类色图例
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = Spacing.xs),
+                    .padding(top = Spacing.xs)
+                    .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                LegendItem(Color(0xFFE91E63), "作者")
-                LegendItem(Color(0xFF2196F3), "体裁")
-                LegendItem(Color(0xFF4CAF50), "时段")
-                LegendItem(Color(0xFF9C27B0), "流派")
-                LegendItem(Color(0xFFFF9800), "作品")
-                LegendItem(colorScheme.error.copy(alpha = 0.4f), "薄弱光晕")
+                LegendItem(colorScheme.outline, "未学习")
+                LegendItem(colorScheme.error, "薄弱")
+                LegendItem(colorScheme.tertiary, "巩固中")
+                LegendItem(colorScheme.primary, "已掌握")
+            }
+
+            // 类型描边色图例
+            Text(
+                text = "节点描边 = 类型（放大后可见）",
+                style = MaterialTheme.typography.labelSmall,
+                color = colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(top = Spacing.sm),
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = Spacing.xs)
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                GRAPH_TYPE_DISPLAY_NAME.forEach { (type, name) ->
+                    LegendItem(Color(GRAPH_TYPE_COLORS[type] ?: 0xFF888888.toInt()), name)
+                }
+            }
+
+            // 边标签图例（v0.8.0 新增）
+            Text(
+                text = "边线型/标签 = 关系类型（放大后可见）",
+                style = MaterialTheme.typography.labelSmall,
+                color = colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(top = Spacing.sm),
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = Spacing.xs)
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                EDGE_TYPE_LABELS.values.take(6).forEach { label ->
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(colorScheme.surfaceContainerHigh)
+                            .padding(horizontal = Spacing.xs, vertical = 2.dp),
+                    )
+                }
             }
         }
     }
@@ -263,40 +698,97 @@ private fun LegendItem(color: Color, label: String) {
     }
 }
 
-// ── 底部统计栏 ────────────────────────────────────────────────
+// ── 底部掌握度统计栏（v0.8.0 增强）──────────────────────────────
 
+/**
+ * 掌握度统计栏（v0.8.0 新增：4 档分布 + 进度条）。
+ *
+ * 显示：
+ * - 显示节点数 / 总节点数
+ * - 4 档掌握度分布：已掌握 / 巩固中 / 薄弱 / 未学习
+ * - 掌握进度条（已掌握占比）
+ */
 @Composable
-private fun StatsBar(
+private fun MasteryStatsBar(
+    displayedNodes: Int,
     totalNodes: Int,
-    weakNodes: Int,
-    avgRetrievability: Float,
+    masteredCount: Int,
+    consolidatingCount: Int,
+    weakCount: Int,
+    unlearnedCount: Int,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = colorScheme.surfaceContainerLow,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-            horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            StatItem("节点", "$totalNodes")
-            StatItem("薄弱", "$weakNodes")
-            StatItem("平均R", "%.2f".format(avgRetrievability))
+            // 显示节点数
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "显示 $displayedNodes / $totalNodes 节点",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colorScheme.onSurfaceVariant,
+                )
+                val masteryRate = if (displayedNodes > 0) masteredCount.toFloat() / displayedNodes else 0f
+                Text(
+                    text = "掌握率 ${"%.0f%%".format(masteryRate * 100)}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+
+            // 4 档掌握度分布进度条
+            if (displayedNodes > 0) {
+                LinearProgressIndicator(
+                    progress = {
+                        val mastered = masteredCount.toFloat() / displayedNodes
+                        val consolidating = consolidatingCount.toFloat() / displayedNodes
+                        val weak = weakCount.toFloat() / displayedNodes
+                        mastered + consolidating + weak
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = Spacing.xs)
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp)),
+                    color = colorScheme.primary,
+                    trackColor = colorScheme.outline.copy(alpha = 0.2f),
+                )
+                // 4 档数字
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = Spacing.xs),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    StatItem("已掌握", "$masteredCount", colorScheme.primary)
+                    StatItem("巩固中", "$consolidatingCount", colorScheme.tertiary)
+                    StatItem("薄弱", "$weakCount", colorScheme.error)
+                    StatItem("未学习", "$unlearnedCount", colorScheme.outline)
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun StatItem(label: String, value: String) {
+private fun StatItem(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = value,
-            style = MaterialTheme.typography.titleMedium,
-            // P2-2 修复：Bold(700) 过重，M3 Expressive 推荐 SemiBold(600)
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = color,
         )
         Text(
             text = label,
@@ -306,6 +798,258 @@ private fun StatItem(label: String, value: String) {
     }
 }
 
-// ── 空状态 ────────────────────────────────────────────────────
+// ── 节点详情 BottomSheet（v0.8.0 学习导向重构）──────────────────────────────
 
-// EmptyState 已迁移至共享 EmptyState 组件
+/**
+ * 节点详情 BottomSheet（v0.8.0 学习导向重构）。
+ *
+ * 增加学习入口：
+ * - "开始复习"按钮（跳转到该节点关联知识点的复习界面）
+ * - "查看真题"按钮（如有考频）
+ * - "聚焦子图"按钮
+ *
+ * 关联知识点列表可直接跳转：
+ * - 点击"查看详情" → 知识点详情页
+ * - 点击"开始复习" → 复习界面
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NodeDetailSheet(
+    node: GraphNodeItem,
+    onDismiss: () -> Unit,
+    onNavigateToDetail: (String) -> Unit,
+    onNavigateToReview: (String) -> Unit,
+    onFocusNode: (String) -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val typeDisplayName = GRAPH_TYPE_DISPLAY_NAME[node.type] ?: node.type
+    val subjectDisplayName = GRAPH_SUBJECT_DISPLAY_NAME[node.subjectId] ?: "未分类"
+
+    // 关联知识点列表（去重）
+    val relatedPoints = remember(node) {
+        buildList {
+            node.relatedPointId?.let { add(it) }
+            node.sourceKpIds.forEach { if (it !in this) add(it) }
+        }
+    }
+
+    val masteryLevel = when {
+        node.retrievability >= 0.8f -> "已掌握"
+        node.retrievability >= 0.5f -> "巩固中"
+        node.retrievability > 0f -> "薄弱"
+        else -> "未学习"
+    }
+    val masteryColor = when {
+        node.retrievability >= 0.8f -> MaterialTheme.colorScheme.primary
+        node.retrievability >= 0.5f -> MaterialTheme.colorScheme.tertiary
+        node.retrievability > 0f -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.outline
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            // 节点标题
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .clip(CircleShape)
+                            .background(masteryColor),
+                    )
+                    Spacer(modifier = Modifier.width(Spacing.sm))
+                    Column {
+                        Text(
+                            text = node.label,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        if (!node.subtitle.isNullOrBlank()) {
+                            Text(
+                                text = node.subtitle,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 节点属性
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .padding(Spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    DetailRow("类型", typeDisplayName)
+                    DetailRow("科目", subjectDisplayName)
+                    DetailRow("考频", node.examFrequency)
+                    DetailRow("可提取性 R", "%.2f".format(node.retrievability))
+                    DetailRow("掌握状态", masteryLevel)
+                    if (node.sourceKpIds.isNotEmpty()) {
+                        DetailRow("关联知识点数", "${node.sourceKpIds.size}")
+                    }
+                }
+            }
+
+            // 学习入口按钮（v0.8.0 新增）
+            if (relatedPoints.isNotEmpty()) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    ) {
+                        // 开始复习
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f),
+                            onClick = { onNavigateToReview(relatedPoints.first()) },
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(Spacing.md),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Spacer(modifier = Modifier.width(Spacing.xs))
+                                Text(
+                                    text = "开始复习",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                )
+                            }
+                        }
+                        // 聚焦子图
+                        Surface(
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f),
+                            onClick = { onFocusNode(node.id) },
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(Spacing.md),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocationSearching,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Spacer(modifier = Modifier.width(Spacing.xs))
+                                Text(
+                                    text = "聚焦子图",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 关联知识点列表
+            if (relatedPoints.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "关联知识点（${relatedPoints.size}）",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(top = Spacing.sm),
+                    )
+                }
+                items(relatedPoints) { pointId ->
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { onNavigateToDetail(pointId) },
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(Spacing.md),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.MenuBook,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(modifier = Modifier.width(Spacing.sm))
+                                Text(
+                                    text = pointId,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoStories,
+                                    contentDescription = "查看详情",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Text(
+                                    text = "详情 →",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 底部安全间距
+            item { Spacer(modifier = Modifier.height(Spacing.lg)) }
+        }
+    }
+}
+
+@Composable
+private fun DetailRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
