@@ -51,7 +51,11 @@ import javax.inject.Singleton
 /**
  * 调度仓库接口(NF-PP5 Wave 3.2 提取,便于测试替换)。
  *
- * 桥接 UI 卡片评分与 FSRS 调度算法。生产实现见 [SchedulingRepositoryImpl]。
+ * 桥接 UI 卡片评分与 FSRS 算法。生产实现见 [SchedulingRepositoryImpl]。
+ *
+ * v0.8.6 新增 [previewIntervals]:
+ * - 用于 UI 评分按钮显示"1分钟 / 6天 / 12天"预期间隔(Anki 标配)
+ * - 不写入数据库,纯计算,可频繁调用
  *
  * @see SchedulingRepositoryImpl
  */
@@ -71,7 +75,47 @@ interface SchedulingRepository {
         rating: Rating,
         cardType: CardTemplateType,
     ): MemoRecordEntity?
+
+    /**
+     * 预览 4 种评分(Again/Hard/Good/Easy)的调度结果,不写入数据库。
+     *
+     * v0.8.6 新增:用于 UI 评分按钮显示预期间隔(参考 Anki "10m / 4d / 8d" 设计),
+     * 让用户在评分前理解每个评分的后果,建立 FSRS 心智模型。
+     *
+     * 实现要点:
+     * - 读取当前知识点的 MemoRecord(不存在则用默认 NEW 状态)
+     * - 按 cardType 推断 tier,构造 FsrsWrapper
+     * - 调用 FsrsWrapper.repeat() 一次性得到 4 种评分的 FlashCard
+     * - 从 FlashCard.scheduledDays + dueDate 提取间隔并格式化为友好文本
+     *
+     * 性能:每次进入新卡片调用一次,只读不写,DB 查询 1 次,可接受。
+     *
+     * @param pointId  知识点 ID
+     * @param cardType 卡片模板类型(用于推断 tier)
+     * @return 4 种评分对应的预览信息(键为 Rating)
+     */
+    suspend fun previewIntervals(
+        pointId: String,
+        cardType: CardTemplateType,
+    ): Map<Rating, IntervalPreview>
 }
+
+/**
+ * 评分预览信息(v0.8.6 新增)。
+ *
+ * 表示"如果用户评 X 档,卡片将在多久后再次出现"。
+ *
+ * @property rating 评分等级
+ * @property scheduledDays 调度间隔(天)。0 表示学习阶段(分钟级),>0 表示 N 天后
+ * @property intervalMillis 实际间隔(毫秒,学习阶段精确到分钟)
+ * @property displayText 友好显示文本,如"1分钟" / "6天" / "1个月" / "明天"
+ */
+data class IntervalPreview(
+    val rating: Rating,
+    val scheduledDays: Int,
+    val intervalMillis: Long,
+    val displayText: String,
+)
 
 @Singleton
 class SchedulingRepositoryImpl @Inject constructor(
@@ -172,6 +216,88 @@ class SchedulingRepositoryImpl @Inject constructor(
         }
 
         return updatedMemo
+    }
+
+    /**
+     * 预览 4 种评分的调度结果(v0.8.6 新增)。
+     *
+     * 不写入数据库,纯计算。复用 [FsrsWrapper.repeat] 一次性得到 4 种评分的 FlashCard,
+     * 从 dueDate 与 now 的差值提取实际间隔(精确到分钟,学习阶段),或从 scheduledDays 提取天数。
+     *
+     * 格式化规则(参考 Anki "10m / 4d / 8d" 简洁风格):
+     * - scheduledDays == 0 且 intervalMillis < 1 小时 → "N分钟"
+     * - scheduledDays == 0 且 intervalMillis < 1 天 → "N小时"
+     * - scheduledDays == 1 → "明天"
+     * - scheduledDays in 2..6 → "N天"
+     * - scheduledDays in 7..29 → "N周" (scheduledDays / 7)
+     * - scheduledDays in 30..364 → "N月" (scheduledDays / 30)
+     * - scheduledDays >= 365 → "N年" (scheduledDays / 365)
+     *
+     * 边界:pointId 为空或 cardType 无效时返回空 Map,UI 不显示预览。
+     */
+    override suspend fun previewIntervals(
+        pointId: String,
+        cardType: CardTemplateType,
+    ): Map<Rating, IntervalPreview> {
+        if (pointId.isBlank()) return emptyMap()
+
+        // 1. 读取现有 MemoRecord(不存在则用默认 NEW)
+        val existingMemo = memoRecordDao.getById(pointId) ?: createDefaultMemoRecord(pointId)
+
+        // 2. 按 tier 构造 FsrsWrapper(与 rateCard 完全一致,确保预览=实际)
+        val tier = mapCardTypeToTier(cardType)
+        val config = TIER_CONFIGS[tier] ?: TIER_CONFIGS.getValue(MemoryTier.TIER_FRAMEWORK)
+        val wrapper = FsrsWrapper(
+            requestRetention = config.targetRetention,
+            maximumInterval = config.maxInterval,
+            enableFuzz = tier != MemoryTier.TIER_EXACT,
+            stabilityGrowthFactor = config.stabilityGrowthFactor,
+            easyBonus = config.easyBonus,
+            againPenalty = config.againPenalty,
+        )
+
+        // 3. 转 FlashCard 并预览 4 档
+        val nowMillis = clockGuard.effectiveNowMillis()
+        val now = LocalDateTime.ofInstant(
+            Instant.ofEpochMilli(nowMillis),
+            ZoneId.systemDefault(),
+        )
+        val flashCardBefore = MemoRecordMapper.toFlashCard(existingMemo)
+        val previews = wrapper.repeat(flashCardBefore, now)
+
+        // 4. 格式化为 IntervalPreview
+        return previews.mapValues { (rating, scheduled) ->
+            val intervalMillis = java.time.Duration.between(now, scheduled.dueDate).toMillis()
+            IntervalPreview(
+                rating = rating,
+                scheduledDays = scheduled.scheduledDays,
+                intervalMillis = intervalMillis,
+                displayText = formatInterval(scheduled.scheduledDays, intervalMillis),
+            )
+        }
+    }
+
+    /**
+     * 格式化间隔为友好文本(参考 Anki "10m / 4d / 8d" 简洁风格)。
+     *
+     * 学习阶段(scheduledDays==0)用分钟/小时,复习阶段用天/周/月/年。
+     * 边界值用 coerceAtLeast(1) 防止"0分钟"。
+     */
+    private fun formatInterval(scheduledDays: Int, intervalMillis: Long): String {
+        return when {
+            scheduledDays == 0 && intervalMillis < 3_600_000L -> {
+                "${(intervalMillis / 60_000L).coerceAtLeast(1L)}分钟"
+            }
+            scheduledDays == 0 && intervalMillis < 86_400_000L -> {
+                "${(intervalMillis / 3_600_000L).coerceAtLeast(1L)}小时"
+            }
+            scheduledDays == 1 -> "明天"
+            scheduledDays in 2..6 -> "${scheduledDays}天"
+            scheduledDays in 7..29 -> "${scheduledDays / 7}周"
+            scheduledDays in 30..364 -> "${scheduledDays / 30}个月"
+            scheduledDays >= 365 -> "${scheduledDays / 365}年"
+            else -> "${scheduledDays}天"
+        }
     }
 
     /**

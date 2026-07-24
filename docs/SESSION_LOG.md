@@ -3185,3 +3185,137 @@ OCR 残留清理（6 处）：
 2. **P1**：大屏 NavigationRail 持续可见（需逐页测试子路由布局适配）
 3. **P2**：NavHost 详情浏览历史保留（限制深度 5 层而非清空）
 4. **P3**：全局 strings.xml 抽取（NF-U2 系统性修复）
+
+---
+
+## 2026-07-24 v0.8.5 知识卡片功能深度修复
+
+### 背景
+
+用户反馈"知识卡片功能还不够好，不够完善，以及有没有问题，深入调查研究，反复打磨"。
+本会话对 `:feature:cards` 模块做深度审查，发现并修复 FSRS 调度粒度、会话管理、UI 状态分发等核心问题，
+新增 8 个测试覆盖 sibling 去重、撤销、会话统计等新逻辑（266 tests 全绿，从 258 → 266）。
+
+### 调研发现（FSRS-6 算法正确性）
+
+通过源码追踪 `FsrsWrapper.scheduleInternal` / `scheduleNew`，确认 FSRS 首次评分关键行为：
+
+| 评分 | newS（初始稳定性） | newD（初始难度） | interval | next_review_at | 新状态 |
+|------|---|---|---|---|---|
+| AGAIN | 0.2172 | 6.8336 | 1 分钟 | now+1min | LEARNING |
+| HARD  | 0.3174 | 5.7810 | 5 分钟 | now+5min | LEARNING |
+| GOOD  | 1.7265 | 4.7284 | 1-3 天（按 tier） | now+Nd | REVIEW |
+| EASY  | 5.1816 | 3.6758 | 2-8 天（按 tier） | now+Nd | REVIEW |
+
+**关键结论**：
+- 新卡的 `stability=0` 和 `difficulty=5.0` 都被 `scheduleNew.initStability/initDifficulty` 完全覆盖，输入值仅在 ReviewLog 中作历史记录。
+- 这意味着同 pointId 多卡评分会重复触发 initStability，导致 stability 被高估 N 倍（N=sibling 卡数）。
+
+### 修复清单
+
+#### P0：FSRS 调度粒度修复（sibling 去重）
+
+- **问题**：一个知识点经 `CardSplitter.splitTermExplanation` 拆 5-6 张卡，全部共享同一 `pointId`。
+  每张卡评分都触发 `schedulingRepository.rateCard` → FSRS 调度 → stability 被高估 5-6 倍。
+- **修复**：CardsViewModel 维护 `ratedPointIds: MutableSet<String>`，同 pointId 仅第一次评分触发调度，
+  后续 sibling 卡仅推进 UI + 记录错题（AGAIN）。参考 Anki sibling burying 设计。
+- **测试**：`同 pointId 多张卡仅首次评分触发 FSRS 调度` 验证 3 张同 pointId 卡 GOOD/GOOD/GOOD 后调度只调用 1 次。
+
+#### P0：会话内 cards 列表冻结
+
+- **问题**：`ReviewRepository.tickFlow` 每 60s 触发 Room Flow 重新 emit cards，
+  `currentIndex` 被 `coerceIn(0, cards.size-1)` 后可能跳回已评分的卡，用户体验断裂。
+- **修复**：CardsViewModel 新增 `sessionCards: List<CardItem>?`，首次加载后冻结，
+  retry() 才重置（`sessionCards = null`）。`combine` 内 `effectiveCards = sessionCards ?: cards.mapIndexed{...}`。
+
+#### P0：isFinished 状态正确传递到 UI
+
+- **问题**：`CardsUiState.isFinished` 字段已定义但 UI 用 `currentCard==null` 判断空态，
+  无法区分"今日无到期卡"vs"本次会话完成"——两种场景显示同样的"今日复习已完成"，误导用户。
+- **修复**：
+  - ViewModel：`isFinished = effectiveCards.isNotEmpty() && currentIndex >= effectiveCards.size`
+  - UI：用 `CardsStateKey(isLoading, error, isFinished, hasCards)` 四元组键控 Crossfade，分流到 5 种状态：
+    Loading / Error / SessionComplete / Empty（无到期卡） / CardReviewContent
+
+#### P1：撤销功能（undo）
+
+- **问题**：用户误评分后无法回退看上一张卡的内容。
+- **修复**：CardsViewModel 新增 `undo()` 方法，回退 `currentIndex` 和 `isFlipped` 状态，
+  回退 `sessionReviewedCount`，但**不回滚 FSRS 调度**（已写入 memo_records + review_logs 不可逆）。
+  UI 加 `UndoButton`，`currentIndex > 0` 时可见，触控目标 ≥48dp。
+- **测试**：`undo 回退 currentIndex 但不回滚 FSRS` 验证 currentIndex 回退但调度记录不变。
+
+#### P1：会话统计（SessionCompleteState）
+
+- **修复**：新增 `sessionReviewedCount` / `sessionAgainCount` 两个 StateFlow，
+  完成态展示三个统计卡：已复习张数 / 需重练张数 / 掌握率（(reviewed-again)/reviewed）。
+  掌握率 ≥85% 蓝色 / ≥60% 黄色 / <60% 红色，鼓励文案随掌握率变化。
+- **测试**：`AGAIN 评分累加 sessionAgainCount` / `评完所有卡后 isFinished 为 true` 等。
+
+#### P1：评分按钮颜色编码
+
+- **问题**：原四个评分按钮（不会/困难/良好/简单）全是中性色（FilledTonal/Outlined/Button 默认），
+  用户无法一眼识别评分语义，容易误点。
+- **修复**：参考 Anki Mobile / Duolingo 的"红黄绿"配色直觉：
+  - AGAIN：`errorContainer`（红，警告"完全不会"）
+  - HARD：`tertiaryContainer`（黄/橙，注意"有难度"）
+  - GOOD：`primary`（蓝，标准"掌握了"）
+  - EASY：`secondaryContainer`（绿，鼓励"很简单"）
+  每个按钮加 `contentDescription` 语义，TalkBack 朗读"不会：1分钟后重看"等。
+  触控目标全部 ≥48dp。
+
+#### P1：进度条 + LinearProgressIndicator
+
+- **修复**：原进度区只有文字"3 / 12"，新增 `LinearProgressIndicator` 直观展示进度，
+  无障碍 `contentDescription = "复习进度：第 N 张，共 M 张"`。
+
+#### P1：keyPoints 切分规则修复
+
+- **问题**：`CardRepository.generateCardsFromKnowledgePoint` 中 EssayPointsCard 的 `keyPoints`
+  按 `。；，\n` 切分，逗号会把"建安风骨，源于汉末"切成"建安风骨"和"源于汉末"两个无效片段。
+- **修复**：仅按句末标点（`。；;！？!?\\n`）切分，并过滤长度 <2 的无效片段，
+  保留分句完整性。
+
+### 验证结果
+
+| 检查项 | 结果 |
+|--------|------|
+| :feature:cards:compileDebugKotlin | ✓ BUILD SUCCESSFUL |
+| :core:data:compileDebugKotlin | ✓ BUILD SUCCESSFUL |
+| :app:assembleDebug | ✓ BUILD SUCCESSFUL |
+| :app:testDebugUnitTest | ✓ 全绿（266 tests，从 258 → 266，+8 新测试） |
+| 涉及文件 | 5 个（CardsViewModel/CardsScreen/CardRepository/CardsViewModelTest/app build.gradle.kts） |
+| 修复项数 | 8（3 P0 + 5 P1） |
+
+### CardsViewModelTest 测试覆盖
+
+新增 8 个测试用例：
+
+1. `同 pointId 多张卡仅首次评分触发 FSRS 调度`（P0 sibling 去重）
+2. `不同 pointId 各自触发调度`（P0 反例验证）
+3. `AGAIN 评分累加 sessionAgainCount`（P1 统计）
+4. `undo 回退 currentIndex 但不回滚 FSRS`（P1 撤销）
+5. `currentIndex 为 0 时 undo 不操作`（P1 边界）
+6. `评完所有卡后 isFinished 为 true`（P0 完成态）
+7. `retry 重置会话状态`（P1 retry）
+8. `无 pointId 的卡仅推进 UI 不触发调度`（P0 边界）
+
+### 已知遗留问题（不阻塞 v0.8.5 发布）
+
+1. **3 种卡片模板未启用**：ClozeQuoteCard / WorkAuthorBidirectionalCard / SchoolComparisonCard
+   有定义和渲染但 `CardRepository.generateCardsFromKnowledgePoint` 不会生成（缺少 seed 数据字段
+   `keyQuotes` / `authorWorkPairs` / `schoolComparison`）。需 OCR 完成 + 知识提取管线扩展后启用。
+2. **fuzz 后未 clamp 到 maximumInterval**：`FsrsWrapper.scheduleInternal` 第 184 行
+   `fuzzedInterval.roundToInt().coerceAtLeast(1)` 缺 `.coerceAtMost(maximumInterval)`，
+   长期复习卡可能超过 tier 配置的最大间隔。当前首次评分不受影响（interval 最大 8 天 << maxInterval）。
+3. **TierFsrsConfig.minInterval 形同虚设**：配置项存在但 `nextInterval` 用硬编码 `maxOf(..., 1)`，
+   不读取 config。三档 minInterval 都是 1，行为正确但配置冗余。
+4. **enableFuzz 配置分散两处**：`TierFsrsConfig` 无 enableFuzz 字段，
+   `SchedulingRepository` 和 `ContentTierMapper.shouldEnableFuzz` 各自决定，等价但易遗漏。
+
+### 下一步建议
+
+1. **P0**：emulator 实测 v0.8.5（验证 sibling 去重效果 + 撤销按钮 + 完成态统计 + 颜色编码）
+2. **P1**：启用剩余 3 种卡片模板（需先扩展 seed_data.json 结构 + 知识提取管线）
+3. **P2**：修复 `fuzz 后未 clamp 到 maximumInterval`（FsrsWrapper 第 184 行加 coerceAtMost）
+4. **P2**：将 enableFuzz 纳入 TierFsrsConfig 字段（消除配置分散）

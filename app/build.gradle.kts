@@ -17,11 +17,11 @@ android {
         minSdk = 26
         targetSdk = 35
         // P0-M2 修正：versionCode 必须每次发版递增，否则包安装器无法区分版本。
-        // v0.1.0=1, v0.2.0=2, v0.3.0=3, v0.4.0=4, v0.5.0=5, v0.6.0=6, v0.7.0=7, v0.7.1=8, v0.7.2=9（修复图谱FK回滚）, v0.7.3=10（481真题答案+卡片镜像+图谱扩充）, v0.7.4=11（481真题范文+卡片内容增强+多维视角解析+考频派生）, v0.7.5=12（610综合卷127题科目重新分类+UI修复+图谱重写）, v0.7.6=13（数据瘦身+图谱时间轴布局）, v0.8.1=14（图谱三模式重构+形状编码+覆盖率100%）, v0.8.2=15（修复图谱闪退：lanes越界+IN子句超限）, v0.8.3=16（全面UI/UX打磨：设计系统修复+输入校验+无障碍+性能优化）, v0.8.4=17（第二轮深度打磨：AMOLED补全+无障碍语义+动画优化+死代码清理+错误反馈）
-        versionCode = 17
+        // v0.1.0=1, v0.2.0=2, v0.3.0=3, v0.4.0=4, v0.5.0=5, v0.6.0=6, v0.7.0=7, v0.7.1=8, v0.7.2=9（修复图谱FK回滚）, v0.7.3=10（481真题答案+卡片镜像+图谱扩充）, v0.7.4=11（481真题范文+卡片内容增强+多维视角解析+考频派生）, v0.7.5=12（610综合卷127题科目重新分类+UI修复+图谱重写）, v0.7.6=13（数据瘦身+图谱时间轴布局）, v0.8.1=14（图谱三模式重构+形状编码+覆盖率100%）, v0.8.2=15（修复图谱闪退：lanes越界+IN子句超限）, v0.8.3=16（全面UI/UX打磨：设计系统修复+输入校验+无障碍+性能优化）, v0.8.4=17（第二轮深度打磨：AMOLED补全+无障碍语义+动画优化+死代码清理+错误反馈）, v0.8.5=18（知识卡片功能深度修复：FSRS调度粒度sibling去重+会话内cards冻结+isFinished状态正确传递+撤销功能+会话统计+评分按钮颜色编码+keyPoints切分修复）
+        versionCode = 18
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
-        // v0.8.4：第二轮深度打磨 — AMOLED模式补全3个surface字段 + EmptyState/ErrorState mergeDescendants语义 + LoadingIndicator加载状态语义 + 主题动画参数优化(去过冲+缩短时长) + DefaultSeedColor死代码清理 + ThemeRepositoryImpl @Singleton + ThemeViewModel错误事件流
-        versionName = "0.8.4"
+        // v0.8.5：知识卡片功能深度修复 — P0 FSRS调度粒度修复(sibling去重：同pointId多卡仅首次触发调度，避免stability虚高6倍) + P0 会话内cards冻结(避免60s tickFlow触发Flow刷新导致currentIndex错位) + P0 isFinished状态正确传递到UI(区分"无到期卡"vs"本次完成") + P1 撤销功能(仅UI回退不回滚FSRS) + P1 会话统计(已复习张数/AGAIN张数/掌握率) + P1 评分按钮颜色编码(AGAIN红/HARD黄/GOOD蓝/EASY绿) + P1 keyPoints切分修复(只按句末标点不按逗号) + 新增8个测试覆盖(266 tests全绿)
+        versionName = "0.8.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

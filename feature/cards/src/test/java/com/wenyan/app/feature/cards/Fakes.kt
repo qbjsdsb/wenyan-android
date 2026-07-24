@@ -3,6 +3,7 @@ package com.wenyan.app.feature.cards
 import com.wenyan.app.core.data.cards.CardTemplate
 import com.wenyan.app.core.data.cards.ClozeQuoteCard
 import com.wenyan.app.core.data.repository.CardRepository
+import com.wenyan.app.core.data.repository.IntervalPreview
 import com.wenyan.app.core.data.repository.SchedulingRepository
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.database.entity.CardTemplateType
@@ -34,6 +35,11 @@ class FakeCardRepository(
  * - [rateCardResult]:rateCard 返回的 MemoRecordEntity(默认非 null)
  * - [throwException]:非 null 时 rateCard 抛异常
  * - [rateCardCalls]:记录所有 rateCard 调用参数
+ * - [previewResults]:previewIntervals 返回的预设结果(v0.8.6 新增)
+ *
+ * v0.8.6 新增 previewIntervals 支持:测试可注入 [previewResults] 控制预览输出。
+ * 默认返回 4 档预览(Again=1分钟/Hard=5分钟/Good=6天/Easy=12天),
+ * 模拟真实 FSRS 输出便于 UI 测试。
  */
 class FakeSchedulingRepository(
     var rateCardResult: MemoRecordEntity? = MemoRecordEntity(
@@ -51,9 +57,16 @@ class FakeSchedulingRepository(
         inPriorityQueue = 0,
     ),
     var throwException: Throwable? = null,
+    var previewResults: Map<Rating, IntervalPreview> = mapOf(
+        Rating.AGAIN to IntervalPreview(Rating.AGAIN, 0, 60_000L, "1分钟"),
+        Rating.HARD to IntervalPreview(Rating.HARD, 0, 300_000L, "5分钟"),
+        Rating.GOOD to IntervalPreview(Rating.GOOD, 6, 6L * 86_400_000L, "6天"),
+        Rating.EASY to IntervalPreview(Rating.EASY, 12, 12L * 86_400_000L, "12天"),
+    ),
 ) : SchedulingRepository {
 
     val rateCardCalls: MutableList<Triple<String, Rating, CardTemplateType>> = mutableListOf()
+    val previewCalls: MutableList<Pair<String, CardTemplateType>> = mutableListOf()
 
     override suspend fun rateCard(
         pointId: String,
@@ -63,6 +76,14 @@ class FakeSchedulingRepository(
         throwException?.let { throw it }
         rateCardCalls.add(Triple(pointId, rating, cardType))
         return rateCardResult
+    }
+
+    override suspend fun previewIntervals(
+        pointId: String,
+        cardType: CardTemplateType,
+    ): Map<Rating, IntervalPreview> {
+        previewCalls.add(pointId to cardType)
+        return previewResults
     }
 }
 

@@ -22,10 +22,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
@@ -33,13 +40,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -47,6 +55,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.Role
@@ -54,23 +63,35 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wenyan.app.core.data.repository.IntervalPreview
 import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ErrorState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
+import com.wenyan.app.core.fsrs.Rating
 
 /**
- * 记忆卡片界面骨架。
+ * 记忆卡片界面。
  *
  * 实现卡片正反面翻转交互：
  * - 点击卡片翻转（正面问题 / 背面答案）
  * - 翻转后展示 FSRS 四档评分按钮（Again/Hard/Good/Easy）
+ *
+ * v0.8.5 UI 改造（与 ViewModel 状态对齐）：
+ * 1. 区分四种状态：加载中 / 错误 / 会话完成 / 无到期卡 / 正常复习
+ *    （原实现只能识别"空"，无法区分"今日没卡"vs"刚刚完成一轮"）
+ * 2. 评分按钮颜色编码：AGAIN=error 红 / HARD=tertiary 黄 / GOOD=primary 蓝 / EASY=secondary 绿
+ *    （原实现四个按钮全是中性色，用户无法一眼识别评分语义）
+ * 3. 完成态展示会话统计：已复习 N 张 / AGAIN M 张 / 完成率
+ * 4. 撤销按钮：currentIndex > 0 时可见，回退上一张（不回滚 FSRS）
+ * 5. 进度条：用 LinearProgressIndicator 替代纯文字 "3 / 12"
  *
  * 翻转动画通过 graphicsLayer rotationY 实现。
  */
@@ -78,23 +99,54 @@ import com.wenyan.app.core.designsystem.motion.WenyanMotion
 @Composable
 fun CardsScreen(
     onNavigateToAiAssistant: () -> Unit = {},
+    onNavigateToKnowledge: () -> Unit = {},
+    onNavigateToDetail: (String) -> Unit = {},
     viewModel: CardsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    // v0.8.4 修复：collect errorMessage，评分/错题记录失败时通过 Snackbar 反馈
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+    val sessionReviewed by viewModel.sessionReviewedCount.collectAsStateWithLifecycle()
+    val sessionAgain by viewModel.sessionAgainCount.collectAsStateWithLifecycle()
+    // v0.8.7 P0：接通评分预期间隔预览 + Leech 警告（原 ViewModel 已实现但 UI 未接通）
+    val currentPreviews by viewModel.currentPreviews.collectAsStateWithLifecycle()
+    val leechWarning by viewModel.leechWarning.collectAsStateWithLifecycle()
+    // v0.8.9 P1-2:接通 sibling 已评分状态,UI 据此隐藏误导性预期间隔
+    val isSiblingAlreadyRated by viewModel.isSiblingAlreadyRated.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    // v0.8.3 修复：接入 scrollBehavior，长答案滚动时 TopAppBar 可折叠
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
     )
 
-    // v0.8.4 修复：errorMessage 非 null 时弹 Snackbar，展示后立即 clearError 避免重组重复弹
+    // errorMessage 非 null 时弹 Snackbar，展示后立即 clearError 避免重组重复弹
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearError()
         }
+    }
+
+    // v0.8.7 P0：Leech 警告用 AlertDialog 展示（比 Snackbar 更醒目，需用户主动确认）
+    // v0.8.8：携带 pointId，新增"查看知识点"按钮直接跳转 detail 页处理
+    if (leechWarning != null) {
+        AlertDialog(
+            onDismissRequest = viewModel::clearLeechWarning,
+            title = { Text("需要重点关注") },
+            text = { Text(leechWarning.message) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val pid = leechWarning.pointId
+                    viewModel.clearLeechWarning()
+                    if (pid.isNotBlank()) onNavigateToDetail(pid)
+                }) {
+                    Text("查看知识点")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::clearLeechWarning) {
+                    Text("知道了")
+                }
+            },
+        )
     }
 
     ExpressiveScaffold(
@@ -114,8 +166,16 @@ fun CardsScreen(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding ->
+        // 用四元组键控 Crossfade：覆盖加载/错误/空/完成/正常卡片五种状态
+        // isFinished=true 表示用户已经评完一轮（区分于"今日无到期卡"）
+        val stateKey = CardsStateKey(
+            isLoading = uiState.isLoading,
+            error = uiState.error,
+            isFinished = uiState.isFinished,
+            hasCards = uiState.currentCard != null,
+        )
         Crossfade(
-            targetState = Triple(uiState.isLoading, uiState.error, uiState.currentCard == null),
+            targetState = stateKey,
             animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
             label = "cards_state",
             modifier = Modifier
@@ -123,9 +183,9 @@ fun CardsScreen(
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .padding(innerPadding)
                 .padding(Spacing.lg),
-        ) { (isLoading, error, isEmpty) ->
+        ) { key ->
             when {
-                isLoading -> {
+                key.isLoading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,
@@ -133,8 +193,7 @@ fun CardsScreen(
                         WenyanLoadingIndicator()
                     }
                 }
-                // P0-6 修复：加 error 分支，数据加载失败时展示错误信息 + 重试按钮
-                error != null -> {
+                key.error != null -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,
@@ -142,68 +201,468 @@ fun CardsScreen(
                         ErrorState(
                             icon = Icons.Default.CloudOff,
                             title = "加载失败",
-                            message = error,
+                            message = key.error,
                             onRetry = viewModel::retry,
                         )
                     }
                 }
-                isEmpty -> {
-                    // v0.8.3 优化：用 EmptyState 组件替代裸 Text，与全 App 一致 + 鼓励文案
+                key.isFinished -> {
+                    // 会话完成态：展示本次复习统计 + 会话时长 + 鼓励继续 / 返回
+                    SessionCompleteState(
+                        reviewedCount = sessionReviewed,
+                        againCount = sessionAgain,
+                        sessionDurationMinutes = viewModel.getSessionDurationMinutes(),
+                        onRetry = viewModel::retry,
+                        onExit = onNavigateToKnowledge,
+                    )
+                }
+                !key.hasCards -> {
+                    // 今日无到期卡（首次进入就没卡，与"刚完成一轮"区分）
+                    // v0.8.8：加"去学习"按钮引导用户到知识点列表
                     EmptyState(
                         icon = Icons.Default.CheckCircle,
-                        title = "今日复习已完成",
-                        description = "暂无待复习卡片，可去知识点列表预习新内容",
+                        title = "今天没有到期卡片",
+                        description = "已全部复习完毕，可去知识点列表预习新内容",
+                        action = {
+                            FilledTonalButton(
+                                onClick = onNavigateToKnowledge,
+                                modifier = Modifier.heightIn(min = 48.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MenuBook,
+                                    contentDescription = null,
+                                    modifier = Modifier.padding(end = Spacing.xs),
+                                )
+                                Text("去学习")
+                            }
+                        },
                     )
                 }
                 else -> {
                     uiState.currentCard?.let { card ->
-                        Column(
+                        CardReviewContent(
+                            card = card,
+                            uiState = uiState,
+                            previews = currentPreviews,
+                            isSiblingAlreadyRated = isSiblingAlreadyRated,
+                            onFlip = viewModel::flipCard,
+                            onRate = viewModel::rateCard,
+                            onUndo = viewModel::undo,
+                            onSkip = viewModel::skipCard,
                             modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
-                        ) {
-                            // 进度提示（animateContentSize 让数字变化平滑）
-                            Text(
-                                text = "${uiState.currentIndex + 1} / ${uiState.cards.size}",
-                                style = MaterialTheme.typography.labelLarge,
-                                modifier = Modifier.animateContentSize(),
-                            )
-
-                            // 可翻转卡片
-                            FlipCard(
-                                card = card,
-                                isFlipped = uiState.isFlipped,
-                                onClick = viewModel::flipCard,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f),
-                            )
-
-                            // 评分按钮（翻转后显示）+ 提示文案（翻转前显示）
-                            // 两者用 AnimatedVisibility 替代 if/else 硬切
-                            AnimatedVisibility(
-                                visible = uiState.isFlipped,
-                                enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 }),
-                                exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 4 }),
-                            ) {
-                                RatingButtons(onRate = viewModel::rateCard)
-                            }
-                            AnimatedVisibility(
-                                visible = !uiState.isFlipped,
-                                enter = fadeIn(),
-                                exit = fadeOut(),
-                            ) {
-                                Text(
-                                    text = "点击卡片查看答案",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * Crossfade 状态键（避免 Triple 语义不清）。
+ *
+ * - [isLoading]：首次加载中
+ * - [error]：加载失败
+ * - [isFinished]：本次会话已完成（currentIndex 推到末尾）
+ * - [hasCards]：当前有可复习卡片
+ *
+ * 优先级：isLoading > error > isFinished > hasCards
+ */
+private data class CardsStateKey(
+    val isLoading: Boolean,
+    val error: String?,
+    val isFinished: Boolean,
+    val hasCards: Boolean,
+)
+
+/**
+ * 正常卡片复习态：进度 + 翻转卡 + 评分按钮。
+ *
+ * v0.8.7：新增 [previews] 参数，传入当前卡片 4 档评分的预期间隔，
+ * 评分按钮下方显示"1分钟 / 6天 / 12天"等预期间隔（参考 Anki）。
+ *
+ * v0.8.9 P1-2:新增 [isSiblingAlreadyRated] 参数,sibling 卡(同 pointId 已评分过)
+ * 隐藏误导性预期间隔,改为显示"已调度(同知识点首卡已评分)"提示。
+ * 原实现 sibling 卡也显示"GOOD→6天",但评分不会触发 FSRS 调度,误导用户。
+ */
+@Composable
+private fun CardReviewContent(
+    card: CardItem,
+    uiState: CardsUiState,
+    previews: Map<Rating, IntervalPreview>,
+    isSiblingAlreadyRated: Boolean,
+    onFlip: () -> Unit,
+    onRate: (CardRating) -> Unit,
+    onUndo: () -> Unit,
+    onSkip: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        // 进度区：文字 + 进度条
+        ProgressSection(
+            currentIndex = uiState.currentIndex,
+            total = uiState.cards.size,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        // 可翻转卡片
+        FlipCard(
+            card = card,
+            isFlipped = uiState.isFlipped,
+            onClick = onFlip,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+        )
+
+        // 评分按钮（翻转后）+ 撤销/跳过按钮 / 翻转前提示文案
+        // 用 AnimatedVisibility 替代 if/else 硬切
+        AnimatedVisibility(
+            visible = uiState.isFlipped,
+            enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 }),
+            exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 4 }),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                // v0.8.9 P1-2:sibling 已评分时,显示提示而非误导性预期间隔
+                // sibling 卡评分不触发 FSRS 调度,显示"GOOD→6天"会让用户误以为评分会改变调度
+                if (isSiblingAlreadyRated) {
+                    SiblingRatedHint()
+                } else {
+                    RatingButtons(onRate = onRate, previews = previews)
+                }
+                // v0.8.8：撤销 + 跳过按钮横排
+                // 撤销：回退上一张（currentIndex > 0 才显示）
+                // 跳过：不评分推进到下一张（避免乱评污染 FSRS）
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    if (uiState.currentIndex > 0) {
+                        UndoButton(onUndo = onUndo, modifier = Modifier.weight(1f))
+                    }
+                    SkipButton(onSkip = onSkip, modifier = Modifier.weight(1f))
+                }
+            }
+        }
+        AnimatedVisibility(
+            visible = !uiState.isFlipped,
+            enter = fadeIn(),
+            exit = fadeOut(),
+        ) {
+            // 翻转前的辅助提示 + 跳过按钮（未翻转也能跳过）
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                Text(
+                    text = "点击卡片查看答案",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                // v0.8.8：未翻转也允许跳过（卡片看不懂时直接跳）
+                SkipButton(onSkip = onSkip)
+            }
+        }
+    }
+}
+
+/**
+ * sibling 卡已评分提示(v0.8.9 P1-2 新增)。
+ *
+ * 当前卡片与已评分的首张 sibling 卡共享同一知识点,评分不会触发 FSRS 调度
+ * (调度已在首张卡完成,参考 Anki sibling burying 避免重复评分导致 stability 虚高)。
+ *
+ * 用 InfoCard 风格而非评分按钮,避免误导用户以为评分会改变调度间隔。
+ * 用户仍可评分推进到下一张(评分结果仅影响错题记录,不触发 FSRS)。
+ */
+@Composable
+private fun SiblingRatedHint(modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .semantics { contentDescription = "此卡与已评分的兄弟卡共享知识点，评分不会触发 FSRS 调度" },
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Row(
+            modifier = Modifier.padding(Spacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(end = Spacing.sm),
+            )
+            Text(
+                text = "已调度（同知识点首卡已评分，可继续翻卡）",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+/**
+ * 进度区：当前 N / 总数 + 进度条。
+ *
+ * 用 LinearProgressIndicator 替代纯文字，视觉更直观。
+ */
+@Composable
+private fun ProgressSection(
+    currentIndex: Int,
+    total: Int,
+    modifier: Modifier = Modifier,
+) {
+    val safeTotal = total.coerceAtLeast(1)
+    val progress by remember(currentIndex, total) {
+        derivedStateOf { currentIndex.toFloat() / safeTotal.toFloat() }
+    }
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "${currentIndex + 1} / $total",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.animateContentSize(),
+        )
+        LinearProgressIndicator(
+            progress = { progress.coerceIn(0f, 1f) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 4.dp)
+                .semantics {
+                    contentDescription = "复习进度：第 ${currentIndex + 1} 张，共 $total 张"
+                },
+        )
+    }
+}
+
+/**
+ * 会话完成态：展示本次复习统计 + 会话时长 + 重开/返回按钮。
+ *
+ * v0.8.5 新增：让用户看到本轮复习的实际效果（N 张 / M 张不会），
+ * 替代原"今日复习已完成"的笼统提示。区分"刚完成"与"今日无卡"两种场景。
+ *
+ * v0.8.7 新增：
+ * - [sessionDurationMinutes]：本次会话用时（分钟），展示"本次用时 X 分钟"提升成就感
+ * - [onExit]：退出按钮，导航到知识点列表（原仅有"再复习一轮"，用户无法明确离开）
+ *
+ * - [reviewedCount]：本次会话已评分卡片数
+ * - [againCount]：本次会话评 AGAIN 的卡片数（含 sibling）
+ * - [onRetry]：重开一轮（重新加载 due 卡）
+ */
+@Composable
+private fun SessionCompleteState(
+    reviewedCount: Int,
+    againCount: Int,
+    sessionDurationMinutes: Int,
+    onRetry: () -> Unit,
+    onExit: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // 计算掌握率：((reviewedCount - againCount) / reviewedCount).coerceIn(0, 1)
+    val masteryRate = if (reviewedCount > 0) {
+        ((reviewedCount - againCount).toFloat() / reviewedCount.toFloat()).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    // 鼓励文案：根据掌握率选择
+    val encouragement = when {
+        reviewedCount == 0 -> "暂无数据"
+        masteryRate >= 0.85f -> "掌握得很好，继续保持"
+        masteryRate >= 0.6f -> "稳步进步，下次再战"
+        else -> "需要重点巩固，加油"
+    }
+    val fullDescription = buildString {
+        append("本次复习完成，用时 $sessionDurationMinutes 分钟，共 $reviewedCount 张")
+        if (againCount > 0) append("，其中 $againCount 张需要重新记忆")
+        append("，$encouragement")
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(Spacing.xxl)
+            .semantics(mergeDescendants = true) {
+                contentDescription = fullDescription
+            },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+    ) {
+        Icon(
+            imageVector = Icons.Default.AutoAwesome,
+            contentDescription = null,
+            modifier = Modifier.padding(top = Spacing.xl),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = "本次复习完成",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        // v0.8.7：会话用时（提升学习成就感）
+        Text(
+            text = "用时 $sessionDurationMinutes 分钟",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        // 统计卡：复习张数 / AGAIN 张数 / 掌握率
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            StatCard(
+                label = "已复习",
+                value = reviewedCount.toString(),
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f),
+            )
+            StatCard(
+                label = "需重练",
+                value = againCount.toString(),
+                color = if (againCount > 0) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.outline
+                },
+                modifier = Modifier.weight(1f),
+            )
+            StatCard(
+                label = "掌握率",
+                value = "${(masteryRate * 100).toInt()}%",
+                color = when {
+                    masteryRate >= 0.85f -> MaterialTheme.colorScheme.primary
+                    masteryRate >= 0.6f -> MaterialTheme.colorScheme.tertiary
+                    else -> MaterialTheme.colorScheme.error
+                },
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Text(
+            text = encouragement,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Button(
+            onClick = onRetry,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.Replay,
+                contentDescription = null,
+                modifier = Modifier.padding(end = Spacing.sm),
+            )
+            Text("再复习一轮")
+        }
+        // v0.8.7：退出按钮，让用户明确离开复习（导航到知识点列表）
+        TextButton(
+            onClick = onExit,
+            modifier = Modifier.heightIn(min = 48.dp),
+        ) {
+            Text("返回学习")
+        }
+    }
+}
+
+/**
+ * 单个统计数字卡（用于 SessionCompleteState）。
+ */
+@Composable
+private fun StatCard(
+    label: String,
+    value: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .padding(Spacing.sm),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = color,
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * 撤销按钮：仅 UI 回退，不回滚 FSRS 调度。
+ *
+ * v0.8.5 新增：参考 Anki Z 键撤销，简化为 TextButton 风格，
+ * 触控目标 ≥48dp，左对齐 Undo 图标 + 文字。
+ *
+ * v0.8.8：新增 [modifier] 参数，支持在 Row 中 weight 分配宽度。
+ */
+@Composable
+private fun UndoButton(
+    onUndo: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TextButton(
+        onClick = onUndo,
+        modifier = modifier
+            .heightIn(min = 48.dp)
+            .semantics { contentDescription = "撤销上一张" },
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.Undo,
+            contentDescription = null,
+            modifier = Modifier.padding(end = Spacing.xs),
+        )
+        Text("撤销")
+    }
+}
+
+/**
+ * 跳过按钮(v0.8.8 新增)。
+ *
+ * 不评分推进到下一张,避免乱评污染 FSRS 数据。
+ * 适用:卡片内容有误/临时不想答。
+ *
+ * 翻转前后均可用(未翻转时也可跳过,避免卡在不懂的卡上)。
+ */
+@Composable
+private fun SkipButton(
+    onSkip: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TextButton(
+        onClick = onSkip,
+        modifier = modifier
+            .heightIn(min = 48.dp)
+            .semantics { contentDescription = "跳过当前卡片，不评分" },
+    ) {
+        Icon(
+            imageVector = Icons.Default.SkipNext,
+            contentDescription = null,
+            modifier = Modifier.padding(end = Spacing.xs),
+        )
+        Text("跳过")
     }
 }
 
@@ -248,37 +707,25 @@ private fun FlipCard(
                 // 默认值偏小导致 180° 翻转时边缘严重拉伸
                 cameraDistance = 12 * density
             }
-            // v0.8.4 修复：FlipCard 无障碍语义，TalkBack 用户可感知"可翻转/已翻转"
             .semantics {
                 role = Role.Button
-                contentDescription = if (isFlipped) "答案面，双击返回问题" else "问题面，双击查看答案"
+                // v0.8.7：修正"双击"→"单击"（Card.onClick 是单击触发，非双击）
+                contentDescription = if (isFlipped) "答案面，单击返回问题" else "问题面，单击查看答案"
                 stateDescription = if (isFlipped) "已翻转" else "未翻转"
             },
         colors = CardDefaults.cardColors(containerColor = containerColor),
         onClick = onClick,
     ) {
-        // v0.7.4 修复：长答案（如论述题范文、名词解释）超出卡片可视区时被截断，
-        // 用户无法看到完整答案。给内容容器加 verticalScroll，长内容可在卡片内滚动阅读。
+        // 长答案（论述题范文、名词解释）超出卡片可视区时被截断，
+        // 给内容容器加 verticalScroll 让长内容可在卡片内滚动阅读。
         // 滚动放在外层 Box（未受 graphicsLayer rotationY 影响），
-        // 避免背面 180° 旋转后滚动方向反向（ swipe up 反而向下）的体验问题。
+        // 避免背面 180° 旋转后滚动方向反向的体验问题。
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
             contentAlignment = Alignment.Center,
         ) {
-            // 阶段5：优先使用 CardContent 结构化渲染（6种模板专属样式）
-            // template 为 null 时降级为 front/back 纯文本（向后兼容）
-            //
-            // 关键：用 showBack（derivedStateOf）而非 isFlipped 决定显示正/反面，
-            // 确保内容切换与动画同步在 rotation>90° 那一帧发生（卡侧消失瞬间）。
-            //
-            // v0.7.3 P0 修复（镜像文字）：父 Card 容器 rotationY=0→180° 翻转，
-            // 背面内容（rotation=180° 时）会被父层镜像投影成左右翻转的文字。
-            // 原注释声称"背面内容本身是正向的,所以用户看到的是正常的背面"是错误推断——
-            // graphicsLayer 的 rotationY 会镜像所有子内容,无论子内容本身是否正向。
-            // 修复：给内容层加反向 rotationY=180° 抵消父层镜像（180+180=360=0）。
-            // 仅在 showBack=true 时应用反向旋转,正面内容不受影响。
             val template = card.template
             Box(
                 modifier = Modifier.graphicsLayer {
@@ -301,33 +748,156 @@ private fun FlipCard(
     }
 }
 
-// FSRS 评分按钮组
+/**
+ * FSRS 评分按钮组。
+ *
+ * v0.8.5 颜色编码：
+ * - AGAIN：error 容器（红，警告）
+ * - HARD：tertiary 容器（黄/橙，注意）
+ * - GOOD：secondary 容器（绿，成功）
+ * - EASY：primary（蓝，加成）
+ *
+ * v0.8.7 新增预期间隔显示（参考 Anki "10m / 4d / 8d"）：
+ * - 每个按钮下方显示该评分档位的预期间隔（如"1分钟""6天""12天"）
+ * - [previews] 为空时（加载失败/新卡未加载完）降级为纯文字按钮
+ * - 让用户在评分前理解每个评分的后果，建立 FSRS 心智模型
+ *
+ * v0.8.9 P2-3 修复:GOOD/EASY 颜色对齐 Anki 惯例。
+ * - 原实现 GOOD=primary(蓝)/EASY=secondary(绿),与 Anki Mobile/AnkiDroid 颠倒
+ * - Anki 惯例:GOOD=绿(掌握/通行),EASY=蓝(超预期加成)
+ * - 调整后 GOOD=secondaryContainer(绿,主操作),EASY=primary(蓝,加成操作)
+ * - isPrimary 标记同步调整:GOOD 作为默认推荐评分用 filled Button,
+ *   EASY 用 FilledTonalButton 视觉权重稍弱
+ *
+ * 颜色语义参考 Anki Mobile / Duolingo 的"红黄绿"配色直觉。
+ * 所有按钮 heightIn(min=48dp) 满足 M3 触控目标规范。
+ *
+ * @param onRate 评分回调
+ * @param previews 4 档评分的预期间隔（由 ViewModel 异步加载）
+ */
 @Composable
-private fun RatingButtons(onRate: (CardRating) -> Unit) {
+private fun RatingButtons(
+    onRate: (CardRating) -> Unit,
+    previews: Map<Rating, IntervalPreview>,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        // v0.8.4 修复：评分按钮默认 40dp < 48dp 触控下限，加 heightIn 保底
-        FilledTonalButton(
+        // AGAIN：红色警示（"完全不会"）
+        RatingButton(
+            label = "不会",
+            intervalText = previews[Rating.AGAIN]?.displayText,
             onClick = { onRate(CardRating.AGAIN) },
-            modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-        ) { Text("不会") }
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+            isPrimary = false,
+            modifier = Modifier.weight(1f),
+        )
 
-        OutlinedButton(
+        // HARD：黄/橙色（"有难度"）
+        RatingButton(
+            label = "困难",
+            intervalText = previews[Rating.HARD]?.displayText,
             onClick = { onRate(CardRating.HARD) },
-            modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-        ) { Text("困难") }
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            isPrimary = false,
+            modifier = Modifier.weight(1f),
+        )
 
-        OutlinedButton(
+        // GOOD：绿色（"掌握了"，FSRS 标准间隔，Anki 惯例绿=成功）
+        // v0.8.9:从 primary(蓝) 改为 secondaryContainer(绿),与 Anki Mobile 对齐
+        RatingButton(
+            label = "良好",
+            intervalText = previews[Rating.GOOD]?.displayText,
             onClick = { onRate(CardRating.GOOD) },
-            modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-        ) { Text("良好") }
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            isPrimary = true,
+            modifier = Modifier.weight(1f),
+        )
 
-        Button(
+        // EASY：蓝色（"很简单"，加成间隔，Anki 惯例蓝=超预期）
+        // v0.8.9:从 secondaryContainer(绿) 改为 primary(蓝),与 Anki Mobile 对齐
+        RatingButton(
+            label = "简单",
+            intervalText = previews[Rating.EASY]?.displayText,
             onClick = { onRate(CardRating.EASY) },
-            modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-        ) { Text("简单") }
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            isPrimary = false,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/**
+ * 单个评分按钮：评分标签 + 预期间隔（v0.8.7 抽取）。
+ *
+ * - [label]：评分文字（"不会"/"困难"/"良好"/"简单"）
+ * - [intervalText]：预期间隔（"1分钟"/"6天"/"12天"），null 时不显示
+ * - [isPrimary]：true 用 [Button]（filled），false 用 [FilledTonalButton]
+ */
+@Composable
+private fun RatingButton(
+    label: String,
+    intervalText: String?,
+    onClick: () -> Unit,
+    containerColor: Color,
+    contentColor: Color,
+    isPrimary: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val semanticsDesc = if (intervalText != null) {
+        "$label：$intervalText 后重看"
+    } else {
+        label
+    }
+    val colors = ButtonDefaults.filledTonalButtonColors(
+        containerColor = containerColor,
+        contentColor = contentColor,
+    )
+    if (isPrimary) {
+        Button(
+            onClick = onClick,
+            modifier = modifier
+                .heightIn(min = 48.dp)
+                .semantics { contentDescription = semanticsDesc },
+        ) {
+            RatingButtonContent(label = label, intervalText = intervalText)
+        }
+    } else {
+        FilledTonalButton(
+            onClick = onClick,
+            modifier = modifier
+                .heightIn(min = 48.dp)
+                .semantics { contentDescription = semanticsDesc },
+            colors = colors,
+        ) {
+            RatingButtonContent(label = label, intervalText = intervalText)
+        }
+    }
+}
+
+/**
+ * 评分按钮内容：标签 + 预期间隔（v0.8.7 抽取）。
+ *
+ * 标签用 labelLarge，间隔用 labelSmall（视觉层次）。
+ * 间隔为 null 时只显示标签（降级模式）。
+ */
+@Composable
+private fun RatingButtonContent(label: String, intervalText: String?) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(label, style = MaterialTheme.typography.labelLarge)
+        if (intervalText != null) {
+            Text(
+                text = intervalText,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
     }
 }
 
@@ -340,10 +910,5 @@ private fun RatingButtons(onRate: (CardRating) -> Unit) {
  *
  * 提取为纯函数便于测试。注意 [androidx.compose.animation.core.animateFloatAsState]
  * 会在每帧更新 rotation，本函数在每帧被调用以决定内容切换时机。
- *
- * v0.7.3 修正注释：原注释声称"背面内容立即以正向方向渲染（虽然外层 graphicsLayer
- * 仍在 rotation，但背面内容本身是正向的）"——这是错误推断。graphicsLayer 的 rotationY
- * 会镜像所有子内容。真正的镜像修复在 FlipCard 的内容层加了反向 rotationY=180° 抵消。
- * 本函数仅决定何时切换正/反面内容，不负责解除镜像。
  */
 internal fun shouldShowBack(rotation: Float): Boolean = rotation > 90f

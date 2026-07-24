@@ -115,6 +115,8 @@ class CardRepositoryImpl @Inject constructor(
         }
 
         // 2. 论述要点卡:coreConclusion 作为论述题,summary 拆为关键词
+        // v0.8.5 修复：原按 '。'、'；'、'，'、'\n' 切分，会把"建安风骨，源于汉末"切成两个无效片段
+        // （"建安风骨"和"源于汉末"）。现仅按句末标点（。；！？\n）切分，保留分句完整性。
         val summary = knowledgePoint.summary
         if (!summary.isNullOrBlank()) {
             cards.add(
@@ -123,9 +125,9 @@ class CardRepositoryImpl @Inject constructor(
                     back = summary,
                     pointId = pointId,
                     question = knowledgePoint.title,
-                    keyPoints = summary.split('。', '；', '，', '\n')
+                    keyPoints = summary.split('。', '；', ';', '！', '？', '!', '?', '\n')
                         .map { it.trim() }
-                        .filter { it.isNotBlank() },
+                        .filter { it.isNotBlank() && it.length >= 2 },
                 ),
             )
         }

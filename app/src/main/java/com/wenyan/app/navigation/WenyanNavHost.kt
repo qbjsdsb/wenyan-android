@@ -100,6 +100,26 @@ fun WenyanNavHost(
                     launchSingleTop = true
                 }
             },
+            onNavigateToKnowledge = {
+                // v0.8.7：完成态"返回学习"按钮，切换到知识点列表 Tab
+                navController.navigate(TopLevelDestination.ROUTE_KNOWLEDGE) {
+                    popUpTo(navController.graph.startDestinationId) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            onNavigateToDetail = { pointId ->
+                // v0.8.8 P0：Leech 警告"查看知识点"按钮跳转详情
+                // （原 cardsDestination 漏传此参数，导致按钮点击后对话框关闭但不导航）
+                navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId") {
+                    popUpTo("$ROUTE_KNOWLEDGE_DETAIL/{pointId}") {
+                        inclusive = true
+                    }
+                    launchSingleTop = true
+                }
+            },
         )
         graphDestination(
             onNavigateToAiAssistant = {
@@ -184,9 +204,15 @@ private fun NavGraphBuilder.quizDestination(
 
 private fun NavGraphBuilder.cardsDestination(
     onNavigateToAiAssistant: () -> Unit,
+    onNavigateToKnowledge: () -> Unit,
+    onNavigateToDetail: (String) -> Unit,
 ) {
     composable(TopLevelDestination.ROUTE_CARDS) {
-        CardsScreen(onNavigateToAiAssistant = onNavigateToAiAssistant)
+        CardsScreen(
+            onNavigateToAiAssistant = onNavigateToAiAssistant,
+            onNavigateToKnowledge = onNavigateToKnowledge,
+            onNavigateToDetail = onNavigateToDetail,
+        )
     }
 }
 

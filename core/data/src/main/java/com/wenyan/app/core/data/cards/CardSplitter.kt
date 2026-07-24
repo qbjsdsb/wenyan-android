@@ -59,9 +59,31 @@ object CardSplitter {
         }
 
         val cards = if (dimensions.isNotEmpty()) {
-            // 结构化标签命中：每个维度一张卡（附带完整结构化字段供渲染上下文）
-            dimensions.map { (question, answer) ->
-                buildTermDimensionCard(term, question, answer, pointId, category, societyFields, workFields, fullExplanation, studyText)
+            // 结构化标签命中：每个维度一张卡
+            // v0.8.9 P2-8 修复:sibling 卡冗余展示完整字段
+            // 原实现每张 sibling 卡都附带完整 society/work/fullExplanation/studyText,
+            // 导致 5 张卡背面都显示相同的 6 个结构化字段 + 完整解释 + 教材原文,
+            // 信息高度冗余(如"时代"卡背面既显示"汉末建安年间",又显示"时间：汉末建安年间")
+            //
+            // 修复策略:
+            // - 首张 sibling 卡作为"概览卡",附带完整 society/work 结构化字段
+            //   (供用户翻第一张时建立整体认知)
+            // - 后续 sibling 卡仅附带 fullExplanation/studyText(提供上下文)
+            //   不再附带 society/work(避免与 back 内容重复)
+            // - 所有 sibling 卡仍共享同一 pointId(FSRS 调度 sibling 去重)
+            dimensions.mapIndexed { index, (question, answer) ->
+                val isFirstSibling = index == 0
+                buildTermDimensionCard(
+                    term = term,
+                    dimension = question,
+                    answer = answer,
+                    pointId = pointId,
+                    category = category,
+                    society = if (isFirstSibling) societyFields else null,
+                    work = if (isFirstSibling) workFields else null,
+                    fullExplanation = fullExplanation,
+                    studyText = studyText,
+                )
             }
         } else {
             // 无标签：按分句拆分（无结构化字段）
@@ -76,7 +98,15 @@ object CardSplitter {
             val head = cards.take(TARGET_SPLIT_MAX - 1)
             val tail = cards.drop(TARGET_SPLIT_MAX - 1)
             val mergedBack = tail.joinToString(separator = "\n") { it.back }
-            head + buildTermDimensionCard(term, "其他要点", mergedBack, pointId, category, societyFields, workFields, fullExplanation, studyText)
+            // 合并卡不附带 society/work(避免与非首张 sibling 卡行为不一致)
+            head + buildTermDimensionCard(
+                term = term,
+                dimension = "其他要点",
+                answer = mergedBack,
+                pointId = pointId,
+                fullExplanation = fullExplanation,
+                studyText = studyText,
+            )
         } else {
             cards
         }

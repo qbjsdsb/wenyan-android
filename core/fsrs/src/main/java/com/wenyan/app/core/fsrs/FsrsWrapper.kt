@@ -181,7 +181,13 @@ class FsrsWrapper(
             // toInt 得 P(4)=0.5, P(5)=0.5, P(6)=0，期望=4.5（偏少 0.5 天）。
             // roundToInt: P(4)=0.25, P(5)=0.5, P(6)=0.25，期望=5.0（对称）。
             // 与同文件 nextInterval（第 387-391 行，F-05 已修复）取整策略对齐。
-            scheduledDaysValue = fuzzedInterval.roundToInt().coerceAtLeast(1)
+            //
+            // v0.8.7 修复：fuzz 后 clamp 到 maximumInterval。
+            // 原实现仅 coerceAtLeast(1)，长期复习卡 fuzz 后可能超过 maximumInterval
+            // （如 maxInterval=365, interval=364, fuzz=+2 → 366 > 365）。
+            // FSRS 规范要求所有调度间隔不超过 maximumInterval，加 coerceAtMost 保证。
+            scheduledDaysValue = fuzzedInterval.roundToInt()
+                .coerceIn(1, maximumInterval)
             dueDate = now.plusDays(scheduledDaysValue.toLong())
         }
 
