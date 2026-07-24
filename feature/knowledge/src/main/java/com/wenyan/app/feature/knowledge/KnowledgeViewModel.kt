@@ -112,13 +112,18 @@ class KnowledgeViewModel @Inject constructor(
                                     isLoading = false,
                                     knowledgePoints = filtered.map { toUiItem(it) },
                                     selectedCategory = category,
-                                    searchQuery = query,
                                 )
                             }
                         }
                 }
+                // v0.8.20 P1-4 修复:catch 时保留已有 knowledgePoints,
+                // 避免数据库偶发异常导致列表瞬间清空,用户丢失正在浏览的上下文。
+                // 原 emit 全新 KnowledgeUiState(error=...) 会清空列表,与 retry() 保留策略不一致。
                 .catch { e ->
-                    emit(KnowledgeUiState(error = e.message ?: "加载失败"))
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = friendlyErrorMessage(e),
+                    )
                 }
                 .collect { _uiState.value = it }
         }
@@ -137,10 +142,16 @@ class KnowledgeViewModel @Inject constructor(
      *
      * 传入空字符串或纯空白时清除搜索,恢复全部浏览模式。
      *
+     * v0.8.20 P1-7 修复:限制最大长度 50 字符,避免用户粘贴超长字符串
+     * 触发 O(n) escapeLikeWildcards + SQLite LIKE 全表扫描性能问题。
+     * 50 字符足够覆盖考研关键词(如"鲁迅《呐喊》狂人日记象征手法")。
+     *
      * @param query 搜索关键词(原始输入,无需转义,ViewModel 内部转义 LIKE 通配符)
      */
     fun updateSearchQuery(query: String) {
-        savedStateHandle["searchQuery"] = query
+        // v0.8.20 P1-7: 限制最大 50 字符,超出截断
+        val trimmed = if (query.length > MAX_SEARCH_QUERY_LENGTH) query.take(MAX_SEARCH_QUERY_LENGTH) else query
+        savedStateHandle["searchQuery"] = trimmed
     }
 
     /** 清除搜索(便捷方法,等价于 updateSearchQuery("")) */
@@ -162,6 +173,43 @@ class KnowledgeViewModel @Inject constructor(
     companion object {
         /** 搜索防抖间隔(毫秒),参考 Anki 搜索默认值 */
         private const val SEARCH_DEBOUNCE_MS = 300L
+
+        /**
+         * 搜索关键词最大长度(v0.8.20 P1-7 新增)。
+         *
+         * 限制 50 字符避免:
+         * - O(n) escapeLikeWildcards 转义超长字符串
+         * - SQLite LIKE 全表扫描(910 知识点 × 10000 字符 ≈ 920 万次字符比较)
+         * - SavedStateHandle 持久化超长字符串到 Bundle
+         * - EmptyState 渲染超长文本
+         *
+         * 50 字符足够覆盖考研关键词(如"鲁迅《呐喊》狂人日记象征手法")。
+         */
+        private const val MAX_SEARCH_QUERY_LENGTH = 50
+
+        /**
+         * 将异常映射为用户友好的中文错误提示(v0.8.20 P1-5 新增)。
+         *
+         * 原实现直接展示 `e.message ?: "加载失败"`,异常 message 可能是
+         * 英文堆栈("android.database.sqlite.SQLiteException: no such table...")、
+         * SQL 错误("UNIQUE constraint failed: knowledge_points.id")、
+         * 网络错误("timeout")等,对用户不友好。
+         *
+         * 现按异常类型映射为中文提示,raw message 仍由 catchAndLog 在 Repository 层
+         * 用 Log.e 输出供排查。
+         */
+        private fun friendlyErrorMessage(e: Throwable): String = when {
+            e is java.net.SocketTimeoutException || e is java.net.UnknownHostException ->
+                "网络超时,请检查网络后重试"
+            e is android.database.sqlite.SQLiteException ->
+                "本地数据异常,请重启 App"
+            e is kotlinx.coroutines.TimeoutCancellationException ->
+                "加载超时,请重试"
+            e.message != null && e.message!!.contains("no such table", ignoreCase = true) ->
+                "数据库版本异常,请重启 App"
+            else -> "加载失败,请重试"
+        }
+
 
         /**
          * 按科目筛选知识点。
@@ -193,6 +241,9 @@ class KnowledgeViewModel @Inject constructor(
                 subject = pointWithSubject.subjectName ?: "未知科目",
                 summary = pointWithSubject.point.summary
                     ?: pointWithSubject.point.coreConclusion.take(100),
+                // v0.8.20 P1-2 新增:透传考频,列表卡片展示高频/中频/低频标签,
+                // 用户浏览时快速识别高频考点(无需点进详情页查看)
+                examFrequency = pointWithSubject.point.examFrequency,
             )
     }
 }
@@ -204,16 +255,25 @@ data class KnowledgeUiState(
     val selectedCategory: KnowledgeCategory = KnowledgeCategory.ALL,
     /** 加载失败时的错误信息（P0-6 新增） */
     val error: String? = null,
-    /** 当前搜索关键词(v0.8.19 新增,P1-UI-1,用于 UI 搜索框回显) */
-    val searchQuery: String = "",
+    // v0.8.20 P0-2 修复:删除死字段 searchQuery。
+    // 原字段从未被 UI 读取(UI 用 viewModel.searchQuery StateFlow 实时值),
+    // 且 debounce 300ms 后才更新,与 viewModel.searchQuery 双源不同步,易引入 bug。
 )
 
-// 知识点列表项
+/**
+ * 知识点列表项。
+ *
+ * v0.8.20 P1-2 新增 [examFrequency]:透传原始考频值(HIGH/MEDIUM/LOW/NEVER),
+ * UI 层根据值显示对应 chip(高频/中频/低频/未考),
+ * 与详情页 HeaderSection 的考频映射逻辑一致(避免在 ViewModel 层做 string 翻译)。
+ */
 data class KnowledgePointItem(
     val id: String,
     val title: String,
     val subject: String,
     val summary: String,
+    /** 考频原始值(v0.8.20 P1-2 新增,UI 层映射为中文标签) */
+    val examFrequency: String = "NEVER",
 )
 
 // 知识点分类（四科 + 全部）

@@ -15,7 +15,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudOff
@@ -30,6 +36,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -40,11 +47,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wenyan.app.core.designsystem.component.ChipVariant
 import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ErrorState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.TonalCard
+import com.wenyan.app.core.designsystem.component.WenyanInfoChip
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 
 /**
@@ -140,13 +149,27 @@ fun KnowledgeScreen(
                     }
                     isEmpty -> {
                         // v0.8.19 P1-UI-1: 区分"无搜索结果"和"无数据"两种空态
+                        // v0.8.20 P1-3 修复:搜索 + 分类叠加下 0 结果时,提示用户切换分类
+                        // (如"鲁迅"在"古代文学"分类下搜不到,但切换到"现当代文学"可找到)
+                        val isFiltered = uiState.selectedCategory != KnowledgeCategory.ALL
+                        val title = when {
+                            searchQuery.isNotBlank() && isFiltered ->
+                                "在“${uiState.selectedCategory.label}”中未找到“${searchQuery.trim()}”"
+                            searchQuery.isNotBlank() ->
+                                "未找到匹配“${searchQuery.trim()}”的知识点"
+                            else -> "暂无知识点，等待种子数据加载"
+                        }
                         EmptyState(
                             icon = Icons.Filled.Inbox,
-                            title = if (searchQuery.isNotBlank()) {
-                                "未找到匹配“${searchQuery.trim()}”的知识点"
-                            } else {
-                                "暂无知识点，等待种子数据加载"
-                            },
+                            title = title,
+                            // 搜索 + 分类叠加下 0 结果时,提供"查看全部分类"快捷操作
+                            action = if (searchQuery.isNotBlank() && isFiltered) {
+                                {
+                                    TextButton(onClick = { viewModel.selectCategory(KnowledgeCategory.ALL) }) {
+                                        Text("查看全部分类")
+                                    }
+                                }
+                            } else null,
                         )
                     }
                     else -> {
@@ -180,6 +203,9 @@ private fun SearchBar(
     onQueryChange: (String) -> Unit,
     onClear: () -> Unit,
 ) {
+    // v0.8.20 P0-1 修复:原注释声称 imeAction=Done 但代码未实现,
+    // 用户按键盘 Done 键无法收起键盘。现补齐 keyboardOptions + keyboardActions。
+    val keyboardController = LocalSoftwareKeyboardController.current
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
@@ -205,6 +231,8 @@ private fun SearchBar(
         },
         singleLine = true,
         shape = MaterialTheme.shapes.large,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
     )
 }
 
@@ -254,6 +282,7 @@ private fun KnowledgeList(
 }
 
 // 单个知识点卡片
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun KnowledgePointCard(
     item: KnowledgePointItem,
@@ -282,11 +311,24 @@ private fun KnowledgePointCard(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                text = item.subject,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.secondary,
-            )
+            // v0.8.20 P1-2: 科目 + 考频 chip 同行展示(FlowRow 自动换行)。
+            // 考频用 PRIMARY/SECONDARY/TERTIARY chip 突出高频考点,
+            // 与详情页 HeaderSection 的 freqVariant 映射一致。
+            // NEVER 不展示 chip(避免"未考"chip 干扰浏览,无考频信息比"未考"标签更克制)。
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                Text(
+                    text = item.subject,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                val (freqLabel, freqVariant) = examFrequencyChip(item.examFrequency)
+                if (freqLabel != null) {
+                    WenyanInfoChip(text = freqLabel, variant = freqVariant)
+                }
+            }
             Text(
                 text = item.summary,
                 style = MaterialTheme.typography.bodyMedium,
@@ -297,4 +339,20 @@ private fun KnowledgePointCard(
             )
         }
     }
+}
+
+/**
+ * 将考频原始值映射为列表卡片 chip 标签 + variant(v0.8.20 P1-2 新增)。
+ *
+ * 与 [KnowledgePointDetailScreen] 的 HeaderSection freqVariant 映射一致,
+ * 保持列表页与详情页考频视觉表达统一(高频 PRIMARY / 中频 SECONDARY / 低频 TERTIARY)。
+ *
+ * NEVER / 未知值返回 null,UI 不展示 chip(避免"未考"标签干扰浏览,
+ * 用户更关心"哪些是高频考点",无考频信息比"未考"标签更克制)。
+ */
+private fun examFrequencyChip(examFrequency: String): Pair<String?, ChipVariant> = when (examFrequency) {
+    "HIGH" -> "高频" to ChipVariant.PRIMARY
+    "MEDIUM" -> "中频" to ChipVariant.SECONDARY
+    "LOW" -> "低频" to ChipVariant.TERTIARY
+    else -> null to ChipVariant.NEUTRAL
 }

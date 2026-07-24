@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
 import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ErrorState
@@ -22,11 +24,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Inbox
-import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.designsystem.component.ChipVariant
 import com.wenyan.app.core.designsystem.component.ContentSourceBadge
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
@@ -527,20 +528,25 @@ private fun WrongAnswerRow(
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            // v0.8.20 P2-3 修复:合并三 chip 为单一语义节点,TalkBack 一次性朗读
+            // "来源 卡片复习,错答 3 次,3 小时前"而非逐个聚焦
+            modifier = Modifier.semantics(mergeDescendants = true) {},
         ) {
-            val sourceLabel = when (wrong.source) {
-                "CARD_AGAIN" -> "卡片复习"
-                "QUIZ_WRONG" -> "真题练习"
-                else -> wrong.source
+            // v0.8.20 P1-7 修复:原硬编码 "CARD_AGAIN"/"QUIZ_WRONG" 字符串,
+            // 改用 WrongAnswerRepository 常量,与 WrongAnswerScreen.formatSource 一致
+            val (sourceLabel, sourceVariant) = when (wrong.source) {
+                WrongAnswerRepository.SOURCE_CARD_AGAIN -> "卡片复习" to ChipVariant.SECONDARY
+                WrongAnswerRepository.SOURCE_QUIZ_WRONG -> "真题练习" to ChipVariant.TERTIARY
+                else -> wrong.source to ChipVariant.NEUTRAL
             }
-            WenyanInfoChip(
-                text = sourceLabel,
-                variant = if (wrong.source == "CARD_AGAIN") ChipVariant.SECONDARY else ChipVariant.TERTIARY,
-            )
-            WenyanInfoChip(
-                text = "错答 ${wrong.wrongCount} 次",
-                variant = ChipVariant.NEUTRAL,
-            )
+            WenyanInfoChip(text = sourceLabel, variant = sourceVariant)
+            // v0.8.20 P2-7 修复:wrongCount <= 0 时不展示(语义不合理,数据异常时不误导用户)
+            if (wrong.wrongCount > 0) {
+                WenyanInfoChip(
+                    text = "错答 ${wrong.wrongCount} 次",
+                    variant = ChipVariant.NEUTRAL,
+                )
+            }
             // v0.8.19 P1-REL-2: 最后答错时间(相对时间),让用户感知"这题多久前错过"
             WenyanInfoChip(
                 text = formatRelativeTime(wrong.lastWrongAt),
@@ -548,19 +554,23 @@ private fun WrongAnswerRow(
             )
         }
 
-        // 第二行:用户错误答案
+        // 第二行:用户错误答案(v0.8.20 P1-4 对齐:截断超长答案,避免撑高卡片)
         Text(
-            text = "你的答案：${wrong.userAnswer}",
+            text = "你的答案：${wrong.userAnswer.take(MAX_WRONG_ANSWER_PREVIEW)}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.error,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
         )
 
         // 第三行:正确答案(若有)
-        wrong.correctAnswer?.let { correct ->
+        wrong.correctAnswer?.takeIf { it.isNotBlank() }?.let { correct ->
             Text(
-                text = "正确答案：$correct",
+                text = "正确答案：${correct.take(MAX_WRONG_ANSWER_PREVIEW)}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
             )
         }
 
@@ -580,15 +590,34 @@ private fun WrongAnswerRow(
 }
 
 /**
+ * 错题答案预览的最大字符数(v0.8.20 P1-4 新增)。
+ *
+ * 用户答案 / 正确答案可能很长(如真题主观题答案 500+ 字),
+ * 在详情页错题卡片中截断为 [MAX_WRONG_ANSWER_PREVIEW] 字符 + maxLines=3 + Ellipsis,
+ * 避免单条错题撑高卡片导致详情页无限滚动。
+ *
+ * 用户需查看完整答案可跳转到错题本(后续错题本支持展开/折叠)。
+ *
+ * 200 字符:覆盖大多数简答题答案的前 1-2 段,足够用户判断错因。
+ */
+private const val MAX_WRONG_ANSWER_PREVIEW = 200
+
+/**
  * 将时间戳格式化为相对时间文本(如"3小时前"/"昨天"/"3天前")。
  *
  * v0.8.19 P1-REL-2 新增:供 [WrongAnswerRow] 展示"最后答错时间"。
  * 实现与 settings 模块的 formatRelativeTime 一致(未抽到 common 模块,
  * 避免为单函数引入跨模块依赖;后续若有第三处使用再抽取)。
+ *
+ * v0.8.20 P1-4 修复:处理未来时间戳(时钟回拨或异常数据),
+ * 负 diffMillis 直接返回"刚刚",避免显示负数。
  */
 private fun formatRelativeTime(timestamp: Long): String {
     val now = System.currentTimeMillis()
     val diffMillis = now - timestamp
+    // v0.8.20 P1-4 修复:未来时间戳(时钟回拨或异常数据)直接返回"刚刚",
+    // 避免下面计算结果为负数,显示"-3 分钟前"等异常文案
+    if (diffMillis < 0) return "刚刚"
     val diffMinutes = diffMillis / (60 * 1000)
     val diffHours = diffMillis / (60 * 60 * 1000)
     val diffDays = diffMillis / (24 * 60 * 60 * 1000)

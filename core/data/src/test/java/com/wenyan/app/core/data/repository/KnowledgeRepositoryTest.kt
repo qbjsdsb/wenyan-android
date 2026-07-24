@@ -319,6 +319,22 @@ class KnowledgeRepositoryTest {
         }
     }
 
+    /**
+     * v0.8.20 P1-DATA-1 测试:空关键词抛 [IllegalArgumentException]。
+     *
+     * 验证 require 防御:调用方违规传空字符串时立即抛异常(开发期发现),
+     * 而非静默返回错误结果(SQL LIKE '%%' 会丢失 NULL 字段的知识点)。
+     */
+    @Test(expected = IllegalArgumentException::class)
+    fun searchVerifiedWithSubject_blankKeyword_throwsIllegalArgument() {
+        repository.searchVerifiedWithSubject("")
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun searchVerifiedWithSubject_whitespaceKeyword_throwsIllegalArgument() {
+        repository.searchVerifiedWithSubject("   ")
+    }
+
     // ── 工厂方法 ──────────────────────────────────────────────
 
     private fun makePoint(

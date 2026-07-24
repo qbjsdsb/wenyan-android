@@ -128,18 +128,24 @@ class KnowledgeRepository @Inject constructor(
      * 转义:调用方需用 [escapeLikeWildcards] 转义 % 和 _ 通配符,
      * 避免"100%"匹配"1000"等问题(与 [KnowledgePointDao.searchByKeyword] 一致)。
      *
-     * 注意:空关键词时 SQL `LIKE '%%'` 仅匹配非 NULL 字段,
-     * 与 [getVerifiedWithSubject](无 LIKE 条件,返回全部 VERIFIED)行为不完全一致
-     * (title/core_conclusion/full_content 为 NULL 的知识点会被排除)。
-     * ViewModel 已在 query.isBlank() 时走 [getVerifiedWithSubject],
-     * 不会传入空字符串,此处行为差异不会触发。调用方不应直接传空字符串。
+     * v0.8.20 P1-DATA-1 修复:加 [require] 校验 keyword 非空。
+     * 原仅注释说明"不应传空字符串",但无运行时校验,调用方违规时静默返回错误结果
+     * (空字符串 SQL `LIKE '%%'` 仅匹配非 NULL 字段,会丢失 title/core_conclusion
+     * 为 NULL 的知识点,与 [getVerifiedWithSubject] 行为不一致)。
+     * 现 require 在函数调用时立即抛 [IllegalArgumentException],开发期即可发现。
      *
      * @param keyword 搜索关键词(已转义 % 和 _,非空)
      * @return 匹配的知识点 + 科目名列表,按 updated_at DESC 排序
+     * @throws IllegalArgumentException 如果 keyword 为空或纯空白
      */
-    fun searchVerifiedWithSubject(keyword: String): Flow<List<KnowledgePointWithSubject>> =
-        knowledgePointDao.observeSearchWithSubject(keyword)
+    fun searchVerifiedWithSubject(keyword: String): Flow<List<KnowledgePointWithSubject>> {
+        require(keyword.isNotBlank()) {
+            "keyword must not be blank; use getVerifiedWithSubject() for unfiltered list. " +
+                "Blank keyword causes SQL LIKE '%%' to exclude NULL fields, silently losing points."
+        }
+        return knowledgePointDao.observeSearchWithSubject(keyword)
             .catchAndLog(TAG, "searchVerifiedWithSubject") { emptyList() }
+    }
 
     /**
      * 转义 LIKE 通配符(v0.8.19 新增,供搜索框使用)。

@@ -182,6 +182,28 @@ class KnowledgeViewModelTest {
         assertEquals("未知科目", uiItem.subject)
     }
 
+    // v0.8.20 P1-2 测试:toUiItem 透传 examFrequency,UI 层映射为中文 chip
+
+    @Test
+    fun toUiItem_passesThroughExamFrequency_high() {
+        val pointWithSubject = KnowledgePointWithSubject(
+            point = makePoint(id = "kp1", examFrequency = "HIGH"),
+            subjectName = "中国古代文学",
+        )
+        val uiItem = KnowledgeViewModel.toUiItem(pointWithSubject)
+        assertEquals("HIGH", uiItem.examFrequency)
+    }
+
+    @Test
+    fun toUiItem_passesThroughExamFrequency_never() {
+        val pointWithSubject = KnowledgePointWithSubject(
+            point = makePoint(id = "kp1", examFrequency = "NEVER"),
+            subjectName = "中国古代文学",
+        )
+        val uiItem = KnowledgeViewModel.toUiItem(pointWithSubject)
+        assertEquals("NEVER", uiItem.examFrequency)
+    }
+
     private fun makePointWithSubject(
         id: String,
         subjectName: String?,
@@ -196,6 +218,7 @@ class KnowledgeViewModelTest {
         summary: String? = "测试摘要",
         coreConclusion: String = "测试核心结论",
         contentSource: String? = "TEXTBOOK_NATIVE",
+        examFrequency: String = "NEVER",
     ) = KnowledgePointEntity(
         id = id,
         chapterId = "ch1",
@@ -208,7 +231,7 @@ class KnowledgeViewModelTest {
         contrastIds = null,
         extensionIds = null,
         examRecords = null,
-        examFrequency = "NEVER",
+        examFrequency = examFrequency,
         termTemplate = null,
         tags = null,
         difficulty = 3,

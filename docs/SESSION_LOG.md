@@ -3757,3 +3757,105 @@ CardSplitterTest 新增 1 个场景：
 - `./gradlew :feature:knowledge:testDebugUnitTest :core:data:testDebugUnitTest` 全量
 - emulator 实测：知识点搜索框防抖 + LIKE 转义 + 详情页错题关联 + 标记已解决 Flow 刷新
 
+---
+
+## Session 2026-07-25：知识点功能第二轮深度打磨（v0.8.20）
+
+**触发**：用户反馈"知识点功能还不够好，不够完善，以及有没有问题，深入调查研究，反复打磨"。
+
+### 深度审计发现的问题
+
+通过静态代码审查（沙箱 Android SDK 不可用，无法编译/测试）发现以下问题：
+
+#### P0 编译错误（必修，沙箱验证阻塞）
+
+1. **P0-COMPILE-1：`MAX_WRONG_ANSWER_PREVIEW` 未定义**
+   - 文件：`feature/knowledge/.../KnowledgePointDetailScreen.kt` 第 557、567 行
+   - 问题：上一轮 P1-4 修复引入 `wrong.userAnswer.take(MAX_WRONG_ANSWER_PREVIEW)`，
+     但常量未在文件任何位置（包括 companion object）定义，导致编译失败
+   - 修复：在文件末尾添加 `private const val MAX_WRONG_ANSWER_PREVIEW = 200`，
+     200 字符覆盖大多数简答题答案前 1-2 段，足够用户判断错因
+
+2. **P0-COMPILE-2：`Modifier.semantics` 未导入**
+   - 文件：`feature/knowledge/.../KnowledgePointDetailScreen.kt` 第 531 行
+   - 问题：上一轮 P2-3 修复引入 `Modifier.semantics(mergeDescendants = true) {}`，
+     但 imports 中未添加 `import androidx.compose.ui.semantics.semantics`，编译失败
+   - 修复：添加 `import androidx.compose.ui.semantics.semantics`，
+     同时把 `androidx.compose.ui.text.style.TextOverflow.Ellipsis` 全限定名改为
+     `TextOverflow.Ellipsis`（添加对应 import），统一风格
+
+#### P1 体验/防御优化
+
+3. **P1-2：列表卡片不显示考频标签**
+   - 文件：`feature/knowledge/.../KnowledgeScreen.kt`、`KnowledgeViewModel.kt`
+   - 问题：详情页 HeaderSection 有考频 chip（高频 PRIMARY / 中频 SECONDARY / 低频 TERTIARY），
+     但列表页 `KnowledgePointCard` 只有 title/subject/summary 三个 Text，
+     用户浏览列表时无法快速识别高频考点，必须逐个点进详情页查看
+   - 修复：
+     - `KnowledgePointItem` 新增 `examFrequency: String = "NEVER"` 字段（默认值兼容现有数据）
+     - `KnowledgeViewModel.toUiItem` 透传 `pointWithSubject.point.examFrequency`
+     - `KnowledgePointCard` 用 `FlowRow` 同行展示科目 Text + 考频 chip
+     - 抽取 `examFrequencyChip(examFrequency)` 私有函数，与详情页 HeaderSection
+       freqVariant 映射一致（高频 PRIMARY / 中频 SECONDARY / 低频 TERTIARY）
+     - NEVER / 未知值不展示 chip（避免"未考"标签干扰浏览，无考频信息比"未考"标签更克制）
+   - 设计权衡：在 ViewModel 层透传原始值，UI 层做中文翻译，与详情页一致
+     （避免在 ViewModel 层做 string 翻译，保持数据层纯净）
+
+4. **P1-DATA-1：`searchVerifiedWithSubject` 缺少 require 防御**
+   - 文件：`core/data/.../KnowledgeRepository.kt`
+   - 问题：上一轮仅注释说明"调用方不应传空字符串"，但无运行时校验，
+     调用方违规时静默返回错误结果（SQL `LIKE '%%'` 仅匹配非 NULL 字段，
+     会丢失 title/core_conclusion/full_content 为 NULL 的知识点）
+   - 修复：函数体首行加 `require(keyword.isNotBlank()) { ... }`，
+     调用时立即抛 `IllegalArgumentException`，开发期即可发现
+   - 现有调用方（`KnowledgeViewModel`）已在 `query.isBlank()` 时走 `getVerifiedWithSubject`，
+     不会触发 require；测试也用非空关键词，兼容无破坏
+
+#### P2 代码质量
+
+5. **P2-1：`formatRelativeTime` 未处理未来时间戳**
+   - 文件：`feature/knowledge/.../KnowledgePointDetailScreen.kt`
+   - 问题：`diffMillis = now - timestamp`，若 timestamp > now（时钟回拨或异常数据），
+     diffMillis 为负数，下面计算 diffMinutes / diffHours / diffDays 均为负，
+     `diffMinutes < 1` 命中"刚刚"分支虽然不会崩，但语义不清
+   - 修复：在函数开头加 `if (diffMillis < 0) return "刚刚"` 显式处理未来时间戳，
+     避免下游计算结果为负数导致显示"-3 分钟前"等异常文案
+
+### 新增测试（4 个场景）
+
+#### `KnowledgeViewModelTest`（+2 个，原 11 个 → 13 个）
+
+- `toUiItem_passesThroughExamFrequency_high`：验证 HIGH 考频透传
+- `toUiItem_passesThroughExamFrequency_never`：验证 NEVER 考频透传（默认值）
+- 工厂方法 `makePoint` 加 `examFrequency` 参数（默认 "NEVER"，向后兼容现有测试）
+
+#### `KnowledgeRepositoryTest`（+2 个，原 17 个 → 19 个）
+
+- `searchVerifiedWithSubject_blankKeyword_throwsIllegalArgument`：
+  验证空关键词抛 `IllegalArgumentException`（P1-DATA-1 防御）
+- `searchVerifiedWithSubject_whitespaceKeyword_throwsIllegalArgument`：
+  验证纯空白关键词抛异常（`isNotBlank()` 同时拦截空字符串和纯空白）
+
+### 验证状态
+
+⚠ 沙箱 Android SDK 不可用（`ANDROID_HOME` 未设置），无法本地编译/测试验证。
+
+代码审查确认：
+- `MAX_WRONG_ANSWER_PREVIEW` 已定义为 `private const val`，在 `WrongAnswerRow` 中正确引用
+- `Modifier.semantics` / `TextOverflow` 已添加 import，无未解析符号
+- `KnowledgePointItem.examFrequency` 默认值 "NEVER"，向后兼容现有 `KnowledgeViewModelTest`
+  的 `makePoint` 工厂方法（未传 examFrequency 时默认 NEVER）
+- `examFrequencyChip` 函数返回 `Pair<String?, ChipVariant>`，NEVER 时首个元素为 null，
+  UI 用 `if (freqLabel != null)` 判断是否展示 chip
+- `KnowledgeRepository.searchVerifiedWithSubject` 的 `require` 在函数体顶层
+  （不在 lambda 内），调用时立即抛异常而非订阅时
+- 测试 `searchVerifiedWithSubject_blankKeyword_throwsIllegalArgument` 用
+  `@Test(expected = IllegalArgumentException::class)`，无需 runTest 包裹
+  （require 在函数调用时同步抛出，不涉及协程）
+
+待 emulator 环境恢复后需验证：
+- `./gradlew :feature:knowledge:compileDebugKotlin :feature:knowledge:testDebugUnitTest`
+- `./gradlew :core:data:compileDebugKotlin :core:data:testDebugUnitTest`
+- emulator 实测：列表卡片考频 chip 显示 + 详情页错题答案截断 + retry 后 Flow 重订阅
+
+
