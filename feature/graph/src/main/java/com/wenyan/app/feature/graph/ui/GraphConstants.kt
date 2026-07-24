@@ -88,8 +88,8 @@ internal object GraphConstants {
     const val TIMELINE_PADDING_RATIO = 0.05f
     /** 时间轴顶部刻度线高度比例 */
     const val TIMELINE_RULER_RATIO = 0.06f
-    /** 时间轴泳道数量 */
-    const val TIMELINE_LANES = 5
+    /** 时间轴泳道数量（v0.8.2：从 5 扩到 6，新增知识点层） */
+    const val TIMELINE_LANES = 6
 
     // ── 力导向布局参数（邻域模式）──
 

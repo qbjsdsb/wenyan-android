@@ -204,7 +204,10 @@ class GraphViewModel @Inject constructor(
                     val cached = _knowledgePointTitles.value
                     val missing = ids.filter { it !in cached }
                     if (missing.isEmpty()) return@collect
-                    val newTitles = graphRepository.getKnowledgePointTitles(missing)
+                    // v0.8.2 修复：分批查询，避免 SQLite IN 子句 999 参数限制
+                    val newTitles = missing.chunked(900).flatMap { batch ->
+                        graphRepository.getKnowledgePointTitles(batch).toList()
+                    }.toMap()
                     _knowledgePointTitles.value = cached + newTitles
                 }
         }

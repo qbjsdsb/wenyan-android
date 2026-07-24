@@ -152,11 +152,12 @@ internal object GraphLayout {
             return padX + (clamped - GraphConstants.TIMELINE_START_YEAR) / yearRange * drawableWidth
         }
 
-        // 泳道定义（5 条：流派/小说/诗歌/散文/戏剧）
+        // 泳道定义（6 条：流派/小说/诗歌/散文/戏剧/知识点）
+        // v0.8.2 修复：原 5 条泳道导致 genre 节点（laneIdx=-2）和 KNOWLEDGE_POINT（laneIdx=5）越界崩溃
         val rulerHeight = drawableHeight * GraphConstants.TIMELINE_RULER_RATIO
         val laneAreaTop = padY + rulerHeight
         val laneAreaHeight = drawableHeight - rulerHeight
-        val laneCount = 5
+        val laneCount = 6
         val laneSpacing = laneAreaHeight / laneCount
 
         val lanes = listOf(
@@ -165,6 +166,7 @@ internal object GraphLayout {
             TimelineLane("诗歌", laneAreaTop + laneSpacing * 2.5f, 0xFFFF9800.toInt()),
             TimelineLane("散文", laneAreaTop + laneSpacing * 3.5f, 0xFF2196F3.toInt()),
             TimelineLane("戏剧", laneAreaTop + laneSpacing * 4.5f, 0xFF4CAF50.toInt()),
+            TimelineLane("知识点", laneAreaTop + laneSpacing * 5.5f, 0xFF607D8B.toInt()),
         )
 
         // 关键年份刻度
@@ -215,15 +217,21 @@ internal object GraphLayout {
             return 1
         }
 
-        // 节点 → 泳道映射（v0.8.1 重写：移除死代码 + 硬编码 UUID，WORK 也查体裁）
+        // 节点 → 泳道映射（v0.8.2 修复：genre 节点返回有效索引，不再返回 -2 越界）
         fun nodeLaneIndex(node: GraphNodeItem): Int = when {
-            isPeriodNode(node) -> -1 // 时段节点放顶部刻度带
-            isGenreNode(node) -> -2  // 体裁节点放泳道标签处
+            isPeriodNode(node) -> 0 // 时段节点放流派泳道（不再用 -1 特殊值，避免越界）
+            isGenreNode(node) -> when (node.label) {
+                "小说" -> 1
+                "诗歌" -> 2
+                "散文" -> 3
+                "戏剧" -> 4
+                else -> 0
+            }
             node.type in listOf("SCHOOL", "MOVEMENT") -> 0
             node.metadata?.get("type") in listOf("society", "movement", "school") -> 0
             node.type == "AUTHOR" -> findGenreLaneIndex(node.id)
             node.type == "WORK" -> findGenreLaneIndex(node.id)
-            node.type == "KNOWLEDGE_POINT" -> 5 // 知识点层（v0.8.1 新增第6泳道）
+            node.type == "KNOWLEDGE_POINT" -> 5 // 知识点层（v0.8.2：lanes 已扩展到 6 条）
             node.type == "CHARACTER" -> 1
             else -> 0 // 概念节点放流派泳道
         }
@@ -260,24 +268,15 @@ internal object GraphLayout {
         val laneNodeXs = mutableMapOf<Int, MutableList<Float>>()
 
         for (node in nodes) {
-            val laneIdx = nodeLaneIndex(node)
+            val laneIdx = nodeLaneIndex(node).coerceIn(0, lanes.lastIndex)
             val x = nodeX(node)
-            val y = if (laneIdx == -1) {
-                // 时段节点放顶部刻度带
-                padY + rulerHeight * 0.5f
-            } else {
-                lanes[laneIdx].y
-            }
+            val y = lanes[laneIdx].y
 
             // 防重叠：如果同泳道同 x 附近已有节点，垂直偏移
-            val finalY = if (laneIdx >= 0) {
-                val xs = laneNodeXs.getOrPut(laneIdx) { mutableListOf() }
-                val overlapCount = xs.count { kotlin.math.abs(it - x) < minSpacing }
-                xs.add(x)
-                y + overlapCount * 14f * (if (overlapCount % 2 == 0) 1 else -1)
-            } else {
-                y
-            }
+            val xs = laneNodeXs.getOrPut(laneIdx) { mutableListOf() }
+            val overlapCount = xs.count { kotlin.math.abs(it - x) < minSpacing }
+            xs.add(x)
+            val finalY = y + overlapCount * 14f * (if (overlapCount % 2 == 0) 1 else -1)
 
             positions[node.id] = Offset(x, finalY)
             nodeSubject[node.id] = node.subjectId ?: "unknown"
