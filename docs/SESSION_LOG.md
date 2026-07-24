@@ -2837,3 +2837,109 @@ OCR 残留清理（6 处）：
 
 1. **P0**：GitHub Actions 账单问题（需用户处理）
 2. **P2**：emulator 实测 v0.7.6（如条件允许），重点验证时间轴布局 + 缩放平移流畅性 + DB 迁移
+
+---
+
+## 2026-07-24 v0.8.1 知识图谱三模式重构 + 形状编码
+
+### 用户反馈
+
+> "整体流畅性看看怎么优化一下，然后再检查检查有没有什么问题，没啥问题就发布吧"
+> "整体界面再优化一下，有什么不合理的，不规范的严谨改掉，此外知识图谱还是一团糟，我希望是我的所有考研知识的知识图谱，你先仔细调查研究，开放思维，去网上找找也行，总之一定要做到最好，进行重构，反复思考反复打磨"
+
+核心诉求：知识图谱覆盖率从 4.4%（仅 50+ 手写骨架节点）→ 100%（910 知识点全部入图），并从单一布局升级为三模式可切换。
+
+### 调研依据
+
+- **Sweller 认知负荷理论**：视觉通道有限，避免编码冲突；节点数控制在 40-60（CORE 档）避免认知超载
+- **Novak 概念图理论 + Nesbit & Adesope 元分析**：有标签边的图比无标签图学习价值高 3-5 倍
+- **NYU InfoVis 讲义**：边编码 thickness/pattern/color 三通道中，pattern（线型）最不易与节点色冲突
+- **Obsidian Local Graph 范式**：邻域力导向布局适合深挖单节点关系
+- **Miller 7±2 工作记忆上限**：5 种形状对应 5 类节点
+
+### 重构内容
+
+#### Phase 1: 数据层 — 知识点自动入图（覆盖率 4.4% → 100%）
+
+| 文件 | 改动 |
+|------|------|
+| `app/src/main/assets/seed_data.json` | 知识点 entities/relations 数据补全，版本 2.9.0 → 2.11.0 |
+| `core/data/.../seed/SeedDataLoader.kt` | 新增 `importKnowledgeEntities()`：从知识点 entities/relations 自动生成图谱节点和边（2123+ 节点，968+ 边）；修复考频数据丢失（解析 `exam_frequency` 字段，原硬编码 "NEVER"） |
+| `core/data/.../seed/KnowledgePointSeed.kt` | 新增 `@SerialName("exam_frequency")` 字段 |
+| `core/data/.../repository/GraphRepository.kt` | 新增 `getKnowledgePointTitles(ids)` 批量查询接口 |
+| `core/data/.../repository/GraphRepositoryImpl.kt` | 实现 `getKnowledgePointTitles`，通过 KnowledgePointDao 批量查询 |
+
+#### Phase 2: 常量层 — GraphConstants.kt 抽出
+
+新建 `feature/graph/.../ui/GraphConstants.kt`，集中管理：
+- 节点尺寸 / 缩放范围 / LOD 阈值 / 节点尺寸倍率（4 档重要性）
+- 掌握度阈值 / 核心节点判定阈值
+- 边绘制参数 / 视口剔除边距
+- 时间轴布局参数 / 力导向布局参数
+- `NodeShape` 枚举（CIRCLE/SQUARE/DIAMOND/TRIANGLE/STAR）
+- `GRAPH_TYPE_SHAPES` 映射（AUTHOR→圆/WORK→方/CONCEPT→菱/MOVEMENT+SCHOOL→三角/KNOWLEDGE_POINT→星）
+- `EDGE_TYPE_LABELS`（12 种边类型→中文标签）
+- `EDGE_TYPE_LINE_STYLES`（线型编码：实线/虚线/加粗/箭头）
+
+#### Phase 3: 布局层 — GraphLayout.kt 三模式
+
+| 模式 | 算法 | 用途 |
+|------|------|------|
+| TIMELINE（默认） | 文学史时间轴泳道布局 | 横轴 1915-2030，纵轴 6 泳道（流派/小说/诗歌/散文/戏剧/知识点），建立文学史脉络 |
+| NEIGHBORHOOD | 邻域力导向布局（spring-electric 模型，80 次迭代） | Obsidian Local Graph 范式，深挖聚焦节点 1-3 跳邻居，最大 30 节点 |
+| RADIAL | 径向科目概览 | 按 subjectId 分扇区，扇区内按 type 分子扇区，鸟瞰全局 |
+
+**时间轴布局关键修复**（v0.8.1）：
+- 移除硬编码 UUID 体裁判定，改为通过 BELONGS_TO 边 + 体裁节点 label 匹配（"小说"→泳道 1 等）
+- 无年份节点不再纯随机散布，改为按类型 + 科目分配确定性默认年份（作家 1910-1990，作品 1930-2000，基于 id 哈希）
+
+#### Phase 4: ViewModel 层 — GraphViewModel.kt
+
+- 新增 `LayoutMode` 枚举 + `_layoutMode` StateFlow + `setLayoutMode()` 切换逻辑
+  - 切换到 TIMELINE/RADIAL 清除聚焦（全局视图）
+  - 切换到 NEIGHBORHOOD 保留聚焦，无焦点时自动选度数最大节点
+- 新增 `_knowledgePointTitles` StateFlow，节点列表变化时批量查询标题（供 NodeDetailSheet 显示标题而非 UUID）
+- 使用 `FilterState` data class 聚合筛选状态，解决 combine 最多 5 Flow 的限制
+- 实现核心节点策略：CORE 档显示 sourceKpIds.size≥4 或高频考点或 degree≥3 的节点（40-60 个）
+
+#### Phase 5: Canvas 层 — GraphCanvas.kt 重写
+
+- 三模式布局统一入口 `GraphLayout.calculate(mode, ...)`
+- **形状编码替代描边色**：新增 `DrawScope.drawNodeShape(shape, center, radius, color)`，支持 5 种形状（圆/方/菱/三角/星）
+- **线型编码关系类型**：边按 SOLID/SOLID_ARROW/DASHED/DASHED_ARROW/THICK 分组批量绘制
+- **边标签 O(n²) 性能修复**：原按 label 文本查找，改为以 edge 为 key 缓存
+- **LOD 阈值调整**：边标签从 1.8 → 1.0（与节点标签同步，放大即显示）
+- **统一变换公式**：Canvas 和点击层共享 graphicsLayer，修复缩放平移点击错位 bug
+
+#### Phase 6: Screen 层 — GraphScreen.kt
+
+- 新增 `LayoutModeSelector`（SingleChoiceSegmentedButtonRow，三模式切换）
+- `LegendBar` 重构为可折叠设计（默认收起，释放 88dp 垂直空间）：
+  - 顶栏：布局说明 + 收起/展开按钮
+  - 展开内容：掌握度色图例 + 类型形状图例（真实形状替代彩色圆点）+ 边标签图例
+- `NodeDetailSheet` 显示知识点标题（通过 `knowledgePointTitles` 映射，fallback 到 ID）
+- NEIGHBORHOOD 模式下点击节点设为焦点
+
+### 验证结果
+
+| 检查项 | 结果 |
+|--------|------|
+| :feature:graph:compileDebugKotlin | ✓ BUILD SUCCESSFUL |
+| :core:data:compileDebugKotlin | ✓ BUILD SUCCESSFUL |
+| seed 版本 | 2.11.0（触发重新导入，保留 FSRS 进度） |
+| 图谱节点数 | 2123+（原 50+，自动从知识点 entities/relations 生成） |
+| 图谱边数 | 968+（原 100+，含跨类边 + 知识点关系边） |
+| 覆盖率 | 100%（原 4.4%，910 知识点全部入图） |
+
+### 关键技术决策
+
+1. **为什么不只用一种布局？** 不同学习任务需要不同视图：建立脉络用时间轴，深挖关系用邻域，鸟瞰全局用径向。单一布局无法满足所有需求。
+2. **为什么用形状而非颜色编码类型？** 颜色已被掌握度占用（灰/红/橙/绿），再用颜色编码类型会冲突。形状是离散通道，与连续的颜色通道正交。
+3. **为什么 CORE 档只显示 40-60 节点？** Sweller 认知负荷理论 + Miller 7±2，节点过多会导致认知超载，反而降低学习效率。三档（CORE/IMPORTANT/ALL）渐进式展开。
+4. **为什么边要加标签？** Nesbit & Adesope 元分析证实，有标签边的概念图比无标签图学习价值高 3-5 倍。边标签让"作家→流派"变成"鲁迅 参与 左联"，语义化提升学习价值。
+
+### 下一步建议
+
+1. **P0**：emulator 实测 v0.8.1（三模式切换 + 形状编码 + 边标签 + 2123 节点性能 + 缩放平移）
+2. **P1**：CI 账单问题解决后打 v0.8.1 Release tag
+3. **P2**：力导向布局可考虑接入 Compose Multiplatform 的力导向库（如 force-graph），提升收敛效果

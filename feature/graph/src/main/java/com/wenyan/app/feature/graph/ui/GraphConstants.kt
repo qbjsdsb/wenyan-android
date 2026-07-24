@@ -132,6 +132,42 @@ val GRAPH_TYPE_DISPLAY_NAME = mapOf(
 )
 
 /**
+ * 节点形状枚举（v0.8.1 新增：替代类型描边色，避免与掌握度填充色冲突）。
+ *
+ * 视觉编码设计依据（NYU InfoVis 讲义 + Sweller 认知负荷理论）：
+ * - 形状是离散通道，与连续的颜色通道（掌握度）正交，无冲突
+ * - 5 种形状对应 5 类节点，符合 Miller 7±2 工作记忆上限
+ *
+ * 映射：
+ * - CIRCLE（圆）：AUTHOR 作家 — 象征"人物"，柔和有亲和力
+ * - SQUARE（方）：WORK 作品 — 象征"造物"，稳定结构
+ * - DIAMOND（菱）：CONCEPT 概念 — 象征"提炼"，尖锐有抽象感
+ * - TRIANGLE（三角）：MOVEMENT/SCHOOL 流派运动 — 象征"方向"，指向性
+ * - STAR（星）：KNOWLEDGE_POINT 知识点 — 象征"原子"，最核心的复习单元
+ */
+enum class NodeShape {
+    CIRCLE,
+    SQUARE,
+    DIAMOND,
+    TRIANGLE,
+    STAR,
+}
+
+/**
+ * 节点类型 → 形状映射（v0.8.1 新增）。
+ *
+ * CHARACTER 类型（如有）fallback 到 CIRCLE。
+ */
+val GRAPH_TYPE_SHAPES: Map<String, NodeShape> = mapOf(
+    "AUTHOR" to NodeShape.CIRCLE,
+    "WORK" to NodeShape.SQUARE,
+    "CONCEPT" to NodeShape.DIAMOND,
+    "MOVEMENT" to NodeShape.TRIANGLE,
+    "SCHOOL" to NodeShape.TRIANGLE,
+    "KNOWLEDGE_POINT" to NodeShape.STAR,
+)
+
+/**
  * 节点类型颜色（导出供图例使用；Canvas 渲染改用形状编码，此颜色仅用于图例小圆点）。
  *
  * v0.8.0 调整：移除类型描边色（与节点填充色冲突），改用形状区分类型。

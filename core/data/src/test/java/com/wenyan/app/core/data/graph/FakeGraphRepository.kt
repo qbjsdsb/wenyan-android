@@ -77,6 +77,15 @@ class FakeGraphRepository(
                 )
             },
         )
+
+    /**
+     * 测试用 Fake 实现（v0.8.1 新增）。
+     *
+     * 测试中无需预置知识点标题，直接返回空 Map；
+     * NodeDetailSheet 显示时 fallback 到 ID。
+     */
+    override suspend fun getKnowledgePointTitles(ids: List<String>): Map<String, String> =
+        emptyMap()
 }
 
 // ── 测试辅助函数 ──────────────────────────────────────────────────

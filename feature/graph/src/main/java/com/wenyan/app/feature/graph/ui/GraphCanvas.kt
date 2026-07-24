@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -35,6 +36,7 @@ import com.wenyan.app.feature.graph.GraphNodeItem
 import com.wenyan.app.feature.graph.LayoutMode
 import kotlin.math.cos
 import kotlin.math.hypot
+import kotlin.math.PI
 import kotlin.math.sin
 
 /**
@@ -453,11 +455,12 @@ fun GraphCanvas(
                 }
             }
 
-            // ── 4. 节点（v0.8.0 简化视觉编码：3 层）──
-            // 视觉编码：
+            // ── 4. 节点（v0.8.1 重构视觉编码：形状替代描边色）──
+            // 视觉编码（3 层，正交无冲突）：
             //   - 颜色 = 掌握度（R 值：灰=未学/红=薄弱/橙=巩固/绿=已掌握）
             //   - 尺寸 = 重要性（sourceKpIds.size，4 档）
-            //   - 描边 = 类型色（scale >= 0.7 时显示）
+            //   - 形状 = 节点类型（圆=作家/方=作品/菱=概念/三角=流派/星=知识点）
+            //     v0.8.1：替代类型描边色，避免与掌握度填充色冲突
             for (node in nodes) {
                 val pos = layoutResult.positions[node.id] ?: continue
                 if (pos.x < viewportLeft - cullMargin) continue
@@ -486,25 +489,14 @@ fun GraphCanvas(
                 )
                 val finalColor = if (isSearching) baseColor.copy(alpha = 0.25f) else baseColor
 
-                // 节点填充（掌握度色）
-                drawCircle(
-                    color = finalColor,
-                    radius = nodeRadius,
-                    center = pos,
-                )
-
-                // 类型描边（scale 足够时显示）
-                if (showTypeStroke) {
-                    val typeColor = GRAPH_TYPE_COLORS[node.type]?.let { Color(it) }
-                    if (typeColor != null) {
-                        drawCircle(
-                            color = if (isSearching) typeColor.copy(alpha = 0.15f) else typeColor,
-                            radius = nodeRadius,
-                            center = pos,
-                            style = Stroke(width = GraphConstants.NODE_STROKE_WIDTH),
-                        )
-                    }
+                // 节点形状：按类型映射（v0.8.1 新增）
+                // scale >= 0.7 时显示真实形状；scale < 0.7 时统一用圆点（远观降低视觉噪音）
+                val shape = if (showTypeStroke) {
+                    GRAPH_TYPE_SHAPES[node.type] ?: NodeShape.CIRCLE
+                } else {
+                    NodeShape.CIRCLE
                 }
+                drawNodeShape(shape, pos, nodeRadius, finalColor)
 
                 // 标签
                 if (showLabels) {
@@ -518,6 +510,74 @@ fun GraphCanvas(
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * 绘制节点形状（v0.8.1 新增：替代 drawCircle，支持 5 种形状编码类型）。
+ *
+ * 作为 [DrawScope] 扩展函数，在 Canvas 渲染块内通过 `this: DrawScope` 隐式接收。
+ * 同时供图例 [com.wenyan.app.feature.graph.GraphScreen.ShapeLegendItem] 复用，
+ * 确保图例形状与 Canvas 节点形状视觉一致。
+ *
+ * @param shape  节点形状
+ * @param center 中心坐标
+ * @param radius 半径（外接圆半径）
+ * @param color  填充色（掌握度色）
+ */
+internal fun DrawScope.drawNodeShape(
+    shape: NodeShape,
+    center: Offset,
+    radius: Float,
+    color: Color,
+) {
+    when (shape) {
+        NodeShape.CIRCLE -> drawCircle(color = color, radius = radius, center = center)
+        NodeShape.SQUARE -> {
+            val half = radius * 0.9f
+            drawRect(
+                color = color,
+                topLeft = Offset(center.x - half, center.y - half),
+                size = androidx.compose.ui.geometry.Size(half * 2, half * 2),
+            )
+        }
+        NodeShape.DIAMOND -> {
+            val path = Path().apply {
+                moveTo(center.x, center.y - radius)
+                lineTo(center.x + radius, center.y)
+                lineTo(center.x, center.y + radius)
+                lineTo(center.x - radius, center.y)
+                close()
+            }
+            drawPath(path = path, color = color)
+        }
+        NodeShape.TRIANGLE -> {
+            // 等边三角形，中心对齐
+            val r = radius * 1.1f
+            val path = Path().apply {
+                moveTo(center.x, center.y - r)
+                lineTo(center.x + r * 0.866f, center.y + r * 0.5f)
+                lineTo(center.x - r * 0.866f, center.y + r * 0.5f)
+                close()
+            }
+            drawPath(path = path, color = color)
+        }
+        NodeShape.STAR -> {
+            // 五角星：外半径 radius，内半径 radius*0.4
+            val path = Path().apply {
+                val outerR = radius * 1.1f
+                val innerR = outerR * 0.4f
+                for (i in 0 until 10) {
+                    val angle = -PI / 2 + i * PI / 5
+                    val r = if (i % 2 == 0) outerR else innerR
+                    val x = (center.x + r * cos(angle)).toFloat()
+                    val y = (center.y + r * sin(angle)).toFloat()
+                    if (i == 0) moveTo(x, y) else lineTo(x, y)
+                }
+                close()
+            }
+            drawPath(path = path, color = color)
         }
     }
 }

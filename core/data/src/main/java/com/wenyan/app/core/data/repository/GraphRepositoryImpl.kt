@@ -1,5 +1,6 @@
 package com.wenyan.app.core.data.repository
 
+import android.util.Log
 import com.wenyan.app.core.data.util.catchAndLog
 import com.wenyan.app.core.database.dao.GraphEdgeDao
 import com.wenyan.app.core.database.dao.GraphNodeDao

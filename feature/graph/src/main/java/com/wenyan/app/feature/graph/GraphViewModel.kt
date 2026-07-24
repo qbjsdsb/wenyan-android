@@ -17,7 +17,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -110,6 +112,16 @@ class GraphViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<GraphUiState>(GraphUiState(isLoading = true))
     val uiState: StateFlow<GraphUiState> = _uiState.asStateFlow()
 
+    /**
+     * 知识点标题映射（v0.8.1 新增：供 NodeDetailSheet 显示标题而非 UUID）。
+     *
+     * key = 知识点 ID（如 "kp_00613"），value = 知识点标题（如"《呐喊》与新小说的奠基"）。
+     * 当 [uiState] 的节点列表变化时，收集所有 sourceKpIds + relatedPointId，
+     * 批量查询标题并更新此 StateFlow。
+     */
+    private val _knowledgePointTitles = MutableStateFlow<Map<String, String>>(emptyMap())
+    val knowledgePointTitles: StateFlow<Map<String, String>> = _knowledgePointTitles.asStateFlow()
+
     /** 科目列表（供筛选栏显示） */
     val subjects: StateFlow<List<SubjectEntity>> = subjectDao.observeAll()
         .catch { emit(emptyList()) }
@@ -168,6 +180,33 @@ class GraphViewModel @Inject constructor(
                     emit(GraphUiState(error = e.message ?: "加载失败"))
                 }
                 .collect { _uiState.value = it }
+        }
+
+        // v0.8.1 新增：当 UI 节点列表变化时，批量加载关联知识点标题。
+        // 替代 NodeDetailSheet 直接显示 UUID 的糟糕体验。
+        viewModelScope.launch {
+            _uiState
+                .map { state ->
+                    buildSet {
+                        state.nodes.forEach { node ->
+                            node.relatedPointId?.let { add(it) }
+                            node.sourceKpIds.forEach { add(it) }
+                        }
+                    }.toList()
+                }
+                .distinctUntilChanged()
+                .collect { ids ->
+                    if (ids.isEmpty()) {
+                        _knowledgePointTitles.value = emptyMap()
+                        return@collect
+                    }
+                    // 增量合并：已缓存的不再重复查询
+                    val cached = _knowledgePointTitles.value
+                    val missing = ids.filter { it !in cached }
+                    if (missing.isEmpty()) return@collect
+                    val newTitles = graphRepository.getKnowledgePointTitles(missing)
+                    _knowledgePointTitles.value = cached + newTitles
+                }
         }
     }
 

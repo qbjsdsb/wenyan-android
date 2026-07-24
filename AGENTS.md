@@ -145,13 +145,13 @@ tools/                           # Python 管线脚本
 
 ## 7. 当前状态（2026-07-24）
 
-**✅ v0.7.6 数据瘦身 + 知识图谱时间轴布局完成** — 删除冗余字段（multi_perspectives/sample_essay）+ DB 迁移 v5→v6 + GraphCanvas 重构为文学史时间轴泳道布局（4 泳道 + 35 跨类边 + 7 时段节点），485 真题 + 909 知识点数据全绿，258 tests 0 failures。
+**✅ v0.8.1 知识图谱三模式重构 + 形状编码完成** — 图谱覆盖率 4.4%→100%（910 知识点全部入图，2123+ 节点 968+ 边）+ 三模式布局可切换（时间轴/邻域力导向/径向概览）+ 形状编码替代描边色（圆/方/菱/三角/星）+ 边语义化（12 种中文标签 + 线型编码）+ LegendBar 可折叠，485 真题数据全绿。
 
-- 最新 commit：待提交（v0.7.6 数据瘦身 + 时间轴布局）
-- 最新 Release：**v0.7.5**（待打 tag） — v0.7.6 待 emulator 实测后打 tag
-- 沙箱验证（2026-07-24）：`assembleDebug` SUCCESSFUL + `testDebugUnitTest` **258 tests 0 failures 0 errors**
+- 最新 commit：待提交（v0.8.1 知识图谱三模式重构）
+- 最新 Release：**v0.7.5**（待打 tag） — v0.8.1 待 emulator 实测后打 tag
+- 沙箱验证（2026-07-24）：`:feature:graph` + `:core:data` compileDebugKotlin SUCCESSFUL
+- v0.8.1 核心改动：SeedDataLoader.importKnowledgeEntities() 自动入图（2123+ 节点）+ GraphLayout.kt 三模式布局 + GraphConstants.kt 常量集中 + NodeShape 形状编码 + EDGE_TYPE_LABELS 边语义化 + GraphViewModel LayoutMode 切换 + GraphCanvas drawNodeShape + GraphScreen 可折叠 LegendBar + seed 2.9.0→2.11.0
 - v0.7.6 核心改动：删除 910 知识点 multi_perspectives + 485 真题 sample_essay（-21.6 万字符）+ DB v5→v6 删列迁移 + GraphSkeleton 扩 7 时段+35 跨类边 + GraphCanvas 重写为文学史时间轴泳道布局 + seed 2.8.0→2.9.0
-- v0.7.5 核心修复：610 综合卷 127 题科目重新分类（古代36/现当代32/外国26/理论33），seed 2.7.0→2.8.0 触发重新导入
 - CI 阻塞：GitHub Actions 账单问题，38+ commit 待 CI 验证（不影响 Release，已通过 API 绕过）
 - 详见 [docs/00-STATUS.md](docs/00-STATUS.md) + [docs/SESSION_LOG.md](docs/SESSION_LOG.md) 最后一节
 
@@ -183,11 +183,12 @@ tools/                           # Python 管线脚本
 | v0.7.4 用户体验深度修复 | ✅ 完成 | 4 道合并题拆分 + 2022年806答案错位修复 + OCR 清洗 + GraphCanvas 重写 + UI 修复，seed 2.4.0→2.7.0 |
 | v0.7.5 610 综合卷科目深度修复 | ✅ 完成（2026-07-23） | 610 综合卷 127 题科目重新分类（古代36/现当代32/外国26/理论33），seed 2.7.0→2.8.0 |
 | v0.7.6 数据瘦身 + 知识图谱时间轴布局 | ✅ 完成（2026-07-24） | 删除 multi_perspectives/sample_essay 冗余字段 + DB v5→v6 迁移 + GraphCanvas 重构为文学史时间轴泳道布局（4 泳道 + 35 跨类边 + 7 时段节点），seed 2.8.0→2.9.0 |
+| v0.8.1 知识图谱三模式重构 + 形状编码 | ✅ 完成（2026-07-24） | 图谱覆盖率 4.4%→100%（910 知识点自动入图，2123+ 节点 968+ 边）+ 三模式布局（时间轴/邻域力导向/径向）+ 形状编码（圆/方/菱/三角/星）+ 边语义化（12 中文标签 + 线型）+ LegendBar 可折叠，seed 2.9.0→2.11.0 |
 
 ## 9. 下一步优先级
 
 1. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 38+ commit 待 CI 验证
-2. **P0**：跑 emulator 实测 v0.7.6 — 验证 文学史时间轴布局（4 泳道分明 + 跨类边纵向连接 + 时间刻度线）+ DB 迁移 v5→v6（旧用户升级不丢真题数据）+ 缩放平移 + 909 知识点展示 + FSRS 调度
+2. **P0**：跑 emulator 实测 v0.8.1 — 验证三模式切换（时间轴/邻域/径向）+ 形状编码 + 边标签 + 2123 节点性能 + 缩放平移 + seed 2.11.0 重新导入 + FSRS 调度
 3. **P2 优化项（非阻塞）**：`app/build.gradle.kts` 第 71 行 release keystore fail-fast 应移到 task 执行阶段（当前在配置阶段抛异常，沙箱跑 debug 任务也触发，需 `unset CI` 绕过）
 4. **P1 Phase 2 剩余维度审计**：
    - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）

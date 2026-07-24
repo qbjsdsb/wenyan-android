@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -66,8 +67,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -83,7 +86,10 @@ import com.wenyan.app.feature.graph.ui.GRAPH_SUBJECT_COLORS
 import com.wenyan.app.feature.graph.ui.GRAPH_SUBJECT_DISPLAY_NAME
 import com.wenyan.app.feature.graph.ui.GRAPH_TYPE_COLORS
 import com.wenyan.app.feature.graph.ui.GRAPH_TYPE_DISPLAY_NAME
+import com.wenyan.app.feature.graph.ui.GRAPH_TYPE_SHAPES
 import com.wenyan.app.feature.graph.ui.GraphCanvas
+import com.wenyan.app.feature.graph.ui.NodeShape
+import com.wenyan.app.feature.graph.ui.drawNodeShape
 import kotlinx.coroutines.launch
 
 /**
@@ -122,6 +128,7 @@ fun GraphScreen(
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val displayScope by viewModel.displayScope.collectAsStateWithLifecycle()
     val layoutMode by viewModel.layoutMode.collectAsStateWithLifecycle()
+    val knowledgePointTitles by viewModel.knowledgePointTitles.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -130,6 +137,8 @@ fun GraphScreen(
     var showSearchBar by remember { mutableStateOf(false) }
     var resetTrigger by remember { mutableStateOf(0) }
     var selectedNodeId by remember { mutableStateOf<String?>(null) }
+    // v0.8.1：图例默认收起，释放主内容区垂直空间
+    var legendCollapsed by remember { mutableStateOf(true) }
 
     val selectedNode = remember(uiState.nodes, selectedNodeId) {
         if (selectedNodeId == null) null
@@ -232,8 +241,12 @@ fun GraphScreen(
                 )
             }
 
-            // 图例（v0.8.0：根据布局模式显示不同说明）
-            LegendBar(layoutMode = layoutMode)
+            // 图例（v0.8.1：可折叠，默认收起释放主内容区）
+            LegendBar(
+                layoutMode = layoutMode,
+                collapsed = legendCollapsed,
+                onToggle = { legendCollapsed = !legendCollapsed },
+            )
 
             // 主内容区
             Box(
@@ -323,6 +336,7 @@ fun GraphScreen(
     selectedNode?.let { node ->
         NodeDetailSheet(
             node = node,
+            knowledgePointTitles = knowledgePointTitles,
             onDismiss = { selectedNodeId = null },
             onNavigateToDetail = { pointId ->
                 selectedNodeId = null
@@ -570,23 +584,33 @@ private fun FilterPanel(
     }
 }
 
-// ── 图例（v0.8.0 简化 + 模式感知）──────────────────────────────
+// ── 图例（v0.8.1 可折叠 + 形状编码）──────────────────────────────
 
 /**
- * 图例（v0.8.0 简化：移除冗余项 + 根据布局模式显示不同说明）。
+ * 图例（v0.8.1 重构：可折叠 + 形状编码替代描边色）。
  *
- * 只显示 3 类信息：
- * 1. 掌握度色（灰/红/橙/绿）—— 主视觉编码
- * 2. 类型描边色（粉/橙/蓝/紫）—— 次要编码
- * 3. 常见边标签 —— 关系语义
+ * v0.8.1 改进：
+ * - **可折叠**：默认收起只显示一行摘要，点击展开完整图例。
+ *   原实现固定 5 行占用 ~120dp 垂直空间，挤压 Canvas 主内容区。
+ *   收起后仅占 ~32dp，Canvas 多出 ~88dp 可用高度。
+ * - **形状图标**：类型图例用真实形状（圆/方/菱/三角/星）替代彩色圆点，
+ *   与 Canvas 中的节点渲染保持一致（v0.8.1 形状编码）。
  *
- * 顶部提示文案根据 [layoutMode] 变化：
- * - TIMELINE：横轴年份 + 纵轴体裁泳道
- * - NEIGHBORHOOD：聚焦节点 + 1-3 跳邻居
- * - RADIAL：按科目分扇区 + 扇区内按类型聚类
+ * 3 类信息（展开时）：
+ * 1. 节点颜色 = 掌握度（灰/红/橙/绿）
+ * 2. 节点形状 = 类型（圆/方/菱/三角/星）
+ * 3. 边线型/标签 = 关系类型
+ *
+ * @param layoutMode 当前布局模式（影响顶部说明文案）
+ * @param collapsed  是否收起（由调用方持有状态）
+ * @param onToggle   收起/展开切换回调
  */
 @Composable
-private fun LegendBar(layoutMode: LayoutMode) {
+private fun LegendBar(
+    layoutMode: LayoutMode,
+    collapsed: Boolean,
+    onToggle: () -> Unit,
+) {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
         color = colorScheme.surfaceContainerLow,
@@ -597,83 +621,112 @@ private fun LegendBar(layoutMode: LayoutMode) {
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
         ) {
-            // 布局说明（根据模式变化）
-            Text(
-                text = layoutMode.description,
-                style = MaterialTheme.typography.labelSmall,
-                color = colorScheme.primary,
-                fontWeight = FontWeight.Medium,
-            )
-
-            // 掌握度色图例（主视觉编码）
-            Text(
-                text = "节点颜色 = 掌握度",
-                style = MaterialTheme.typography.labelSmall,
-                color = colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(top = Spacing.xs),
-            )
+            // 顶栏：布局说明 + 收起/展开按钮（始终可见）
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = Spacing.xs)
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                LegendItem(colorScheme.outline, "未学习")
-                LegendItem(colorScheme.error, "薄弱")
-                LegendItem(colorScheme.tertiary, "巩固中")
-                LegendItem(colorScheme.primary, "已掌握")
-            }
-
-            // 类型描边色图例
-            Text(
-                text = "节点描边 = 类型（放大后可见）",
-                style = MaterialTheme.typography.labelSmall,
-                color = colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(top = Spacing.sm),
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = Spacing.xs)
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                GRAPH_TYPE_DISPLAY_NAME.forEach { (type, name) ->
-                    LegendItem(Color(GRAPH_TYPE_COLORS[type] ?: 0xFF888888.toInt()), name)
+                Text(
+                    text = layoutMode.description,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colorScheme.primary,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(
+                    onClick = onToggle,
+                    modifier = Modifier.size(28.dp),
+                ) {
+                    Icon(
+                        imageVector = if (collapsed) Icons.Default.PlayArrow
+                            else Icons.Default.Close,
+                        contentDescription = if (collapsed) "展开图例" else "收起图例",
+                        tint = colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
             }
 
-            // 边标签图例（v0.8.0 新增）
-            Text(
-                text = "边线型/标签 = 关系类型（放大后可见）",
-                style = MaterialTheme.typography.labelSmall,
-                color = colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(top = Spacing.sm),
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = Spacing.xs)
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                verticalAlignment = Alignment.CenterVertically,
+            // 展开内容（v0.8.1：AnimatedVisibility 替代永远显示）
+            AnimatedVisibility(
+                visible = !collapsed,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut(),
             ) {
-                EDGE_TYPE_LABELS.values.take(6).forEach { label ->
+                Column {
+                    // 掌握度色图例（主视觉编码）
                     Text(
-                        text = label,
+                        text = "节点颜色 = 掌握度",
                         style = MaterialTheme.typography.labelSmall,
                         color = colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(colorScheme.surfaceContainerHigh)
-                            .padding(horizontal = Spacing.xs, vertical = 2.dp),
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(top = Spacing.xs),
                     )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = Spacing.xs)
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        LegendItem(colorScheme.outline, "未学习")
+                        LegendItem(colorScheme.error, "薄弱")
+                        LegendItem(colorScheme.tertiary, "巩固中")
+                        LegendItem(colorScheme.primary, "已掌握")
+                    }
+
+                    // 类型形状图例（v0.8.1：形状替代描边色）
+                    Text(
+                        text = "节点形状 = 类型（放大后可见）",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(top = Spacing.sm),
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = Spacing.xs)
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        GRAPH_TYPE_DISPLAY_NAME.forEach { (type, name) ->
+                            val shape = GRAPH_TYPE_SHAPES[type] ?: NodeShape.CIRCLE
+                            ShapeLegendItem(shape, colorScheme.onSurfaceVariant, name)
+                        }
+                    }
+
+                    // 边标签图例
+                    Text(
+                        text = "边线型/标签 = 关系类型（放大后可见）",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(top = Spacing.sm),
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = Spacing.xs)
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        EDGE_TYPE_LABELS.values.take(6).forEach { label ->
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(colorScheme.surfaceContainerHigh)
+                                    .padding(horizontal = Spacing.xs, vertical = 2.dp),
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -689,6 +742,27 @@ private fun LegendItem(color: Color, label: String) {
                 .clip(CircleShape)
                 .background(color),
         )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = Spacing.xs),
+        )
+    }
+}
+
+/**
+ * 形状图例项（v0.8.1 新增：用 Canvas 绘制真实形状，与节点渲染一致）。
+ */
+@Composable
+private fun ShapeLegendItem(shape: NodeShape, color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Canvas(modifier = Modifier.size(12.dp)) {
+            val cx = size.width / 2f
+            val cy = size.height / 2f
+            val radius = size.minDimension / 2f
+            drawNodeShape(shape, Offset(cx, cy), radius, color)
+        }
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
@@ -816,6 +890,7 @@ private fun StatItem(label: String, value: String, color: Color) {
 @Composable
 private fun NodeDetailSheet(
     node: GraphNodeItem,
+    knowledgePointTitles: Map<String, String>,
     onDismiss: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
     onNavigateToReview: (String) -> Unit,
@@ -982,6 +1057,7 @@ private fun NodeDetailSheet(
                     )
                 }
                 items(relatedPoints) { pointId ->
+                    val title = knowledgePointTitles[pointId] ?: pointId
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         shape = RoundedCornerShape(8.dp),
@@ -995,7 +1071,10 @@ private fun NodeDetailSheet(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f),
+                            ) {
                                 Icon(
                                     imageVector = Icons.Default.MenuBook,
                                     contentDescription = null,
@@ -1004,8 +1083,10 @@ private fun NodeDetailSheet(
                                 )
                                 Spacer(modifier = Modifier.width(Spacing.sm))
                                 Text(
-                                    text = pointId,
+                                    text = title,
                                     style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
                             Row(
