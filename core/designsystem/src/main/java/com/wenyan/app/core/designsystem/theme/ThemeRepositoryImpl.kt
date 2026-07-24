@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * [ThemeRepository] 的 DataStore Preferences 实现。
@@ -37,6 +38,9 @@ import javax.inject.Inject
  * 迁移后 designsystem 不应反向依赖 core/data。改为直接用 `.catch { }` 内联实现，
  * 保持行为一致（记日志 + emit 降级值）。
  */
+// v0.8.4 修复（P3）：添加 @Singleton，避免每次注入创建新实例。
+// DataStore 本身单例保证数据一致，但多实例创建有无谓开销。
+@Singleton
 class ThemeRepositoryImpl @Inject constructor(
     private val dataStore: DataStore<Preferences>,
 ) : ThemeRepository {

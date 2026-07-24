@@ -3106,3 +3106,82 @@ OCR 残留清理（6 处）：
 1. **P0**：emulator 实测 v0.8.3（所有修复的实机验证）
 2. **P1**：CI 账单问题解决后打 v0.8.3 Release tag
 3. **P2**：剩余 P3 代码质量问题（import 排序、WenyanAlertDialog 抽取）可后续迭代
+
+---
+
+## 2026-07-24 v0.8.4 第二轮深度打磨
+
+### 背景
+
+用户要求"整体界面再次审查，反复打磨，没问题就发布让我实机检测，做好交接工作"。
+本会话对 app 模块、设计系统组件（8 个未审查文件）、主题层（7 个文件）做第二轮深度审查，
+修复 AMOLED 模式、无障碍语义、动画性能、死代码等 7 项问题。
+
+### 修复清单
+
+#### 主题层修复
+
+1. **P1：WenyanTheme.kt — AMOLED 模式替换不完整**
+   - 问题：AMOLED 模式仅替换 6 个 surface 字段（background/surface/surfaceDim/surfaceContainerLowest/Low/Container），
+     缺失 surfaceContainerHigh/Highest/Bright。导致 TonalCard（用 surfaceBright）、
+     ContentSourceBadge（用 surfaceContainerHigh）在 AMOLED 纯黑背景下仍显示 M3 默认深灰，
+     与全黑背景对比突兀，破坏 AMOLED 一致性。
+   - 修复：补充三个高层 surface 为深灰渐变（0xFF1A1A1A / 0xFF242424 / 0xFF2E2E2E），
+     保持卡片层次可见性同时省电（OLED 几乎全黑）。
+
+2. **P2：WenyanTheme.kt — 主题动画参数优化**
+   - 问题：原 LowBouncy(0.75) 有过冲 + StiffnessLow(200f) ~600ms，用户感觉迟钝
+   - 修复：改为 NoBouncy(1.0) 无过冲 + StiffnessMediumLow(400f) ~300ms，
+     符合 M3 DurationMedium4 推荐时长，过渡更干脆
+
+3. **P3：Color.kt — DefaultSeedColor 死代码清理**
+   - 问题：`DefaultSeedColor` 经 Grep 确认全项目无代码引用（NF-DS10 修复后默认种子色统一从 ThemeConfig.seedColor 取值），
+     与 ThemeConfig 的 seedColor 默认值重复定义，存在单一来源真相问题
+   - 修复：删除 DefaultSeedColor，保留注释说明
+
+4. **P3：ThemeRepositoryImpl.kt — 添加 @Singleton**
+   - 问题：无 @Singleton 注解，Hilt 每次注入创建新实例（虽 DataStore 本身单例保证数据一致）
+   - 修复：添加 @Singleton 注解
+
+5. **P2：ThemeViewModel.kt — launchSafely 静默吞异常**
+   - 问题：原 catch 块仅注释"静默处理"，无日志、无 UI 反馈。生产环境主题保存失败用户无感知且难以排查
+   - 修复：添加 Log.w 日志 + errorEvents SharedFlow，UI 可订阅展示 Snackbar
+
+#### 设计系统组件修复
+
+6. **P1：EmptyState.kt — ErrorState 错误图标无 contentDescription + 未合并语义**
+   - 问题：ErrorState 错误图标 contentDescription = null，屏幕阅读器无法识别"错误状态"；
+     EmptyState/ErrorState 的 Column 未 mergeDescendants，TalkBack 逐个聚焦 Icon/Title/Description
+   - 修复：Column 添加 semantics(mergeDescendants = true) + contentDescription，
+     TalkBack 一次性朗读完整状态（"加载失败，<message>"）
+
+7. **P1：LoadingState.kt — LoadingIndicator 无加载状态语义**
+   - 问题：无 semantics，屏幕阅读器无法识别"加载中"状态
+   - 修复：添加 contentDescription = "加载中" + LiveRegionMode.Polite，
+     TalkBack 朗读"加载中"并在加载完成时自动通知
+
+### 已知未修复项（留待后续迭代）
+
+| 项 | 严重度 | 原因 |
+|----|--------|------|
+| 大屏子路由 NavigationRail 完全消失 | P1 | 影响所有子路由布局，需逐页测试，发布前风险过高 |
+| NavHost 详情间跳转丢失浏览历史 | P1 | 改为限制深度需复杂逻辑，可能引入 bug |
+| 全局字符串硬编码（NF-U2） | P2 | 系统性问题，需批量抽取 strings.xml，工作量大 |
+| WindowSizeClass 切换无过渡动画 | P2 | 需 AnimatedContent 包裹，需验证不引入布局抖动 |
+| ContentSourceBadge/WenyanInfoChip 缺 semantics role | P2 | 需逐组件验证 TalkBack 朗读效果 |
+
+### 验证结果
+
+| 检查项 | 结果 |
+|--------|------|
+| :app:assembleDebug | ✓ BUILD SUCCESSFUL |
+| :app:testDebugUnitTest | ✓ 全绿 |
+| 涉及文件 | 6 个（WenyanTheme/EmptyState/LoadingState/Color/ThemeRepositoryImpl/ThemeViewModel + build.gradle.kts） |
+| 修复项数 | 7 |
+
+### 下一步建议
+
+1. **P0**：emulator 实测 v0.8.4（AMOLED 模式卡片层次 + 无障碍语义 + 主题切换动画）
+2. **P1**：大屏 NavigationRail 持续可见（需逐页测试子路由布局适配）
+3. **P2**：NavHost 详情浏览历史保留（限制深度 5 层而非清空）
+4. **P3**：全局 strings.xml 抽取（NF-U2 系统性修复）

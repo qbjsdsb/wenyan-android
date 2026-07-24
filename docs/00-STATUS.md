@@ -5,12 +5,12 @@
 
 ## ✅ 当前状态
 
-**v0.8.3 全面 UI/UX 打磨完成** — 19 个文件 30+ 项修复：设计系统（labelSmall字重/导航栏语义/触控目标/状态同步）+ ApiConfigScreen（输入校验/rememberSaveable/RadioButton/FilledTonalButton/FAB隐藏）+ KnowledgeScreen（卡片间距）+ GraphCanvas（科目标签预缓存/pointerInput稳定）+ 多Screen错误状态/IME适配/二次确认/FontWeight统一。assembleDebug + testDebugUnitTest 全绿。
+**v0.8.4 第二轮深度打磨完成** — 6 文件 7 项修复：AMOLED 模式补全 3 个 surface 字段（卡片层次可见性）+ EmptyState/ErrorState mergeDescendants 语义 + LoadingIndicator 加载状态语义 + 主题动画参数优化（去过冲+缩短时长）+ DefaultSeedColor 死代码清理 + ThemeRepositoryImpl @Singleton + ThemeViewModel 错误事件流。assembleDebug + testDebugUnitTest 全绿。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | 待提交（v0.8.3 全面 UI/UX 打磨） |
-| 最新 Release | **v0.7.5**（待打 tag） — v0.8.3 待 emulator 实测后打 tag |
+| 最新 commit | 待提交（v0.8.4 第二轮深度打磨） |
+| 最新 Release | **v0.7.5**（待打 tag） — v0.8.4 待 emulator 实测后打 tag |
 | 编译验证 | **:app:assembleDebug + :app:testDebugUnitTest SUCCESSFUL** |
 | 知识点 | **910 个**（entities/relations 数据补全，自动入图） |
 | 真题 | **485 道**（v0.7.6 已删除 sample_essay 冗余字段） |

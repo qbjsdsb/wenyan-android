@@ -4,6 +4,10 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 
 /**
  * 文研加载指示器（M3 Expressive LoadingIndicator）。
@@ -15,6 +19,11 @@ import androidx.compose.ui.Modifier
  * 封装在此以集中管理 @OptIn(ExperimentalMaterial3ExpressiveApi)，各 feature 模块
  * 直接使用本组件无需重复 opt-in。
  *
+ * v0.8.4 修复（P1）：添加无障碍语义。
+ * 原实现无 semantics，屏幕阅读器无法识别这是"加载中"状态。
+ * 现添加 contentDescription + LiveRegionMode.Polite，
+ * TalkBack 朗读"加载中"并在加载完成时自动通知。
+ *
  * @param modifier 修饰符
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -22,5 +31,11 @@ import androidx.compose.ui.Modifier
 fun WenyanLoadingIndicator(
     modifier: Modifier = Modifier,
 ) {
-    LoadingIndicator(modifier = modifier)
+    LoadingIndicator(
+        modifier = modifier.semantics {
+            contentDescription = "加载中"
+            // Polite 模式：不打断用户当前操作，等待合适时机再朗读
+            liveRegion = LiveRegionMode.Polite
+        },
+    )
 }

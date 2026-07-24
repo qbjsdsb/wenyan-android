@@ -73,6 +73,13 @@ fun WenyanTheme(
     // AMOLED 模式：将底层表面替换为纯黑
     // NF-UP1 修复：baseScheme.copy 创建 36 字段的新 ColorScheme，每次重组都重建。
     // remember(baseScheme, isDark, config.amoledMode) 保证仅在依赖变化时重建。
+    //
+    // v0.8.4 修复（P1）：AMOLED 模式替换不完整。
+    // 原仅替换 6 个 surface 字段（background/surface/surfaceDim/surfaceContainerLowest/Low/Container），
+    // 缺失 surfaceContainerHigh/Highest/Bright。导致 TonalCard（用 surfaceBright）、
+    // ContentSourceBadge（用 surfaceContainerHigh）在 AMOLED 纯黑背景下仍显示 M3 默认深灰，
+    // 与全黑背景对比突兀，破坏 AMOLED 一致性。
+    // 现补充三个高层 surface 为深灰渐变（非纯黑），保持卡片层次可见性同时省电。
     val finalScheme = remember(baseScheme, isDark, config.amoledMode) {
         if (isDark && config.amoledMode) {
             baseScheme.copy(
@@ -82,6 +89,10 @@ fun WenyanTheme(
                 surfaceContainerLowest = Color.Black,
                 surfaceContainerLow = Color.Black,
                 surfaceContainer = Color.Black,
+                // v0.8.4 新增：高层容器保持微亮深灰，确保卡片在纯黑背景上仍可区分层次
+                surfaceContainerHigh = Color(0xFF1A1A1A),
+                surfaceContainerHighest = Color(0xFF242424),
+                surfaceBright = Color(0xFF2E2E2E),
             )
         } else {
             baseScheme
@@ -90,6 +101,10 @@ fun WenyanTheme(
 
     // v0.6：颜色切换动画。主题切换（深色↔浅色、种子色变化、AMOLED 开关）时
     // 颜色平滑过渡而非瞬间跳变，符合 M3 Expressive 的"持续运动"原则。
+    //
+    // v0.8.4 优化（P2）：原 LowBouncy(0.75) 有过冲 + StiffnessLow(200f) ~600ms 过长，
+    // 用户感觉迟钝。改为 NoBouncy(1.0) 无过冲 + StiffnessMediumLow(400f) ~300ms，
+    // 符合 M3 DurationMedium4 推荐时长，过渡更干脆。
     val animatedScheme = animateColorScheme(finalScheme)
 
     MaterialExpressiveTheme(
@@ -104,17 +119,17 @@ fun WenyanTheme(
 /**
  * 对 [ColorScheme] 的每个颜色角色做弹簧动画过渡。
  *
- * 弹簧参数：
- * - [Spring.DampingRatioLowBouncy]（≈0.75）让运动有轻微过冲但不过分
- * - [Spring.StiffnessLow]（200f）让过渡稍慢（~600ms），符合主题切换的"重量感"
+ * v0.8.4 优化：
+ * - dampingRatio 从 LowBouncy(0.75) 改为 NoBouncy(1.0)，去除过冲（主题切换不应"弹"）
+ * - stiffness 从 Low(200f) 改为 MediumLow(400f)，过渡 ~300ms，符合 M3 DurationMedium4
  *
  * 注意：调用时需在 @Composable 上下文中，每个 [animateColorAsState] 独立 remember。
  */
 @Composable
 private fun animateColorScheme(scheme: ColorScheme): ColorScheme {
     val spec = spring<Color>(
-        dampingRatio = Spring.DampingRatioLowBouncy,
-        stiffness = Spring.StiffnessLow,
+        dampingRatio = Spring.DampingRatioNoBouncy,
+        stiffness = Spring.StiffnessMediumLow,
     )
 
     val primary by animateColorAsState(scheme.primary, spec, label = "primary")
