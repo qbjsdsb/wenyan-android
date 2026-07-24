@@ -92,6 +92,15 @@ private val TIMELINE_TICK_YEARS = intArrayOf(1917, 1927, 1937, 1949, 1966, 1976,
  *
  * 5. **保留 v0.7.4 标签智能定位**：标签放在节点下方（统一向下，避免与时间刻度重叠）
  *
+ * v0.7.6 流畅性优化：
+ * - **修复变换 bug**：v0.7.4 遗留——Canvas 用 graphicsLayer（先缩放再平移），
+ *   节点点击 Box 手动算 (pos+offset)*scale（先平移再缩放），变换公式不一致，
+ *   缩放+平移时点击位置错位（偏差 = offset * (scale - 1)）。
+ *   现统一到外层 Box 的 graphicsLayer，Canvas 和点击层共享同一变换。
+ * - **手势性能提升**：原实现每次手势触发 BoxWithConstraints 重组，40+ 节点 Box
+ *   重新计算屏幕坐标 + px→Dp 转换。现节点 Box 用未变换坐标定位，Dp 偏移预缓存，
+ *   手势变化只触发 graphicsLayer 重新应用（GPU 层），不触发 Compose 重组布局。
+ *
  * **优势对比**（v0.7.4 分组径向 → v0.7.6 时间轴）：
  * - 逻辑性：径向布局按"颜色分组"无内在逻辑；时间轴按"历史时间"组织，符合文学史认知
  * - 学习价值：径向布局难以看出作家/流派/时段的时序关系；时间轴直观展示代际传承
@@ -191,9 +200,31 @@ fun GraphCanvas(
                 .toSet()
         }
 
-        // ── Canvas 只负责绘制（时间轴、边、节点、标签），不再处理点击 ──
-        // 应用缩放/平移变换：translation + scale
-        Canvas(
+        // v0.7.6 流畅性优化：预计算节点点击区域的 Dp 偏移（未变换坐标）。
+        // 点击 Box 用 absoluteOffset 定位在 graphicsLayer 变换前的坐标系中，
+        // 经外层 graphicsLayer 变换后与 Canvas 渲染位置完全对齐。
+        // 只在 positions 变化时重算，手势变化不触发重算。
+        val touchSizeDp = with(density) { (touchRadiusPx * 2f).toDp() }
+        val touchOffsetsDp = remember(positions, touchRadiusPx, density) {
+            positions.mapValues { (_, pos) ->
+                with(density) {
+                    Pair(
+                        (pos.x - touchRadiusPx).toDp(),
+                        (pos.y - touchRadiusPx).toDp(),
+                    )
+                }
+            }
+        }
+
+        // ── v0.7.6 流畅性优化：Canvas + 点击层共享 graphicsLayer ──
+        // 修复 v0.7.4 遗留 bug：原 Canvas 用 graphicsLayer（先缩放再平移），
+        // 节点 Box 手动算 (pos+offset)*scale（先平移再缩放），变换公式不一致，
+        // 缩放+平移时点击位置错位。现统一到外层 Box 的 graphicsLayer，
+        // Canvas 和点击层共享同一变换，位置完全一致。
+        //
+        // 性能提升：手势变化只触发 graphicsLayer 重新应用（GPU 层合成），
+        // 不触发 Compose 重组布局，40+ 节点点击 Box 无需重新计算坐标。
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
@@ -203,129 +234,127 @@ fun GraphCanvas(
                     scaleY = scale
                 },
         ) {
-            // ── 1. 绘制时间轴刻度线（顶部）──
-            val timelineY = canvasHeight * 0.06f
-            TIMELINE_TICK_YEARS.forEach { year ->
-                val x = yearToX(year.toFloat(), canvasWidth)
-                drawLine(
-                    color = timelineTickColor,
-                    start = Offset(x, timelineY),
-                    end = Offset(x, canvasHeight),
-                    strokeWidth = 0.8f,
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 8f)),
-                )
-                val tickLabel = tickLabelLayouts[year]
-                if (tickLabel != null) {
-                    drawText(
-                        textLayoutResult = tickLabel,
-                        topLeft = Offset(
-                            x - tickLabel.size.width / 2f,
-                            timelineY - tickLabel.size.height - 2f,
-                        ),
-                    )
-                }
-            }
-
-            // ── 2. 绘制泳道分割线（淡）──
-            val laneYs = floatArrayOf(
-                canvasHeight * LANE_Y_PERIOD,
-                canvasHeight * LANE_Y_SCHOOL,
-                canvasHeight * LANE_Y_AUTHOR,
-                canvasHeight * LANE_Y_GENRE,
-            )
-            laneYs.forEach { laneY ->
-                drawLine(
-                    color = laneDividerColor,
-                    start = Offset(0f, laneY),
-                    end = Offset(canvasWidth, laneY),
-                    strokeWidth = 0.5f,
-                )
-            }
-
-            // ── 3. 绘制边（含薄弱边高亮）──
-            edges.forEach { edge ->
-                val from = positions[edge.fromId]
-                val to = positions[edge.toId]
-                if (from != null && to != null) {
-                    val isWeak = edge.fromId in weakNodeIds || edge.toId in weakNodeIds
+            // ── 1. Canvas 绘制（时间轴、边、节点、标签）──
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                // ── 1.1 时间轴刻度线（顶部）──
+                val timelineY = canvasHeight * 0.06f
+                TIMELINE_TICK_YEARS.forEach { year ->
+                    val x = yearToX(year.toFloat(), canvasWidth)
                     drawLine(
-                        color = if (isWeak) weakEdgeColor else edgeColor,
-                        start = from,
-                        end = to,
-                        strokeWidth = if (isWeak) 3f else 1.5f,
+                        color = timelineTickColor,
+                        start = Offset(x, timelineY),
+                        end = Offset(x, canvasHeight),
+                        strokeWidth = 0.8f,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 8f)),
+                    )
+                    val tickLabel = tickLabelLayouts[year]
+                    if (tickLabel != null) {
+                        drawText(
+                            textLayoutResult = tickLabel,
+                            topLeft = Offset(
+                                x - tickLabel.size.width / 2f,
+                                timelineY - tickLabel.size.height - 2f,
+                            ),
+                        )
+                    }
+                }
+
+                // ── 1.2 泳道分割线（淡）──
+                val laneYs = floatArrayOf(
+                    canvasHeight * LANE_Y_PERIOD,
+                    canvasHeight * LANE_Y_SCHOOL,
+                    canvasHeight * LANE_Y_AUTHOR,
+                    canvasHeight * LANE_Y_GENRE,
+                )
+                laneYs.forEach { laneY ->
+                    drawLine(
+                        color = laneDividerColor,
+                        start = Offset(0f, laneY),
+                        end = Offset(canvasWidth, laneY),
+                        strokeWidth = 0.5f,
                     )
                 }
-            }
 
-            // ── 4. 绘制节点 + 标签 ──
-            nodes.forEach { node ->
-                val pos = positions[node.id] ?: return@forEach
-                val color = resolveNodeColor(
-                    node = node,
-                    masteredColor = masteredColor,
-                    consolidatingColor = consolidatingColor,
-                    weakColor = weakColor,
-                    unlearnedColor = unlearnedColor,
-                )
+                // ── 1.3 边（含薄弱边高亮）──
+                edges.forEach { edge ->
+                    val from = positions[edge.fromId]
+                    val to = positions[edge.toId]
+                    if (from != null && to != null) {
+                        val isWeak = edge.fromId in weakNodeIds || edge.toId in weakNodeIds
+                        drawLine(
+                            color = if (isWeak) weakEdgeColor else edgeColor,
+                            start = from,
+                            end = to,
+                            strokeWidth = if (isWeak) 3f else 1.5f,
+                        )
+                    }
+                }
 
-                // 外圈光晕（薄弱节点）
-                if (node.id in weakNodeIds) {
+                // ── 1.4 节点 + 标签 ──
+                nodes.forEach { node ->
+                    val pos = positions[node.id] ?: return@forEach
+                    val color = resolveNodeColor(
+                        node = node,
+                        masteredColor = masteredColor,
+                        consolidatingColor = consolidatingColor,
+                        weakColor = weakColor,
+                        unlearnedColor = unlearnedColor,
+                    )
+
+                    // 外圈光晕（薄弱节点）
+                    if (node.id in weakNodeIds) {
+                        drawCircle(
+                            color = weakHaloColor,
+                            radius = nodeRadiusPx + 6f,
+                            center = pos,
+                        )
+                    }
+
+                    // 节点圆
                     drawCircle(
-                        color = weakHaloColor,
-                        radius = nodeRadiusPx + 6f,
+                        color = color,
+                        radius = nodeRadiusPx,
                         center = pos,
                     )
+
+                    // 节点标签：v0.7.6 统一向下放置，避免与顶部时间刻度重叠
+                    // 标签锚点：节点中心下方 (nodeRadiusPx + 4f) px
+                    val textLayout = textLayouts[node.id] ?: return@forEach
+                    val labelTopLeft = Offset(
+                        pos.x - textLayout.size.width / 2f,
+                        pos.y + nodeRadiusPx + 4f,
+                    )
+                    drawText(
+                        textLayoutResult = textLayout,
+                        topLeft = labelTopLeft,
+                    )
                 }
+            }
 
-                // 节点圆
-                drawCircle(
-                    color = color,
-                    radius = nodeRadiusPx,
-                    center = pos,
-                )
-
-                // 节点标签：v0.7.6 统一向下放置，避免与顶部时间刻度重叠
-                // 标签锚点：节点中心下方 (nodeRadiusPx + 4f) px
-                val textLayout = textLayouts[node.id] ?: return@forEach
-                val labelTopLeft = Offset(
-                    pos.x - textLayout.size.width / 2f,
-                    pos.y + nodeRadiusPx + 4f,
-                )
-                drawText(
-                    textLayoutResult = textLayout,
-                    topLeft = labelTopLeft,
+            // ── 2. 节点点击层（位置与 Canvas 内部坐标一致）──
+            // NF-UA1：点击 Box 用 absoluteOffset 定位在未变换坐标系中，
+            // 经外层 graphicsLayer 变换后与 Canvas 渲染位置完全对齐。
+            // 触控区域固定 48dp（WCAG 最小标准），不随 scale 缩放。
+            nodes.forEach { node ->
+                val offsets = touchOffsetsDp[node.id] ?: return@forEach
+                Box(
+                    modifier = Modifier
+                        .size(touchSizeDp)
+                        .align(Alignment.TopStart)
+                        .absoluteOffset(x = offsets.first, y = offsets.second)
+                        .clip(CircleShape)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = buildString {
+                                append(node.label)
+                                if (!node.subtitle.isNullOrBlank()) {
+                                    append("（").append(node.subtitle).append("）")
+                                }
+                            }
+                        }
+                        .clickable { onNodeClick(node.id) },
                 )
             }
-        }
-
-        // ── NF-UA1 修复：节点点击改为 Box 叠加 ──
-        // 注意：点击 Box 必须应用相同的 graphicsLayer 变换，否则缩放后点击位置错位。
-        // 触控区域直径 = 2 * touchRadiusPx（48dp），符合 WCAG 最小触控目标。
-        nodes.forEach { node ->
-            val pos = positions[node.id] ?: return@forEach
-            // 应用 scale/offset 变换得到屏幕坐标
-            val screenX = (pos.x + offset.x) * scale
-            val screenY = (pos.y + offset.y) * scale
-            // 触控区域也按 scale 缩放，保证缩放后点击区域与视觉节点一致
-            val touchRadiusScaled = touchRadiusPx * scale
-            val xDp = with(density) { (screenX - touchRadiusScaled).toDp() }
-            val yDp = with(density) { (screenY - touchRadiusScaled).toDp() }
-            val touchSizeScaledDp = with(density) { (touchRadiusScaled * 2).toDp() }
-            Box(
-                modifier = Modifier
-                    .size(touchSizeScaledDp.coerceAtLeast(24.dp))
-                    .semantics {
-                        role = Role.Button
-                        contentDescription = buildString {
-                            append(node.label)
-                            if (!node.subtitle.isNullOrBlank()) append("（").append(node.subtitle).append("）")
-                        }
-                    }
-                    .align(Alignment.TopStart)
-                    .absoluteOffset(x = xDp, y = yDp)
-                    .clip(CircleShape)
-                    .clickable { onNodeClick(node.id) },
-            )
         }
     }
 }

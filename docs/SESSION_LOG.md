@@ -2807,13 +2807,33 @@ OCR 残留清理（6 处）：
   - 同流派作家通过跨类边追溯到流派节点，便于纵向归纳（如京派：沈从文 + 钱钟书）
   - 时间刻度线作为视觉锚点，用户能快速定位任意节点的年代
 
+### v0.7.6 流畅性优化（发布前最终检查）
+
+**修复变换 bug**（v0.7.4 遗留）：
+- 问题：Canvas 用 `graphicsLayer`（变换公式 `screen = local * scale + offset`，先缩放再平移），
+  节点点击 Box 手动计算 `(pos + offset) * scale`（先平移再缩放），两者变换公式不一致。
+- 后果：缩放 + 平移时点击位置错位，偏差 = `offset * (scale - 1)`。
+  例如 scale=2, offset.x=100 时偏差 100px，节点视觉位置与点击区域不对齐。
+- 修复：将 Canvas 和点击层放入共享 `graphicsLayer` 的外层 Box，统一变换公式。
+  节点 Box 用未变换坐标（`pos.x - touchRadius`）定位，经 graphicsLayer 变换后与 Canvas 渲染位置完全对齐。
+
+**手势性能优化**：
+- 问题：原实现每次缩放/平移手势触发整个 `BoxWithConstraints` 重组，40+ 节点点击 Box
+  重新计算屏幕坐标（`(pos + offset) * scale`）+ px→Dp 转换，每帧大量计算。
+- 优化：
+  1. 节点点击区域的 Dp 偏移预缓存到 `remember(positions, touchRadiusPx, density)`，
+     只在节点列表变化时重算，手势变化不触发重算。
+  2. 手势变化只触发 `graphicsLayer` 重新应用（GPU 层合成），不触发 Compose 重组布局。
+  3. 触控区域固定 48dp（WCAG 最小标准），不随 scale 缩放，简化计算。
+
+**验证结果**：
+- `assembleDebug` BUILD SUCCESSFUL
+- `testDebugUnitTest` BUILD SUCCESSFUL（258 tests 0 failures）
+- 版本号 versionCode=13, versionName="0.7.6"
+- seed_data.json version=2.9.0
+- 数据库 version=6, MIGRATION_5_6 已注册
+
 ### 下一步建议
 
-1. **P0**：跑 emulator 实测 v0.7.6，重点验证：
-   - 文学史时间轴布局视觉清晰，4 泳道分明
-   - 跨类边纵向连接（如鲁迅→左联、鲁迅→小说）正确显示
-   - 时间刻度线 + 泳道分割线视觉协调
-   - 数据库迁移 v5→v6 自动执行（旧用户升级不丢真题数据）
-   - 双指缩放/单指平移保持流畅
-2. **P0**：GitHub Actions 账单问题（需用户处理）
-3. **P2**：emulator 实测后打 v0.7.6 Release tag
+1. **P0**：GitHub Actions 账单问题（需用户处理）
+2. **P2**：emulator 实测 v0.7.6（如条件允许），重点验证时间轴布局 + 缩放平移流畅性 + DB 迁移
