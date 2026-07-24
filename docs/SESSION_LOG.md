@@ -2636,3 +2636,184 @@ OCR 残留清理（6 处）：
    - 2022年806试卷题目-答案对应正确
 2. **P0**：GitHub Actions 账单问题（需用户处理）
 3. **P2**：release keystore fail-fast 移到 task 执行阶段
+
+---
+
+## 2026-07-24 v0.7.6 数据瘦身 + 知识图谱时间轴布局
+
+### 用户反馈
+
+> "知识点里面的其他，真题里面的范文都相当多余，删掉，此外知识图谱还是不够有逻辑，不够美丽，也不够能帮助学习，你再思考调研一下"
+
+三大诉求：
+1. 删除知识点 `multi_perspectives` 字段（source 全为"其他"，无意义）
+2. 删除真题 `sample_essay` 字段（范文冗余）
+3. 知识图谱重构为更有逻辑、更美观、更有助于学习的布局
+
+### 修复内容
+
+#### Phase 1: 数据瘦身
+
+| 文件 | 改动 |
+|------|------|
+| app/src/main/assets/seed_data.json | 删除 910 知识点的 `multi_perspectives` 字段 + 485 真题的 `sample_essay` 字段，版本 2.8.0 → 2.9.0 |
+| core/database/.../ExamQuestionEntity.kt | 删除 `sampleEssay` 字段及相关注释 |
+| core/database/.../migration/Migration_5_6.kt | 新增：通过"建新表→迁移数据→删旧表→重命名→重建索引"删除 `exam_questions.sample_essay` 列（SQLite 不支持 DROP COLUMN） |
+| core/database/.../WenyanDatabase.kt | 数据库版本 5 → 6，注册 Migration_5_6 |
+| core/data/.../SeedDataLoader.kt | 移除 `sampleEssay` 字段解析与映射（保留 `multiPerspectives` 字段定义兼容旧 seed，但 seed 2.9.0 已无此字段，解析为 null） |
+| feature/quiz/.../QuizViewModel.kt | 移除 `QuizQuestionItem.sampleEssay` 字段及相关逻辑 |
+| feature/quiz/.../QuizScreen.kt | 移除范文相关 UI 组件及逻辑 |
+
+**数据量减少**：21.6 万字符（sample_essay 范文）+ multi_perspectives 冗余结构
+
+#### Phase 2: 数据库迁移 v5→v6
+
+`Migration_5_6.kt` 实现：
+1. 创建新表 `exam_questions_new`（不含 `sample_essay` 列）
+2. 从旧表复制数据到新表（列对齐）
+3. 删除旧表 `exam_questions`
+4. 重命名 `exam_questions_new` → `exam_questions`
+5. 重建索引（`index_exam_questions_subject_id` 等）
+
+#### Phase 3: 知识图谱重构为文学史时间轴布局
+
+##### 3.1 GraphNodeItem 传递 metadata 字段
+
+`GraphViewModel.kt`：
+- `GraphNodeItem` 新增 `metadata: Map<String, String>?` 字段
+- `toUiItem()` 传递 `node.metadata`，让 Canvas 能读取时间元数据
+
+##### 3.2 GraphSkeleton 补跨类边 + 细化时段
+
+`GraphSkeleton.kt` 重构（节点从 40+ 扩到 50+，关系从 38 扩到 100+）：
+
+**新增 7 个文学史分期节点**（v0.7.6 细化时段，原仅 2 个聚合时段）：
+- 五四文学革命（1917-1927）
+- 左翼十年（1928-1937）
+- 抗战与解放（1937-1949）
+- 十七年文学（1949-1966）
+- 文革文学（1966-1976）
+- 新时期文学（1978-1989）
+- 后新时期（1990s-）
+
+**新增 28 条体裁×细化时段 BELONGS_TO 边**（4 体裁 × 7 时段）：
+- 例：小说 BELONGS_TO 五四文学革命（"五四小说"）
+
+**新增 6 条时段时序 PRECEDES 边**：
+- 五四 → 左翼 → 抗战 → 十七年 → 文革 → 新时期 → 后新时期
+
+**新增 35 条跨类边**（`CROSS_CATEGORY_RELATIONS`）：
+- 16 条作家-流派 PARTICIPATED_IN：
+  - 鲁迅→文学革命 / 鲁迅→左联
+  - 茅盾→文学研究会 / 茅盾→左联
+  - 郭沫若→文学革命 / 郭沫若→创造社
+  - 沈从文→京派 / 张爱玲→海派 / 钱钟书→京派
+  - 巴金/老舍/曹禺→文学研究会 等
+- 19 条作家-体裁 BELONGS_TO：
+  - 鲁迅→小说 + 散文
+  - 郭沫若→诗歌 + 戏剧
+  - 曹禺→戏剧
+  - 艾青→诗歌 等
+
+`SeedDataLoader.importGraphSkeleton()` 接通 `CROSS_CATEGORY_RELATIONS` 导入。
+
+**为作家节点补充时间元数据**：所有 13 位作家节点 `metadata` 增补 `birthYear` / `deathYear` 字段，供时间轴横轴定位。
+
+##### 3.3 GraphCanvas 重写为文学史时间轴布局
+
+`GraphCanvas.kt` 完整重写布局算法（保留交互逻辑）：
+
+**新布局结构**：
+- 横轴 = 时间（1915~2030，覆盖现当代文学全周期）
+- 纵轴 = 4 条泳道（从上到下）：
+  - Lane 0 时段（Y=0.16，顶部，作为时间标尺）
+  - Lane 1 流派（Y=0.38）
+  - Lane 2 作家（Y=0.62，主体）
+  - Lane 3 体裁（Y=0.86，底部）
+
+**时间→X 轴映射**：
+- 作家：`(birthYear + deathYear) / 2` 中位数
+- 流派：`metadata["year"]` 解析（如 "1930s" → 1930）
+- 时段：`(startYear + endYear) / 2` 中位数
+- 体裁：无时间字段，沿 X 轴均匀分布
+
+**同泳道重叠避让**：
+- 相邻节点 X 距离 < 80px 时，对后放置节点进行 Y 偏移（22px）
+- 偏移量随连续碰撞次数递增，交替向上下偏移
+
+**视觉增强**：
+- 顶部时间刻度线（8 个关键年份：1917/1927/1937/1949/1966/1976/1989/2000）
+- 泳道分割线（淡色横线，标识 4 条泳道边界）
+- 时间刻度虚线竖向延伸到底部，便于节点时间定位
+
+**保留 v0.7.4 交互**：
+- 双指缩放（0.5x~3.0x）+ 单指平移
+- 节点点击 Box 叠加（NF-UA1 无障碍，触控区 48dp）
+- 分类色优先 + R 值退化（作家粉/体裁蓝/时段绿/流派紫/作品橙）
+- 薄弱节点光晕（R < 0.5 红色光晕 + 红色边）
+
+##### 3.4 GraphScreen 图例与交互优化
+
+`GraphScreen.kt`：
+- `WenyanLargeTopAppBar` 增加 subtitle "文学史时间轴 · 1915-2030"
+- `LegendBar` 重构为两层：
+  - 上层：布局说明 "横轴：时间 · 纵轴：泳道（时段 / 流派 / 作家 / 体裁）"
+  - 下层：5 类分类色 + 薄弱光晕
+
+### 验证结果
+
+| 检查项 | 结果 |
+|--------|------|
+| assembleDebug | ✓ BUILD SUCCESSFUL |
+| testDebugUnitTest | ✓ 全绿（258 tests 保持，0 failures） |
+| :feature:graph:compileDebugKotlin | ✓ BUILD SUCCESSFUL |
+| :core:data:compileDebugKotlin | ✓ BUILD SUCCESSFUL |
+| seed 版本 | 2.9.0（触发重新导入，保留 FSRS 进度） |
+| 数据库版本 | 6（Migration_5_6 删除 sample_essay 列） |
+| 图谱节点数 | 50+（原 40+，新增 7 时段 + 35 跨类边） |
+
+### v0.7.6 完整改动清单
+
+| 文件 | 改动 |
+|------|------|
+| app/src/main/assets/seed_data.json | 删除 multi_perspectives + sample_essay 字段，版本 2.8.0→2.9.0 |
+| core/database/.../ExamQuestionEntity.kt | 删除 sampleEssay 字段 |
+| core/database/.../migration/Migration_5_6.kt | 新增：DB v5→v6 迁移（删除 sample_essay 列） |
+| core/database/.../WenyanDatabase.kt | DB 版本 5→6，注册 Migration_5_6 |
+| core/data/.../SeedDataLoader.kt | 移除 sampleEssay 映射 + 接通 CROSS_CATEGORY_RELATIONS 导入 |
+| core/data/.../seed/GraphSkeleton.kt | 新增 7 时段节点 + 28 体裁×时段边 + 6 时段时序边 + 35 跨类边 + 作家时间元数据 |
+| feature/graph/.../GraphViewModel.kt | GraphNodeItem 新增 metadata 字段 + toUiItem 传递 |
+| feature/graph/.../ui/GraphCanvas.kt | 完整重写为文学史时间轴泳道布局 |
+| feature/graph/.../GraphScreen.kt | TopAppBar subtitle + LegendBar 双层说明 |
+| feature/quiz/.../QuizViewModel.kt | 移除 sampleEssay 字段 |
+| feature/quiz/.../QuizScreen.kt | 移除范文 UI |
+
+### 设计思路对比
+
+**v0.7.4 分组径向布局**（旧）：
+- 算法：按节点颜色分组（5 类），每组占据一个扇区，组内节点围绕扇区中心组成小圆环
+- 问题：
+  - 按颜色分组无内在逻辑（"作家粉"和"流派紫"为什么相邻？）
+  - 节点密集时标签重叠严重
+  - 难以看出作家/流派/时段的时序关系
+  - "花瓣"形状虽美但不利于学习
+
+**v0.7.6 文学史时间轴布局**（新）：
+- 算法：横轴=时间，纵轴=泳道（按节点类型分 4 层）
+- 优势：
+  - 横轴时间符合文学史认知（用户能直观看到"五四→左翼→抗战→十七年→新时期"的时间脉络）
+  - 纵轴泳道分明，跨类边纵向连接形成"作家↔流派↔体裁↔时段"知识链路
+  - 同年代作家在 X 轴聚集，便于横向对比（如鲁迅 vs 周作人）
+  - 同流派作家通过跨类边追溯到流派节点，便于纵向归纳（如京派：沈从文 + 钱钟书）
+  - 时间刻度线作为视觉锚点，用户能快速定位任意节点的年代
+
+### 下一步建议
+
+1. **P0**：跑 emulator 实测 v0.7.6，重点验证：
+   - 文学史时间轴布局视觉清晰，4 泳道分明
+   - 跨类边纵向连接（如鲁迅→左联、鲁迅→小说）正确显示
+   - 时间刻度线 + 泳道分割线视觉协调
+   - 数据库迁移 v5→v6 自动执行（旧用户升级不丢真题数据）
+   - 双指缩放/单指平移保持流畅
+2. **P0**：GitHub Actions 账单问题（需用户处理）
+3. **P2**：emulator 实测后打 v0.7.6 Release tag

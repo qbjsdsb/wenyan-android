@@ -49,14 +49,19 @@ import kotlinx.coroutines.launch
 // 图例颜色（从主题获取，与 GraphCanvas 一致）
 
 /**
- * 知识图谱界面（阶段5增强）。
+ * 知识图谱界面（v0.7.6 时间轴布局）。
  *
  * 功能：
- * - Canvas 可视化节点 + 边
- * - R 值颜色映射（绿/黄/红/灰）
+ * - Canvas 可视化节点 + 边（v0.7.6 文学史时间轴泳道布局）
+ * - 横轴 = 时间（1915-2030，覆盖现当代文学全周期）
+ * - 纵轴 = 4 条泳道（时段/流派/作家/体裁）
+ * - 跨类边纵向连接泳道，形成"作家↔流派↔体裁↔时段"知识链路
+ * - 顶部时间刻度线（8 个关键年份）+ 泳道分割线
+ * - 分类色映射（作家粉/体裁蓝/时段绿/流派紫/作品橙）
  * - 薄弱子图高亮（红色光晕 + 红色边）
- * - 图例说明
+ * - 图例说明（v0.7.6 新增布局提示）
  * - 底部统计栏（总节点 / 薄弱节点 / 平均 R）
+ * - 双指缩放 + 单指平移（v0.7.4 保留）
  * - 节点点击 → 有关联知识点则跳转详情,否则 Snackbar 提示(P0 v0.7.2 修复)
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,6 +80,8 @@ fun GraphScreen(
             // 图谱 Canvas 固定布局不滚动，仅享受 Large 标题样式
             WenyanLargeTopAppBar(
                 title = "知识图谱",
+                // v0.7.6 新增：副标题提示时间轴范围
+                subtitle = "文学史时间轴 · 1915-2030",
                 actions = {
                     IconButton(onClick = onNavigateToAiAssistant) {
                         Icon(
@@ -92,7 +99,7 @@ fun GraphScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            // 图例
+            // 图例（v0.7.6 紧凑化：单行分类色 + 泳道说明）
             LegendBar()
 
             // 主内容区
@@ -189,16 +196,17 @@ fun GraphScreen(
 // ── 图例 ──────────────────────────────────────────────────────
 
 /**
- * 图例颜色（v0.7.4 重构）。
+ * 图例（v0.7.6 重构：时间轴泳道布局说明）。
  *
- * 原图例只显示 R 值 4 色（已掌握/需巩固/薄弱/未学习），但 Canvas 改用分类色后
- * 节点不再按 R 值着色，图例与实际渲染脱节。
+ * 原图例仅显示 5 类分类色（v0.7.4 实现），未说明布局含义。
+ * v0.7.6 改为两层信息：
+ * - 上层：横向时间轴 / 纵向泳道 提示
+ * - 下层：5 类分类色 + 薄弱光晕
  *
- * 现按 [com.wenyan.app.core.data.seed.GraphSkeleton] 的 5 类分类色显示：
- * - 作者（粉） / 体裁（蓝） / 时段（绿） / 流派（紫） / 作品（橙）
- * - 薄弱光晕（红）：薄弱节点外圈光晕，与节点填充色叠加显示
- *
- * 颜色值与 GraphSkeleton 常量保持一致（ARGB Int），避免硬编码重复。
+ * 配合 [GraphCanvas] 的文学史时间轴布局，让用户立刻理解图谱组织方式：
+ * - 横轴 = 时间（1915-2030，覆盖现当代文学全周期）
+ * - 纵轴 = 4 条泳道（时段/流派/作家/体裁）
+ * - 跨类边纵向连接泳道，形成"作家↔流派↔体裁↔时段"知识链路
  */
 @Composable
 private fun LegendBar() {
@@ -207,19 +215,32 @@ private fun LegendBar() {
         color = colorScheme.surfaceContainerLow,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            LegendItem(Color(0xFFE91E63), "作者")
-            LegendItem(Color(0xFF2196F3), "体裁")
-            LegendItem(Color(0xFF4CAF50), "时段")
-            LegendItem(Color(0xFF9C27B0), "流派")
-            LegendItem(Color(0xFFFF9800), "作品")
-            LegendItem(colorScheme.error.copy(alpha = 0.4f), "薄弱光晕")
+            // 上层：布局说明
+            Text(
+                text = "横轴：时间  ·  纵轴：泳道（时段 / 流派 / 作家 / 体裁）",
+                style = MaterialTheme.typography.labelSmall,
+                color = colorScheme.onSurfaceVariant,
+            )
+            // 下层：分类色图例
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = Spacing.xs),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                LegendItem(Color(0xFFE91E63), "作者")
+                LegendItem(Color(0xFF2196F3), "体裁")
+                LegendItem(Color(0xFF4CAF50), "时段")
+                LegendItem(Color(0xFF9C27B0), "流派")
+                LegendItem(Color(0xFFFF9800), "作品")
+                LegendItem(colorScheme.error.copy(alpha = 0.4f), "薄弱光晕")
+            }
         }
     }
 }

@@ -17,11 +17,11 @@ android {
         minSdk = 26
         targetSdk = 35
         // P0-M2 修正：versionCode 必须每次发版递增，否则包安装器无法区分版本。
-        // v0.1.0=1, v0.2.0=2, v0.3.0=3, v0.4.0=4, v0.5.0=5, v0.6.0=6, v0.7.0=7, v0.7.1=8, v0.7.2=9（修复图谱FK回滚）, v0.7.3=10（481真题答案+卡片镜像+图谱扩充）, v0.7.4=11（481真题范文+卡片内容增强+多维视角解析+考频派生）, v0.7.5=12（610综合卷127题科目重新分类+UI修复+图谱重写）
-        versionCode = 12
+        // v0.1.0=1, v0.2.0=2, v0.3.0=3, v0.4.0=4, v0.5.0=5, v0.6.0=6, v0.7.0=7, v0.7.1=8, v0.7.2=9（修复图谱FK回滚）, v0.7.3=10（481真题答案+卡片镜像+图谱扩充）, v0.7.4=11（481真题范文+卡片内容增强+多维视角解析+考频派生）, v0.7.5=12（610综合卷127题科目重新分类+UI修复+图谱重写）, v0.7.6=13（数据瘦身+图谱时间轴布局）
+        versionCode = 13
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
-        // v0.7.5：610综合卷127题科目重新分类（古代36/现当代32/外国26/理论33）+ labelSmall 12sp WCAG + GraphCanvas分组径向布局 + CardsScreen verticalScroll + seed 2.8.0
-        versionName = "0.7.5"
+        // v0.7.6：删除 multi_perspectives/sample_essay 冗余字段 + DB 迁移 v5→v6 + GraphCanvas 重构为文学史时间轴泳道布局（4 泳道 + 35 跨类边 + 7 时段节点）+ seed 2.9.0
+        versionName = "0.7.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

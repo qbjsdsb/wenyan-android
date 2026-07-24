@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -33,12 +34,10 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.wenyan.app.core.data.seed.GraphSkeleton
 import com.wenyan.app.feature.graph.GraphEdgeItem
 import com.wenyan.app.feature.graph.GraphNodeItem
-import kotlin.math.cos
-import kotlin.math.min
-import kotlin.math.sin
-import kotlin.math.sqrt
+import kotlin.math.abs
 
 // 节点半径
 private val NODE_RADIUS_DP = 12f
@@ -50,33 +49,55 @@ private val NODE_TOUCH_RADIUS_DP = 24f
 private const val MIN_SCALE = 0.5f
 private const val MAX_SCALE = 3.0f
 
+// 文学史时间轴范围（覆盖现当代文学全周期）
+private const val TIMELINE_MIN_YEAR = 1915
+private const val TIMELINE_MAX_YEAR = 2030
+
+// 泳道 Y 轴占比（基于 Canvas 高度）
+private const val LANE_Y_PERIOD = 0.16f   // 时段泳道（顶部，作为时间标尺）
+private const val LANE_Y_SCHOOL = 0.38f   // 流派泳道
+private const val LANE_Y_AUTHOR = 0.62f   // 作家泳道（主体）
+private const val LANE_Y_GENRE = 0.86f    // 体裁泳道（底部）
+
+// 同泳道节点重叠避让：相邻节点 X 距离 < 此值时进行 Y 偏移
+private const val LANE_COLLISION_THRESHOLD_PX = 80f
+private const val LANE_COLLISION_OFFSET_PX = 22f
+
+// 时间轴刻度年份（与 7 个文学史分期对齐）
+private val TIMELINE_TICK_YEARS = intArrayOf(1917, 1927, 1937, 1949, 1966, 1976, 1989, 2000)
+
 /**
  * 知识图谱 Canvas 可视化组件（Spec C4.12）。
  *
- * v0.7.4 重构（修复用户反馈"知识图谱过于杂乱，看不清"）：
+ * v0.7.6 重构（基于用户反馈"知识图谱还是不够有逻辑，不够美丽，也不够能帮助学习"）：
  *
- * 1. **分组径向布局** 替代单圆周布局：
- *    - 按 [GraphNodeItem.color] 分组（作家粉/体裁蓝/时段绿/流派紫/作品橙）
- *    - 每个色组占据一个扇区，扇区中心位于外环
- *    - 同组节点围绕扇区中心组成小圆环（"花瓣"布局）
- *    - 同色节点聚集 → 组内边短、组间边少交叉
+ * 1. **文学史时间轴布局** 替代 v0.7.4 分组径向布局：
+ *    - **横轴 = 时间**（1915~2030，覆盖现当代文学全周期）
+ *      节点按时间字段（生卒年/年代/起止年）在 X 轴定位
+ *    - **纵轴 = 泳道**（4 条）：
+ *      - Lane 0 时段（顶部，作为时间标尺）
+ *      - Lane 1 流派
+ *      - Lane 2 作家（主体）
+ *      - Lane 3 体裁（底部）
+ *    - 跨类边纵向连接泳道，形成"作家↔流派↔体裁↔时段"知识链路
  *
- * 2. **启用分类色**：节点颜色优先用 [GraphNodeItem.color]（实体预设色），
- *    仅当 color=0 时退化为按 R 值着色。原实现完全丢弃分类色，33 节点全按 R 值
- *    4 色映射，视觉同质化严重。
+ * 2. **顶部时间刻度线**：在 Canvas 顶部绘制 8 个关键年份刻度
+ *    （1917/1927/1937/1949/1966/1976/1989/2000），对应 7 个文学史分期边界
  *
- * 3. **双指缩放 + 单指平移**：
- *    - detectTransformGestures 同时处理 zoom（双指）和 pan（单指/双指）
- *    - scale 限制在 [MIN_SCALE]..[MAX_SCALE]，避免过度缩放失真或丢失上下文
- *    - 应用 graphicsLayer { translation = offset; scaleX = scaleY = scale }
- *    - 节点点击触控区同样变换，确保缩放后点击位置精准
+ * 3. **同泳道重叠避让**：相邻节点 X 距离 < [LANE_COLLISION_THRESHOLD_PX] 时，
+ *    对后放置节点进行 Y 偏移（[LANE_COLLISION_OFFSET_PX]），避免标签重叠
  *
- * 4. **节点标签智能定位**：标签放在节点远离组中心的一侧（径向外），
- *    减少与节点本身和其他节点标签的重叠。
+ * 4. **保留 v0.7.4 交互**：双指缩放 + 单指平移、节点点击 Box 叠加（NF-UA1 无障碍）、
+ *    分类色优先 + R 值退化、薄弱节点光晕
  *
- * **NF-UA1 无障碍**（保留）：Canvas 只负责绘制，节点上方叠加透明 Box 承接点击 + semantics。
+ * 5. **保留 v0.7.4 标签智能定位**：标签放在节点下方（统一向下，避免与时间刻度重叠）
  *
- * @param nodes 图谱节点列表（含 R 值与分类色）
+ * **优势对比**（v0.7.4 分组径向 → v0.7.6 时间轴）：
+ * - 逻辑性：径向布局按"颜色分组"无内在逻辑；时间轴按"历史时间"组织，符合文学史认知
+ * - 学习价值：径向布局难以看出作家/流派/时段的时序关系；时间轴直观展示代际传承
+ * - 美观性：径向布局花瓣形状虽美但节点密集；时间轴泳道分明，跨类边形成纵向网络
+ *
+ * @param nodes 图谱节点列表（含 R 值、分类色、metadata 时间字段）
  * @param edges 图谱边列表
  * @param onNodeClick 节点点击回调（参数为节点 ID）
  * @param modifier 修饰符
@@ -103,8 +124,11 @@ fun GraphCanvas(
     val edgeColor = colorScheme.outlineVariant
     val weakHaloColor = colorScheme.error.copy(alpha = 0.2f)
     val weakEdgeColor = colorScheme.error.copy(alpha = 0.6f)
+    val timelineTickColor = colorScheme.outline
+    val timelineLabelColor = colorScheme.onSurfaceVariant
+    val laneDividerColor = colorScheme.outlineVariant.copy(alpha = 0.3f)
 
-    // 缩放与平移状态（v0.7.4 新增）
+    // 缩放与平移状态（v0.7.4 保留）
     var scale by remember { mutableStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
 
@@ -134,14 +158,9 @@ fun GraphCanvas(
         val nodeRadiusPx = with(density) { NODE_RADIUS_DP.dp.toPx() }
         val touchRadiusPx = with(density) { NODE_TOUCH_RADIUS_DP.dp.toPx() }
 
-        // 计算节点位置（分组径向布局）
+        // v0.7.6 重构：计算节点位置（文学史时间轴泳道布局）
         val positions = remember(nodes, canvasWidth, canvasHeight) {
-            calculateGroupedRadialLayout(nodes, canvasWidth, canvasHeight)
-        }
-
-        // 每个节点相对于其所属组中心的单位向量（用于标签径向外定位）
-        val nodeOutwardDirections = remember(nodes, positions) {
-            calculateOutwardDirections(nodes, positions)
+            calculateTimelineLayout(nodes, canvasWidth, canvasHeight)
         }
 
         // 预测量标签文本（避免每帧重复测量）
@@ -150,7 +169,17 @@ fun GraphCanvas(
                 node.id to textMeasurer.measure(
                     AnnotatedString(node.label),
                     // NF-UA3 修复 + v0.7.4：12.sp 是 Android 无障碍最小可读字号。
-                    TextStyle(fontSize = 12.sp, color = labelColor),
+                    TextStyle(fontSize = 11.sp, color = labelColor),
+                )
+            }
+        }
+
+        // 预测量时间刻度标签
+        val tickLabelLayouts = remember(timelineLabelColor) {
+            TIMELINE_TICK_YEARS.associateWith { year ->
+                textMeasurer.measure(
+                    AnnotatedString(year.toString()),
+                    TextStyle(fontSize = 10.sp, color = timelineLabelColor),
                 )
             }
         }
@@ -162,7 +191,7 @@ fun GraphCanvas(
                 .toSet()
         }
 
-        // ── Canvas 只负责绘制（边、节点、标签），不再处理点击 ──
+        // ── Canvas 只负责绘制（时间轴、边、节点、标签），不再处理点击 ──
         // 应用缩放/平移变换：translation + scale
         Canvas(
             modifier = Modifier
@@ -174,7 +203,46 @@ fun GraphCanvas(
                     scaleY = scale
                 },
         ) {
-            // 绘制边
+            // ── 1. 绘制时间轴刻度线（顶部）──
+            val timelineY = canvasHeight * 0.06f
+            TIMELINE_TICK_YEARS.forEach { year ->
+                val x = yearToX(year.toFloat(), canvasWidth)
+                drawLine(
+                    color = timelineTickColor,
+                    start = Offset(x, timelineY),
+                    end = Offset(x, canvasHeight),
+                    strokeWidth = 0.8f,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 8f)),
+                )
+                val tickLabel = tickLabelLayouts[year]
+                if (tickLabel != null) {
+                    drawText(
+                        textLayoutResult = tickLabel,
+                        topLeft = Offset(
+                            x - tickLabel.size.width / 2f,
+                            timelineY - tickLabel.size.height - 2f,
+                        ),
+                    )
+                }
+            }
+
+            // ── 2. 绘制泳道分割线（淡）──
+            val laneYs = floatArrayOf(
+                canvasHeight * LANE_Y_PERIOD,
+                canvasHeight * LANE_Y_SCHOOL,
+                canvasHeight * LANE_Y_AUTHOR,
+                canvasHeight * LANE_Y_GENRE,
+            )
+            laneYs.forEach { laneY ->
+                drawLine(
+                    color = laneDividerColor,
+                    start = Offset(0f, laneY),
+                    end = Offset(canvasWidth, laneY),
+                    strokeWidth = 0.5f,
+                )
+            }
+
+            // ── 3. 绘制边（含薄弱边高亮）──
             edges.forEach { edge ->
                 val from = positions[edge.fromId]
                 val to = positions[edge.toId]
@@ -189,7 +257,7 @@ fun GraphCanvas(
                 }
             }
 
-            // 绘制节点
+            // ── 4. 绘制节点 + 标签 ──
             nodes.forEach { node ->
                 val pos = positions[node.id] ?: return@forEach
                 val color = resolveNodeColor(
@@ -216,29 +284,13 @@ fun GraphCanvas(
                     center = pos,
                 )
 
-                // 节点标签：径向外定位，减少与节点本身和其他节点标签的重叠
+                // 节点标签：v0.7.6 统一向下放置，避免与顶部时间刻度重叠
+                // 标签锚点：节点中心下方 (nodeRadiusPx + 4f) px
                 val textLayout = textLayouts[node.id] ?: return@forEach
-                val outward = nodeOutwardDirections[node.id] ?: Offset(0f, 1f)
-                // 标签锚点：节点中心 + (节点半径 + 4px) 沿径向外方向
-                // 然后按文本宽高修正对齐到标签左上角
-                val labelAnchor = Offset(
-                    pos.x + (nodeRadiusPx + 4f) * outward.x,
-                    pos.y + (nodeRadiusPx + 4f) * outward.y,
+                val labelTopLeft = Offset(
+                    pos.x - textLayout.size.width / 2f,
+                    pos.y + nodeRadiusPx + 4f,
                 )
-                val labelTopLeft = when {
-                    // 向右下方：标签左上角 = anchor
-                    outward.x >= 0f && outward.y >= 0f ->
-                        Offset(labelAnchor.x, labelAnchor.y - textLayout.size.height / 2f)
-                    // 向右上方
-                    outward.x >= 0f && outward.y < 0f ->
-                        Offset(labelAnchor.x, labelAnchor.y - textLayout.size.height)
-                    // 向左下方
-                    outward.x < 0f && outward.y >= 0f ->
-                        Offset(labelAnchor.x - textLayout.size.width, labelAnchor.y - textLayout.size.height / 2f)
-                    // 向左上方
-                    else ->
-                        Offset(labelAnchor.x - textLayout.size.width, labelAnchor.y - textLayout.size.height)
-                }
                 drawText(
                     textLayoutResult = textLayout,
                     topLeft = labelTopLeft,
@@ -278,147 +330,216 @@ fun GraphCanvas(
     }
 }
 
+// ==================== v0.7.6 时间轴布局算法 ====================
+
 /**
- * 分组径向布局（v0.7.4 重构）。
+ * 文学史时间轴泳道布局（v0.7.6 重构）。
  *
  * 算法：
- * 1. 按 [GraphNodeItem.color] 分组（视觉分类：作家粉/体裁蓝/时段绿/流派紫/作品橙）
- * 2. 色值为 0（未指定）的节点单独归为"未分类"组
- * 3. 每个组分配一个扇区中心角（均分 2π）
- * 4. 组中心放置在以画布中心为原点、外环半径 R1 的圆上
- * 5. 同组节点围绕组中心组成小圆环（半径 R2，由组内节点数决定）
+ * 1. 按节点类型/分类分泳道：
+ *    - Lane 0 (Y=0.16): 时段节点（type=CONCEPT 且 metadata["dimension"]="period"）
+ *    - Lane 1 (Y=0.38): 流派节点（type=CONCEPT 且 metadata["type"] 为 "society"/"school"/"movement"）
+ *    - Lane 2 (Y=0.62): 作家节点（type=AUTHOR）
+ *    - Lane 3 (Y=0.86): 体裁节点（type=CONCEPT 且 metadata["dimension"]="genre"）
+ *    - 其他节点：归入作家泳道（最宽）
+ * 2. X 轴定位：
+ *    - 作家：(birthYear + deathYear) / 2
+ *    - 流派：metadata["year"]（如 "1930s" → 1930）
+ *    - 时段：(startYear + endYear) / 2
+ *    - 体裁：无时间字段，沿 X 轴均匀分布
+ * 3. 同泳道重叠避让：相邻节点 X 距离过近时，对后放置节点进行 Y 偏移
  *
- * 结果：同色节点聚集形成"花瓣"，组内边短、组间边少交叉。
- *
- * 特殊情况：
- * - 1 个节点：居中
- * - 2 个节点：水平对称
- * - 仅 1 个组：组内按圆周布局（退化情形，等价原算法）
+ * 结果：节点在二维平面形成"时间×类型"矩阵，跨类边纵向连接形成知识网络。
  */
-private fun calculateGroupedRadialLayout(
+private fun calculateTimelineLayout(
     nodes: List<GraphNodeItem>,
     width: Float,
     height: Float,
 ): Map<String, Offset> {
-    val centerX = width / 2f
-    val centerY = height / 2f
-
-    if (nodes.size == 1) return mapOf(nodes[0].id to Offset(centerX, centerY))
-    if (nodes.size == 2) {
-        val radius = min(width, height) * 0.3f
-        return mapOf(
-            nodes[0].id to Offset(centerX - radius, centerY),
-            nodes[1].id to Offset(centerX + radius, centerY),
-        )
-    }
-
-    // 按 color 分组（color=0 视为"未分类"单独一组）
-    val groups = nodes.groupBy { it.color }
-        .toList()
-        .sortedWith(compareByDescending<Pair<Int, List<GraphNodeItem>>> { it.second.size }.thenBy { it.first })
-
-    // 仅一组时退化为单圆周布局（原算法），保持兼容
-    if (groups.size == 1) {
-        return calculateSingleCircleLayout(nodes, centerX, centerY, min(width, height) * 0.4f)
-    }
-
-    // 外环半径：组中心距画布中心的距离
-    // 留出 0.15 边距给节点+标签，避免贴边
-    val outerRadius = min(width, height) * 0.34f
-    // 内环半径基数：同组节点围绕组中心的小圆环半径
-    // 按组大小开根号缩放，避免大组内节点过挤
-    val innerRadiusBase = min(width, height) * 0.10f
-
     val positions = mutableMapOf<String, Offset>()
-    groups.forEachIndexed { groupIdx, (_, groupNodes) ->
-        val groupAngle = (2.0 * Math.PI * groupIdx / groups.size).toFloat()
-        val groupCenterX = centerX + outerRadius * cos(groupAngle)
-        val groupCenterY = centerY + outerRadius * sin(groupAngle)
+    if (nodes.isEmpty()) return positions
 
-        if (groupNodes.size == 1) {
-            positions[groupNodes[0].id] = Offset(groupCenterX, groupCenterY)
-        } else {
-            // 组内小圆环：半径按组大小开根号缩放，避免大组内节点过挤
-            // 13 个节点时半径 ~ innerRadiusBase * 1.6（sqrt(13/5)）
-            val innerRadius = innerRadiusBase * sqrt(groupNodes.size.toFloat() / 5f).coerceIn(0.6f, 1.8f)
-            groupNodes.forEachIndexed { idx, node ->
-                val angleInGroup = (2.0 * Math.PI * idx / groupNodes.size).toFloat()
-                positions[node.id] = Offset(
-                    x = groupCenterX + innerRadius * cos(angleInGroup),
-                    y = groupCenterY + innerRadius * sin(angleInGroup),
-                )
-            }
+    // 按节点类型/分类分泳道，并按时间排序
+    val periodNodes = mutableListOf<GraphNodeItem>()
+    val schoolNodes = mutableListOf<GraphNodeItem>()
+    val authorNodes = mutableListOf<GraphNodeItem>()
+    val genreNodes = mutableListOf<GraphNodeItem>()
+    val otherNodes = mutableListOf<GraphNodeItem>()
+
+    nodes.forEach { node ->
+        val dimension = node.metadata?.get("dimension")
+        val typeMeta = node.metadata?.get("type")
+        when {
+            // 时段节点：dimension=period
+            dimension == "period" -> periodNodes.add(node)
+            // 流派/社团节点：metadata.type = society/school/movement
+            typeMeta == "society" || typeMeta == "school" || typeMeta == "movement" -> schoolNodes.add(node)
+            // 作家节点
+            node.type == "AUTHOR" -> authorNodes.add(node)
+            // 体裁节点：dimension=genre
+            dimension == "genre" -> genreNodes.add(node)
+            else -> otherNodes.add(node)
         }
     }
+
+    // 时段泳道：按时段起止年中位数排序，X 轴对应时间
+    periodNodes.sortBy { extractPeriodMidYear(it) }
+    placeNodesInLane(
+        nodes = periodNodes,
+        laneY = height * LANE_Y_PERIOD,
+        width = width,
+        positions = positions,
+        yearExtractor = ::extractPeriodMidYear,
+    )
+
+    // 流派泳道：按年代排序
+    val sortedSchoolNodes = schoolNodes.sortedBy { extractSchoolYear(it) }
+    placeNodesInLane(
+        nodes = sortedSchoolNodes,
+        laneY = height * LANE_Y_SCHOOL,
+        width = width,
+        positions = positions,
+        yearExtractor = ::extractSchoolYear,
+    )
+
+    // 作家泳道：按生卒年中位数排序
+    val sortedAuthorNodes = authorNodes.sortedBy { extractAuthorMidYear(it) }
+    placeNodesInLane(
+        nodes = sortedAuthorNodes,
+        laneY = height * LANE_Y_AUTHOR,
+        width = width,
+        positions = positions,
+        yearExtractor = ::extractAuthorMidYear,
+    )
+
+    // 体裁泳道：均匀分布（无时间字段）
+    genreNodes.forEachIndexed { idx, node ->
+        val x = if (genreNodes.size <= 1) width / 2f
+        else width * (idx + 1f) / (genreNodes.size + 1f)
+        positions[node.id] = Offset(x, height * LANE_Y_GENRE)
+    }
+
+    // 其他节点（无明确分类）：放到作家泳道，X 轴均匀分布
+    if (otherNodes.isNotEmpty()) {
+        otherNodes.forEachIndexed { idx, node ->
+            val x = width * (idx + 1f) / (otherNodes.size + 1f)
+            positions[node.id] = Offset(x, height * LANE_Y_AUTHOR)
+        }
+    }
+
     return positions
 }
 
 /**
- * 单圆周布局（v0.7.4 兼容保留，仅当所有节点同色时退化使用）。
- */
-private fun calculateSingleCircleLayout(
-    nodes: List<GraphNodeItem>,
-    centerX: Float,
-    centerY: Float,
-    radius: Float,
-): Map<String, Offset> {
-    return nodes.mapIndexed { index, node ->
-        val angle = (2 * Math.PI * index / nodes.size).toFloat()
-        node.id to Offset(
-            x = centerX + radius * cos(angle),
-            y = centerY + radius * sin(angle),
-        )
-    }.toMap()
-}
-
-/**
- * 计算每个节点相对于其所属组中心的"径向外"单位向量（v0.7.4 新增）。
+ * 在指定泳道内放置节点，应用时间→X 轴映射 + 同泳道重叠避让。
  *
- * 用于标签定位：标签放在节点远离组中心的一侧，避免与节点和其他节点标签重叠。
- *
- * 算法：
- * 1. 按 color 重新分组，计算每组中心（所有节点位置平均值）
- * 2. 对每个节点，方向 = (节点位置 - 组中心) 归一化
- * 3. 退化情形（节点恰好位于组中心）默认向下 (0, 1)
+ * 避让算法：
+ * - 节点按时间排序后依次放置
+ * - 若与前一个节点 X 距离 < [LANE_COLLISION_THRESHOLD_PX]，向后偏移 Y 轴
+ *   （偏移量随连续碰撞次数递增，避免堆叠）
  */
-private fun calculateOutwardDirections(
+private fun placeNodesInLane(
     nodes: List<GraphNodeItem>,
-    positions: Map<String, Offset>,
-): Map<String, Offset> {
-    val groups = nodes.groupBy { it.color }
-    val result = mutableMapOf<String, Offset>()
-    groups.forEach { (_, groupNodes) ->
-        if (groupNodes.isEmpty()) return@forEach
-        // 组中心 = 所有节点位置平均值
-        val groupCenter = groupNodes
-            .mapNotNull { positions[it.id] }
-            .fold(Offset.Zero) { acc, pos -> acc + pos } / groupNodes.size.toFloat()
-
-        groupNodes.forEach { node ->
-            val pos = positions[node.id] ?: return@forEach
-            val delta = pos - groupCenter
-            val length = sqrt(delta.x * delta.x + delta.y * delta.y)
-            // 退化情形：节点恰在组中心，默认向下
-            result[node.id] = if (length < 1f) {
-                Offset(0f, 1f)
-            } else {
-                Offset(delta.x / length, delta.y / length)
-            }
+    laneY: Float,
+    width: Float,
+    positions: MutableMap<String, Offset>,
+    yearExtractor: (GraphNodeItem) -> Float,
+) {
+    var lastX = -Float.MAX_VALUE
+    var collisionStreak = 0
+    nodes.forEach { node ->
+        val year = yearExtractor(node)
+        val x = yearToX(year, width)
+        // 同泳道重叠避让
+        val yOffset = if (abs(x - lastX) < LANE_COLLISION_THRESHOLD_PX) {
+            collisionStreak++
+            // 交替向上下偏移，连续碰撞递增偏移量
+            val sign = if (collisionStreak % 2 == 0) -1 else 1
+            sign * LANE_COLLISION_OFFSET_PX * ((collisionStreak + 1) / 2)
+        } else {
+            collisionStreak = 0
+            0f
         }
+        positions[node.id] = Offset(x, laneY + yOffset)
+        lastX = x
     }
-    return result
 }
 
 /**
- * 解析节点显示颜色（v0.7.4 重构）。
+ * 提取作家节点的中位年份（生卒年中位数）。
+ *
+ * 退化策略：
+ * 1. metadata["birthYear"] + metadata["deathYear"] 中位数
+ * 2. 仅 birthYear：birthYear + 30（假设创作活跃期 30 年后）
+ * 3. 无时间字段：返回 [TIMELINE_MIN_YEAR]（最左侧）
+ */
+private fun extractAuthorMidYear(node: GraphNodeItem): Float {
+    val meta = node.metadata ?: return TIMELINE_MIN_YEAR.toFloat()
+    val birth = meta[GraphSkeleton.META_KEY_BIRTH_YEAR]?.toFloatOrNull()
+    val death = meta[GraphSkeleton.META_KEY_DEATH_YEAR]?.toFloatOrNull()
+    return when {
+        birth != null && death != null -> (birth + death) / 2f
+        birth != null -> birth + 30f
+        death != null -> death - 30f
+        else -> TIMELINE_MIN_YEAR.toFloat()
+    }
+}
+
+/**
+ * 提取流派/社团节点的年代。
+ *
+ * 退化策略：
+ * 1. metadata["year"] 解析（如 "1930s" → 1930, "1985" → 1985）
+ * 2. 无 year 字段：返回 [TIMELINE_MIN_YEAR]
+ */
+private fun extractSchoolYear(node: GraphNodeItem): Float {
+    val raw = node.metadata?.get("year") ?: return TIMELINE_MIN_YEAR.toFloat()
+    // 解析 "1930s" / "1985" / "1930s" 等格式
+    val digits = raw.takeWhile { it.isDigit() }
+    return digits.toFloatOrNull() ?: TIMELINE_MIN_YEAR.toFloat()
+}
+
+/**
+ * 提取时段节点的中位年份。
+ *
+ * 退化策略：
+ * 1. metadata["startYear"] + metadata["endYear"] 中位数
+ * 2. 仅 startYear：startYear
+ * 3. 无时间字段：返回 [TIMELINE_MIN_YEAR]
+ */
+private fun extractPeriodMidYear(node: GraphNodeItem): Float {
+    val meta = node.metadata ?: return TIMELINE_MIN_YEAR.toFloat()
+    val start = meta[GraphSkeleton.META_KEY_START_YEAR]?.toFloatOrNull()
+    val end = meta[GraphSkeleton.META_KEY_END_YEAR]?.toFloatOrNull()
+    return when {
+        start != null && end != null -> (start + end) / 2f
+        start != null -> start
+        end != null -> end
+        else -> TIMELINE_MIN_YEAR.toFloat()
+    }
+}
+
+/**
+ * 年份 → X 轴像素坐标转换。
+ *
+ * 线性映射：x = (year - MIN_YEAR) / (MAX_YEAR - MIN_YEAR) * width
+ * 留 5% 边距避免贴边
+ */
+private fun yearToX(year: Float, width: Float): Float {
+    val padding = width * 0.05f
+    val usableWidth = width - 2 * padding
+    val ratio = (year - TIMELINE_MIN_YEAR) / (TIMELINE_MAX_YEAR - TIMELINE_MIN_YEAR)
+    return padding + ratio.coerceIn(0f, 1f) * usableWidth
+}
+
+/**
+ * 解析节点显示颜色（v0.7.4 实现，v0.7.6 保留）。
  *
  * 优先级：
  * 1. **节点实体预设色**（[GraphNodeItem.color] != 0）：直接使用，保留分类色
  *    （作家粉 / 体裁蓝 / 时段绿 / 流派紫 / 作品橙）
  * 2. **退化为 R 值映射色**（color == 0）：按 R 值四档映射
  *    （已掌握 primary / 需巩固 tertiary / 薄弱 error / 未学习 outline）
- *
- * 原实现完全丢弃实体色，33 节点全部按 R 值 4 色映射，视觉同质化严重。
  *
  * 注意：薄弱节点（R < 0.5 且 R > 0）仍会绘制 error 色光晕，与节点填充色无关。
  * 这样既能看到分类（节点填充色），又能看到薄弱状态（外圈光晕）。

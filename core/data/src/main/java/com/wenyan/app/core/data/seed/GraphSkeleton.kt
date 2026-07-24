@@ -57,6 +57,18 @@ object GraphSkeleton {
     /** 节点颜色：作品（橙色，v0.7.3 新增） */
     private val COLOR_WORK = 0xFFFF9800.toInt()
 
+    /**
+     * 节点 metadata 中的时间字段 key（v0.7.6 新增）。
+     *
+     * 用于时间轴布局：作家用 birthYear/deathYear，流派/时段用 year/startYear/endYear。
+     * GraphCanvas 通过此字段计算节点的横轴位置。
+     */
+    const val META_KEY_YEAR = "year"
+    const val META_KEY_START_YEAR = "startYear"
+    const val META_KEY_END_YEAR = "endYear"
+    const val META_KEY_BIRTH_YEAR = "birthYear"
+    const val META_KEY_DEATH_YEAR = "deathYear"
+
     // 南师大作家节点 ID（原 7 位 + v0.7.3 新增 6 位 = 13 位）
     private const val ID_LUXUN = "550e8400-e29b-41d4-a716-446655440001"
     private const val ID_ZHOUZUOREN = "550e8400-e29b-41d4-a716-446655440002"
@@ -79,9 +91,17 @@ object GraphSkeleton {
     private const val ID_GENRE_SANWEN = "550e8400-e29b-41d4-a716-446655440103"
     private const val ID_GENRE_XIJU = "550e8400-e29b-41d4-a716-446655440104"
 
-    // 时段节点 ID
+    // 时段节点 ID（v0.7.6 细化：从 2 个扩展到 7 个文学史分期）
     private const val ID_PERIOD_XIANDAI = "550e8400-e29b-41d4-a716-446655440201"
     private const val ID_PERIOD_DANGDAI = "550e8400-e29b-41d4-a716-446655440202"
+    // v0.7.6 新增细化时段
+    private const val ID_PERIOD_WUSI = "550e8400-e29b-41d4-a716-446655440203"        // 五四文学革命 1917-1927
+    private const val ID_PERIOD_ZUOYI = "550e8400-e29b-41d4-a716-446655440204"        // 左翼十年 1928-1937
+    private const val ID_PERIOD_KANGZHAN = "550e8400-e29b-41d4-a716-446655440205"     // 抗战与解放 1937-1949
+    private const val ID_PERIOD_SHIQI = "550e8400-e29b-41d4-a716-446655440206"        // 十七年文学 1949-1966
+    private const val ID_PERIOD_WENGE = "550e8400-e29b-41d4-a716-446655440207"        // 文革文学 1966-1976
+    private const val ID_PERIOD_XINSHIQI = "550e8400-e29b-41d4-a716-446655440208"     // 新时期文学 1978-1989
+    private const val ID_PERIOD_HOUXINSHIQI = "550e8400-e29b-41d4-a716-446655440209"  // 后新时期 1990s-
 
     // v0.7.3 新增：文学流派/社团节点 ID
     private const val ID_SCHOOL_WENXUEGE = "550e8400-e29b-41d4-a716-446655440301"
@@ -131,7 +151,11 @@ object GraphSkeleton {
             color = COLOR_AUTHOR,
             relatedPointId = "kp_00613",
             subjectId = SUBJECT_ID,
-            metadata = mapOf("originalName" to "周树人"),
+            metadata = mapOf(
+                "originalName" to "周树人",
+                META_KEY_BIRTH_YEAR to "1881",
+                META_KEY_DEATH_YEAR to "1936",
+            ),
             prerequisites = null,
         ),
         GraphNodeEntity(
@@ -142,7 +166,10 @@ object GraphSkeleton {
             color = COLOR_AUTHOR,
             relatedPointId = null,
             subjectId = SUBJECT_ID,
-            metadata = null,
+            metadata = mapOf(
+                META_KEY_BIRTH_YEAR to "1885",
+                META_KEY_DEATH_YEAR to "1967",
+            ),
             prerequisites = null,
         ),
         GraphNodeEntity(
@@ -153,7 +180,11 @@ object GraphSkeleton {
             color = COLOR_AUTHOR,
             relatedPointId = "kp_00636",
             subjectId = SUBJECT_ID,
-            metadata = mapOf("originalName" to "沈德鸿"),
+            metadata = mapOf(
+                "originalName" to "沈德鸿",
+                META_KEY_BIRTH_YEAR to "1896",
+                META_KEY_DEATH_YEAR to "1981",
+            ),
             prerequisites = null,
         ),
         GraphNodeEntity(
@@ -164,7 +195,10 @@ object GraphSkeleton {
             color = COLOR_AUTHOR,
             relatedPointId = "kp_00624",
             subjectId = SUBJECT_ID,
-            metadata = null,
+            metadata = mapOf(
+                META_KEY_BIRTH_YEAR to "1902",
+                META_KEY_DEATH_YEAR to "1988",
+            ),
             prerequisites = null,
         ),
         GraphNodeEntity(
@@ -175,7 +209,11 @@ object GraphSkeleton {
             color = COLOR_AUTHOR,
             relatedPointId = "kp_00625",
             subjectId = SUBJECT_ID,
-            metadata = mapOf("originalName" to "张瑛"),
+            metadata = mapOf(
+                "originalName" to "张瑛",
+                META_KEY_BIRTH_YEAR to "1920",
+                META_KEY_DEATH_YEAR to "1995",
+            ),
             prerequisites = null,
         ),
         GraphNodeEntity(
@@ -186,7 +224,10 @@ object GraphSkeleton {
             color = COLOR_AUTHOR,
             relatedPointId = "kp_00641",
             subjectId = SUBJECT_ID,
-            metadata = null,
+            metadata = mapOf(
+                META_KEY_BIRTH_YEAR to "1906",
+                META_KEY_DEATH_YEAR to "1970",
+            ),
             prerequisites = null,
         ),
         GraphNodeEntity(
@@ -197,7 +238,11 @@ object GraphSkeleton {
             color = COLOR_AUTHOR,
             relatedPointId = null,
             subjectId = SUBJECT_ID,
-            metadata = mapOf("originalName" to "王卫国"),
+            metadata = mapOf(
+                "originalName" to "王卫国",
+                META_KEY_BIRTH_YEAR to "1949",
+                META_KEY_DEATH_YEAR to "1992",
+            ),
             prerequisites = null,
         ),
         // v0.7.3 新增作家节点
@@ -209,7 +254,11 @@ object GraphSkeleton {
             color = COLOR_AUTHOR,
             relatedPointId = "kp_00694",
             subjectId = SUBJECT_ID,
-            metadata = mapOf("originalName" to "李尧棠"),
+            metadata = mapOf(
+                "originalName" to "李尧棠",
+                META_KEY_BIRTH_YEAR to "1904",
+                META_KEY_DEATH_YEAR to "2005",
+            ),
             prerequisites = null,
         ),
         GraphNodeEntity(
@@ -220,7 +269,11 @@ object GraphSkeleton {
             color = COLOR_AUTHOR,
             relatedPointId = "kp_00627",
             subjectId = SUBJECT_ID,
-            metadata = mapOf("originalName" to "舒庆春"),
+            metadata = mapOf(
+                "originalName" to "舒庆春",
+                META_KEY_BIRTH_YEAR to "1899",
+                META_KEY_DEATH_YEAR to "1966",
+            ),
             prerequisites = null,
         ),
         GraphNodeEntity(
@@ -231,7 +284,11 @@ object GraphSkeleton {
             color = COLOR_AUTHOR,
             relatedPointId = "kp_00630",
             subjectId = SUBJECT_ID,
-            metadata = mapOf("originalName" to "万家宝"),
+            metadata = mapOf(
+                "originalName" to "万家宝",
+                META_KEY_BIRTH_YEAR to "1910",
+                META_KEY_DEATH_YEAR to "1996",
+            ),
             prerequisites = null,
         ),
         GraphNodeEntity(
@@ -242,7 +299,10 @@ object GraphSkeleton {
             color = COLOR_AUTHOR,
             relatedPointId = "kp_00601",
             subjectId = SUBJECT_ID,
-            metadata = null,
+            metadata = mapOf(
+                META_KEY_BIRTH_YEAR to "1892",
+                META_KEY_DEATH_YEAR to "1978",
+            ),
             prerequisites = null,
         ),
         GraphNodeEntity(
@@ -253,7 +313,10 @@ object GraphSkeleton {
             color = COLOR_AUTHOR,
             relatedPointId = null,
             subjectId = SUBJECT_ID,
-            metadata = null,
+            metadata = mapOf(
+                META_KEY_BIRTH_YEAR to "1910",
+                META_KEY_DEATH_YEAR to "1998",
+            ),
             prerequisites = null,
         ),
         GraphNodeEntity(
@@ -264,7 +327,11 @@ object GraphSkeleton {
             color = COLOR_AUTHOR,
             relatedPointId = null,
             subjectId = SUBJECT_ID,
-            metadata = mapOf("originalName" to "蒋正涵"),
+            metadata = mapOf(
+                "originalName" to "蒋正涵",
+                META_KEY_BIRTH_YEAR to "1910",
+                META_KEY_DEATH_YEAR to "1996",
+            ),
             prerequisites = null,
         ),
     )
@@ -397,12 +464,23 @@ object GraphSkeleton {
     // ==================== SubTask 19.4: 体裁×时段二维矩阵骨架 ====================
 
     /**
-     * 体裁×时段二维矩阵 - 节点（6 个）。
+     * 体裁×时段二维矩阵 - 节点（v0.7.6 重构：从 6 个扩展到 11 个）。
      *
      * 体裁维度（4 个，type=CONCEPT）：小说 / 诗歌 / 散文 / 戏剧
-     * 时段维度（2 个，type=CONCEPT）：现代文学 / 当代文学
+     * 时段维度（v0.7.6 细化为 7 个文学史分期，type=CONCEPT）：
+     * - 五四文学革命（1917-1927）
+     * - 左翼十年（1928-1937）
+     * - 抗战与解放（1937-1949）
+     * - 十七年文学（1949-1966）
+     * - 文革文学（1966-1976）
+     * - 新时期文学（1978-1989）
+     * - 后新时期（1990s-）
      *
-     * 构成 4×2 矩阵骨架，通过 [GENRE_PERIOD_RELATIONS] 中的 BELONGS_TO 边连接。
+     * 原仅 2 个时段（现代/当代）过于粗糙，无法支撑文学史时间轴布局。
+     * v0.7.6 细化为 7 期，每期都有明确的起止年份，用于时间轴横轴定位。
+     *
+     * 保留 ID_PERIOD_XIANDAI / ID_PERIOD_DANGDAI 作为聚合节点（现代=前3期，当代=后4期），
+     * 供需要粗粒度分组的边使用。
      */
     val GENRE_PERIOD_MATRIX: List<GraphNodeEntity> = listOf(
         // ---- 体裁节点 ----
@@ -450,43 +528,165 @@ object GraphSkeleton {
             metadata = mapOf("dimension" to "genre"),
             prerequisites = null,
         ),
-        // ---- 时段节点 ----
+        // ---- 聚合时段节点（保留兼容，现代=1917-1949，当代=1949-）----
         GraphNodeEntity(
             id = ID_PERIOD_XIANDAI,
             type = GraphNodeType.CONCEPT.name,
             label = "现代文学",
-            subtitle = "时段维度",
+            subtitle = "1917-1949",
             color = COLOR_PERIOD,
             relatedPointId = null,
             subjectId = SUBJECT_ID,
-            metadata = mapOf("dimension" to "period"),
+            metadata = mapOf(
+                "dimension" to "period",
+                META_KEY_START_YEAR to "1917",
+                META_KEY_END_YEAR to "1949",
+            ),
             prerequisites = null,
         ),
         GraphNodeEntity(
             id = ID_PERIOD_DANGDAI,
             type = GraphNodeType.CONCEPT.name,
             label = "当代文学",
-            subtitle = "时段维度",
+            subtitle = "1949-",
             color = COLOR_PERIOD,
             relatedPointId = null,
             subjectId = SUBJECT_ID,
-            metadata = mapOf("dimension" to "period"),
+            metadata = mapOf(
+                "dimension" to "period",
+                META_KEY_START_YEAR to "1949",
+                META_KEY_END_YEAR to "2025",
+            ),
+            prerequisites = null,
+        ),
+        // ---- v0.7.6 新增细化时段节点（7 个文学史分期）----
+        GraphNodeEntity(
+            id = ID_PERIOD_WUSI,
+            type = GraphNodeType.CONCEPT.name,
+            label = "五四文学革命",
+            subtitle = "1917-1927",
+            color = COLOR_PERIOD,
+            relatedPointId = null,
+            subjectId = SUBJECT_ID,
+            metadata = mapOf(
+                "dimension" to "period",
+                "level" to "fine",
+                META_KEY_START_YEAR to "1917",
+                META_KEY_END_YEAR to "1927",
+            ),
+            prerequisites = null,
+        ),
+        GraphNodeEntity(
+            id = ID_PERIOD_ZUOYI,
+            type = GraphNodeType.CONCEPT.name,
+            label = "左翼十年",
+            subtitle = "1928-1937",
+            color = COLOR_PERIOD,
+            relatedPointId = null,
+            subjectId = SUBJECT_ID,
+            metadata = mapOf(
+                "dimension" to "period",
+                "level" to "fine",
+                META_KEY_START_YEAR to "1928",
+                META_KEY_END_YEAR to "1937",
+            ),
+            prerequisites = null,
+        ),
+        GraphNodeEntity(
+            id = ID_PERIOD_KANGZHAN,
+            type = GraphNodeType.CONCEPT.name,
+            label = "抗战与解放",
+            subtitle = "1937-1949",
+            color = COLOR_PERIOD,
+            relatedPointId = null,
+            subjectId = SUBJECT_ID,
+            metadata = mapOf(
+                "dimension" to "period",
+                "level" to "fine",
+                META_KEY_START_YEAR to "1937",
+                META_KEY_END_YEAR to "1949",
+            ),
+            prerequisites = null,
+        ),
+        GraphNodeEntity(
+            id = ID_PERIOD_SHIQI,
+            type = GraphNodeType.CONCEPT.name,
+            label = "十七年文学",
+            subtitle = "1949-1966",
+            color = COLOR_PERIOD,
+            relatedPointId = null,
+            subjectId = SUBJECT_ID,
+            metadata = mapOf(
+                "dimension" to "period",
+                "level" to "fine",
+                META_KEY_START_YEAR to "1949",
+                META_KEY_END_YEAR to "1966",
+            ),
+            prerequisites = null,
+        ),
+        GraphNodeEntity(
+            id = ID_PERIOD_WENGE,
+            type = GraphNodeType.CONCEPT.name,
+            label = "文革文学",
+            subtitle = "1966-1976",
+            color = COLOR_PERIOD,
+            relatedPointId = null,
+            subjectId = SUBJECT_ID,
+            metadata = mapOf(
+                "dimension" to "period",
+                "level" to "fine",
+                META_KEY_START_YEAR to "1966",
+                META_KEY_END_YEAR to "1976",
+            ),
+            prerequisites = null,
+        ),
+        GraphNodeEntity(
+            id = ID_PERIOD_XINSHIQI,
+            type = GraphNodeType.CONCEPT.name,
+            label = "新时期文学",
+            subtitle = "1978-1989",
+            color = COLOR_PERIOD,
+            relatedPointId = null,
+            subjectId = SUBJECT_ID,
+            metadata = mapOf(
+                "dimension" to "period",
+                "level" to "fine",
+                META_KEY_START_YEAR to "1978",
+                META_KEY_END_YEAR to "1989",
+            ),
+            prerequisites = null,
+        ),
+        GraphNodeEntity(
+            id = ID_PERIOD_HOUXINSHIQI,
+            type = GraphNodeType.CONCEPT.name,
+            label = "后新时期",
+            subtitle = "1990s-",
+            color = COLOR_PERIOD,
+            relatedPointId = null,
+            subjectId = SUBJECT_ID,
+            metadata = mapOf(
+                "dimension" to "period",
+                "level" to "fine",
+                META_KEY_START_YEAR to "1990",
+                META_KEY_END_YEAR to "2025",
+            ),
             prerequisites = null,
         ),
     )
 
     /**
-     * 体裁×时段二维矩阵 - 关系（8 条）。
+     * 体裁×时段二维矩阵 - 关系（v0.7.6 重构：从 8 条扩展到 36 条）。
      *
-     * 每条边表示一个体裁 BELONGS_TO 一个时段，构成 4×2 矩阵：
-     * - 小说 BELONGS_TO 现代文学 / 当代文学
-     * - 诗歌 BELONGS_TO 现代文学 / 当代文学
-     * - 散文 BELONGS_TO 现代文学 / 当代文学
-     * - 戏剧 BELONGS_TO 现代文学 / 当代文学
+     * v0.7.6 改进：
+     * 1. 保留原 8 条粗粒度 BELONGS_TO 边（体裁→现代/当代）
+     * 2. 新增 28 条细粒度 BELONGS_TO 边（4 体裁 × 7 细化时段）
+     *    - 例如"小说 BELONGS_TO 五四文学革命"代表"五四时期的小说"
      *
-     * 例如"小说 BELONGS_TO 现代文学"代表矩阵中的"现代小说"单元格。
+     * 细化后的矩阵能更精确地表达文学史中"体裁×时段"的交叉关系，
+     * 配合时间轴布局让用户直观看到每种体裁在不同时期的活跃程度。
      */
     val GENRE_PERIOD_RELATIONS: List<GraphEdgeEntity> = listOf(
+        // ===== 粗粒度边（保留兼容）：4 体裁 × 2 聚合时段 = 8 条 =====
         // 小说 → 现代文学 / 当代文学
         GraphEdgeEntity(
             id = "edge-gp-001",
@@ -546,6 +746,251 @@ object GraphSkeleton {
             targetId = ID_PERIOD_DANGDAI,
             type = GraphEdgeType.BELONGS_TO.name,
             label = "当代戏剧",
+        ),
+        // ===== v0.7.6 新增细粒度边：4 体裁 × 7 细化时段 = 28 条 =====
+        // 小说 → 7 细化时段
+        GraphEdgeEntity(
+            id = "edge-gp-101",
+            sourceId = ID_GENRE_XIAOSHUO,
+            targetId = ID_PERIOD_WUSI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "五四小说",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-102",
+            sourceId = ID_GENRE_XIAOSHUO,
+            targetId = ID_PERIOD_ZUOYI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "左翼小说",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-103",
+            sourceId = ID_GENRE_XIAOSHUO,
+            targetId = ID_PERIOD_KANGZHAN,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "抗战小说",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-104",
+            sourceId = ID_GENRE_XIAOSHUO,
+            targetId = ID_PERIOD_SHIQI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "十七年小说",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-105",
+            sourceId = ID_GENRE_XIAOSHUO,
+            targetId = ID_PERIOD_WENGE,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "文革小说",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-106",
+            sourceId = ID_GENRE_XIAOSHUO,
+            targetId = ID_PERIOD_XINSHIQI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "新时期小说",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-107",
+            sourceId = ID_GENRE_XIAOSHUO,
+            targetId = ID_PERIOD_HOUXINSHIQI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "后新时期小说",
+        ),
+        // 诗歌 → 7 细化时段
+        GraphEdgeEntity(
+            id = "edge-gp-201",
+            sourceId = ID_GENRE_SHIGE,
+            targetId = ID_PERIOD_WUSI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "五四诗歌",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-202",
+            sourceId = ID_GENRE_SHIGE,
+            targetId = ID_PERIOD_ZUOYI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "左翼诗歌",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-203",
+            sourceId = ID_GENRE_SHIGE,
+            targetId = ID_PERIOD_KANGZHAN,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "抗战诗歌",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-204",
+            sourceId = ID_GENRE_SHIGE,
+            targetId = ID_PERIOD_SHIQI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "十七年诗歌",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-205",
+            sourceId = ID_GENRE_SHIGE,
+            targetId = ID_PERIOD_WENGE,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "文革诗歌",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-206",
+            sourceId = ID_GENRE_SHIGE,
+            targetId = ID_PERIOD_XINSHIQI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "新时期诗歌",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-207",
+            sourceId = ID_GENRE_SHIGE,
+            targetId = ID_PERIOD_HOUXINSHIQI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "后新时期诗歌",
+        ),
+        // 散文 → 7 细化时段
+        GraphEdgeEntity(
+            id = "edge-gp-301",
+            sourceId = ID_GENRE_SANWEN,
+            targetId = ID_PERIOD_WUSI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "五四散文",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-302",
+            sourceId = ID_GENRE_SANWEN,
+            targetId = ID_PERIOD_ZUOYI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "左翼散文",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-303",
+            sourceId = ID_GENRE_SANWEN,
+            targetId = ID_PERIOD_KANGZHAN,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "抗战散文",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-304",
+            sourceId = ID_GENRE_SANWEN,
+            targetId = ID_PERIOD_SHIQI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "十七年散文",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-305",
+            sourceId = ID_GENRE_SANWEN,
+            targetId = ID_PERIOD_WENGE,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "文革散文",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-306",
+            sourceId = ID_GENRE_SANWEN,
+            targetId = ID_PERIOD_XINSHIQI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "新时期散文",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-307",
+            sourceId = ID_GENRE_SANWEN,
+            targetId = ID_PERIOD_HOUXINSHIQI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "后新时期散文",
+        ),
+        // 戏剧 → 7 细化时段
+        GraphEdgeEntity(
+            id = "edge-gp-401",
+            sourceId = ID_GENRE_XIJU,
+            targetId = ID_PERIOD_WUSI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "五四戏剧",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-402",
+            sourceId = ID_GENRE_XIJU,
+            targetId = ID_PERIOD_ZUOYI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "左翼戏剧",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-403",
+            sourceId = ID_GENRE_XIJU,
+            targetId = ID_PERIOD_KANGZHAN,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "抗战戏剧",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-404",
+            sourceId = ID_GENRE_XIJU,
+            targetId = ID_PERIOD_SHIQI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "十七年戏剧",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-405",
+            sourceId = ID_GENRE_XIJU,
+            targetId = ID_PERIOD_WENGE,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "文革戏剧",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-406",
+            sourceId = ID_GENRE_XIJU,
+            targetId = ID_PERIOD_XINSHIQI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "新时期戏剧",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-407",
+            sourceId = ID_GENRE_XIJU,
+            targetId = ID_PERIOD_HOUXINSHIQI,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "后新时期戏剧",
+        ),
+        // ===== v0.7.6 新增：时段时序链（PRECEDES）=====
+        // 五四→左翼→抗战→十七年→文革→新时期→后新时期
+        GraphEdgeEntity(
+            id = "edge-gp-501",
+            sourceId = ID_PERIOD_WUSI,
+            targetId = ID_PERIOD_ZUOYI,
+            type = GraphEdgeType.PRECEDES.name,
+            label = "文学分期",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-502",
+            sourceId = ID_PERIOD_ZUOYI,
+            targetId = ID_PERIOD_KANGZHAN,
+            type = GraphEdgeType.PRECEDES.name,
+            label = "文学分期",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-503",
+            sourceId = ID_PERIOD_KANGZHAN,
+            targetId = ID_PERIOD_SHIQI,
+            type = GraphEdgeType.PRECEDES.name,
+            label = "文学分期",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-504",
+            sourceId = ID_PERIOD_SHIQI,
+            targetId = ID_PERIOD_WENGE,
+            type = GraphEdgeType.PRECEDES.name,
+            label = "文学分期",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-505",
+            sourceId = ID_PERIOD_WENGE,
+            targetId = ID_PERIOD_XINSHIQI,
+            type = GraphEdgeType.PRECEDES.name,
+            label = "文学分期",
+        ),
+        GraphEdgeEntity(
+            id = "edge-gp-506",
+            sourceId = ID_PERIOD_XINSHIQI,
+            targetId = ID_PERIOD_HOUXINSHIQI,
+            type = GraphEdgeType.PRECEDES.name,
+            label = "文学分期",
         ),
     )
 
@@ -877,6 +1322,304 @@ object GraphSkeleton {
             targetId = ID_SCHOOL_XINSHIXIE,
             type = GraphEdgeType.PRECEDES.name,
             label = "回归现实",
+        ),
+    )
+
+    // ==================== v0.7.6 新增：跨类边（作家-流派 / 作家-体裁） ====================
+
+    /**
+     * 跨类关系（35 条，v0.7.6 新增）。
+     *
+     * 补足原骨架"作家只与作家连边、流派只与流派连边"的孤岛问题，让用户在图谱中
+     * 能从任意作家节点出发，沿跨类边追溯到该作家参与的流派/社团、主要创作体裁，
+     * 形成"作家 ↔ 流派 ↔ 体裁 ↔ 时段"的完整知识网络。
+     *
+     * 关系类型分布：
+     * - PARTICIPATED_IN（作家→流派/社团）：16 条
+     *   例：鲁迅→左联、茅盾→文学研究会、郭沫若→创造社、沈从文→京派
+     * - BELONGS_TO（作家→体裁）：19 条
+     *   例：鲁迅→小说 + 散文、郭沫若→诗歌、曹禺→戏剧
+     *
+     * 说明：
+     * - 一位作家可参与多个流派（如鲁迅：文学革命 + 左联），可使用多种体裁
+     *   （如鲁迅：小说 + 散文）。多重归属用多条边表达，配合时间轴布局让用户
+     *   直观看到作家在文学史网络中的多维坐标。
+     * - 跨类边在时间轴布局中跨越泳道连接，视觉上形成"作家行 → 流派行 → 体裁行"
+     *   的纵向知识链路，配合横轴时间定位，构成完整的"文学史坐标系"。
+     */
+    val CROSS_CATEGORY_RELATIONS: List<GraphEdgeEntity> = listOf(
+        // ===== 作家-流派 PARTICIPATED_IN（16 条）=====
+        // 鲁迅：文学革命核心人物 + 左联发起人
+        GraphEdgeEntity(
+            id = "edge-xc-001",
+            sourceId = ID_LUXUN,
+            targetId = ID_SCHOOL_WENYAN,
+            type = GraphEdgeType.PARTICIPATED_IN.name,
+            label = "文学革命主将",
+        ),
+        GraphEdgeEntity(
+            id = "edge-xc-002",
+            sourceId = ID_LUXUN,
+            targetId = ID_SCHOOL_ZUOLIAN,
+            type = GraphEdgeType.PARTICIPATED_IN.name,
+            label = "左联发起人",
+        ),
+        // 周作人：文学革命参与 + 文学研究会发起人
+        GraphEdgeEntity(
+            id = "edge-xc-003",
+            sourceId = ID_ZHOUZUOREN,
+            targetId = ID_SCHOOL_WENYAN,
+            type = GraphEdgeType.PARTICIPATED_IN.name,
+            label = "文学革命参与",
+        ),
+        GraphEdgeEntity(
+            id = "edge-xc-004",
+            sourceId = ID_ZHOUZUOREN,
+            targetId = ID_SCHOOL_WENXUEGE,
+            type = GraphEdgeType.PARTICIPATED_IN.name,
+            label = "文学研究会发起人",
+        ),
+        // 茅盾：文学研究会发起人 + 左联参与
+        GraphEdgeEntity(
+            id = "edge-xc-005",
+            sourceId = ID_MAODUN,
+            targetId = ID_SCHOOL_WENXUEGE,
+            type = GraphEdgeType.PARTICIPATED_IN.name,
+            label = "文学研究会发起人",
+        ),
+        GraphEdgeEntity(
+            id = "edge-xc-006",
+            sourceId = ID_MAODUN,
+            targetId = ID_SCHOOL_ZUOLIAN,
+            type = GraphEdgeType.PARTICIPATED_IN.name,
+            label = "左联参与",
+        ),
+        // 郭沫若：文学革命核心 + 创造社发起人
+        GraphEdgeEntity(
+            id = "edge-xc-007",
+            sourceId = ID_GUOMORUO,
+            targetId = ID_SCHOOL_WENYAN,
+            type = GraphEdgeType.PARTICIPATED_IN.name,
+            label = "文学革命主将",
+        ),
+        GraphEdgeEntity(
+            id = "edge-xc-008",
+            sourceId = ID_GUOMORUO,
+            targetId = ID_SCHOOL_CHUANGZAO,
+            type = GraphEdgeType.PARTICIPATED_IN.name,
+            label = "创造社发起人",
+        ),
+        // 巴金、老舍、曹禺：文学研究会参与
+        GraphEdgeEntity(
+            id = "edge-xc-009",
+            sourceId = ID_BAJIN,
+            targetId = ID_SCHOOL_WENXUEGE,
+            type = GraphEdgeType.PARTICIPATED_IN.name,
+            label = "文学研究会参与",
+        ),
+        GraphEdgeEntity(
+            id = "edge-xc-010",
+            sourceId = ID_LAOSHE,
+            targetId = ID_SCHOOL_WENXUEGE,
+            type = GraphEdgeType.PARTICIPATED_IN.name,
+            label = "文学研究会参与",
+        ),
+        GraphEdgeEntity(
+            id = "edge-xc-011",
+            sourceId = ID_CAOYU,
+            targetId = ID_SCHOOL_WENXUEGE,
+            type = GraphEdgeType.PARTICIPATED_IN.name,
+            label = "文学研究会参与",
+        ),
+        // 沈从文、钱钟书：京派
+        GraphEdgeEntity(
+            id = "edge-xc-012",
+            sourceId = ID_SHENCONGWEN,
+            targetId = ID_SCHOOL_JINGPAI,
+            type = GraphEdgeType.PARTICIPATED_IN.name,
+            label = "京派代表作家",
+        ),
+        GraphEdgeEntity(
+            id = "edge-xc-013",
+            sourceId = ID_QIANZHONGSHU,
+            targetId = ID_SCHOOL_JINGPAI,
+            type = GraphEdgeType.PARTICIPATED_IN.name,
+            label = "京派关联作家",
+        ),
+        // 张爱玲：海派
+        GraphEdgeEntity(
+            id = "edge-xc-014",
+            sourceId = ID_ZHANGAILING,
+            targetId = ID_SCHOOL_HAIPAI,
+            type = GraphEdgeType.PARTICIPATED_IN.name,
+            label = "海派代表作家",
+        ),
+        // 艾青：朦胧诗前驱（"朦胧诗"作为诗歌流派，艾青的自由诗实践影响后世朦胧诗人）
+        GraphEdgeEntity(
+            id = "edge-xc-015",
+            sourceId = ID_AIQING,
+            targetId = ID_SCHOOL_MENLONG,
+            type = GraphEdgeType.PARTICIPATED_IN.name,
+            label = "自由诗先驱",
+        ),
+        // 路遥：新写实小说关联（路遥《平凡的世界》延续新写实主义关怀，但艺术手法上属现实主义传统）
+        GraphEdgeEntity(
+            id = "edge-xc-016",
+            sourceId = ID_LUYAO,
+            targetId = ID_SCHOOL_XINSHIXIE,
+            type = GraphEdgeType.PARTICIPATED_IN.name,
+            label = "现实主义延续",
+        ),
+
+        // ===== 作家-体裁 BELONGS_TO（19 条）=====
+        // 鲁迅：小说 + 散文（《呐喊》《彷徨》小说集 + 《野草》散文诗集）
+        GraphEdgeEntity(
+            id = "edge-xc-101",
+            sourceId = ID_LUXUN,
+            targetId = ID_GENRE_XIAOSHUO,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "小说创作",
+        ),
+        GraphEdgeEntity(
+            id = "edge-xc-102",
+            sourceId = ID_LUXUN,
+            targetId = ID_GENRE_SANWEN,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "散文创作",
+        ),
+        // 周作人：散文（"美文"理论奠基）
+        GraphEdgeEntity(
+            id = "edge-xc-103",
+            sourceId = ID_ZHOUZUOREN,
+            targetId = ID_GENRE_SANWEN,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "美文奠基",
+        ),
+        // 茅盾：小说（《子夜》）
+        GraphEdgeEntity(
+            id = "edge-xc-104",
+            sourceId = ID_MAODUN,
+            targetId = ID_GENRE_XIAOSHUO,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "社会剖析小说",
+        ),
+        // 沈从文：小说（《边城》）
+        GraphEdgeEntity(
+            id = "edge-xc-105",
+            sourceId = ID_SHENCONGWEN,
+            targetId = ID_GENRE_XIAOSHUO,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "湘西小说",
+        ),
+        // 张爱玲：小说（《金锁记》）
+        GraphEdgeEntity(
+            id = "edge-xc-106",
+            sourceId = ID_ZHANGAILING,
+            targetId = ID_GENRE_XIAOSHUO,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "都市小说",
+        ),
+        // 赵树理：小说（《小二黑结婚》）
+        GraphEdgeEntity(
+            id = "edge-xc-107",
+            sourceId = ID_ZHAOSHULI,
+            targetId = ID_GENRE_XIAOSHUO,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "山药蛋派小说",
+        ),
+        // 路遥：小说（《平凡的世界》）
+        GraphEdgeEntity(
+            id = "edge-xc-108",
+            sourceId = ID_LUYAO,
+            targetId = ID_GENRE_XIAOSHUO,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "现实主义小说",
+        ),
+        // 巴金：小说（《家》）
+        GraphEdgeEntity(
+            id = "edge-xc-109",
+            sourceId = ID_BAJIN,
+            targetId = ID_GENRE_XIAOSHUO,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "家族小说",
+        ),
+        // 老舍：小说（《骆驼祥子》）
+        GraphEdgeEntity(
+            id = "edge-xc-110",
+            sourceId = ID_LAOSHE,
+            targetId = ID_GENRE_XIAOSHUO,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "京味小说",
+        ),
+        // 钱钟书：小说（《围城》）
+        GraphEdgeEntity(
+            id = "edge-xc-111",
+            sourceId = ID_QIANZHONGSHU,
+            targetId = ID_GENRE_XIAOSHUO,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "学者小说",
+        ),
+        // 曹禺：戏剧（《雷雨》）
+        GraphEdgeEntity(
+            id = "edge-xc-112",
+            sourceId = ID_CAOYU,
+            targetId = ID_GENRE_XIJU,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "现代话剧奠基",
+        ),
+        // 郭沫若：诗歌（《女神》）+ 戏剧（历史剧）
+        GraphEdgeEntity(
+            id = "edge-xc-113",
+            sourceId = ID_GUOMORUO,
+            targetId = ID_GENRE_SHIGE,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "新诗奠基",
+        ),
+        GraphEdgeEntity(
+            id = "edge-xc-114",
+            sourceId = ID_GUOMORUO,
+            targetId = ID_GENRE_XIJU,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "历史剧",
+        ),
+        // 艾青：诗歌（《大堰河》）
+        GraphEdgeEntity(
+            id = "edge-xc-115",
+            sourceId = ID_AIQING,
+            targetId = ID_GENRE_SHIGE,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "自由诗代表",
+        ),
+        // 巴金、老舍：散文（晚年散文创作）
+        GraphEdgeEntity(
+            id = "edge-xc-116",
+            sourceId = ID_BAJIN,
+            targetId = ID_GENRE_SANWEN,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "《随想录》散文",
+        ),
+        GraphEdgeEntity(
+            id = "edge-xc-117",
+            sourceId = ID_LAOSHE,
+            targetId = ID_GENRE_SANWEN,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "散文创作",
+        ),
+        // 沈从文：散文（《湘行散记》）
+        GraphEdgeEntity(
+            id = "edge-xc-118",
+            sourceId = ID_SHENCONGWEN,
+            targetId = ID_GENRE_SANWEN,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "湘行散记",
+        ),
+        // 张爱玲：散文（《流言》）
+        GraphEdgeEntity(
+            id = "edge-xc-119",
+            sourceId = ID_ZHANGAILING,
+            targetId = ID_GENRE_SANWEN,
+            type = GraphEdgeType.BELONGS_TO.name,
+            label = "都市散文",
         ),
     )
 }

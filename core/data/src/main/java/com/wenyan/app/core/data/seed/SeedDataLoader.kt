@@ -367,11 +367,15 @@ class SeedDataLoader @Inject constructor(
      *
      * 包括：
      * - 南师大现当代文学考点骨架（13 位作家节点 + 12 条作家关系）
-     * - 体裁×时段二维矩阵骨架（6 节点 + 8 关系）
-     * - 文学流派/社团骨架（v0.7.3 新增：14 节点 + 流派关系）
+     * - 体裁×时段二维矩阵骨架（v0.7.6 细化：11 节点 + 36 关系，含 7 个文学史分期）
+     * - 文学流派/社团骨架（v0.7.3 新增：14 节点 + 18 关系）
+     * - 跨类边（v0.7.6 新增：35 条，作家-流派 PARTICIPATED_IN + 作家-体裁 BELONGS_TO）
      *
      * v0.7.3 更新：节点总数从 13 扩充至 40+，大部分节点关联真实知识点 ID，
      * 用户点击图谱节点可跳转到对应知识点详情页。
+     *
+     * v0.7.6 更新：节点总数扩至 50+，关系总数扩至 100+，补足跨类边形成完整的
+     * "作家 ↔ 流派 ↔ 体裁 ↔ 时段"知识网络，配合时间轴布局让用户直观把握文学史经纬。
      */
     private suspend fun importGraphSkeleton() {
         // 南师大现当代文学考点骨架
@@ -385,6 +389,9 @@ class SeedDataLoader @Inject constructor(
         // v0.7.3 新增：文学流派/社团骨架
         GraphSkeleton.LITERARY_SCHOOLS.forEach { graphRepository.insertNode(it) }
         GraphSkeleton.LITERARY_SCHOOL_RELATIONS.forEach { graphRepository.insertEdge(it) }
+
+        // v0.7.6 新增：跨类边（作家-流派 PARTICIPATED_IN + 作家-体裁 BELONGS_TO）
+        GraphSkeleton.CROSS_CATEGORY_RELATIONS.forEach { graphRepository.insertEdge(it) }
     }
 
     companion object {

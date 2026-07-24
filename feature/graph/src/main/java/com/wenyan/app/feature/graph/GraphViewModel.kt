@@ -97,6 +97,9 @@ class GraphViewModel @Inject constructor(
         color = node.color,
         type = node.type,
         subtitle = node.subtitle,
+        // v0.7.6 新增：传递 metadata，让 Canvas 时间轴布局读取 birthYear/deathYear/year/
+        // startYear/endYear 等时间字段，按文学史时间轴定位节点横轴。
+        metadata = node.metadata,
     )
 
     /** 将 [GraphEdgeEntity] 映射为 UI 层 [GraphEdgeItem] */
@@ -136,6 +139,18 @@ data class GraphNodeItem(
     val type: String = "",
     /** 副标题（如生卒年/流派年代），v0.7.4 新增：节点选中时可展示更多上下文 */
     val subtitle: String? = null,
+    /**
+     * 节点元数据（v0.7.6 新增）。
+     *
+     * 用于时间轴布局：Canvas 从此字段读取 [GraphSkeleton.META_KEY_BIRTH_YEAR] /
+     * [GraphSkeleton.META_KEY_DEATH_YEAR]（作家生卒年）/ [GraphSkeleton.META_KEY_YEAR]
+     * （流派年代）/ [GraphSkeleton.META_KEY_START_YEAR] / [GraphSkeleton.META_KEY_END_YEAR]
+     * （时段起止年）等时间字段，计算节点在横轴（时间轴）上的位置。
+     *
+     * 也用于布局分组：metadata["dimension"]="genre" 表示体裁节点、"dimension"="period" 表示时段节点，
+     * Canvas 据此分配泳道。
+     */
+    val metadata: Map<String, String>? = null,
 )
 
 // 图谱边项（UI 层模型）
