@@ -19,9 +19,14 @@ import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
 import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ErrorState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -46,6 +51,7 @@ import com.wenyan.app.core.designsystem.component.WenyanInfoChip
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.database.entity.DataSourceEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import com.wenyan.app.core.database.entity.WrongAnswerEntity
 
 /**
  * 知识点详情界面（Spec C1.27 多教材对照 + C7.2 来源溯源）。
@@ -175,6 +181,12 @@ fun KnowledgePointDetailScreen(
                                 RelatedPointsSection(
                                     detail = uiState.detail,
                                     onNavigateToDetail = onNavigateToDetail,
+                                )
+
+                                // ── 错题记录(v0.8.19 P1-REL-1) ──
+                                WrongAnswersSection(
+                                    wrongAnswers = uiState.wrongAnswers,
+                                    onMarkResolved = viewModel::markWrongAnswerResolved,
                                 )
                             }
                         }
@@ -447,5 +459,145 @@ private fun RelatedGroup(
                 GroupedCardDivider()
             }
         }
+    }
+}
+
+// ── 错题记录(v0.8.19 P1-REL-1 新增) ───────────────────────
+
+/**
+ * 错题记录区块。
+ *
+ * 展示该知识点的未解决错题,让用户在详情页直接看到"这题我错过几次",
+ * 无需跳转到错题本。每条错题展示:
+ * - 来源(卡片复习 / 真题练习)
+ * - 错答次数(wrongCount)
+ * - 最后答错时间(相对时间,如"3小时前"/"昨天")
+ * - 用户错误答案
+ * - 正确答案(若有)
+ * - "标记已解决"按钮(用户确认已掌握后移除该错题)
+ *
+ * 无错题时不显示该区块(避免空区块干扰阅读)。
+ *
+ * v0.8.19 P1-REL-2 修复:原注释写"可折叠"但未实现,移除误导性注释;
+ * 新增"最后答错时间"展示(原注释提及但代码漏实现),与 settings 模块
+ * formatRelativeTime 一致的相对时间格式。
+ *
+ * @param wrongAnswers 未解决错题列表(按 lastWrongAt DESC)
+ * @param onMarkResolved 标记错题为已解决的回调,参数为错题 ID
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun WrongAnswersSection(
+    wrongAnswers: List<WrongAnswerEntity>,
+    onMarkResolved: (String) -> Unit,
+) {
+    if (wrongAnswers.isEmpty()) return
+
+    GroupedCard(title = "错题记录（${wrongAnswers.size}）") {
+        wrongAnswers.forEachIndexed { index, wrong ->
+            WrongAnswerRow(
+                wrong = wrong,
+                onMarkResolved = { onMarkResolved(wrong.id) },
+            )
+            if (index < wrongAnswers.size - 1) {
+                GroupedCardDivider()
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun WrongAnswerRow(
+    wrong: WrongAnswerEntity,
+    onMarkResolved: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = Spacing.lg,
+                end = Spacing.lg,
+                top = Spacing.md,
+                bottom = Spacing.md,
+            ),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        // 第一行:来源标签 + 错答次数 + 最后答错时间
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            val sourceLabel = when (wrong.source) {
+                "CARD_AGAIN" -> "卡片复习"
+                "QUIZ_WRONG" -> "真题练习"
+                else -> wrong.source
+            }
+            WenyanInfoChip(
+                text = sourceLabel,
+                variant = if (wrong.source == "CARD_AGAIN") ChipVariant.SECONDARY else ChipVariant.TERTIARY,
+            )
+            WenyanInfoChip(
+                text = "错答 ${wrong.wrongCount} 次",
+                variant = ChipVariant.NEUTRAL,
+            )
+            // v0.8.19 P1-REL-2: 最后答错时间(相对时间),让用户感知"这题多久前错过"
+            WenyanInfoChip(
+                text = formatRelativeTime(wrong.lastWrongAt),
+                variant = ChipVariant.NEUTRAL,
+            )
+        }
+
+        // 第二行:用户错误答案
+        Text(
+            text = "你的答案：${wrong.userAnswer}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+        )
+
+        // 第三行:正确答案(若有)
+        wrong.correctAnswer?.let { correct ->
+            Text(
+                text = "正确答案：$correct",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+
+        // 第四行:标记已解决按钮
+        FilledTonalButton(
+            onClick = onMarkResolved,
+            modifier = Modifier.padding(top = Spacing.xs),
+        ) {
+            Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = null,
+                modifier = Modifier.padding(end = Spacing.sm),
+            )
+            Text("标记已解决")
+        }
+    }
+}
+
+/**
+ * 将时间戳格式化为相对时间文本(如"3小时前"/"昨天"/"3天前")。
+ *
+ * v0.8.19 P1-REL-2 新增:供 [WrongAnswerRow] 展示"最后答错时间"。
+ * 实现与 settings 模块的 formatRelativeTime 一致(未抽到 common 模块,
+ * 避免为单函数引入跨模块依赖;后续若有第三处使用再抽取)。
+ */
+private fun formatRelativeTime(timestamp: Long): String {
+    val now = System.currentTimeMillis()
+    val diffMillis = now - timestamp
+    val diffMinutes = diffMillis / (60 * 1000)
+    val diffHours = diffMillis / (60 * 60 * 1000)
+    val diffDays = diffMillis / (24 * 60 * 60 * 1000)
+    return when {
+        diffMinutes < 1 -> "刚刚"
+        diffMinutes < 60 -> "${diffMinutes}分钟前"
+        diffHours < 24 -> "${diffHours}小时前"
+        diffDays == 1L -> "昨天"
+        diffDays < 30 -> "${diffDays}天前"
+        else -> "${diffDays / 30}个月前"
     }
 }

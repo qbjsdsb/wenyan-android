@@ -96,6 +96,35 @@ interface KnowledgePointDao {
     suspend fun searchByKeyword(keyword: String, limit: Int = 5): List<KnowledgePointEntity>
 
     /**
+     * 全文关键词搜索(带科目名,Flow 版本,v0.8.19 新增)。
+     *
+     * 供 [com.wenyan.app.feature.knowledge.KnowledgeViewModel] 搜索框使用。
+     * 与 [searchByKeyword] 的区别:
+     * - 返回 [KnowledgePointWithSubject](含科目名,供 UI 分类标签展示)
+     * - 返回 Flow(数据库变更时自动刷新搜索结果)
+     * - 仅搜索 VERIFIED 知识点(与 [observeVerifiedWithSubject] 一致,未校对的不进搜索)
+     * - 无 limit(搜索结果由 ViewModel 控制数量)
+     *
+     * NF-BB1:同样加 ESCAPE '\\',调用方需转义 % 和 _。
+     *
+     * @param keyword 搜索关键词(已转义 % 和 _),空字符串时返回所有 VERIFIED 知识点
+     * @return 匹配的知识点 + 科目名列表,按 updated_at DESC 排序
+     */
+    @Query(
+        "SELECT kp.*, s.name AS subject_name " +
+            "FROM knowledge_points kp " +
+            "LEFT JOIN chapters c ON kp.chapter_id = c.id " +
+            "LEFT JOIN subjects s ON c.subject_id = s.id " +
+            "WHERE kp.ocr_status = 'VERIFIED' AND (" +
+            "kp.title LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
+            "kp.core_conclusion LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
+            "kp.full_content LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
+            "kp.study_text LIKE '%' || :keyword || '%' ESCAPE '\\' " +
+            ") ORDER BY kp.updated_at DESC",
+    )
+    fun observeSearchWithSubject(keyword: String): Flow<List<KnowledgePointWithSubject>>
+
+    /**
      * 查询所有 VERIFIED 知识点，附带科目名（P1 修复）。
      *
      * 通过 LEFT JOIN chapters + subjects 一次查询获取科目名，避免 N+1。

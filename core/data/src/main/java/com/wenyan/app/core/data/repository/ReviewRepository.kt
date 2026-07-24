@@ -4,7 +4,6 @@ import com.wenyan.app.core.data.util.catchAndLog
 import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.dao.MemoRecordDao
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
-import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -79,7 +78,9 @@ class ReviewRepository @Inject constructor(
      * 到期判断通过 [MemoRecordDao.observeDue]（使用 SQLite 内置时间）实现，
      * 与 [getPendingReviewCount] 保持语义一致：队列长度 = 待复习数量。
      *
-     * 如需获取全部 VERIFIED 知识点（含未到期，附科目名），使用 [getVerifiedWithSubject]。
+     * 如需获取全部 VERIFIED 知识点（含未到期，附科目名），使用
+     * [com.wenyan.app.core.data.repository.KnowledgeRepository.getVerifiedWithSubject]
+     * (v0.8.19 已从本仓库迁移到 KnowledgeRepository)。
      *
      * P1-1 修复：原实现直接 `combine(observeVerifiedForReview, observeDue)`，
      * Room Flow 仅在表数据变化时重新查询，observeDue 内的 `strftime('%s','now')`
@@ -101,18 +102,6 @@ class ReviewRepository @Inject constructor(
         }
         .distinctUntilChanged()
         .catchAndLog(TAG, "getReviewQueue") { emptyList() }
-
-    /**
-     * 获取所有已 VERIFIED 的知识点，附带科目名（P1 修复）。
-     *
-     * 供知识点浏览界面的分类筛选使用（如 [com.wenyan.app.feature.knowledge.KnowledgeViewModel]）。
-     *
-     * P1-9 清理：原 `getAllVerifiedKnowledgePoints()`（无科目名）已被此方法取代，
-     * 零调用方，已删除。新代码请用本方法。
-     */
-    fun getVerifiedWithSubject(): Flow<List<KnowledgePointWithSubject>> =
-        knowledgePointDao.observeVerifiedWithSubject()
-            .catchAndLog(TAG, "getVerifiedWithSubject") { emptyList() }
 
     /**
      * 今日待复习数量：已 VERIFIED 且到期（next_review_at <= 当前时间）的知识点数。

@@ -1,21 +1,26 @@
 package com.wenyan.app.feature.knowledge
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.repository.KnowledgePointDetail
 import com.wenyan.app.core.data.repository.KnowledgeRepository
+import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.database.entity.DataSourceEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import com.wenyan.app.core.database.entity.WrongAnswerEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -24,20 +29,51 @@ import javax.inject.Inject
  * 通过 [SavedStateHandle] 从导航参数获取 pointId，
  * 观察 [KnowledgeRepository.observeKnowledgePointDetail] 获取详情。
  *
+ * v0.8.19 P1-UI-6 修复(NF-L7):
+ * - 原 `val pointId: String = savedStateHandle["pointId"] ?: ""` 是一次性读取,
+ *   后续不观察 SavedStateHandle 变化。同路由实例下 pointId 变化不更新。
+ * - 现改为 `savedStateHandle.getStateFlow("pointId", "")`,在 flatMapLatest 中订阅,
+ *   pointId 变化时自动重新订阅详情 Flow。当前架构下路由用 launchSingleTop + popUpTo
+ *   每次新建 ViewModel 实例,影响有限,但提升健壮性,为未来 SharedViewModel 复用铺路。
+ *
+ * v0.8.19 P1-REL-1 新增错题关联:
+ * - 注入 [WrongAnswerRepository],combine 到 [uiState]
+ * - UI 展示该知识点的未解决错题列表(wrongCount / lastWrongAt / userAnswer)
+ * - 用户可在详情页直接看到"这题我错过几次",无需跳转到错题本
+ *
  * UI 状态含：
- * - 知识点主信息（title/summary/coreConclusion/studyText/multiPerspectives）
+ * - 知识点主信息（title/summary/coreConclusion/studyText）
  * - 来源溯源列表（data_sources 表）
  * - 关联/对比/延伸知识点标题
+ * - 错题记录列表(v0.8.19 新增,仅未解决的错题)
  */
 @HiltViewModel
 @OptIn(ExperimentalCoroutinesApi::class)
 class KnowledgePointDetailViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
     private val knowledgeRepository: KnowledgeRepository,
+    private val wrongAnswerRepository: WrongAnswerRepository,
 ) : ViewModel() {
 
-    /** 从导航参数获取知识点 ID */
-    val pointId: String = savedStateHandle["pointId"] ?: ""
+    private companion object {
+        private const val TAG = "KnowledgePointDetailViewModel"
+    }
+
+    /**
+     * 从导航参数获取知识点 ID(v0.8.19 P1-UI-6 改为 StateFlow)。
+     *
+     * 原实现 `val pointId: String = savedStateHandle["pointId"] ?: ""` 是一次性读取,
+     * 后续不观察 SavedStateHandle 变化。同路由实例下 pointId 变化不更新。
+     *
+     * 现改为 StateFlow,在 [uiState] 的 flatMapLatest 中订阅,
+     * pointId 变化时自动重新订阅详情 Flow。
+     *
+     * 保留 `val pointId: String` 属性(读当前值),供 UI 或外部访问(如 Deep Link)。
+     */
+    private val pointIdFlow: StateFlow<String> = savedStateHandle.getStateFlow("pointId", "")
+
+    /** 当前知识点 ID(便捷访问,读 [pointIdFlow] 当前值) */
+    val pointId: String get() = pointIdFlow.value
 
     /**
      * 重试触发器（v0.8.3 新增：支持 ErrorState 的 onRetry）。
@@ -49,28 +85,39 @@ class KnowledgePointDetailViewModel @Inject constructor(
     /**
      * 详情 UI 状态。
      *
-     * 观察 Repository 的合并流，数据库变更时自动刷新。
+     * v0.8.19 重构:
+     * - 用 combine(retryTrigger, pointIdFlow) 触发 flatMapLatest,
+     *   pointId 变化或 retry 时重新订阅详情 Flow + 错题 Flow
+     * - 详情 Flow 与错题 Flow 用 combine 合并,任一变化时更新 uiState
      *
      * v0.8.3 重构：用 flatMapLatest 替代直接 stateIn + catch，支持 retry。
      * 原 catch 后流终止无法重试，现通过 retryTrigger 触发重新订阅。
      */
-    val uiState: StateFlow<KnowledgePointDetailUiState> = retryTrigger
-        .flatMapLatest {
-            knowledgeRepository
-                .observeKnowledgePointDetail(pointId)
-                .map { detail ->
+    val uiState: StateFlow<KnowledgePointDetailUiState> = combine(retryTrigger, pointIdFlow) { _, pointId -> pointId }
+        .flatMapLatest { pointId ->
+            if (pointId.isBlank()) {
+                flowOf(KnowledgePointDetailUiState(isLoading = false, notFound = true))
+            } else {
+                combine(
+                    knowledgeRepository.observeKnowledgePointDetail(pointId),
+                    wrongAnswerRepository.observeByPoint(pointId),
+                ) { detail, wrongAnswers ->
                     if (detail == null) {
                         KnowledgePointDetailUiState(isLoading = false, notFound = true)
                     } else {
+                        // 仅展示未解决的错题(resolvedAt == null)
+                        val unresolved = wrongAnswers.filter { it.resolvedAt == null }
                         KnowledgePointDetailUiState(
                             isLoading = false,
                             detail = detail,
+                            wrongAnswers = unresolved,
                         )
                     }
                 }
-                .catch { e ->
-                    emit(KnowledgePointDetailUiState(error = e.message ?: "加载失败"))
-                }
+            }
+        }
+        .catch { e ->
+            emit(KnowledgePointDetailUiState(error = e.message ?: "加载失败"))
         }
         .stateIn(
             scope = viewModelScope,
@@ -86,12 +133,40 @@ class KnowledgePointDetailViewModel @Inject constructor(
     fun retry() {
         retryTrigger.value++
     }
+
+    /**
+     * 标记错题为已解决(v0.8.19 P1-REL-1 新增)。
+     *
+     * 用户在详情页查看错题后,确认已掌握可点击"标记已解决",
+     * 该错题从 [uiState.wrongAnswers] 中移除(Flow 自动刷新)。
+     *
+     * v0.8.19 P1-REL-2 修复:原 `catch (_: Exception) {}` 静默吞异常,
+     * 与项目其他模块(CardsViewModel 用 Log.e)不一致,生产排查困难。
+     * 现加 Log.w 输出异常堆栈,UI 仍不弹错误(标记失败不影响主流程,
+     * 用户可重试或查看错题本处理)。
+     *
+     * @param wrongAnswerId 错题记录 ID
+     */
+    fun markWrongAnswerResolved(wrongAnswerId: String) {
+        viewModelScope.launch {
+            try {
+                wrongAnswerRepository.markResolved(wrongAnswerId)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // 标记失败不影响主流程,Flow 会保持当前状态
+                // 用户可重试或查看错题本处理
+                Log.w(TAG, "markWrongAnswerResolved failed: id=$wrongAnswerId", e)
+            }
+        }
+    }
 }
 
 /**
  * 知识点详情 UI 状态。
  *
  * P1-3 新增 [error] 字段：数据流加载失败时携带错误信息，UI 据此提示用户。
+ * v0.8.19 新增 [wrongAnswers] 字段:该知识点的未解决错题列表,供 UI 展示。
  */
 data class KnowledgePointDetailUiState(
     val isLoading: Boolean = false,
@@ -99,6 +174,8 @@ data class KnowledgePointDetailUiState(
     val detail: KnowledgePointDetail? = null,
     /** 加载失败时的错误信息（P1-3 新增） */
     val error: String? = null,
+    /** 未解决错题列表(v0.8.19 P1-REL-1 新增,按 lastWrongAt DESC) */
+    val wrongAnswers: List<WrongAnswerEntity> = emptyList(),
 ) {
     /** 知识点实体（便捷访问） */
     val point: KnowledgePointEntity? get() = detail?.point

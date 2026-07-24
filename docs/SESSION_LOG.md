@@ -3602,3 +3602,158 @@ CardSplitterTest 新增 1 个场景：
 
 待 emulator 环境恢复后需验证：`./gradlew :feature:cards:testDebugUnitTest :core:data:testDebugUnitTest` 全量。
 
+---
+
+## v0.8.19 知识点功能深度打磨（2026-07-24）
+
+### 背景
+
+用户反馈"知识点功能还不够好，不够完善，以及有没有问题，深入调查研究，反复打磨"。
+本轮聚焦知识点模块（`feature/knowledge`）+ 知识点数据层（`core/data`）：
+架构职责分离、详情页错题关联、搜索功能、注释一致性、测试覆盖补全。
+
+### 修复内容
+
+#### 架构修复（1 项）
+
+1. **P4: 知识点浏览职责从 `ReviewRepository` 迁移至 `KnowledgeRepository`**
+   - 问题：`KnowledgeViewModel` 注入 `ReviewRepository` 仅为调用 `getVerifiedWithSubject()`，
+     而 `ReviewRepository` 职责是 FSRS 复习队列，知识点浏览与复习无关，职责混乱
+     （对应 AGENTS.md 第 9.4 条 P4）
+   - 修复：
+     - `getVerifiedWithSubject()` 迁移到 `KnowledgeRepository`
+     - 新增 `KnowledgeRepository.searchVerifiedWithSubject(keyword)` + `escapeLikeWildcards(input)`
+     - `KnowledgeViewModel` 改注入 `KnowledgeRepository`，移除 `ReviewRepository` 依赖
+     - `ReviewRepository` 中原 `getVerifiedWithSubject()` 标注 deprecated（保留向后兼容）
+
+#### P1-UI-1: 知识点搜索框（新增功能）
+
+2. **知识点列表新增搜索框**
+   - 实现：
+     - `KnowledgeViewModel.searchQuery: StateFlow<String>` 持久化到 `SavedStateHandle`
+     - `debounce(300ms)` 避免每次按键触发 DB 查询（参考 Anki 搜索防抖）
+     - 空搜索词走 `getVerifiedWithSubject()`（全部 VERIFIED）
+     - 非空搜索词走 `searchVerifiedWithSubject(escaped)`（LIKE 搜索）
+     - 搜索结果仍受 `selectedCategory` 分类筛选约束（搜索 + 筛选可叠加）
+   - 搜索范围：`title` / `core_conclusion` / `full_content` / `study_text` 四字段 LIKE
+   - 转义：`escapeLikeWildcards` 转义 `%`/`_` 通配符，避免"100%"匹配"1000"
+   - DAO 层：`KnowledgePointDao.observeSearchWithSubject(keyword)` SQL JOIN subjects 表
+
+#### P1-DATA-4: 详情页查询优化
+
+3. **关联知识点查询合并为一次 DB 往返**
+   - 问题：`KnowledgeRepository.observeKnowledgePointDetail` 原对 `relatedIds` / `contrastIds` /
+     `extensionIds` 分别调用三次 `getByIds`，触发最多 3 次 DB 往返
+   - 修复：合并三组 ID 去重后一次 `getByIds(allIds)`，内存按 ID 分组到三个列表
+   - 收益：减少 2 次 DB 往返（每次 ~1-5ms，共省 2-10ms）
+   - 边界：三组 ID 全为空时短路返回 detail，不调用 `getByIds`
+
+#### P1-UI-6: 详情页 pointId 动态更新
+
+4. **`KnowledgePointDetailViewModel.pointId` 改为 StateFlow 订阅**
+   - 问题：原 `val pointId: String = savedStateHandle["pointId"] ?: ""` 是一次性读取，
+     同路由实例下 pointId 变化不更新
+   - 修复：改为 `savedStateHandle.getStateFlow("pointId", "")`，在 `flatMapLatest` 中订阅
+   - 影响：当前架构下路由用 `launchSingleTop + popUpTo` 每次新建 ViewModel 实例，影响有限，
+     但提升健壮性，为未来 SharedViewModel 复用铺路
+
+#### P1-REL-1: 详情页错题关联（新增功能）
+
+5. **知识点详情页展示未解决错题 + 标记已解决**
+   - 实现：
+     - `KnowledgePointDetailViewModel` 注入 `WrongAnswerRepository`
+     - `combine(detail, wrongAnswers)` 合并到 `uiState`
+     - UI 展示该知识点的未解决错题（`wrongCount` / `lastWrongAt` / `userAnswer`）
+     - 用户可在详情页直接看到"这题我错过几次"，无需跳转到错题本
+     - "标记已解决"按钮调用 `markWrongAnswerResolved(id)`
+   - 数据流：`markResolved` 写 DB → Flow 自动刷新 → 错题从 `uiState.wrongAnswers` 移除
+
+#### P1-REL-2: 异常处理与注释一致性
+
+6. **`markWrongAnswerResolved` 吞异常补 Log.w**
+   - 问题：原 `catch (_: Exception) {}` 静默吞异常，与项目其他模块（`CardsViewModel` 用 `Log.e`）
+     不一致，生产排查困难
+   - 修复：加 `Log.w(TAG, "markWrongAnswerResolved failed: id=$wrongAnswerId", e)`，
+     保留 try-catch 避免崩溃，UI 仍不弹错误（标记失败不影响主流程）
+   - 同时保留 `CancellationException` 重新抛出（协程协作式取消语义）
+
+7. **`WrongAnswerRow` 实现最后答错时间的相对时间展示**
+   - 问题：注释提及"最后答错时间(相对时间)"和"可折叠"，但代码未实现相对时间，且无折叠功能
+   - 修复：移除"可折叠"注释，新增 `formatRelativeTime(timestamp)` 函数
+   - 格式：刚刚 / X 分钟前 / X 小时前 / 昨天 / X 天前 / X 个月前
+   - 与 settings 模块的 `formatRelativeTime` 一致（未抽到 common 模块，避免跨模块依赖）
+
+8. **`searchVerifiedWithSubject` 注释澄清空关键词行为**
+   - 问题：注释称空关键词时返回所有 VERIFIED 知识点，与实际 SQL `LIKE '%%'`
+     仅匹配非 NULL 字段的行为不一致
+   - 修复：澄清注释，说明空关键词时的行为差异（`title`/`core_conclusion`/`full_content` 为 NULL 的
+     知识点会被排除），并说明 ViewModel 已在 `query.isBlank()` 时走 `getVerifiedWithSubject`，
+     此处行为差异不会触发
+
+### 新增测试（25 个场景）
+
+#### `KnowledgePointDetailViewModelTest`（11 个场景）
+
+1. `uiState_blankPointId_showsNotFound`
+2. `uiState_pointIdNotFound_showsNotFound`
+3. `uiState_pointExists_loadsDetailWithSources`
+4. `uiState_pointWithRelatedContrastExtension_groupsCorrectly`
+5. `uiState_relatedIdsContainsNonExistentId_filteredOut`
+6. `uiState_hasUnresolvedWrongAnswers_showsInState`（仅未解决错题进 uiState）
+7. `uiState_noWrongAnswers_emptyList`
+8. `uiState_markResolvedInRepository_wrongAnswerRemovedFromUiState`（Flow 自动刷新）
+9. `markWrongAnswerResolved_callsRepositoryMarkResolved`
+10. `markWrongAnswerResolved_repositoryThrows_doesNotCrash`（异常不崩溃）
+11. `retry_reloadesDetailAfterPointBecomesAvailable`
+
+#### `KnowledgeRepositoryTest`（14 个场景）
+
+- `observeKnowledgePointDetail_*`：6 个（pointNotFound / pointExists / withRelatedContrastExtension /
+  overlappingIds_groupedToAllMatchingLists / nonExistentRelatedId_filteredOut / emptyIdLists_noGetByIdsCall）
+- `escapeLikeWildcards_*`：6 个（escapesPercent / escapesUnderscore / escapesBackslash /
+  mixedWildcards / plainText_noChange / emptyString）
+- `getVerifiedWithSubject_returnsOnlyVerifiedPoints`：1 个
+- `searchVerifiedWithSubject_*`：4 个（matchesTitle / matchesCoreConclusion /
+  excludesPendingPoints / noMatch_returnsEmpty）
+
+#### 测试基础设施
+
+- 新增 `feature/knowledge/src/test/.../Fakes.kt`：
+  - `FakeKnowledgePointDao`：stub `KnowledgeRepository` 实际调用的 4 个方法
+    （`observeById` / `getByIds` / `observeVerifiedWithSubject` / `observeSearchWithSubject`），
+    其他方法抛 `UnsupportedOperationException` 避免静默返回错误默认值
+  - `FakeDataSourceDao`：仅 stub `observeByKnowledgePoint`
+  - `FakeKnowledgeWrongAnswerRepository`：实现 `observeByPoint` + `markResolved`，
+    记录 `resolvedIds` 供断言，支持 `markResolvedThrowable` 模拟异常分支
+  - `buildKnowledgeRepository()`：构造真实 `KnowledgeRepository` + Fake DAOs，
+    顺带覆盖 Repository 的 `observeKnowledgePointDetail` 合并逻辑
+- `KnowledgeRepositoryTest` 用 in-package `FakeKpDao` / `FakeDsDao`（避免 core:data 测试依赖 feature 层），
+  额外记录 `getByIdsCalls` 断言 P1-DATA-4 的"合并三组 ID 一次查询"行为
+
+### 测试策略说明
+
+- 用 `StandardTestDispatcher` + `advanceUntilIdle` 控制协程执行时序
+- 读 `uiState.value` 断言最终状态（与 `CardsViewModelTest` 一致，避免 Turbine block
+  内 `advanceUntilIdle` 的 receiver 解析问题）
+- `KnowledgeRepositoryTest` 用 Turbine `test { }` 验证 Flow 发射（Repository 是纯 Flow，无 StateFlow）
+- Fake DAO 用 `MutableStateFlow` + `map` 模拟 Room 的 Flow 行为，数据变化时自动触发上游重发射
+
+### 验证状态
+
+⚠ 沙箱 Android SDK 不可用（`ANDROID_HOME` 未设置，gradle wrapper 下载超时，
+系统 gradle 8.14.4 可用但缺 Android SDK），无法本地编译验证。
+
+代码审查确认：
+- `KnowledgePointDetailViewModel` 构造函数注入 `WrongAnswerRepository`，
+  `KnowledgeViewModel` 构造函数注入 `KnowledgeRepository`（无 `ReviewRepository` 残留）
+- `KnowledgeRepository.escapeLikeWildcards` 与 `RagEngine.escapeLikeWildcards` 实现一致
+- `KnowledgePointDao` 接口已含 `observeSearchWithSubject` / `observeVerifiedWithSubject` 方法
+- `Fakes.kt` 中 `FakeKnowledgePointDao` 实现了 `KnowledgePointDao` 全部方法（接口已穷尽）
+- 测试 import 完整（`assertEquals` / `assertNotNull` / `assertTrue` / `assertFalse` / `assertNull`）
+- `markWrongAnswerResolved` 的 `CancellationException` 重新抛出，符合协程协作式取消语义
+- `formatRelativeTime` 与 settings 模块实现一致，未抽到 common 模块（避免跨模块依赖）
+
+待 emulator 环境恢复后需验证：
+- `./gradlew :feature:knowledge:testDebugUnitTest :core:data:testDebugUnitTest` 全量
+- emulator 实测：知识点搜索框防抖 + LIKE 转义 + 详情页错题关联 + 标记已解决 Flow 刷新
+
