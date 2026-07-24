@@ -57,11 +57,11 @@ class WrongAnswerViewModel @Inject constructor(
                 WrongAnswerFilter.ALL -> wrongAnswerRepository.observeAll()
             }
         }
-        .catch { e ->
-            emit(emptyList())
-            _errorMessage.value = "加载失败：${e.message ?: "未知错误"}"
-        }
         .map { items -> WrongAnswerUiState(items = items.map { it.toUiItem() }) }
+        .catch { e ->
+            // v0.8.4 修复：原 emit(emptyList()) 把加载失败伪装为空状态，改为 emit error 态
+            emit(WrongAnswerUiState(error = e.message ?: "加载失败"))
+        }
         .stateIn(viewModelScope, SharingStarted.Eagerly, WrongAnswerUiState(isLoading = true))
 
     /** 切换过滤模式 */
@@ -108,6 +108,15 @@ class WrongAnswerViewModel @Inject constructor(
         _errorMessage.value = null
     }
 
+    /** v0.8.4 新增：重试加载（重新触发 filter 流订阅） */
+    fun retry() {
+        _errorMessage.value = null
+        // 通过切换 filter 触发 flatMapLatest 重新订阅
+        val current = _filter.value
+        _filter.value = if (current == WrongAnswerFilter.UNRESOLVED) WrongAnswerFilter.ALL else WrongAnswerFilter.UNRESOLVED
+        _filter.value = current
+    }
+
     /** 将 [WrongAnswerEntity] 转换为 UI 列表项 */
     private fun WrongAnswerEntity.toUiItem(): WrongAnswerItem = WrongAnswerItem(
         id = id,
@@ -136,6 +145,8 @@ enum class WrongAnswerFilter {
 data class WrongAnswerUiState(
     val isLoading: Boolean = false,
     val items: List<WrongAnswerItem> = emptyList(),
+    /** v0.8.4 新增：加载失败错误信息（原 catch emit emptyList 把失败伪装为空状态） */
+    val error: String? = null,
 )
 
 /**

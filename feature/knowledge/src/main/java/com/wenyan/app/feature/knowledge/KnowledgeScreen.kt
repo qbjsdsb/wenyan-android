@@ -202,7 +202,11 @@ private fun KnowledgePointCard(
             // 视障用户才能识别卡片可点击。原 .clickable 无 role，TalkBack 不朗读"按钮"。
             .clickable(role = Role.Button, onClick = onClick),
     ) {
-        Column(modifier = Modifier.padding(Spacing.lg)) {
+        // v0.8.3 修复（P2-K-1）：加 verticalArrangement.spacedBy 让 title/subject/summary 之间有呼吸感
+        Column(
+            modifier = Modifier.padding(Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
             Text(
                 text = item.title,
                 style = MaterialTheme.typography.titleMedium,
@@ -226,5 +230,3 @@ private fun KnowledgePointCard(
         }
     }
 }
-
-// 空状态占位（已迁移至共享 EmptyState 组件）

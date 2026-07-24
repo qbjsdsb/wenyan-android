@@ -12,6 +12,7 @@ import androidx.compose.material3.WideNavigationRailItemDefaults
 import androidx.compose.material3.WideNavigationRailValue
 import androidx.compose.material3.rememberWideNavigationRailState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 
 /**
@@ -51,6 +52,11 @@ fun WenyanWideNavigationRail(
             WideNavigationRailValue.Collapsed
         },
     )
+    // v0.8.3 修复：原实现仅用 expanded 作 initialValue，参数变化时 railState 不会同步，
+    // 导致外部"展开/折叠"按钮点击后视觉无响应。添加 LaunchedEffect 强制同步。
+    LaunchedEffect(expanded) {
+        if (expanded) railState.expand() else railState.collapse()
+    }
     val colorScheme = MaterialTheme.colorScheme
     WideNavigationRail(
         modifier = modifier.fillMaxHeight(),
@@ -64,7 +70,8 @@ fun WenyanWideNavigationRail(
             WideNavigationRailItem(
                 selected = selected,
                 onClick = { onNavigate(item.route) },
-                icon = { Icon(imageVector = item.icon, contentDescription = item.label) },
+                // v0.8.3 修复：同 WenyanNavigationBar，Icon 设为装饰性避免与 label 重复读屏
+                icon = { Icon(imageVector = item.icon, contentDescription = null) },
                 label = { Text(text = item.label) },
                 railExpanded = expanded,
                 colors = WideNavigationRailItemDefaults.colors(

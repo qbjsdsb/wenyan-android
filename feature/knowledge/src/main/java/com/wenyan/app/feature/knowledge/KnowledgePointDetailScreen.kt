@@ -16,6 +16,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
+import com.wenyan.app.core.designsystem.component.EmptyState
+import com.wenyan.app.core.designsystem.component.ErrorState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -94,11 +99,11 @@ fun KnowledgePointDetailScreen(
                 .padding(innerPadding),
         ) {
             Crossfade(
-                targetState = uiState.isLoading to (uiState.notFound || uiState.point == null),
+                targetState = Triple(uiState.isLoading, uiState.error, uiState.notFound || uiState.point == null),
                 animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
                 label = "knowledge_detail_state",
                 modifier = Modifier.fillMaxSize(),
-            ) { (isLoading, isNotFound) ->
+            ) { (isLoading, error, isNotFound) ->
                 when {
                     isLoading -> {
                         Box(
@@ -108,17 +113,27 @@ fun KnowledgePointDetailScreen(
                             WenyanLoadingIndicator()
                         }
                     }
-                    isNotFound -> {
+                    error != null -> {
+                        // v0.8.3 修复：原代码未处理 error 状态，异常时误显示"知识点不存在"
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(
-                                text = "知识点不存在",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ErrorState(
+                                icon = Icons.Default.CloudOff,
+                                title = "加载失败",
+                                message = error,
+                                onRetry = viewModel::retry,
                             )
                         }
+                    }
+                    isNotFound -> {
+                        // v0.8.3 优化：用 EmptyState 组件替代裸 Text，与全 App 一致
+                        EmptyState(
+                            icon = Icons.Default.Inbox,
+                            title = "知识点不存在",
+                            description = "该知识点可能已被删除或 ID 错误",
+                        )
                     }
                     else -> {
                         uiState.point?.let { point ->

@@ -22,13 +22,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material3.AlertDialog
 import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -36,6 +36,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -48,12 +49,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -113,8 +116,11 @@ fun ApiConfigScreen(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(onClick = viewModel::showAddForm) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "添加配置")
+            // v0.8.3 修复：表单弹出时隐藏 FAB，避免被 scrim 遮挡但仍可点击的歧义
+            if (!isFormVisible) {
+                FloatingActionButton(onClick = viewModel::showAddForm) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "添加配置")
+                }
             }
         },
     ) { innerPadding ->
@@ -250,14 +256,17 @@ private fun ConfigCard(
     TonalCard(
         modifier = modifier
             .fillMaxWidth()
-            // NF-UA4 修复：加 role=Role.Button 语义，TalkBack 朗读"按钮"
+            // v0.8.3 修复（P2-A-1）：整卡可点击设为"当前使用"（Android 设置惯用模式），
+            // 但将原 CheckCircle 图标改为 RadioButton，使"单选"语义更明确，
+            // 避免用户误以为点击卡片是"查看详情"。
             .clickable(role = Role.Button, onClick = onSetCurrent),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs + Spacing.xs),
+            // v0.8.3 修复（P3-A-1）：Spacing.xs + Spacing.xs 等价于 Spacing.sm，直接用 token
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -269,18 +278,16 @@ private fun ConfigCard(
                     style = MaterialTheme.typography.titleMedium,
                     // P1-6 修复：Bold(700) 过重，M3 Expressive 推荐 SemiBold(600)
                     fontWeight = FontWeight.SemiBold,
-                    // P1-2 修复：长显示名限 1 行 + 省略号，避免与右侧 CheckCircle 错位
+                    // P1-2 修复：长显示名限 1 行 + 省略号，避免与右侧 RadioButton 错位
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
-                if (isCurrent) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "当前使用",
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
+                // v0.8.3（P2-A-1）：RadioButton 替代 CheckCircle，单选语义更明确
+                RadioButton(
+                    selected = isCurrent,
+                    onClick = onSetCurrent,
+                )
             }
 
             // 服务商标签
@@ -318,7 +325,8 @@ private fun ConfigCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = Spacing.xs),
-                horizontalArrangement = Arrangement.End,
+                // v0.8.3 修复（P2-A-2）：加 spacedBy 避免编辑/删除按钮紧贴
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.End),
             ) {
                 TextButton(onClick = onEdit) {
                     Icon(
@@ -377,11 +385,34 @@ private fun ApiConfigFormDialog(
     // "0." / "-0" / "" 时 toDoubleOrNull() 返回 null，let {} 不执行，
     // formState.temperature 不变，输入被立即丢弃，用户无法清空重输或输入小数点。
     // 现改为本地 String state 自由输入，onSave 时统一解析与 coerceIn。
-    var temperatureText by remember(formState.temperature) {
+    //
+    // v0.8.3 修复（P1-A-2）：remember → rememberSaveable，屏幕旋转不丢失输入。
+    // v0.8.3 修复（P1-A-1）：添加输入校验，非法值时显示错误提示。
+    var temperatureText by rememberSaveable(formState.temperature) {
         mutableStateOf(formState.temperature.toString())
     }
-    var maxTokensText by remember(formState.maxTokens) {
+    var maxTokensText by rememberSaveable(formState.maxTokens) {
         mutableStateOf(formState.maxTokens.toString())
+    }
+
+    // 输入校验状态
+    val temperatureError = remember(temperatureText) {
+        val parsed = temperatureText.toDoubleOrNull()
+        when {
+            temperatureText.isBlank() -> null // 空值允许，保存时用默认值
+            parsed == null -> "请输入有效数字"
+            parsed < 0.0 || parsed > 2.0 -> "范围 0-2"
+            else -> null
+        }
+    }
+    val maxTokensError = remember(maxTokensText) {
+        val parsed = maxTokensText.toIntOrNull()
+        when {
+            maxTokensText.isBlank() -> null
+            parsed == null -> "请输入有效整数"
+            parsed < 1 || parsed > 32000 -> "范围 1-32000"
+            else -> null
+        }
     }
 
     val sheetState = rememberModalBottomSheetState()
@@ -413,6 +444,8 @@ private fun ApiConfigFormDialog(
             )
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                // v0.8.3 修复（P2-A-6）：加 contentPadding 提供滚动起始余量
+                contentPadding = PaddingValues(horizontal = Spacing.lg),
             ) {
                 // P2-LAZY-1 修正：LazyRow items 加 key（用 provider.key 唯一标识），避免重组时丢失选中状态
                 // NF-UP4 修正：加 contentType 让 LazyRow 复用同一类型 item 的 slot，提升滚动性能
@@ -461,6 +494,9 @@ private fun ApiConfigFormDialog(
                 },
                 placeholder = "0.7",
                 keyboardType = KeyboardType.Decimal,
+                // v0.8.3（P1-A-1）：输入校验错误反馈
+                isError = temperatureError != null,
+                supportingText = temperatureError,
             )
             FormTextField(
                 label = "最大 Token 数",
@@ -473,18 +509,23 @@ private fun ApiConfigFormDialog(
                 },
                 placeholder = "2000",
                 keyboardType = KeyboardType.Number,
+                // v0.8.3（P1-A-1）：输入校验错误反馈
+                isError = maxTokensError != null,
+                supportingText = maxTokensError,
             )
 
             // 操作按钮行
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.End),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 TextButton(onClick = onDismiss) {
                     Text("取消")
                 }
-                TextButton(
+                // v0.8.3 修复（P2-A-3）：保存是主要操作，改用 FilledTonalButton 提升视觉权重
+                // 有输入错误时禁用保存，防止用户保存非法值
+                FilledTonalButton(
                     onClick = {
                         // P0-3 修复：保存时统一解析本地 state，非法值降级为默认值
                         val parsedTemp = temperatureText.toDoubleOrNull()
@@ -501,6 +542,7 @@ private fun ApiConfigFormDialog(
                         }
                         onSave()
                     },
+                    enabled = temperatureError == null && maxTokensError == null,
                 ) {
                     Text("保存")
                 }
@@ -530,6 +572,9 @@ private fun FormTextField(
     placeholder: String,
     isPassword: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Text,
+    // v0.8.3 新增（P1-A-1）：支持输入校验错误状态与提示文本
+    isError: Boolean = false,
+    supportingText: String? = null,
 ) {
     OutlinedTextField(
         value = value,
@@ -537,8 +582,11 @@ private fun FormTextField(
         label = { Text(label) },
         placeholder = { Text(placeholder) },
         singleLine = true,
-        visualTransformation = if (isPassword) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
+        // v0.8.3 修复（P3-A-2）：使用 import 的 VisualTransformation 替代全限定名
+        visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        isError = isError,
+        supportingText = supportingText?.let { { Text(it) } },
         modifier = Modifier.fillMaxWidth(),
     )
 }

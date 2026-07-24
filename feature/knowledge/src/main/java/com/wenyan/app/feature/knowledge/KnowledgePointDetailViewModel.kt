@@ -8,9 +8,12 @@ import com.wenyan.app.core.data.repository.KnowledgeRepository
 import com.wenyan.app.core.database.entity.DataSourceEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
@@ -27,6 +30,7 @@ import javax.inject.Inject
  * - 关联/对比/延伸知识点标题
  */
 @HiltViewModel
+@OptIn(ExperimentalCoroutinesApi::class)
 class KnowledgePointDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val knowledgeRepository: KnowledgeRepository,
@@ -36,36 +40,52 @@ class KnowledgePointDetailViewModel @Inject constructor(
     val pointId: String = savedStateHandle["pointId"] ?: ""
 
     /**
+     * 重试触发器（v0.8.3 新增：支持 ErrorState 的 onRetry）。
+     *
+     * 自增整数，每次 [retry] 时 +1，触发 [uiState] 的 FlatMapLatest 重新订阅 Flow。
+     */
+    private val retryTrigger = MutableStateFlow(0)
+
+    /**
      * 详情 UI 状态。
      *
      * 观察 Repository 的合并流，数据库变更时自动刷新。
      *
-     * P1-3 修复：加 [catch] 捕获数据流异常。
-     * [knowledgeRepository.observeKnowledgePointDetail] 是 Room Flow（多表 JOIN 合并），
-     * 任何 SQLiteException / CursorWindowAllocationException 都会冒泡到 [stateIn]
-     * 再传给 Compose 收集方，导致 app crash。现捕获并降级为 error 状态。
-     * 注意：catch 后流终止，用户需退出页面重进才能再次加载（无 retry 三件套）。
+     * v0.8.3 重构：用 flatMapLatest 替代直接 stateIn + catch，支持 retry。
+     * 原 catch 后流终止无法重试，现通过 retryTrigger 触发重新订阅。
      */
-    val uiState: StateFlow<KnowledgePointDetailUiState> = knowledgeRepository
-        .observeKnowledgePointDetail(pointId)
-        .map { detail ->
-            if (detail == null) {
-                KnowledgePointDetailUiState(isLoading = false, notFound = true)
-            } else {
-                KnowledgePointDetailUiState(
-                    isLoading = false,
-                    detail = detail,
-                )
-            }
-        }
-        .catch { e ->
-            emit(KnowledgePointDetailUiState(error = e.message ?: "加载失败"))
+    val uiState: StateFlow<KnowledgePointDetailUiState> = retryTrigger
+        .flatMapLatest {
+            knowledgeRepository
+                .observeKnowledgePointDetail(pointId)
+                .map { detail ->
+                    if (detail == null) {
+                        KnowledgePointDetailUiState(isLoading = false, notFound = true)
+                    } else {
+                        KnowledgePointDetailUiState(
+                            isLoading = false,
+                            detail = detail,
+                        )
+                    }
+                }
+                .catch { e ->
+                    emit(KnowledgePointDetailUiState(error = e.message ?: "加载失败"))
+                }
         }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = KnowledgePointDetailUiState(isLoading = true),
         )
+
+    /**
+     * 重试加载（v0.8.3 新增：供 ErrorState 的 onRetry 调用）。
+     *
+     * 触发 [retryTrigger] 自增，重新订阅数据流。
+     */
+    fun retry() {
+        retryTrigger.value++
+    }
 }
 
 /**

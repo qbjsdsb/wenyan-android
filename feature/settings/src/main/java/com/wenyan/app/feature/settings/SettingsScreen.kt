@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -183,17 +184,20 @@ fun SettingsScreen(
                         Column {
                             GroupedCardDivider()
                             // 种子色选择
-                            Row(
+                            // v0.8.3 修复：原 Row 在窄屏（<360dp）下 5 个色块 + "种子色"标签会溢出裁切。
+                            // 改用 FlowRow 自动换行，保证小屏设备完整可见。
+                            FlowRow(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                                verticalAlignment = Alignment.CenterVertically,
+                                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                             ) {
                                 Text(
                                     text = "种子色",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.align(Alignment.CenterVertically),
                                 )
                                 SeedColors.forEach { preset ->
                                     FilterChip(
@@ -241,11 +245,17 @@ fun SettingsScreen(
                                             ),
                                             label = {
                                                 Text(
+                                                    // v0.8.3 修复：原英文标签与其他全中文 UI 不一致，
+                                                    // 用户需猜测含义。改为 M3 中文术语：
+                                                    // Tonal Spot=色调点（默认，种子色直接作主色）
+                                                    // Neutral=中性（降低主色饱和度，偏灰）
+                                                    // Vibrant=鲜艳（提升对比度，色彩浓郁）
+                                                    // Expressive=表现力（多色调对比，最活泼）
                                                     text = when (style) {
-                                                        WenyanPaletteStyle.TONAL_SPOT -> "Tonal Spot"
-                                                        WenyanPaletteStyle.NEUTRAL -> "Neutral"
-                                                        WenyanPaletteStyle.VIBRANT -> "Vibrant"
-                                                        WenyanPaletteStyle.EXPRESSIVE -> "Expressive"
+                                                        WenyanPaletteStyle.TONAL_SPOT -> "色调点"
+                                                        WenyanPaletteStyle.NEUTRAL -> "中性"
+                                                        WenyanPaletteStyle.VIBRANT -> "鲜艳"
+                                                        WenyanPaletteStyle.EXPRESSIVE -> "表现力"
                                                     },
                                                 )
                                             },

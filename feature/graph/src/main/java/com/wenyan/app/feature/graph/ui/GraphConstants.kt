@@ -70,13 +70,19 @@ internal object GraphConstants {
     const val EDGE_WIDTH_WEAK = 1.8f
     /** 高亮边线宽 */
     const val EDGE_WIDTH_HIGHLIGHT = 2f
-    /** 类型描边线宽 */
-    const val NODE_STROKE_WIDTH = 2f
     /** 标签距节点的间距 */
     const val LABEL_OFFSET = 4f
 
+    // v0.8.3 清理：NODE_STROKE_WIDTH 已废弃（v0.8.1 改用形状编码替代描边色），删除
+
     // ── 视口剔除边距（节点半径倍数）──
     const val CULL_MARGIN_RATIO = 4f
+
+    // ── 时间轴布局防重叠参数（v0.8.3 从 GraphLayout 提取）──
+    /** 同泳道节点最小水平间距（px），小于此值触发垂直偏移防重叠 */
+    const val TIMELINE_MIN_SPACING = 35f
+    /** 防重叠垂直偏移步长（px），交替正负排列 */
+    const val TIMELINE_OVERLAP_OFFSET = 14f
 
     // ── 时间轴布局参数 ──
 

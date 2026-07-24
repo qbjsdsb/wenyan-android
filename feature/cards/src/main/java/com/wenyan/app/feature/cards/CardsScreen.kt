@@ -17,10 +17,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.Button
@@ -32,18 +34,31 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ErrorState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.Spacing
@@ -66,10 +81,24 @@ fun CardsScreen(
     viewModel: CardsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // v0.8.4 修复：collect errorMessage，评分/错题记录失败时通过 Snackbar 反馈
+    val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    // v0.8.3 修复：接入 scrollBehavior，长答案滚动时 TopAppBar 可折叠
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+        state = rememberTopAppBarState(),
+    )
+
+    // v0.8.4 修复：errorMessage 非 null 时弹 Snackbar，展示后立即 clearError 避免重组重复弹
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearError()
+        }
+    }
 
     ExpressiveScaffold(
         topBar = {
-            // 卡片翻转界面内容固定不滚动，仅享受 Large 标题样式（不传 scrollBehavior）
             WenyanLargeTopAppBar(
                 title = "记忆卡片",
                 actions = {
@@ -80,8 +109,10 @@ fun CardsScreen(
                         )
                     }
                 },
+                scrollBehavior = scrollBehavior,
             )
         },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding ->
         Crossfade(
             targetState = Triple(uiState.isLoading, uiState.error, uiState.currentCard == null),
@@ -89,6 +120,7 @@ fun CardsScreen(
             label = "cards_state",
             modifier = Modifier
                 .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .padding(innerPadding)
                 .padding(Spacing.lg),
         ) { (isLoading, error, isEmpty) ->
@@ -116,16 +148,12 @@ fun CardsScreen(
                     }
                 }
                 isEmpty -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = "今日复习已完成，暂无待复习卡片",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    // v0.8.3 优化：用 EmptyState 组件替代裸 Text，与全 App 一致 + 鼓励文案
+                    EmptyState(
+                        icon = Icons.Default.CheckCircle,
+                        title = "今日复习已完成",
+                        description = "暂无待复习卡片，可去知识点列表预习新内容",
+                    )
                 }
                 else -> {
                     uiState.currentCard?.let { card ->
@@ -219,6 +247,12 @@ private fun FlipCard(
                 // 修正 3D 透视失真：cameraDistance 越大透视效果越弱（边缘拉伸越小）
                 // 默认值偏小导致 180° 翻转时边缘严重拉伸
                 cameraDistance = 12 * density
+            }
+            // v0.8.4 修复：FlipCard 无障碍语义，TalkBack 用户可感知"可翻转/已翻转"
+            .semantics {
+                role = Role.Button
+                contentDescription = if (isFlipped) "答案面，双击返回问题" else "问题面，双击查看答案"
+                stateDescription = if (isFlipped) "已翻转" else "未翻转"
             },
         colors = CardDefaults.cardColors(containerColor = containerColor),
         onClick = onClick,
@@ -274,24 +308,25 @@ private fun RatingButtons(onRate: (CardRating) -> Unit) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
+        // v0.8.4 修复：评分按钮默认 40dp < 48dp 触控下限，加 heightIn 保底
         FilledTonalButton(
             onClick = { onRate(CardRating.AGAIN) },
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).heightIn(min = 48.dp),
         ) { Text("不会") }
 
         OutlinedButton(
             onClick = { onRate(CardRating.HARD) },
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).heightIn(min = 48.dp),
         ) { Text("困难") }
 
         OutlinedButton(
             onClick = { onRate(CardRating.GOOD) },
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).heightIn(min = 48.dp),
         ) { Text("良好") }
 
         Button(
             onClick = { onRate(CardRating.EASY) },
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).heightIn(min = 48.dp),
         ) { Text("简单") }
     }
 }

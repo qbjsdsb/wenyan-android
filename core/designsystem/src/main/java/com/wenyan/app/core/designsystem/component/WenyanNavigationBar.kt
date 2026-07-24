@@ -54,7 +54,10 @@ fun WenyanNavigationBar(
             NavigationBarItem(
                 selected = selected,
                 onClick = { onNavigate(item.route) },
-                icon = { Icon(imageVector = item.icon, contentDescription = item.label) },
+                // v0.8.3 修复：原 contentDescription = item.label 与 label Text 重复，
+                // TalkBack 朗读"首页首页"。NavigationBarItem 已合并子节点语义，
+                // Icon 设为装饰性（null），由 label Text 提供唯一语义名称。
+                icon = { Icon(imageVector = item.icon, contentDescription = null) },
                 label = { Text(text = item.label) },
                 colors = NavigationBarItemDefaults.colors(
                     indicatorColor = MaterialTheme.colorScheme.secondaryContainer,

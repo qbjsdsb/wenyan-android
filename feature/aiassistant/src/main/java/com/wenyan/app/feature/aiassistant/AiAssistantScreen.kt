@@ -171,7 +171,12 @@ fun AiAssistantScreen(
                         )
                     }
                     // NF-PP6 Wave 3.1: 新建对话按钮(切换到新对话,保留历史)
-                    IconButton(onClick = viewModel::startNewConversation) {
+                    // v0.8.3 修复：messages 为空时已是新对话，按钮 disable 避免无效点击
+                    // 与"清空对话"按钮的 enabled 逻辑一致
+                    IconButton(
+                        onClick = viewModel::startNewConversation,
+                        enabled = uiState.messages.isNotEmpty(),
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "新建对话",
@@ -397,7 +402,12 @@ private fun LearningToolDialog(
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         title = { Text(title) },
         text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
+            // v0.8.3 修复：原 Column 无 verticalArrangement，说明文字/输入框/按钮紧贴一起
+            // 视觉拥挤且误触率高。加 spacedBy(Spacing.sm) 保证 8dp 间距。
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
                 when (mode) {
                     LearningToolMode.ESSAY_GUIDE -> EssayGuideFields(onEssayGuide)
                     LearningToolMode.WRONG_ANSWER -> WrongAnswerFields(onWrongAnswer)

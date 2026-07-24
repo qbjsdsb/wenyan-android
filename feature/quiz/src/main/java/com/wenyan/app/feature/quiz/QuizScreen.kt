@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -19,6 +20,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -114,7 +117,8 @@ fun QuizScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
-                .padding(innerPadding),
+                .padding(innerPadding)
+                .imePadding(),
         ) {
             // 年份选择行
             YearSelector(
@@ -202,7 +206,8 @@ private fun YearSelector(
                 onClick = { onYearSelected(year) },
                 label = { Text("${year}年") },
                 leadingIcon = if (selectedYear == year) {
-                    { Text("✓") }
+                    // v0.8.3 修复：原用 Text("✓") Unicode 字符，改为 Material Icon 保持视觉一致
+                    { Icon(Icons.Default.Check, contentDescription = null) }
                 } else {
                     null
                 },
@@ -452,6 +457,7 @@ private fun AnswerSection(
     }
 
     // ── 答题交互区(NF-PP5 Wave 3.2 新增)─────────────────────────
+    // v0.8.4 修复：imePadding 移至 QuizScreen 顶层 Column，避免每个 QuestionCard 重复消费 insets
     Column(modifier = Modifier.padding(top = Spacing.sm)) {
         // ── 状态 1: 未提交 → 输入框 + 提交按钮 ──
         if (!answerState.isSubmitted) {
@@ -466,7 +472,7 @@ private fun AnswerSection(
             )
             Button(
                 onClick = onSubmitAnswer,
-                enabled = answerState.userAnswer.isNotBlank(),
+                enabled = answerState.userAnswer.isNotBlank() && !answerState.isSubmitted,
                 modifier = Modifier
                     .padding(top = Spacing.xs)
                     .align(Alignment.End),
@@ -560,12 +566,15 @@ private fun AnswerSection(
                 ) {
                     FilledTonalButton(
                         onClick = { onSelfEvaluate(true) },
+                        // v0.8.3 修复：防抖，避免快速连点重复写入错题本
+                        enabled = !answerState.isSelfEvaluated,
                         modifier = Modifier.weight(1f),
                     ) {
                         Text("答对了")
                     }
                     FilledTonalButton(
                         onClick = { onSelfEvaluate(false) },
+                        enabled = !answerState.isSelfEvaluated,
                         modifier = Modifier.weight(1f),
                     ) {
                         Text("答错了")
@@ -573,10 +582,11 @@ private fun AnswerSection(
                 }
             } else {
                 // ── 状态 3: 已自评 → 对错反馈 ──
-                val (feedbackText, feedbackColor) = if (answerState.isCorrect) {
-                    "✓ 自评：答对了" to MaterialTheme.colorScheme.primary
+                // v0.8.4 修复：原用 Unicode ✓/✗ 字符，改为 Material Icon 保持视觉一致
+                val (feedbackText, feedbackColor, feedbackIcon) = if (answerState.isCorrect) {
+                    Triple("自评：答对了", MaterialTheme.colorScheme.primary, Icons.Default.Check)
                 } else {
-                    "✗ 自评：答错了（已加入错题本）" to MaterialTheme.colorScheme.error
+                    Triple("自评：答错了（已加入错题本）", MaterialTheme.colorScheme.error, Icons.Default.Close)
                 }
                 Surface(
                     color = if (answerState.isCorrect) {
@@ -587,13 +597,23 @@ private fun AnswerSection(
                     shape = MaterialTheme.shapes.small,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(
-                        text = feedbackText,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = feedbackColor,
+                    Row(
                         modifier = Modifier.padding(Spacing.sm),
-                    )
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    ) {
+                        Icon(
+                            imageVector = feedbackIcon,
+                            contentDescription = null,
+                            tint = feedbackColor,
+                        )
+                        Text(
+                            text = feedbackText,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = feedbackColor,
+                        )
+                    }
                 }
             }
         }

@@ -5,13 +5,13 @@
 
 ## ✅ 当前状态
 
-**v0.8.1 知识图谱三模式重构 + 形状编码完成** — 图谱覆盖率 4.4%→100%（910 知识点全部入图，2123+ 节点 968+ 边）+ 三模式布局可切换（时间轴/邻域力导向/径向概览）+ 形状编码替代描边色 + 边语义化（中文标签 + 线型）+ LegendBar 可折叠，485 真题数据全绿。
+**v0.8.3 全面 UI/UX 打磨完成** — 19 个文件 30+ 项修复：设计系统（labelSmall字重/导航栏语义/触控目标/状态同步）+ ApiConfigScreen（输入校验/rememberSaveable/RadioButton/FilledTonalButton/FAB隐藏）+ KnowledgeScreen（卡片间距）+ GraphCanvas（科目标签预缓存/pointerInput稳定）+ 多Screen错误状态/IME适配/二次确认/FontWeight统一。assembleDebug + testDebugUnitTest 全绿。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | 待提交（v0.8.1 知识图谱三模式重构） |
-| 最新 Release | **v0.7.5**（待打 tag） — v0.8.1 待 emulator 实测后打 tag |
-| 编译验证 | **:feature:graph + :core:data compileDebugKotlin SUCCESSFUL** |
+| 最新 commit | 待提交（v0.8.3 全面 UI/UX 打磨） |
+| 最新 Release | **v0.7.5**（待打 tag） — v0.8.3 待 emulator 实测后打 tag |
+| 编译验证 | **:app:assembleDebug + :app:testDebugUnitTest SUCCESSFUL** |
 | 知识点 | **910 个**（entities/relations 数据补全，自动入图） |
 | 真题 | **485 道**（v0.7.6 已删除 sample_essay 冗余字段） |
 | seed 版本 | **2.11.0**（触发重新导入，保留用户 FSRS 学习进度） |
@@ -22,7 +22,7 @@
 | 图谱布局 | **三模式可切换**：时间轴（默认）/ 邻域力导向 / 径向概览 |
 | 视觉编码 | **3 层正交**：颜色=掌握度 / 尺寸=重要性 / 形状=类型（圆/方/菱/三角/星） |
 | 阻塞 | **CI 账单问题** — 需用户处理，不影响 Release（debug 签名可用） |
-| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-24 v0.8.1 知识图谱三模式重构） |
+| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-24 v0.8.3 全面 UI/UX 打磨） |
 
 ## 🚨 新会话首要任务
 

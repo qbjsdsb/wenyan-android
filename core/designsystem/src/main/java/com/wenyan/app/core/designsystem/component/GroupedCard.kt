@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -107,6 +108,10 @@ fun GroupedCardItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            // v0.8.3 修复：保证可点击行最小触控目标 48dp（M3 无障碍规范）。
+            // 原实现 padding(top/bottom = Spacing.md = 12dp) + 单行 bodyLarge ≈ 48dp，
+            // 但若 title 短或仅 leadingIcon 无 description 时实测可能不足 48dp。
+            .heightIn(min = 48.dp)
             // P1-4 修复：onClick != null 时加 mergeDescendants，合并 title/description/subtitle
             // 为单一语义节点，TalkBack 一次性朗读而非逐个滑动。
             // trailing 为 Switch 时 onClick 通常为 null，不影响 Switch 独立语义。

@@ -32,7 +32,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Inbox
-import androidx.compose.material.icons.filled.LocationSearching
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
@@ -175,7 +175,7 @@ fun GraphScreen(
                     }
                     IconButton(onClick = { resetTrigger++ }) {
                         Icon(
-                            imageVector = Icons.Default.LocationSearching,
+                            imageVector = Icons.Default.Refresh,
                             contentDescription = "重置视图",
                         )
                     }
@@ -388,16 +388,13 @@ private fun LayoutModeSelector(
                         count = LayoutMode.entries.size,
                     ),
                     label = {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            Text(
-                                text = mode.displayName,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (selectedMode == mode) FontWeight.SemiBold
-                                    else FontWeight.Normal,
-                            )
-                        }
+                        // v0.8.3 修复：移除冗余 Column 包裹（原仅含单个 Text）
+                        Text(
+                            text = mode.displayName,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (selectedMode == mode) FontWeight.SemiBold
+                                else FontWeight.Normal,
+                        )
                     },
                 )
             }
@@ -636,14 +633,15 @@ private fun LegendBar(
                 )
                 IconButton(
                     onClick = onToggle,
-                    modifier = Modifier.size(28.dp),
+                    // v0.8.3 修复：触控目标 48dp（WCAG），原 28dp 低于标准
+                    modifier = Modifier.size(48.dp),
                 ) {
                     Icon(
                         imageVector = if (collapsed) Icons.Default.PlayArrow
                             else Icons.Default.Close,
                         contentDescription = if (collapsed) "展开图例" else "收起图例",
                         tint = colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             }
@@ -1029,7 +1027,7 @@ private fun NodeDetailSheet(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.LocationSearching,
+                                    imageVector = Icons.Default.Refresh,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onTertiaryContainer,
                                     modifier = Modifier.size(20.dp),

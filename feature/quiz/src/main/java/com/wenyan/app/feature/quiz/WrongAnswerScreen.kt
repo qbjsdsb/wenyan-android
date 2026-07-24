@@ -11,12 +11,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -24,12 +26,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -39,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.designsystem.component.ChipVariant
 import com.wenyan.app.core.designsystem.component.EmptyState
+import com.wenyan.app.core.designsystem.component.ErrorState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.TonalCard
@@ -72,9 +81,20 @@ fun WrongAnswerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
+    // v0.8.4 修复：collect errorMessage，删除/标记失败时通过 Snackbar 反馈
+    val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
     )
+
+    // v0.8.4 修复：errorMessage 非 null 时弹 Snackbar，展示后立即 clearError 避免重组重复弹
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearError()
+        }
+    }
 
     ExpressiveScaffold(
         topBar = {
@@ -84,6 +104,7 @@ fun WrongAnswerScreen(
                 scrollBehavior = scrollBehavior,
             )
         },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -97,12 +118,13 @@ fun WrongAnswerScreen(
                 onFilterSelected = viewModel::setFilter,
             )
 
+            // v0.8.4 修复：Crossfade key 加 error 字段，加载失败时走 ErrorState 分支（原伪装为空状态）
             Crossfade(
-                targetState = Triple(uiState.isLoading, uiState.items.isEmpty(), filter),
+                targetState = Triple(uiState.isLoading, uiState.error, uiState.items.isEmpty()),
                 animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
                 label = "wrong_answer_state",
                 modifier = Modifier.fillMaxSize(),
-            ) { (isLoading, isEmpty, currentFilter) ->
+            ) { (isLoading, error, isEmpty) ->
                 when {
                     isLoading -> {
                         Box(
@@ -112,10 +134,24 @@ fun WrongAnswerScreen(
                             WenyanLoadingIndicator()
                         }
                     }
+                    error != null -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            ErrorState(
+                                icon = Icons.Default.CloudOff,
+                                title = "加载失败",
+                                message = error,
+                                onRetry = viewModel::retry,
+                            )
+                        }
+                    }
                     isEmpty -> {
                         EmptyState(
-                            icon = Icons.Filled.Inbox,
-                            title = when (currentFilter) {
+                            // v0.8.4 修复：Inbox 语义弱，改用 ErrorOutline 更贴切"错题"语义
+                            icon = Icons.Default.ErrorOutline,
+                            title = when (filter) {
                                 WrongAnswerFilter.UNRESOLVED -> "暂无未解决错题"
                                 WrongAnswerFilter.ALL -> "错题本为空"
                             },
@@ -140,19 +176,15 @@ private fun WrongAnswerFilterRow(
     currentFilter: WrongAnswerFilter,
     onFilterSelected: (WrongAnswerFilter) -> Unit,
 ) {
-    LazyRow(
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(
-            horizontal = Spacing.lg,
-            vertical = Spacing.sm,
-        ),
+    // v0.8.4 修复：仅 2 项过滤用 LazyRow 过度设计，改用普通 Row 减少开销
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        items(
-            items = WrongAnswerFilter.values(),
-            key = { it.name },
-            contentType = { "filter" },
-        ) { filterOption ->
+        // v0.8.4 修复：values() 已 deprecated，改用 entries
+        WrongAnswerFilter.entries.forEach { filterOption ->
             FilterChip(
                 selected = currentFilter == filterOption,
                 onClick = { onFilterSelected(filterOption) },
@@ -165,7 +197,7 @@ private fun WrongAnswerFilterRow(
                     )
                 },
                 leadingIcon = if (currentFilter == filterOption) {
-                    { Text("✓") }
+                    { Icon(Icons.Default.Check, contentDescription = null) }
                 } else {
                     null
                 },
@@ -181,6 +213,9 @@ private fun WrongAnswerList(
     onMarkResolved: (String) -> Unit,
     onDelete: (String) -> Unit,
 ) {
+    // v0.8.3 新增：删除二次确认状态，防止误触丢失学习数据
+    var deletingItem by remember { mutableStateOf<WrongAnswerItem?>(null) }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
@@ -193,10 +228,44 @@ private fun WrongAnswerList(
             WrongAnswerCard(
                 item = item,
                 onMarkResolved = { onMarkResolved(item.id) },
-                onDelete = { onDelete(item.id) },
+                onDelete = { deletingItem = item },
                 modifier = Modifier.animateItem(),
             )
         }
+    }
+
+    // v0.8.3 新增：删除确认 Dialog（与 ApiConfigScreen/AiAssistantScreen 行为一致）
+    // v0.8.4 修复：Dialog 展示错题内容预览，多条时用户可确认删哪条
+    deletingItem?.let { item ->
+        AlertDialog(
+            onDismissRequest = { deletingItem = null },
+            title = { Text("删除错题") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    Text("确定删除此错题吗？此操作不可撤销。")
+                    Text(
+                        text = "你的答案：${item.userAnswer.take(60)}${if (item.userAnswer.length > 60) "…" else ""}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDelete(item.id)
+                        deletingItem = null
+                    },
+                ) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingItem = null }) {
+                    Text("取消")
+                }
+            },
+        )
     }
 }
 
@@ -258,9 +327,11 @@ private fun WrongAnswerCard(
                     .fillMaxWidth()
                     .padding(top = Spacing.xs),
             ) {
+                // v0.8.4 修复：surfaceVariant 配 onSurfaceVariant 而非默认 onSurface
                 Text(
                     text = item.userAnswer,
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(Spacing.sm),
                 )
             }
@@ -283,8 +354,10 @@ private fun WrongAnswerCard(
             }
 
             // 4. 时间行
+            // v0.8.4 修复：SimpleDateFormat 未 remember，每次重组创建新实例
+            val timeFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
             Text(
-                text = "最后答错：${formatTime(item.lastWrongAt)}",
+                text = "最后答错：${timeFormat.format(Date(item.lastWrongAt))}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = Spacing.sm),
@@ -311,13 +384,15 @@ private fun WrongAnswerCard(
                         Text("标记已解决")
                     }
                 }
+                // v0.8.4 修复：删除是破坏性操作，按钮用 error 色传达危险语义
                 TextButton(onClick = onDelete) {
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(end = Spacing.xs),
                     )
-                    Text("删除")
+                    Text("删除", color = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -331,10 +406,4 @@ private fun formatSource(source: String): String = when (source) {
     WrongAnswerRepository.SOURCE_CARD_AGAIN -> "卡片复习"
     WrongAnswerRepository.SOURCE_QUIZ_WRONG -> "真题练习"
     else -> source
-}
-
-/** 时间戳格式化为 "yyyy-MM-dd HH:mm" */
-private fun formatTime(timestamp: Long): String {
-    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-    return sdf.format(Date(timestamp))
 }

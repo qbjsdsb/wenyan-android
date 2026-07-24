@@ -70,7 +70,7 @@ private fun TermExplanationContent(card: TermExplanationCard, isFlipped: Boolean
             Text(
                 text = card.front,
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
             Text(
                 text = "（名词解释 · ${categoryLabel(card.category)}）",
@@ -212,7 +212,7 @@ private fun ClozeQuoteContent(card: ClozeQuoteCard, isFlipped: Boolean) {
             Text(
                 text = "答案：${card.blank}",
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary,
             )
         }
@@ -242,7 +242,7 @@ private fun WorkAuthorContent(card: WorkAuthorBidirectionalCard, isFlipped: Bool
                 Text(
                     text = card.front,
                     style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
                 )
                 Text(
@@ -254,7 +254,7 @@ private fun WorkAuthorContent(card: WorkAuthorBidirectionalCard, isFlipped: Bool
                 Text(
                     text = card.back,
                     style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Center,
                 )
@@ -287,7 +287,7 @@ private fun EssayPointsContent(card: EssayPointsCard, isFlipped: Boolean) {
             Text(
                 text = card.question,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
         } else {
             Text(
@@ -325,7 +325,7 @@ private fun SchoolComparisonContent(card: SchoolComparisonCard, isFlipped: Boole
             Text(
                 text = card.front,
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
             Text(
                 text = "（流派对照 · 共${card.schools.size}个流派）",
@@ -354,7 +354,7 @@ private fun SchoolRow(school: SchoolInfo) {
         Text(
             text = school.name,
             style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary,
         )
         FieldRow("时期", school.period)
@@ -392,7 +392,7 @@ private fun DistinctionContent(card: DistinctionCard, isFlipped: Boolean) {
                 Text(
                     text = card.item1,
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                 )
                 Text(
                     text = "VS",
@@ -402,7 +402,7 @@ private fun DistinctionContent(card: DistinctionCard, isFlipped: Boolean) {
                 Text(
                     text = card.item2,
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
         } else {

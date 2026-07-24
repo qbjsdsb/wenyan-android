@@ -264,7 +264,7 @@ internal object GraphLayout {
         }
 
         // 同泳道节点防重叠：x 坐标最小间距
-        val minSpacing = 35f
+        // v0.8.3：提取到 GraphConstants.TIMELINE_MIN_SPACING / TIMELINE_OVERLAP_OFFSET
         val laneNodeXs = mutableMapOf<Int, MutableList<Float>>()
 
         for (node in nodes) {
@@ -274,9 +274,9 @@ internal object GraphLayout {
 
             // 防重叠：如果同泳道同 x 附近已有节点，垂直偏移
             val xs = laneNodeXs.getOrPut(laneIdx) { mutableListOf() }
-            val overlapCount = xs.count { kotlin.math.abs(it - x) < minSpacing }
+            val overlapCount = xs.count { kotlin.math.abs(it - x) < GraphConstants.TIMELINE_MIN_SPACING }
             xs.add(x)
-            val finalY = y + overlapCount * 14f * (if (overlapCount % 2 == 0) 1 else -1)
+            val finalY = y + overlapCount * GraphConstants.TIMELINE_OVERLAP_OFFSET * (if (overlapCount % 2 == 0) 1 else -1)
 
             positions[node.id] = Offset(x, finalY)
             nodeSubject[node.id] = node.subjectId ?: "unknown"
@@ -292,11 +292,7 @@ internal object GraphLayout {
         )
     }
 
-    /** 判断目标节点 ID 是否是体裁节点 */
-    private fun targetIsGenre(targetId: String, nodes: List<GraphNodeItem>): Boolean {
-        val target = nodes.find { it.id == targetId } ?: return false
-        return target.type == "CONCEPT" && target.metadata?.get("dimension") == "genre"
-    }
+    // v0.8.3 清理：targetIsGenre 函数已废弃（v0.8.1 改用 findGenreLaneIndex 基于 label 匹配），删除
 
     // ==================== 模式二：邻域力导向布局 ====================
 

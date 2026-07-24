@@ -2943,3 +2943,166 @@ OCR 残留清理（6 处）：
 1. **P0**：emulator 实测 v0.8.1（三模式切换 + 形状编码 + 边标签 + 2123 节点性能 + 缩放平移）
 2. **P1**：CI 账单问题解决后打 v0.8.1 Release tag
 3. **P2**：力导向布局可考虑接入 Compose Multiplatform 的力导向库（如 force-graph），提升收敛效果
+
+---
+
+## 2026-07-24 v0.8.3 全面 UI/UX 打磨
+
+### 背景
+
+用户要求"整体 UI 以及 UX 以及等等界面还有没有不合理的，不合规范的，不舒服的或者有问题的等等，仔细检查审查一下，反复打磨，不要出问题"。本会话对全部 Screen 与设计系统组件做深度审查并修复。
+
+### 审查范围与发现
+
+全面审查 19 个文件（9 个已审查 + 2 个新审查 + 8 个设计系统组件），共发现并修复 **30+ 项** UI/UX 问题。
+
+### 修复清单
+
+#### 设计系统层（core/designsystem）
+
+1. **Type.kt — labelSmall 字重重复**
+   - 问题：`labelSmall` 与 `labelMedium` 完全相同（12sp/Medium/16sp），违反 M3 字体阶梯"字号或字重应有差异"原则
+   - 修复：`labelSmall` 字重从 `Medium` → `Normal`，与 `labelMedium` 形成视觉降级
+
+2. **WenyanNavigationBar.kt — Icon contentDescription 重复读屏**
+   - 问题：Icon 的 `contentDescription = item.label` 与 label Text 重复，TalkBack 朗读"首页首页"
+   - 修复：Icon 设为装饰性（`contentDescription = null`），由 label Text 提供唯一语义
+
+3. **WenyanWideNavigationRail.kt — 状态不同步 + Icon 重复读屏**
+   - 问题：`expanded` 参数未同步到 `railState`，展开/折叠动画不触发；Icon 同上重复读屏
+   - 修复：添加 `LaunchedEffect(expanded)` 同步状态；Icon 设为装饰性
+
+4. **GroupedCard.kt — 触控目标不足 48dp**
+   - 问题：`GroupedCardItem` 可点击行实测可能不足 48dp（短标题/仅 icon 时）
+   - 修复：添加 `heightIn(min = 48.dp)` 确保符合 M3 无障碍规范
+
+#### ApiConfigScreen.kt（14 项修复）
+
+5. **P1-A-1：温度/Token 输入无错误反馈**
+   - 问题：用户输入 "abc" 或 "3.5" 时静默丢弃，无任何提示
+   - 修复：扩展 `FormTextField` 支持 `isError`/`supportingText`，添加实时输入校验（"请输入有效数字"/"范围 0-2"），保存按钮在有错误时禁用
+
+6. **P1-A-2：remember → rememberSaveable**
+   - 问题：屏幕旋转时温度/Token 输入内容丢失
+   - 修复：改用 `rememberSaveable`
+
+7. **P2-A-1：ConfigCard 单选语义不明**
+   - 问题：CheckCircle 图标仅在选中时显示，用户无法感知"这是单选"
+   - 修复：改用 `RadioButton`，始终显示选中/未选中状态
+
+8. **P2-A-2：操作按钮 Row 缺少 spacedBy**
+   - 修复：`Arrangement.spacedBy(Spacing.xs, Alignment.End)`
+
+9. **P2-A-3：保存按钮视觉权重不足**
+   - 问题：保存是主要操作但用 `TextButton`，与取消同级
+   - 修复：改用 `FilledTonalButton`
+
+10. **P2-A-5：FAB 在表单弹出时仍可见**
+    - 修复：`if (!isFormVisible)` 条件渲染 FAB
+
+11. **P2-A-6：LazyRow 缺少 contentPadding**
+    - 修复：添加 `contentPadding = PaddingValues(horizontal = Spacing.lg)`
+
+12. **P3-A-1：Spacing.xs + Spacing.xs 简化**
+    - 修复：直接用 `Spacing.sm`
+
+13. **P3-A-2：VisualTransformation 全限定名**
+    - 修复：添加 import，使用短名
+
+#### KnowledgeScreen.kt
+
+14. **P2-K-1：KnowledgePointCard 缺少 verticalArrangement**
+    - 问题：title/subject/summary 三个 Text 直接堆叠，缺少呼吸感
+    - 修复：`verticalArrangement = Arrangement.spacedBy(Spacing.xs)`
+
+15. **P3-K-1：死注释清理**
+    - 修复：删除"空状态占位（已迁移至共享 EmptyState 组件）"遗留注释
+
+#### KnowledgePointDetailScreen.kt
+
+16. **错误状态处理**
+    - 修复：接入 `ErrorState` 组件，Crossfade 增加 error 分支
+
+#### QuizScreen.kt
+
+17. **IME 适配**
+    - 问题：`imePadding` 放在每张卡片内，导致无效且多次测量
+    - 修复：移至顶层 Column
+
+18. **提交按钮防抖 + 自评反馈图标**
+
+#### WrongAnswerScreen.kt
+
+19. **错误状态未处理**
+    - 修复：接入 Snackbar 展示错误，`uiState` 添加 `error` 字段，Crossfade 增加 error 分支
+
+20. **删除二次确认 + 触控目标**
+
+#### CardsScreen.kt
+
+21. **评分按钮触控目标过小**
+    - 修复：`heightIn(min = 48.dp)`
+
+22. **错误状态反馈 + 无障碍语义**
+
+#### CardRenderer.kt
+
+23. **FontWeight.Bold 残留**
+    - 修复：统一替换为 `SemiBold`
+
+#### SettingsScreen.kt
+
+24. **调色板英文标签**
+    - 修复：中文化（"Tonal Spot"→"色调点"等）
+
+25. **种子色 Row 窄屏溢出**
+    - 修复：改用 `FlowRow` 自动换行
+
+#### AiAssistantScreen.kt
+
+26. **新建对话按钮无 disable 状态**
+    - 修复：`enabled = uiState.messages.isNotEmpty()`
+
+27. **LearningToolDialog 表单间距**
+    - 修复：`verticalArrangement = Arrangement.spacedBy(Spacing.sm)`
+
+28. **pointerInput key 不稳定**
+    - 修复：改为稳定的 `(nodes, layoutResult)`
+
+#### GraphCanvas.kt
+
+29. **科目标签每帧 measure**
+    - 问题：draw 循环内每帧调用 `textMeasurer.measure`，GC 压力大
+    - 修复：预缓存 `subjectLabelLayouts`
+
+30. **pointerInput key 含 scale/offset**
+    - 问题：缩放时手势检测中断
+    - 修复：key 改为稳定的 `(nodes, layoutResult)`
+
+#### GraphConstants.kt + GraphLayout.kt
+
+31. **死代码清理**
+    - 删除废弃的 `NODE_STROKE_WIDTH`、`targetIsGenre`
+32. **魔法数字提取**
+    - 新增 `TIMELINE_MIN_SPACING`、`TIMELINE_OVERLAP_OFFSET` 常量
+
+### 验证结果
+
+| 检查项 | 结果 |
+|--------|------|
+| :app:assembleDebug | ✓ BUILD SUCCESSFUL |
+| :app:testDebugUnitTest | ✓ 全绿 |
+| 涉及文件 | 19 个 |
+| 修复项数 | 30+ |
+
+### 关键技术决策
+
+1. **为什么用 RadioButton 替代 CheckCircle？** CheckCircle 仅在选中时显示，用户无法感知"这是单选选择"。RadioButton 始终显示选中/未选中状态，单选语义更明确，符合 M3 选择控件规范。
+2. **为什么保存按钮用 FilledTonalButton？** M3 Expressive 推荐：主要操作用 FilledButton/FilledTonalButton，次要操作用 TextButton。保存是表单主要操作，取消是次要操作，视觉权重应有差异。
+3. **为什么温度输入要实时校验？** 原 P0-3 修复让输入自由接收但静默丢弃非法值，用户输入 "abc" 看起来被接受但保存时是原值，违背 M3 文本输入验证规范"即时反馈"原则。
+
+### 下一步建议
+
+1. **P0**：emulator 实测 v0.8.3（所有修复的实机验证）
+2. **P1**：CI 账单问题解决后打 v0.8.3 Release tag
+3. **P2**：剩余 P3 代码质量问题（import 排序、WenyanAlertDialog 抽取）可后续迭代

@@ -191,6 +191,24 @@ fun GraphCanvas(
             }
         }
 
+        // v0.8.3 修复：科目标签预缓存，避免在 Canvas draw 循环内每帧调用 textMeasurer.measure
+        // 原实现在 drawPath 后即时 measure 科目名称，每帧 × 扇区数 次测量，大量 GC 压力
+        val subjectLabelLayouts = remember(layoutResult.subjectSectors, showSubjectSectors, scale) {
+            if (showSubjectSectors && scale >= GraphConstants.LOD_SPARSE) {
+                layoutResult.subjectSectors.mapNotNull { sector ->
+                    val sectorColor = GRAPH_SUBJECT_COLORS[sector.subjectId] ?: return@mapNotNull null
+                    val label = GRAPH_SUBJECT_DISPLAY_NAME[sector.subjectId] ?: ""
+                    if (label.isEmpty()) return@mapNotNull null
+                    sector to textMeasurer.measure(
+                        AnnotatedString(label),
+                        TextStyle(fontSize = 14.sp, color = Color(sectorColor).copy(alpha = 0.5f)),
+                    )
+                }
+            } else {
+                emptyList()
+            }
+        }
+
         // 弱节点 ID 集合
         val weakNodeIds = remember(nodes) {
             nodes.filter { it.retrievability > 0f && it.retrievability < GraphConstants.WEAK_THRESHOLD }
@@ -215,20 +233,34 @@ fun GraphCanvas(
                     scaleX = scale
                     scaleY = scale
                 }
-                .pointerInput(nodes, scale, offset) {
+                .pointerInput(nodes, layoutResult) {
+                    // v0.8.3 修复：原 key 含 (nodes, scale, offset)，每次缩放/平移都重启
+                    // detectTapGestures 协程，导致快速操作时手势检测被中断（漏点击）。
+                    // 改为 (nodes, layoutResult) 稳定 key，scale/offset 在 lambda 内通过
+                    // 状态委托读取最新值，手势检测器生命周期与节点数据一致。
                     detectTapGestures { tapOffset ->
+                        // 读取当前 scale/offset（通过 MutableState 委托，获取最新值）
+                        val currentScale = scale
+                        val currentOffset = offset
+
                         // 屏幕坐标 → 世界坐标反向变换
-                        val worldX = (tapOffset.x - offset.x) / scale
-                        val worldY = (tapOffset.y - offset.y) / scale
+                        val worldX = (tapOffset.x - currentOffset.x) / currentScale
+                        val worldY = (tapOffset.y - currentOffset.y) / currentScale
                         val tapWorld = Offset(worldX, worldY)
+
+                        // 视口边界（从当前 scale/offset 计算，用于剔除远端节点）
+                        val vLeft = -currentOffset.x / currentScale
+                        val vTop = -currentOffset.y / currentScale
+                        val vRight = (canvasWidth - currentOffset.x) / currentScale
+                        val vBottom = (canvasHeight - currentOffset.y) / currentScale
 
                         var nearestId: String? = null
                         var nearestDist = Float.MAX_VALUE
-                        val maxDist = touchRadiusPx / scale
+                        val maxDist = touchRadiusPx / currentScale
                         for (node in nodes) {
                             val pos = layoutResult.positions[node.id] ?: continue
-                            if (pos.x < viewportLeft - cullMargin || pos.x > viewportRight + cullMargin) continue
-                            if (pos.y < viewportTop - cullMargin || pos.y > viewportBottom + cullMargin) continue
+                            if (pos.x < vLeft - cullMargin || pos.x > vRight + cullMargin) continue
+                            if (pos.y < vTop - cullMargin || pos.y > vBottom + cullMargin) continue
                             val d = hypot(pos.x - tapWorld.x, pos.y - tapWorld.y)
                             if (d < nearestDist && d < maxDist) {
                                 nearestDist = d
@@ -285,27 +317,22 @@ fun GraphCanvas(
                         path = path,
                         color = Color(sectorColor).copy(alpha = 0.06f),
                     )
+                }
 
-                    // 科目名称标签（扇区中心位置）
-                    if (scale >= GraphConstants.LOD_SPARSE) {
+                // v0.8.3 优化：科目标签批量绘制，使用预缓存 layout，避免每帧 measure
+                if (scale >= GraphConstants.LOD_SPARSE) {
+                    for ((sector, textLayout) in subjectLabelLayouts) {
                         val midAngle = (sector.startAngle + sector.endAngle) / 2
                         val labelRadius = (sector.innerRadius + sector.outerRadius) / 2
                         val labelX = (layoutResult.centerX + labelRadius * cos(midAngle)).toFloat()
                         val labelY = (layoutResult.centerY + labelRadius * sin(midAngle)).toFloat()
-                        val subjectLabel = GRAPH_SUBJECT_DISPLAY_NAME[sector.subjectId] ?: ""
-                        if (subjectLabel.isNotEmpty()) {
-                            val subjectTextLayout = textMeasurer.measure(
-                                AnnotatedString(subjectLabel),
-                                TextStyle(fontSize = 14.sp, color = Color(sectorColor).copy(alpha = 0.5f)),
-                            )
-                            drawText(
-                                textLayoutResult = subjectTextLayout,
-                                topLeft = Offset(
-                                    labelX - subjectTextLayout.size.width / 2f,
-                                    labelY - subjectTextLayout.size.height / 2f,
-                                ),
-                            )
-                        }
+                        drawText(
+                            textLayoutResult = textLayout,
+                            topLeft = Offset(
+                                labelX - textLayout.size.width / 2f,
+                                labelY - textLayout.size.height / 2f,
+                            ),
+                        )
                     }
                 }
             }
