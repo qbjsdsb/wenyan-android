@@ -130,7 +130,6 @@ fun testExamQuestion(
     questionType: String = "ESSAY",
     score: Int = 25,
     answerFramework: String? = "1. 词坛贡献 2. 诗歌成就 3. 散文影响",
-    sampleEssay: String? = null,
     answerStatus: String? = "HAS_ANSWER",
     examPaperCode: String? = "805",
 ): ExamQuestionEntity = ExamQuestionEntity(
@@ -143,7 +142,6 @@ fun testExamQuestion(
     angle = null,
     relatedPointIds = null,
     answerFramework = answerFramework,
-    sampleEssay = sampleEssay,
     notes = null,
     createdAt = 1000L,
     examPaperCode = examPaperCode,

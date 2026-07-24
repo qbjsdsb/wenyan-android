@@ -33,8 +33,8 @@ import javax.inject.Inject
  * 增强点：
  * - 使用 [ExamRepository.getExamQuestionsWithSubjectInfo] 获取科目判定信息，
  *   正确展示"610 文学基础（2022年代码）"等历史代码语义
- * - 完整保留 answerFramework / sampleEssay / answerStatus 等字段供 UI 展示
- * - 维护展开状态 [expandedQuestionIds]，控制答题框架/范文的折叠展开
+ * - 完整保留 answerFramework / answerStatus 等字段供 UI 展示
+ * - 维护展开状态 [expandedQuestionIds]，控制答题框架的折叠展开
  *
  * 进程被杀恢复（NF-L3 修复）：
  * - [selectedYear] + [expandedQuestionIds] 持久化到 [SavedStateHandle]，
@@ -179,7 +179,7 @@ class QuizViewModel @Inject constructor(
      *
      * v0.7.3 P0 修复:移除 `if (!hasReference) return` 阻断逻辑。
      * 原实现要求题目必须有参考答案才允许提交,导致 481 道无答案真题
-     * (answerFramework/sampleEssay 均为 null)无法进入自评流程,
+     * (answerFramework 为 null)无法进入自评流程,
      * 错题本(SOURCE_QUIZ_WRONG)永不写入。
      * 现允许无答案题目也提交:用户输入答案后可自评,
      * 自评错误时 correctAnswer 字段降级为"暂无参考答案"占位文本,
@@ -226,8 +226,7 @@ class QuizViewModel @Inject constructor(
                 try {
                     // v0.7.3 P0:无参考答案时 correctAnswer 降级为占位文本,
                     // 避免传 null 到错题本导致 UI 显示异常,后续可通过 AI 助手补全
-                    val correctAnswer = question.sampleEssay
-                        ?: question.answerFramework
+                    val correctAnswer = question.answerFramework
                         ?: "（暂无参考答案，可使用 AI 助手生成）"
                     wrongAnswerRepository.recordWrongAnswer(
                         pointId = null,
@@ -264,7 +263,6 @@ data class QuizUiState(
  * - [score]：分值
  * - [angle]：考查角度
  * - [answerFramework]：答题框架（Spec：HAS_ANSWER 时录入，NO_ANSWER 时留空）
- * - [sampleEssay]：范文
  * - [answerStatus]：答案状态（HAS_ANSWER / NO_ANSWER / AI_GENERATED）
  * - [examPaperCode]：当年试卷代码（610 / 801 / 805 / 806）
  * - [materialText]：材料题原文
@@ -281,7 +279,6 @@ data class QuizQuestionItem(
     val score: Int,
     val angle: String?,
     val answerFramework: String?,
-    val sampleEssay: String?,
     val answerStatus: String?,
     val examPaperCode: String?,
     val materialText: String?,
@@ -299,7 +296,6 @@ private fun ExamQuestionWithSubject.toUiItem() = QuizQuestionItem(
     score = question.score,
     angle = question.angle,
     answerFramework = question.answerFramework,
-    sampleEssay = question.sampleEssay,
     answerStatus = question.answerStatus,
     examPaperCode = question.examPaperCode,
     materialText = question.materialText,

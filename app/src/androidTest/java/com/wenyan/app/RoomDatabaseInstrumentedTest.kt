@@ -94,19 +94,19 @@ class RoomDatabaseInstrumentedTest {
 
     // ===================== C2.0i: ExamQuestion Entity 字段完整 =====================
 
-    /** C2.0i: 验证 ExamQuestionEntity 字段完整，且不含错误的 stem/options/answer/explain 字段 */
+    /** C2.0i: 验证 ExamQuestionEntity 字段完整，且不含错误的 stem/options/answer/explain/sampleEssay 字段 */
     @Test
     fun examQuestion_hasAllRequiredFields_andNoWrongFields() {
         val fields = fieldNamesOf(ExamQuestionEntity::class.java)
-        // 设计文档原有字段
+        // 设计文档原有字段（v0.7.6 起删除 sampleEssay，范文冗余）
         listOf(
             "id", "year", "subjectId", "questionType", "content", "score", "angle",
-            "relatedPointIds", "answerFramework", "sampleEssay", "notes", "createdAt"
+            "relatedPointIds", "answerFramework", "notes", "createdAt"
         ).forEach { fieldName ->
             assertTrue("ExamQuestionEntity 缺少字段: $fieldName", fieldName in fields)
         }
-        // 错误字段不应存在（字段是 content 不是 stem）
-        listOf("stem", "options", "answer", "explain").forEach { wrong ->
+        // 错误字段不应存在（字段是 content 不是 stem；sampleEssay v0.7.6 已删除）
+        listOf("stem", "options", "answer", "explain", "sampleEssay").forEach { wrong ->
             assertFalse("ExamQuestionEntity 不应包含错误字段: $wrong", wrong in fields)
         }
     }

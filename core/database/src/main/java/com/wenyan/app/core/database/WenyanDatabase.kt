@@ -51,13 +51,14 @@ import com.wenyan.app.core.database.entity.WrongAnswerEntity
  * 文研App Room 数据库。
  *
  * - 数据库名：wenyan.db
- * - 版本：5（P1 大型任务：NF-PP4 删 history + NF-PP5 错题本 + NF-PP6 AI 对话持久化）
+ * - 版本：6（v0.7.6：删除 exam_questions.sample_essay 列，范文冗余字段清理）
  *   - v1→v2：memo_records 补 elapsed_days/scheduled_days/reps 字段
  *   - v2→v3：回填 reps = review_count（修复 v1→v2 未回填导致老卡片被误判为新卡）
  *   - v3→v4：新增 app_meta 表（通用 key-value，存储 last_known_timestamp_ms 等应用级元数据，
  *     供 ClockGuard 检测系统时钟回拨，避免 FSRS 调度异常）
  *   - v4→v5：合并 schema 变更（NF-PP4 删 memo_records.history / NF-PP6 合并 chat_history +
  *     ai_conversations → chat_conversations + chat_messages / NF-PP5 新增 wrong_answers）
+ *   - v5→v6：删除 exam_questions.sample_essay 列（seed v2.9.0 同步删除范文冗余字段）
  *
  * 共 21 张表（无 mentors 表，导师信息改为外链官网）：
  * 1. subjects                科目
@@ -110,7 +111,7 @@ import com.wenyan.app.core.database.entity.WrongAnswerEntity
         ChatMessageEntity::class,
         WrongAnswerEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 @TypeConverters(WenyanTypeConverters::class)

@@ -109,7 +109,6 @@ class WrongAnswerRepositoryImplTest {
                 angle = null,
                 relatedPointIds = null,
                 answerFramework = null,
-                sampleEssay = null,
                 notes = null,
                 createdAt = 1_000_000L,
                 examPaperCode = "805",

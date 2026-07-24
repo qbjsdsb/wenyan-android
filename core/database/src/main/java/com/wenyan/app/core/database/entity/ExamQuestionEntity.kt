@@ -11,8 +11,8 @@ import androidx.room.PrimaryKey
  *
  * 对应设计文档 4.1 节 exam_questions 表，并合并 Spec 新增字段：
  * - 设计文档原有：id/year/subject_id/question_type/content/score/angle/
- *   related_point_ids/answer_framework/sample_essay/notes/created_at
- *   （注意：字段是 content 不是 stem）
+ *   related_point_ids/answer_framework/notes/created_at
+ *   （注意：字段是 content 不是 stem；v2.9.0 已删除 sample_essay，范文冗余）
  * - Spec 新增：exam_paper_code / answer_status / material_text / source_file / source_page
  *
  * JSON 字段说明：
@@ -67,10 +67,6 @@ data class ExamQuestionEntity(
     /** 答题框架 */
     @ColumnInfo(name = "answer_framework")
     val answerFramework: String?,
-
-    /** 范文 */
-    @ColumnInfo(name = "sample_essay")
-    val sampleEssay: String?,
 
     @ColumnInfo(name = "notes")
     val notes: String?,

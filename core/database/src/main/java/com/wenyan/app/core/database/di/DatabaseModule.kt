@@ -28,6 +28,7 @@ import com.wenyan.app.core.database.migration.MIGRATION_1_2
 import com.wenyan.app.core.database.migration.MIGRATION_2_3
 import com.wenyan.app.core.database.migration.MIGRATION_3_4
 import com.wenyan.app.core.database.migration.MIGRATION_4_5
+import com.wenyan.app.core.database.migration.MIGRATION_5_6
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -59,6 +60,7 @@ object DatabaseModule {
      * - [MIGRATION_2_3]：回填 reps = review_count（NF-D1 修复，v1→v2 未回填导致老卡片误判为新卡）
      * - [MIGRATION_3_4]：新增 app_meta 表（NF-B / P0-E4 修复，存储 last_known_timestamp_ms 供 ClockGuard 用）
      * - [MIGRATION_4_5]：P1 大型任务合并 schema 变更（NF-PP4 删 history / NF-PP6 合并 chat 表 / NF-PP5 新增 wrong_answers）
+     * - [MIGRATION_5_6]：v0.7.6 删除 exam_questions.sample_essay 列（范文冗余字段清理）
      * - fallbackToDestructiveMigrationOnDowngrade：仅版本号降级时重建表（开发期降级测试用）。
      *   P0-D1 修正：原 fallbackToDestructiveMigration() 在升级时也会清空整个数据库，
      *   v0.2.0 已发布用户有真实 FSRS 复习记录，升级时被静默清空是不可接受的。
@@ -74,7 +76,7 @@ object DatabaseModule {
             WenyanDatabase::class.java,
             WenyanDatabase.DATABASE_NAME,
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }

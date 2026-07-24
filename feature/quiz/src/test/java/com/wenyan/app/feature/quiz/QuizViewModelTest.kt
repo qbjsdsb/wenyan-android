@@ -134,7 +134,7 @@ class QuizViewModelTest {
     /**
      * 场景 4:selfEvaluate(isCorrect=false) 记录错题,
      * source = SOURCE_QUIZ_WRONG, examQuestionId = q_1,
-     * correctAnswer = sampleEssay(优先) 或 answerFramework。
+     * correctAnswer = answerFramework（v0.7.6 起范文字段已删除）。
      */
     @Test
     fun `selfEvaluate 答错记录错题且 source 为 QUIZ_WRONG`() = runTest(testDispatcher) {
@@ -159,7 +159,7 @@ class QuizViewModelTest {
         )
         assertEquals("examQuestionId 应为 q_1", "q_1", record.examQuestionId)
         assertEquals("userAnswer 应为我的错误答案", "我的错误答案", record.userAnswer)
-        // testExamQuestion 默认 sampleEssay=null,correctAnswer 应为 answerFramework
+        // testExamQuestion 默认 answerFramework 非空,correctAnswer 应为 answerFramework
         assertEquals(
             "correctAnswer 应为 answerFramework",
             "1. 词坛贡献 2. 诗歌成就 3. 散文影响",

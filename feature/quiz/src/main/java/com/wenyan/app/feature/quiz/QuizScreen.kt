@@ -66,7 +66,7 @@ import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
  * - 完整题目正文展示（非截断）
  * - 科目代码历史变动适配（610/801 语义翻转，通过 SubjectResolution 判定）
  * - 答案状态标注（HAS_ANSWER/NO_ANSWER/AI_GENERATED，使用 ContentSourceBadge）
- * - 折叠展开答题框架/范文（范文标注"非标准答案"）
+ * - 折叠展开答题框架
  * - 关联知识点入口（跳转知识点详情）
  * - AI助手入口（跳转AI助手，苏格拉底式引导）
  *
@@ -258,7 +258,7 @@ private fun QuestionList(
  * 5. 材料题原文（如有）
  * 6. 考查角度（如有）
  * 7. 答题区（折叠/展开）：
- *    - HAS_ANSWER → 展示答题框架 + 范文（标注"范文，非标准答案"）
+ *    - HAS_ANSWER → 展示答题框架
  *    - NO_ANSWER → 提示"暂无参考答案，可使用AI助手辅助分析"
  *    - AI_GENERATED → 展示AI生成的答题框架
  * 8. 底部操作行：关联知识点入口 + AI助手入口
@@ -407,13 +407,13 @@ private fun QuestionCard(
  *    - "提交答案" Button（空白时禁用）
  * 2. **已提交未自评**([isSubmitted] = true, [isSelfEvaluated] = false):
  *    - 展示用户答案(锁定不可编辑)
- *    - 展示参考答案(答题框架 + 范文)
+ *    - 展示参考答案(答题框架)
  *    - "答对了" / "答错了" 两个 FilledTonalButton
  * 3. **已自评**([isSelfEvaluated] = true):
  *    - 展示用户答案 + 参考答案
  *    - 对错反馈(绿色"答对了" / 红色"答错了")
  *
- * 无参考答案(answerFramework + sampleEssay 都为空)时(P0 v0.7.2 修复):
+ * 无参考答案(answerFramework 为空)时(P0 v0.7.2 修复):
  * - 显示非阻断提示,用户仍可输入答案并自评(原实现直接 return 导致 481 题无法答题)
  * - 展开参考答案区显示"暂无参考答案,请根据自身理解自评"
  * - 自评文案调整为"请根据你的理解自评"
@@ -429,8 +429,7 @@ private fun AnswerSection(
     onSelfEvaluate: (Boolean) -> Unit,
 ) {
     val hasFramework = !question.answerFramework.isNullOrBlank()
-    val hasEssay = !question.sampleEssay.isNullOrBlank()
-    val hasReference = hasFramework || hasEssay
+    val hasReference = hasFramework
     val isNoAnswer = question.answerStatus == "NO_ANSWER"
 
     // P0 修复(v0.7.2):原实现在无参考答案时直接 return,导致 481 题全部无法答题/自评,
@@ -532,39 +531,6 @@ private fun AnswerSection(
                     Text(
                         // P0-T6 修正：用 orEmpty() 替代 !!，更安全
                         text = question.answerFramework.orEmpty(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(top = Spacing.xs),
-                    )
-                }
-
-                // 范文(标注"范文，非标准答案")
-                if (hasEssay) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = Spacing.sm),
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    ) {
-                        Text(
-                            text = "范文",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.tertiary,
-                        )
-                        ContentSourceBadge(
-                            contentSource = ContentSource.TEXTBOOK_NATIVE,
-                        )
-                    }
-                    Text(
-                        text = "（范文，非标准答案）",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        // P0-T6 修正：用 orEmpty() 替代 !!
-                        text = question.sampleEssay.orEmpty(),
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(top = Spacing.xs),
                     )

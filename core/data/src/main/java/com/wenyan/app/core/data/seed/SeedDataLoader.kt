@@ -329,7 +329,6 @@ class SeedDataLoader @Inject constructor(
                 angle = null,
                 relatedPointIds = null,
                 answerFramework = seed.answerFramework,
-                sampleEssay = seed.sampleEssay,
                 notes = null,
                 createdAt = now,
                 examPaperCode = seed.examPaperCode,
@@ -545,8 +544,6 @@ data class ExamQuestionSeed(
     val examPaperCode: String? = null,
     @SerialName("answer_framework")
     val answerFramework: String? = null,
-    @SerialName("sample_essay")
-    val sampleEssay: String? = null,
 )
 
 /** 写作素材种子数据（对应 WritingMaterialEntity） */
