@@ -531,9 +531,11 @@ class CardsViewModelTest {
             "警告文案应包含复习次数",
             warning!!.message.contains("8"),
         )
+        // v0.8.13 P0-1 修复:断言与生产文案对齐
+        // v0.8.12 移除了"拆分卡片"建议(App 不支持),改为引导用户查看知识点或问 AI 助手
         assertTrue(
-            "警告应建议拆分卡片",
-            warning.message.contains("拆分"),
+            "警告应引导查看知识点或问 AI 助手",
+            warning.message.contains("查看知识点") || warning.message.contains("AI"),
         )
         assertEquals(
             "LeechWarning 应携带 pointId 供 UI 跳转知识点详情",
@@ -915,13 +917,19 @@ class CardsViewModelTest {
     }
 
     /**
-     * 场景 22（P2）：无 pointId 卡评 AGAIN 记录错题。
+     * 场景 22(P2):无 pointId 卡评 AGAIN 不记录错题。
      *
-     * v0.8.10 P2-C3 修复:原实现无 pointId 卡评分时直接 return,跳过错题记录。
-     * 现改为 AGAIN 时仍记录错题(pointId=null)。
+     * v0.8.14 P0-4 修复:原实现(v0.8.10 P2-C3)无 pointId 卡评 AGAIN 时
+     * 传入 pointId=null 调用 recordWrongAnswer,违反 WrongAnswerRepository 契约
+     * ("pointId 与 examQuestionId 至少一个非空")。WrongAnswerRepositoryImpl 对
+     * null pointId 的处理是 existing=null,导致每次评分都 upsert 新记录,
+     * 无法去重、无法关联知识点、无法通过 observeByPoint 查询,成为错题本里的"孤儿数据"。
+     *
+     * 现恢复 v0.8.5 设计:无 pointId 卡不记录错题(无知识点关联,记录无意义)。
+     * 本测试验证修复:无 pointId 卡评 AGAIN 后,wrongAnswerRepository 不被调用。
      */
     @Test
-    fun `无 pointId 卡评 AGAIN 记录错题`() = runTest(testDispatcher) {
+    fun `无 pointId 卡评 AGAIN 不记录错题`() = runTest(testDispatcher) {
         val cards: List<CardTemplate> = listOf(
             ClozeQuoteCard(
                 front = "无 pointId 卡",
@@ -953,17 +961,9 @@ class CardsViewModelTest {
             0,
             schedulingRepository.rateCardCalls.size,
         )
-        assertEquals(
-            "无 pointId 卡评 AGAIN 应记录错题",
-            1,
-            wrongAnswerRepository.recordedWrongAnswers.size,
-        )
-        val record = wrongAnswerRepository.recordedWrongAnswers[0]
-        assertNull("无 pointId 卡的错题记录 pointId 应为 null", record.pointId)
-        assertEquals(
-            "source 应为 CARD_AGAIN",
-            WrongAnswerRepository.SOURCE_CARD_AGAIN,
-            record.source,
+        assertTrue(
+            "无 pointId 卡评 AGAIN 不应记录错题(违反 WrongAnswerRepository 契约)",
+            wrongAnswerRepository.recordedWrongAnswers.isEmpty(),
         )
     }
 
@@ -1003,6 +1003,487 @@ class CardsViewModelTest {
         assertTrue(
             "无 pointId 卡评 GOOD 不应记录错题",
             wrongAnswerRepository.recordedWrongAnswers.isEmpty(),
+        )
+    }
+
+    // ---------- v0.8.13 新增:TermExplanationCard 测试覆盖(生产卡片类型) ----------
+
+    /**
+     * 场景 24(P0):TermExplanationCard 评分触发 FSRS 调度,cardType=TERM_EXPLANATION。
+     *
+     * v0.8.13 P1-5 新增:原测试全部用 ClozeQuoteCard(生产永不生成),
+     * 生产实际生成的 TermExplanationCard 在 ViewModel 层无测试覆盖。
+     * 本测试验证:
+     * - TermExplanationCard 的 templateType=TERM_EXPLANATION 正确传递给 SchedulingRepository
+     * - rateCard 调用使用正确的 cardType(影响 FSRS tier 映射:
+     *   TERM_EXPLANATION→TIER_FRAMEWORK, CLOZE_QUOTE→TIER_EXACT)
+     * - previewIntervals 用正确的 cardType 加载预览
+     */
+    @Test
+    fun `TermExplanationCard 评分传递正确的 cardType 给 FSRS 调度`() = runTest(testDispatcher) {
+        // 用 TermExplanationCard 重新构造 ViewModel(替代默认 ClozeQuoteCard)
+        cardRepository = FakeCardRepository(listOf(testTermCard()))
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        // previewIntervals 应被调用,且 cardType=TERM_EXPLANATION
+        assertTrue(
+            "应调用 previewIntervals 加载预览",
+            schedulingRepository.previewCalls.isNotEmpty(),
+        )
+        val (_, previewCardType) = schedulingRepository.previewCalls.last()
+        assertEquals(
+            "TermExplanationCard 的 previewIntervals 应传递 TERM_EXPLANATION 类型",
+            CardTemplateType.TERM_EXPLANATION,
+            previewCardType,
+        )
+
+        viewModel.rateCard(CardRating.GOOD)
+        advanceUntilIdle()
+
+        assertEquals("应调用一次 rateCard", 1, schedulingRepository.rateCardCalls.size)
+        val (_, _, rateCardType) = schedulingRepository.rateCardCalls[0]
+        assertEquals(
+            "rateCard 应传递 TERM_EXPLANATION 类型(影响 FSRS tier 映射)",
+            CardTemplateType.TERM_EXPLANATION,
+            rateCardType,
+        )
+    }
+
+    /**
+     * 场景 25(P1):TermExplanationCard 评 AGAIN 记录错题,correctAnswer 优先用 fullExplanation。
+     *
+     * v0.8.14 P0-5 修复:原断言"correctAnswer 应为卡片背面 1921年"与 extractCorrectAnswer
+     * 实现矛盾(实现优先用 fullExplanation)。本场景已被场景 28 完整覆盖,保留场景编号
+     * 但修正断言,避免 CI 跑测试时本场景失败漏网(此前因 CI 账单问题 38+ commit 未验证)。
+     */
+    @Test
+    fun `TermExplanationCard 评 AGAIN 记录错题且 correctAnswer 优先用 fullExplanation`() =
+        runTest(testDispatcher) {
+            cardRepository = FakeCardRepository(listOf(testTermCard(back = "1921年")))
+            schedulingRepository = FakeSchedulingRepository()
+            wrongAnswerRepository = FakeWrongAnswerRepository()
+            studyProgressRepository = FakeStudyProgressRepository()
+            viewModel = CardsViewModel(
+                savedStateHandle = SavedStateHandle(),
+                cardRepository = cardRepository,
+                schedulingRepository = schedulingRepository,
+                wrongAnswerRepository = wrongAnswerRepository,
+                studyProgressRepository = studyProgressRepository,
+            )
+            advanceUntilIdle()
+
+            viewModel.rateCard(CardRating.AGAIN)
+            advanceUntilIdle()
+
+            assertEquals("AGAIN 应记录错题", 1, wrongAnswerRepository.recordedWrongAnswers.size)
+            val record = wrongAnswerRepository.recordedWrongAnswers[0]
+            // 与 extractCorrectAnswer 实现一致:TermExplanationCard 优先用 fullExplanation
+            assertEquals(
+                "correctAnswer 应优先用 fullExplanation(完整解释),而非 back(维度答案)",
+                "文学研究会是1921年成立于北京的文学团体",
+                record.correctAnswer,
+            )
+            assertEquals(
+                "source 应为 CARD_AGAIN",
+                WrongAnswerRepository.SOURCE_CARD_AGAIN,
+                record.source,
+            )
+        }
+
+    // ---------- v0.8.13 新增:P0-2 correctAnswer 提取测试 ----------
+
+    /**
+     * 场景 26(P0):DistinctionCard 评 AGAIN 时 correctAnswer 从 differences 提取。
+     *
+     * v0.8.13 P0-2 修复:DistinctionCard.back 是占位文本"$item1 与 $item2 的区别见要点",
+     * 无信息量。extractCorrectAnswer 应从 differences 列表提取真实答案。
+     */
+    @Test
+    fun `DistinctionCard 评 AGAIN 时 correctAnswer 为 differences 拼接`() = runTest(testDispatcher) {
+        cardRepository = FakeCardRepository(listOf(testDistinctionCard()))
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        viewModel.rateCard(CardRating.AGAIN)
+        advanceUntilIdle()
+
+        assertEquals("应记录一次错题", 1, wrongAnswerRepository.recordedWrongAnswers.size)
+        val record = wrongAnswerRepository.recordedWrongAnswers[0]
+        // correctAnswer 应为 differences 拼接,而非 back(占位文本)
+        assertTrue(
+            "correctAnswer 应包含第一条区别要点",
+            record.correctAnswer?.contains("建安风骨产生于汉末建安年间") == true,
+        )
+        assertTrue(
+            "correctAnswer 应包含第二条区别要点",
+            record.correctAnswer?.contains("建安风骨代表作家为三曹七子") == true,
+        )
+        assertTrue(
+            "correctAnswer 不应是占位文本",
+            record.correctAnswer?.contains("区别见要点") == false,
+        )
+    }
+
+    /**
+     * 场景 27(P0):EssayPointsCard 评 AGAIN 时 correctAnswer 从 keyPoints 提取。
+     *
+     * v0.8.13 P0-2 修复:EssayPointsCard.back 是 summary 散文,
+     * extractCorrectAnswer 应从 keyPoints 列表提取结构化要点(带序号)。
+     */
+    @Test
+    fun `EssayPointsCard 评 AGAIN 时 correctAnswer 为 keyPoints 带序号拼接`() = runTest(testDispatcher) {
+        cardRepository = FakeCardRepository(listOf(testEssayPointsCard()))
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        viewModel.rateCard(CardRating.AGAIN)
+        advanceUntilIdle()
+
+        assertEquals("应记录一次错题", 1, wrongAnswerRepository.recordedWrongAnswers.size)
+        val record = wrongAnswerRepository.recordedWrongAnswers[0]
+        // correctAnswer 应为 keyPoints 带序号拼接
+        assertTrue(
+            "correctAnswer 应包含序号 1.",
+            record.correctAnswer?.contains("1. 标志着文人诗的成熟") == true,
+        )
+        assertTrue(
+            "correctAnswer 应包含序号 2.",
+            record.correctAnswer?.contains("2. 奠定五言诗基础") == true,
+        )
+        assertTrue(
+            "correctAnswer 应包含序号 3.",
+            record.correctAnswer?.contains("3. 影响后世边塞诗派") == true,
+        )
+    }
+
+    /**
+     * 场景 28(P0):TermExplanationCard 评 AGAIN 时 correctAnswer 优先用 fullExplanation。
+     *
+     * v0.8.13 P0-2 修复:TermExplanationCard.back 是维度答案(如"1921年"),
+     * 信息密度低。extractCorrectAnswer 应优先用 fullExplanation(完整解释)。
+     */
+    @Test
+    fun `TermExplanationCard 评 AGAIN 时 correctAnswer 优先用 fullExplanation`() = runTest(testDispatcher) {
+        cardRepository = FakeCardRepository(listOf(testTermCard()))
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        viewModel.rateCard(CardRating.AGAIN)
+        advanceUntilIdle()
+
+        assertEquals("应记录一次错题", 1, wrongAnswerRepository.recordedWrongAnswers.size)
+        val record = wrongAnswerRepository.recordedWrongAnswers[0]
+        // correctAnswer 应为 fullExplanation(完整解释),而非 back(维度答案"1921年")
+        assertEquals(
+            "correctAnswer 应为 fullExplanation",
+            "文学研究会是1921年成立于北京的文学团体",
+            record.correctAnswer,
+        )
+    }
+
+    // ---------- v0.8.13 新增:P1-1 undo 不误报 sibling 测试 ----------
+
+    /**
+     * 场景 29(P1):undo 回到首张评分卡时 isSiblingAlreadyRated=false。
+     *
+     * v0.8.13 P1-1 修复:原实现 undo 回到刚评过的首张卡时,
+     * 因 pointId 在 ratedPointIds 中,isSiblingAlreadyRated 误报 true,
+     * 显示"这张卡和刚复习的卡同属一个知识点"提示(语义错误:首张卡不是 sibling)。
+     *
+     * 场景:两张同 pointId 卡(sibling),评 GOOD 卡 A → 推进到卡 B(sibling,提示显示)→
+     * undo → 回到卡 A(应不显示提示,因为卡 A 是首张评分卡不是 sibling)。
+     */
+    @Test
+    fun `undo 回到首张评分卡时 isSiblingAlreadyRated 为 false`() = runTest(testDispatcher) {
+        // 两张同 pointId 的 sibling 卡
+        val cards = listOf(
+            testTermCard(front = "文学研究会 — 时代", back = "1921年", pointId = "p1"),
+            testTermCard(front = "文学研究会 — 代表作家", back = "郑振铎、沈雁冰", pointId = "p1"),
+        )
+        cardRepository = FakeCardRepository(cards)
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        // 初始:卡 A,未评分,isSibling=false
+        assertFalse("初始卡 A 不应是 sibling", viewModel.isSiblingAlreadyRated.value)
+
+        // 评 GOOD 卡 A,推进到卡 B(sibling)
+        viewModel.rateCard(CardRating.GOOD)
+        advanceUntilIdle()
+        assertTrue(
+            "卡 B(同 pointId sibling)应显示 sibling 提示",
+            viewModel.isSiblingAlreadyRated.value,
+        )
+
+        // undo 回到卡 A
+        viewModel.undo()
+        advanceUntilIdle()
+        assertFalse(
+            "undo 回到首张评分卡 A,isSiblingAlreadyRated 应为 false(不是 sibling)",
+            viewModel.isSiblingAlreadyRated.value,
+        )
+    }
+
+    /**
+     * 场景 30(P1):sibling 卡(非首张)isSiblingAlreadyRated=true。
+     *
+     * 验证 P1-1 修复后,正常的 sibling 卡提示仍能正确显示。
+     * 评 GOOD 卡 A → 推进到卡 B(同 pointId)→ isSiblingAlreadyRated=true。
+     */
+    @Test
+    fun `sibling 卡非首张时 isSiblingAlreadyRated 为 true`() = runTest(testDispatcher) {
+        val cards = listOf(
+            testTermCard(front = "文学研究会 — 时代", back = "1921年", pointId = "p1"),
+            testTermCard(front = "文学研究会 — 代表作家", back = "郑振铎", pointId = "p1"),
+            testTermCard(front = "文学研究会 — 主张", back = "为人生而艺术", pointId = "p1"),
+        )
+        cardRepository = FakeCardRepository(cards)
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        // 卡 A:首张,未评分,isSibling=false
+        assertFalse("卡 A 不应是 sibling", viewModel.isSiblingAlreadyRated.value)
+
+        // 评 GOOD 卡 A,推进到卡 B
+        viewModel.rateCard(CardRating.GOOD)
+        advanceUntilIdle()
+        assertTrue("卡 B(sibling)应是 sibling", viewModel.isSiblingAlreadyRated.value)
+
+        // 评 GOOD 卡 B(不触发 FSRS,因 shouldSchedule=false),推进到卡 C
+        viewModel.rateCard(CardRating.GOOD)
+        advanceUntilIdle()
+        assertTrue(
+            "卡 C(第三个 sibling)应仍是 sibling",
+            viewModel.isSiblingAlreadyRated.value,
+        )
+    }
+
+    // ---------- v0.8.14 新增:P0-1 双击防护测试 ----------
+
+    /**
+     * 场景 31(P0):快速连点评分不会重复评分同一张卡。
+     *
+     * v0.8.14 P0-1 修复:原实现从 `uiState.value.currentCard` 读取当前卡,
+     * 但 _uiState 异步更新,两次同步 rateCard 调用之间 _uiState 不会重新 emit,
+     * 导致第二次调用仍读到旧卡,同一张卡被评分两次,统计虚高 + 跳过下一张。
+     *
+     * 修复:从 sessionCards + _currentIndex(SavedStateHandle-backed,同步可见)读取。
+     *
+     * 本测试模拟快速连点:连续两次 rateCard(GOOD) 不等 advanceUntilIdle,
+     * 验证第一次评卡 A,第二次评卡 B(而非再次评卡 A)。
+     */
+    @Test
+    fun `快速连点评分不重复评分同一张卡`() = runTest(testDispatcher) {
+        val cards = listOf(
+            testClozeCard(front = "卡 A", back = "答案 A", pointId = "p1"),
+            testClozeCard(front = "卡 B", back = "答案 B", pointId = "p2"),
+        )
+        cardRepository = FakeCardRepository(cards)
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        // 连续两次评分,中间不 advanceUntilIdle(模拟快速双击)
+        viewModel.rateCard(CardRating.GOOD)
+        viewModel.rateCard(CardRating.GOOD)
+        advanceUntilIdle()
+
+        // 关键断言:两次评分应分别评卡 A 和卡 B(各自触发一次 FSRS 调度,共 2 次)
+        assertEquals(
+            "快速连点应分别评两张卡,FSRS 调度 2 次(而非同一张卡评 2 次)",
+            2,
+            schedulingRepository.rateCardCalls.size,
+        )
+        // 验证两次调度的 pointId 不同(分别是 p1 和 p2)
+        assertEquals("p1", schedulingRepository.rateCardCalls[0].first)
+        assertEquals("p2", schedulingRepository.rateCardCalls[1].first)
+        // sessionReviewedCount 应为 2(每张卡各 1 次)
+        assertEquals(
+            "sessionReviewedCount 应为 2(无虚高)",
+            2,
+            viewModel.sessionReviewedCount.value,
+        )
+    }
+
+    /**
+     * 场景 32(P0):快速连点 skipCard 不会重复跳过同一张卡。
+     *
+     * 与场景 31 类似,验证 skipCard 也从 sessionCards + _currentIndex 读取。
+     */
+    @Test
+    fun `快速连点 skipCard 不重复跳过同一张卡`() = runTest(testDispatcher) {
+        val cards = listOf(
+            testClozeCard(front = "卡 A", back = "答案 A", pointId = "p1"),
+            testClozeCard(front = "卡 B", back = "答案 B", pointId = "p2"),
+            testClozeCard(front = "卡 C", back = "答案 C", pointId = "p3"),
+        )
+        cardRepository = FakeCardRepository(cards)
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        // 连续两次 skip,中间不 advanceUntilIdle
+        viewModel.skipCard()
+        viewModel.skipCard()
+        advanceUntilIdle()
+
+        // 验证 currentIndex 推进了 2(而非 1)
+        assertEquals(
+            "快速连点 skip 应分别跳过两张卡,currentIndex=2",
+            2,
+            viewModel.uiState.value.currentIndex,
+        )
+        // skip 不触发 FSRS 调度
+        assertEquals(
+            "skip 不应触发 FSRS 调度",
+            0,
+            schedulingRepository.rateCardCalls.size,
+        )
+    }
+
+    // ---------- v0.8.17 新增:sessionDurationMinutes StateFlow 测试 ----------
+
+    /**
+     * 场景 33(P1):sessionDurationMinutes 在会话进行中为 0,完成后 >=1,retry 后回 0。
+     *
+     * v0.8.17 P1 修复:原 [getSessionDurationMinutes] 是普通函数,在 Composable 的
+     * Crossfade 重组中被直接调用(`sessionDurationMinutes = viewModel.getSessionDurationMinutes()`)。
+     * 这是 Compose 反模式:
+     * - 每次父组件重组都会重新执行该函数,读 System.currentTimeMillis() 返回不稳定值
+     * - 破坏 Compose 重组跳过机制(参数不稳定 → SessionCompleteState 无谓重组)
+     * - 在完成态停留时,时长会随重组不断变化,但 UI 无感知(参数已传入子组件)
+     *
+     * 改为 StateFlow 后,仅在 [_uiState] 或 [_sessionStartTime] 变化时重新计算:
+     * - isFinished=false 时返回 0(进行中无需计算)
+     * - isFinished=true 时计算 (now - sessionStartTime) / 60_000,coerceAtLeast(1)
+     *
+     * 本测试用过去时间戳初始化 sessionStartTime(模拟 5 分钟前开始),验证:
+     * 1. 会话进行中(未评完所有卡):sessionDurationMinutes == 0
+     * 2. 会话完成(isFinished=true):sessionDurationMinutes >= 1
+     * 3. retry 后重置:sessionDurationMinutes 回到 0(因 sessionStartTime 被重置为 now,
+     *    且 isFinished 在 _uiState 中被 copy 重置)
+     */
+    @Test
+    fun `sessionDurationMinutes 进行中为0完成后大于等于1且retry后回0`() = runTest(testDispatcher) {
+        // 用过去时间戳初始化 sessionStartTime(模拟 5 分钟前开始)
+        val pastStartTime = System.currentTimeMillis() - 5 * 60_000L
+        val cards = listOf(
+            testClozeCard(front = "卡 A", back = "答案 A", pointId = "p1"),
+            testClozeCard(front = "卡 B", back = "答案 B", pointId = "p2"),
+        )
+        cardRepository = FakeCardRepository(cards)
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(
+                initialState = mapOf("sessionStartTime" to pastStartTime),
+            ),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        // 1. 会话进行中:未评完所有卡,sessionDurationMinutes 应为 0
+        assertFalse("未完成时 isFinished 应为 false", viewModel.uiState.value.isFinished)
+        assertEquals(
+            "会话进行中 sessionDurationMinutes 应为 0(不计算时长)",
+            0,
+            viewModel.sessionDurationMinutes.value,
+        )
+
+        // 2. 评完所有卡,会话完成
+        viewModel.rateCard(CardRating.GOOD)
+        advanceUntilIdle()
+        viewModel.rateCard(CardRating.GOOD)
+        advanceUntilIdle()
+
+        assertTrue("评完所有卡后 isFinished 应为 true", viewModel.uiState.value.isFinished)
+        assertTrue(
+            "完成后 sessionDurationMinutes 应 >= 1(实际 ${viewModel.sessionDurationMinutes.value})",
+            viewModel.sessionDurationMinutes.value >= 1,
+        )
+
+        // 3. retry 后 sessionStartTime 重置为 now,isFinished 重置,sessionDurationMinutes 回 0
+        viewModel.retry()
+        advanceUntilIdle()
+        assertEquals(
+            "retry 后 sessionDurationMinutes 应回到 0(会话重置)",
+            0,
+            viewModel.sessionDurationMinutes.value,
         )
     }
 }

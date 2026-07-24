@@ -3527,3 +3527,78 @@ CardSplitterTest 新增 1 个场景：
 - lastFailCounts 在 retry 中已清理
 
 待 emulator 环境恢复后需验证：assembleDebug + testDebugUnitTest 全量。
+
+---
+
+## v0.8.18 知识卡片深度打磨（2026-07-24）
+
+### 背景
+
+用户反馈"知识卡片功能还不够好，不够完善，以及有没有问题，深入调查研究，反复打磨"。
+本轮聚焦代码质量审计：死代码清理、线程安全调研、测试覆盖补全、设计决策文档化。
+
+### 修复内容
+
+#### 清理（1 项）
+
+1. **清理 RatingStep.triggeredSchedule 死代码**
+   - 问题：v0.8.12 P0 修复后，undo 不再回退 `ratedPointIds`（避免重新评分触发 FSRS 重复调度导致 stability 异常增长），`RatingStep.triggeredSchedule: Boolean` 字段失去消费者，成为死代码
+   - 修复：从 `RatingStep` data class 删除 `triggeredSchedule` 字段，更新 3 处入栈调用（`rateCard` 2 处 + `skipCard` 1 处），同步历史注释
+   - 影响：纯代码清理，行为无变化，减少 RatingStep 实例内存占用（少一个 Boolean）
+
+#### 测试补全（1 项）
+
+2. **新增 sessionDurationMinutes StateFlow 测试（场景 33）**
+   - 背景：v0.8.17 P1 将 `getSessionDurationMinutes()` 普通函数改为 `sessionDurationMinutes: StateFlow<Int>`（修复 Compose 反模式），但无对应测试
+   - 测试：用过去时间戳初始化 `SavedStateHandle`（模拟 5 分钟前开始），验证：
+     - 会话进行中（未评完所有卡）：`sessionDurationMinutes == 0`
+     - 会话完成（`isFinished=true`）：`sessionDurationMinutes >= 1`
+     - `retry()` 后重置：`sessionDurationMinutes == 0`（`sessionStartTime` 被重置为 now，`isFinished` 被重置为 false）
+
+### 调研结论（不修改代码，仅文档化）
+
+#### 3. CardsViewModel 线程安全调研
+
+**结论**：4 个可变集合（`ratedPointIds` / `ratedPointFirstCardIds` / `lastFailCounts` / `ratingHistory`）无 race condition，无需加锁。
+
+**依据**：
+- `CardsViewModel` 全文无 `Dispatchers.IO` / `Dispatchers.Default` / `withContext` 切换
+- 所有协程在 `viewModelScope`（默认 `Dispatchers.Main.immediate`，单线程）
+- 公开方法（`rateCard` / `skipCard` / `undo` / `retry`）从 UI 主线程调用
+- `viewModelScope.launch { ... }` 块内的 suspend 调用（`schedulingRepository.rateCard` 等）可能内部切换到 IO，但返回后恢复到 Main
+- `isSiblingAlreadyRated` StateFlow 的 `map` lambda 在 `viewModelScope` 中执行（Main）
+- 所有集合读写均在 Main 线程顺序执行，无并发
+
+**注**：`sessionCards` 已标注 `@Volatile`，但严格来说不需要（同样只在 Main 访问）。保留 `@Volatile` 作为防御性标注，成本可忽略。
+
+#### 4. 3 种卡片模板"死代码"调研
+
+**结论**：`ClozeQuoteCard` / `SchoolComparisonCard` / `WorkAuthorBidirectionalCard` 是 **设计框架 + 测试 fixture**，不删除。
+
+**依据**：
+- `CardRepositoryImpl.generateCardsFromKnowledgePoint` 生产仅生成 3 种：`TermExplanationCard` / `EssayPointsCard` / `DistinctionCard`
+- 上述 3 种未生成的卡片类型是 `CardTemplate` sealed class 的子类，`CardRenderer` 和 `CardsViewModel.extractCorrectAnswer` 的 `when` 表达式必须穷尽所有 sealed 子类
+- `ClozeQuoteCard` 在测试中作为最简 CardTemplate 子类被广泛使用（`testClozeCard()` helper），20+ 测试依赖它验证 ViewModel 通用逻辑（sibling 去重、undo、统计等）
+- `SchoolComparisonCard` / `WorkAuthorBidirectionalCard` 是数据管线补齐结构化标签后的扩展点（当前 seed 数据 94% 无标签，生成不了这些卡片）
+
+**决策**：保留为设计框架，待 OCR 管线 + 知识提取管线补齐标签后启用。已将"已知未修复项"中的描述从"需补齐生成逻辑或删除"更新为"设计框架，待数据管线补齐"。
+
+### 更新：已知未修复项描述
+
+原：
+- **3 种卡片模板死代码**（ClozeQuoteCard/WorkAuthorBidirectionalCard/SchoolComparisonCard）：需补齐生成逻辑或删除
+
+改为：
+- **3 种卡片模板待数据管线补齐**（ClozeQuoteCard/WorkAuthorBidirectionalCard/SchoolComparisonCard）：当前 CardRepository 仅生成 TermExplanationCard/EssayPointsCard/DistinctionCard。这 3 种是 sealed class 设计框架 + 测试 fixture（ClozeQuoteCard），待 OCR 管线 + 知识提取管线补齐结构化标签后启用生成逻辑
+
+### 验证状态
+
+⚠ 沙箱 Android SDK 不可用（ANDROID_HOME 未设置），无法编译验证。
+代码审查确认：
+- `RatingStep` 定义与 3 处入栈调用、`undo` 出栈逻辑一致（`step.rating` / `step.pointId` 仍可用，无 `step.triggeredSchedule` 残留）
+- 测试场景 33 使用 `SavedStateHandle(initialState = mapOf(...))` 与 `feature/quiz` 模块用法一致
+- `assertFalse` / `assertEquals` / `assertTrue` 已在测试文件 import
+- `sessionDurationMinutes` StateFlow 消费端（CardsScreen.kt L119）使用 `collectAsStateWithLifecycle()`，无遗留 `getSessionDurationMinutes()` 函数调用
+
+待 emulator 环境恢复后需验证：`./gradlew :feature:cards:testDebugUnitTest :core:data:testDebugUnitTest` 全量。
+

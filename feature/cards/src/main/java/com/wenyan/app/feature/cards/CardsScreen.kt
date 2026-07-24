@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -114,15 +115,21 @@ fun CardsScreen(
     val leechWarning by viewModel.leechWarning.collectAsStateWithLifecycle()
     // v0.8.9 P1-2:接通 sibling 已评分状态,UI 据此隐藏误导性预期间隔
     val isSiblingAlreadyRated by viewModel.isSiblingAlreadyRated.collectAsStateWithLifecycle()
+    // v0.8.17 P1:会话时长改为 StateFlow,避免 Composable 中直接调用函数破坏重组稳定性
+    val sessionDurationMinutes by viewModel.sessionDurationMinutes.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
     )
 
     // errorMessage 非 null 时弹 Snackbar，展示后立即 clearError 避免重组重复弹
-    LaunchedEffect(errorMessage) {
-        errorMessage?.let {
-            snackbarHostState.showSnackbar(it)
+    // v0.8.14 P0-8 修复:Leech 警告(AlertDialog)显示时不弹 Snackbar,避免两者同时
+    // 弹出造成用户注意力分散 + AlertDialog 导航走后 Snackbar 未消费被销毁。
+    // 修复策略:leechWarning 非空时暂存 errorMessage 不弹,leechWarning 清除后
+    // errorMessage 仍存在(未 clearError),LaunchedEffect 重新触发弹 Snackbar。
+    LaunchedEffect(errorMessage, leechWarning) {
+        if (errorMessage != null && leechWarning == null) {
+            snackbarHostState.showSnackbar(errorMessage)
             viewModel.clearError()
         }
     }
@@ -131,12 +138,14 @@ fun CardsScreen(
     // v0.8.8：携带 pointId，新增"查看知识点"按钮直接跳转 detail 页处理
     // v0.8.12 P0-8：新增"问 AI 助手"按钮，补全操作路径；文案移除"拆分卡片"（App 不支持）
     leechWarning?.let { warning ->
+        // v0.8.13 P1-3:两个 confirmButton 之间加 Spacing.sm,
+        // 原实现 Row 内两个 TextButton 紧贴,视觉拥挤且触控目标易误触
         AlertDialog(
             onDismissRequest = viewModel::clearLeechWarning,
             title = { Text("需要重点关注") },
             text = { Text(warning.message) },
             confirmButton = {
-                Row {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     TextButton(onClick = {
                         viewModel.clearLeechWarning()
                         onNavigateToAiAssistant()
@@ -219,10 +228,13 @@ fun CardsScreen(
                 }
                 key.isFinished -> {
                     // 会话完成态：展示本次复习统计 + 会话时长 + 鼓励继续 / 返回
+                    // v0.8.17 P1:sessionDurationMinutes 改为 collect StateFlow,
+                    // 避免在 Composable 函数体中直接调用 viewModel.getSessionDurationMinutes()
+                    // 破坏重组稳定性(每次重组返回不同值,SessionCompleteState 无谓重组)
                     SessionCompleteState(
                         reviewedCount = sessionReviewed,
                         againCount = sessionAgain,
-                        sessionDurationMinutes = viewModel.getSessionDurationMinutes(),
+                        sessionDurationMinutes = sessionDurationMinutes,
                         onRetry = viewModel::retry,
                         onExit = onNavigateToKnowledge,
                     )
@@ -308,11 +320,21 @@ private fun CardReviewContent(
     onSkip: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    // v0.8.13 P1-4:大屏适配,限制内容最大宽度避免卡片和按钮在平板/折叠屏上拉伸过宽
+    // 600dp 对应 Material3 中型窗口断点,超过此宽度居中显示留白
+    // 用 Box 包裹实现居中:fillMaxSize 占满父容器,widthIn 限制 Column 最大宽度,
+    // contentAlignment=CenterHorizontally 让 Column 在大屏上水平居中
+    Box(
         modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        contentAlignment = Alignment.Center,
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 600.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
         // 进度区：文字 + 进度条
         ProgressSection(
             currentIndex = uiState.currentIndex,
@@ -398,6 +420,7 @@ private fun CardReviewContent(
                 }
             }
         }
+        }
     }
 }
 
@@ -415,11 +438,23 @@ private fun CardReviewContent(
  */
 @Composable
 private fun SiblingRatedHint(modifier: Modifier = Modifier) {
-    // v0.8.12 P0-7：文案去术语化，图标从 CheckCircle 改为 Info
+    // v0.8.12 P0-7:文案去术语化,图标从 CheckCircle 改为 Info
+    // v0.8.13 P1-1:文案补全"评分仍会记入错题本和会话统计",
+    // 解决用户"既然不改变计划,为什么还要评分"的困惑。
+    // 实际:sibling 卡评分不触发 FSRS 调度(避免 stability 虚高),
+    // 但 AGAIN 仍记录错题,所有评分仍累加 sessionReviewedCount(用于完成态统计)。
+    //
+    // v0.8.14 P2-7 修复:原文案"仍会记入错题本和会话统计"对所有评分都显示,
+    // 但只有 AGAIN 评分才记入错题本,GOOD/HARD/EASY 不记。用户可能误以为评 GOOD
+    // 也会记错题,造成困惑。现明确区分:AGAIN 记错题,所有评分计入会话统计。
+    val hintText = "这张卡和刚复习的卡同属一个知识点，评分不会改变复习计划，" +
+        "评 AGAIN 仍会记入错题本"
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .semantics { contentDescription = "这张卡和刚复习的卡同属一个知识点，评分不会改变复习计划，但仍会记入错题本" },
+            .semantics {
+                contentDescription = hintText
+            },
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.medium,
     ) {
@@ -434,7 +469,7 @@ private fun SiblingRatedHint(modifier: Modifier = Modifier) {
                 modifier = Modifier.padding(end = Spacing.xs),
             )
             Text(
-                text = "这张卡和刚复习的卡同属一个知识点，评分不会改变复习计划",
+                text = hintText,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = Spacing.xs),
@@ -549,49 +584,61 @@ private fun SessionCompleteState(
             textAlign = TextAlign.Center,
         )
         // v0.8.7：会话用时（提升学习成就感）
-        Text(
-            text = "用时 $sessionDurationMinutes 分钟",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        // 统计卡：复习张数 / AGAIN 张数 / 掌握率
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            StatCard(
-                label = "已复习",
-                value = reviewedCount.toString(),
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.weight(1f),
+        // v0.8.13 P0-2:reviewedCount=0 时隐藏会话时长和统计卡片,只显示空状态文案
+        // (此场景为防御性兜底,正常流程 reviewedCount=0 应进入"今日无到期卡"分支)
+        if (reviewedCount > 0) {
+            Text(
+                text = "用时 $sessionDurationMinutes 分钟",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            StatCard(
-                label = "需重练",
-                value = againCount.toString(),
-                color = if (againCount > 0) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.outline
-                },
-                modifier = Modifier.weight(1f),
+            // 统计卡：复习张数 / AGAIN 张数 / 掌握率
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+            ) {
+                StatCard(
+                    label = "已复习",
+                    value = reviewedCount.toString(),
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f),
+                )
+                StatCard(
+                    label = "需重练",
+                    value = againCount.toString(),
+                    color = if (againCount > 0) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.outline
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+                StatCard(
+                    label = "掌握率",
+                    value = "${(masteryRate * 100).toInt()}%",
+                    color = when {
+                        masteryRate >= 0.85f -> MaterialTheme.colorScheme.primary
+                        masteryRate >= 0.6f -> MaterialTheme.colorScheme.tertiary
+                        else -> MaterialTheme.colorScheme.error
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Text(
+                text = encouragement,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
             )
-            StatCard(
-                label = "掌握率",
-                value = "${(masteryRate * 100).toInt()}%",
-                color = when {
-                    masteryRate >= 0.85f -> MaterialTheme.colorScheme.primary
-                    masteryRate >= 0.6f -> MaterialTheme.colorScheme.tertiary
-                    else -> MaterialTheme.colorScheme.error
-                },
-                modifier = Modifier.weight(1f),
+        } else {
+            // reviewedCount=0 兜底:仅显示空状态文案,不展示统计卡片
+            Text(
+                text = encouragement,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
             )
         }
-        Text(
-            text = encouragement,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
         Button(
             onClick = onRetry,
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
@@ -603,12 +650,14 @@ private fun SessionCompleteState(
             )
             Text("再复习一轮")
         }
-        // v0.8.7：退出按钮，让用户明确离开复习（导航到知识点列表）
+        // v0.8.7：退出按钮,让用户明确离开复习(导航到知识点列表)
+        // v0.8.13 P1-2:文案从"返回学习"改为"返回知识点列表"
+        // 原文案"返回学习"语义模糊(cards tab 本身就是学习),实际行为是去知识点列表浏览
         TextButton(
             onClick = onExit,
             modifier = Modifier.heightIn(min = 48.dp),
         ) {
-            Text("返回学习")
+            Text("返回知识点列表")
         }
     }
 }
@@ -885,16 +934,22 @@ private fun RatingButton(
     } else {
         label
     }
-    val colors = ButtonDefaults.filledTonalButtonColors(
-        containerColor = containerColor,
-        contentColor = contentColor,
-    )
+    // v0.8.17 P0 修复:isPrimary=true 时 Button 也必须传 colors,否则用默认 primary(蓝)。
+    // 原实现只为 FilledTonalButton 传 colors,Button 用默认 colors,导致 GOOD 按钮显示
+    // 默认 primary(蓝)而非设计的 secondaryContainer(绿),与 EASY(primaryContainer 蓝)
+    // 颜色重复,4 档按钮实际显示为红/黄/蓝/蓝,破坏"红黄绿蓝"渐进视觉直觉。
+    // 现为 Button 传入 buttonColors(containerColor, contentColor),与 FilledTonalButton
+    // 保持一致的容器配色,实现 v0.8.9 P2-3 注释中"GOOD=secondaryContainer(绿)"的设计意图。
     if (isPrimary) {
         Button(
             onClick = onClick,
             modifier = modifier
                 .heightIn(min = 48.dp)
                 .semantics { contentDescription = semanticsDesc },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = containerColor,
+                contentColor = contentColor,
+            ),
         ) {
             RatingButtonContent(label = label, intervalText = intervalText)
         }
@@ -904,7 +959,10 @@ private fun RatingButton(
             modifier = modifier
                 .heightIn(min = 48.dp)
                 .semantics { contentDescription = semanticsDesc },
-            colors = colors,
+            colors = ButtonDefaults.filledTonalButtonColors(
+                containerColor = containerColor,
+                contentColor = contentColor,
+            ),
         ) {
             RatingButtonContent(label = label, intervalText = intervalText)
         }

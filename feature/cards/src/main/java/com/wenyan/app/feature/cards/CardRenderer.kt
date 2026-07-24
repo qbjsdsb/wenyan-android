@@ -188,8 +188,17 @@ private fun ClozeQuoteContent(card: ClozeQuoteCard, isFlipped: Boolean) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (!isFlipped) {
+            // v0.8.14 P0-6 修复:blank 为空字符串时,String.replace("", "＿＿＿＿")
+            // 会在每个字符位置插入"＿＿＿＿",导致正面显示完全不可读的乱码。
+            // 边界:OCR 提取失败或 seed 数据缺失时 blank 可能为空。
+            // 修复:blank 为空时直接显示原 quote(用户至少能读到完整名句,虽无填空提示)。
+            val displayQuote = if (card.blank.isBlank()) {
+                card.quote
+            } else {
+                card.quote.replace(card.blank, "＿＿＿＿")
+            }
             Text(
-                text = card.quote.replace(card.blank, "＿＿＿＿"),
+                text = displayQuote,
                 style = MaterialTheme.typography.titleLarge,
                 textAlign = TextAlign.Center,
             )
@@ -295,12 +304,22 @@ private fun EssayPointsContent(card: EssayPointsCard, isFlipped: Boolean) {
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
             )
+            // v0.8.13 P2-1:序号用 primary 色 + SemiBold,提升视觉层次
+            // 原实现序号与正文同色同重,扫读时难以快速定位要点
             card.keyPoints.forEachIndexed { index, point ->
-                Text(
-                    text = "${index + 1}. $point",
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(start = Spacing.sm),
-                )
+                Row(modifier = Modifier.fillMaxWidth().padding(start = Spacing.sm)) {
+                    Text(
+                        text = "${index + 1}.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(end = Spacing.sm),
+                    )
+                    Text(
+                        text = point,
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
             }
         }
     }
@@ -360,10 +379,14 @@ private fun SchoolRow(school: SchoolInfo) {
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary,
         )
-        FieldRow("时期", school.period)
-        FieldRow("代表", school.representatives)
-        FieldRow("主张", school.proposition)
-        FieldRow("特色", school.features)
+        // v0.8.16 P2-A 修复：空字段过滤，避免显示"时期： "等空标签。
+        // 原实现 FieldRow 无条件渲染所有标签，SchoolInfo 的 period/representatives/
+        // proposition/features 任一为空时仍显示"时期："，视觉空洞且误导用户以为流派信息缺失。
+        // SocietyFieldsList/WorkFieldsList 已做 isNotBlank 过滤，SchoolRow 对齐修复。
+        if (school.period.isNotBlank()) FieldRow("时期", school.period)
+        if (school.representatives.isNotBlank()) FieldRow("代表", school.representatives)
+        if (school.proposition.isNotBlank()) FieldRow("主张", school.proposition)
+        if (school.features.isNotBlank()) FieldRow("特色", school.features)
     }
 }
 
@@ -388,24 +411,40 @@ private fun DistinctionContent(card: DistinctionCard, isFlipped: Boolean) {
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            // v0.8.13 P2-2:VS 排版优化为左右分栏 + VerticalDivider
+            // 原实现用 SpaceEvenly 排列 item1 + "VS" + item2,
+            // 当 item1/item2 文字长度差异大时视觉不平衡,且无视觉分隔。
+            // 改为 Row + weight(1f) 左右等分,中间 VerticalDivider 强调对比关系。
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
                 Text(
                     text = card.item1,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f),
                 )
-                Text(
-                    text = "VS",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = MaterialTheme.shapes.small,
+                ) {
+                    Text(
+                        text = "VS",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = Spacing.sm, vertical = Spacing.xs),
+                    )
+                }
                 Text(
                     text = card.item2,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f),
                 )
             }
         } else {

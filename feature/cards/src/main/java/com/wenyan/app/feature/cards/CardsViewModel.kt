@@ -5,6 +5,12 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.cards.CardTemplate
+import com.wenyan.app.core.data.cards.ClozeQuoteCard
+import com.wenyan.app.core.data.cards.DistinctionCard
+import com.wenyan.app.core.data.cards.EssayPointsCard
+import com.wenyan.app.core.data.cards.SchoolComparisonCard
+import com.wenyan.app.core.data.cards.TermExplanationCard
+import com.wenyan.app.core.data.cards.WorkAuthorBidirectionalCard
 import com.wenyan.app.core.data.repository.CardRepository
 import com.wenyan.app.core.data.repository.IntervalPreview
 import com.wenyan.app.core.data.repository.SchedulingRepository
@@ -22,6 +28,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -36,12 +43,14 @@ import javax.inject.Inject
  *    - 原实现 `lastRatingWasAgain: Boolean` 只记录最近一次评分,连续撤销(AGAIN→GOOD→undo→undo)
  *      第二次 undo 丢失 AGAIN 回退,导致 sessionAgainCount 统计错误
  *    - 改用 [ratingHistory] 栈(ArrayDeque<RatingStep>),每次评分入栈,undo 出栈
- *    - 栈记录评分类型 + pointId + 是否触发了 FSRS 调度,undo 时精确回退三项统计
+ *    - 栈记录评分类型 + pointId,undo 时精确回退 sessionReviewedCount/sessionAgainCount 两项统计
  *
- * 2. **P0:undo 回退 ratedPointIds**
+ * 2. **P0:undo 回退 ratedPointIds**(v0.8.12 已废弃此策略)
  *    - 原实现 undo 不回退 sibling 去重状态(注释"尽力而为"),导致撤销首张 sibling 卡后
  *      重新评分不触发 FSRS(调度被"吞")
- *    - 现在 RatingStep 记录 triggeredSchedule,undo 时从 ratedPointIds 移除,重新评分可再触发
+ *    - v0.8.8 曾改为 RatingStep 记录 triggeredSchedule,undo 时从 ratedPointIds 移除,
+ *      但 v0.8.12 发现这会导致 FSRS 重复调度(stability 异常增长),已回退此策略。
+ *      `triggeredSchedule` 字段已于 v0.8.18 清理删除。
  *
  * 3. **P1:跳过功能**
  *    - 新增 [skipCard]():不评分推进到下一张,不影响 FSRS 和会话统计
@@ -101,6 +110,23 @@ class CardsViewModel @Inject constructor(
     private val ratedPointIds = mutableSetOf<String>()
 
     /**
+     * 每个 pointId 的"首张评分卡" cardId(v0.8.13 P1-1 新增)。
+     *
+     * 用于 [isSiblingAlreadyRated] 区分"undo 回到刚评过的首张卡"和"后续 sibling 卡":
+     * - 用户评 GOOD 卡 A(p1) → 推进到 sibling 卡 B(p1) → 显示 sibling 提示(正确)
+     * - 用户 undo → 回到卡 A(p1) → 卡 A 的 pointId 在 ratedPointIds 中,
+     *   但卡 A 是首张评分卡不是 sibling,不应显示提示
+     *
+     * 通过比较 [CardItem.id] 与 [ratedPointFirstCardIds][pointId] 判断:
+     * - 相等:当前卡是该 pointId 的首张评分卡(undo 回退场景),不是 sibling
+     * - 不等:当前卡是后续 sibling 卡,显示提示
+     *
+     * 与 [ratedPointIds] 一致,undo 不回退(避免重新评分时 sibling 判断错乱),
+     * retry 时清空。
+     */
+    private val ratedPointFirstCardIds = mutableMapOf<String, String>()
+
+    /**
      * 会话内已复习张数(v0.8.9 持久化到 SavedStateHandle,修复 P2-2)。
      *
      * 含 sibling 卡。进程被杀恢复后保留统计,完成态展示准确。
@@ -130,7 +156,9 @@ class CardsViewModel @Inject constructor(
      * 每次评分/skip 入栈一个 [RatingStep],undo 时出栈并精确回退:
      * - sessionReviewedCount(评分才 +1,skip 不 +1)
      * - sessionAgainCount(AGAIN 评分才 +1)
-     * - ratedPointIds(triggeredSchedule=true 时移除,让重新评分能再触发 FSRS)
+     *
+     * v0.8.12 P0 修复:不再回退 ratedPointIds(避免重新评分导致 FSRS 重复调度,
+     * stability 异常增长)。原 `triggeredSchedule` 字段已于 v0.8.18 清理删除。
      *
      * 原实现 `lastRatingWasAgain` 是单个布尔值,连续撤销(AGAIN→GOOD→undo→undo)时
      * 第二次 undo 丢失 AGAIN 回退。栈结构保证多步撤销每步都能精确回退。
@@ -155,13 +183,43 @@ class CardsViewModel @Inject constructor(
      * - 仅用于展示,不参与 FSRS 调度计算
      * - clockGuard 检测回拨是为了保护 FSRS,会话时长展示用真实墙钟更直观
      *
-     * v0.8.9:持久化到 SavedStateHandle,进程被杀恢复后会话时长统计准确。
+     * v0.8.9:持久化到 SavedStateHandle,进程被杀恢复后会话时长统计仍准确(基于原始开始时间)。
      * 默认值为当前时间(首次进入时初始化),恢复时使用 SavedStateHandle 中的旧值。
      */
     private val _sessionStartTime = savedStateHandle.getStateFlow("sessionStartTime", System.currentTimeMillis())
 
     private val _uiState = MutableStateFlow<CardsUiState>(CardsUiState(isLoading = true))
     val uiState: StateFlow<CardsUiState> = _uiState.asStateFlow()
+
+    /**
+     * 会话时长(分钟,v0.8.17 P1 修复:改为 StateFlow 暴露)。
+     *
+     * 原实现 [getSessionDurationMinutes] 是普通函数,在 CardsScreen 的 Crossfade 重组
+     * 中被直接调用(`sessionDurationMinutes = viewModel.getSessionDurationMinutes()`)。
+     * 这是 Compose 反模式:
+     * - 每次父组件重组都会重新执行该函数,读 System.currentTimeMillis() 返回不稳定值
+     * - 破坏 Compose 重组跳过机制(参数不稳定 → SessionCompleteState 无谓重组)
+     * - 在完成态停留时,时长会随重组不断变化,但 UI 无感知(参数已传入子组件)
+     *
+     * 现改为 StateFlow,仅在 [_uiState] 或 [_sessionStartTime] 变化时重新计算:
+     * - 进入完成态(isFinished=true)时计算一次并缓存
+     * - 会话进行中(isFinished=false)返回 0(完成态才展示时长,进行中无需计算)
+     * - retry 时 [_sessionStartTime] 重置,StateFlow 重新发射 0(随后 isFinished=true 时再计算)
+     *
+     * 注:会话时长仅在完成态展示,进入完成态后会话已结束,时长不再增长,无需定期刷新。
+     * coerceAtLeast(1) 避免显示 0 分钟(让用户觉得没学到东西)。
+     */
+    val sessionDurationMinutes: StateFlow<Int> = combine(
+        _uiState,
+        _sessionStartTime,
+    ) { state, startTime ->
+        if (state.isFinished) {
+            val millis = System.currentTimeMillis() - startTime
+            (millis / 60_000L).toInt().coerceAtLeast(1)
+        } else {
+            0
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
     /**
      * 当前卡片是否为"已评分 sibling 卡"(v0.8.9 新增,修复 P1-2)。
@@ -171,6 +229,12 @@ class CardsViewModel @Inject constructor(
      *   (sibling 卡评分不会触发 FSRS 调度,显示"GOOD→6天"是误导)
      * - UI 改为显示"已调度(同知识点首卡已评分)"提示
      *
+     * v0.8.13 P1-1 修复:区分"undo 回到刚评过的首张卡"和"后续 sibling 卡"。
+     * 原实现仅判断 pointId in ratedPointIds,导致用户 undo 回到首张评分卡时
+     * 也显示 sibling 提示(语义错误:首张卡不是 sibling,它是被评分的那张)。
+     * 现增加 [ratedPointFirstCardIds] 判断:若当前卡 id == 该 pointId 的首张评分卡 id,
+     * 说明是 undo 回退场景,不是 sibling,返回 false。
+     *
      * 注意:声明顺序必须在 [_uiState] 和 [ratedPointIds] 之后,否则初始化时
      * 它们还未初始化(backing field 为 null),会导致 NPE。
      * stateIn 持有 viewModelScope 和 SharingStarted.Eagerly,会立即开始收集,
@@ -178,7 +242,14 @@ class CardsViewModel @Inject constructor(
      * 已完成初始化。
      */
     val isSiblingAlreadyRated: StateFlow<Boolean> = _uiState
-        .map { it.currentCard?.pointId in ratedPointIds }
+        .map { state ->
+            val card = state.currentCard ?: return@map false
+            val pointId = card.pointId
+            if (pointId.isBlank() || pointId !in ratedPointIds) return@map false
+            // v0.8.13 P1-1:当前卡是该 pointId 的首张评分卡(undo 回退场景),不是 sibling
+            val firstCardId = ratedPointFirstCardIds[pointId]
+            firstCardId != null && firstCardId != card.id
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
@@ -251,6 +322,9 @@ class CardsViewModel @Inject constructor(
                     }
                 }
                 .catch { e ->
+                    // v0.8.14 P1-7 修复:原仅取 e.message 丢失堆栈,生产排查困难。
+                    // 现加 Log.e 输出完整堆栈,UI 仍只展示 message(用户无需看堆栈)。
+                    android.util.Log.e("CardsViewModel", "loadCards failed", e)
                     emit(CardsUiState(error = e.message ?: "加载失败"))
                 }
                 .collect { _uiState.value = it }
@@ -258,14 +332,19 @@ class CardsViewModel @Inject constructor(
 
         // v0.8.6 P0:监听 currentIndex 变化,异步加载当前卡的预期间隔
         // 只在 cards 非空 + currentIndex 有效时加载,避免无效查询
+        //
+        // v0.8.13 P0-1 修复:collect 改 collectLatest,避免快速评分时预览加载排队。
+        // 原实现用 collect,previewIntervals 是 suspend 函数,如果用户快速评 GOOD 推进
+        // 多张卡片,前一张的预览加载未完成会阻塞后一张,导致预览显示延迟(看到旧卡的间隔)。
+        // collectLatest 在新卡片到来时立即取消旧预览加载协程,保证预览始终对应当前卡。
         viewModelScope.launch {
             _uiState
                 .map { it.currentCard to it.currentIndex }
                 .distinctUntilChanged()
-                .collect { (card, _) ->
+                .collectLatest { (card, _) ->
                     if (card == null || card.pointId.isBlank()) {
                         _currentPreviews.value = emptyMap()
-                        return@collect
+                        return@collectLatest
                     }
                     val templateType = try {
                         CardTemplateType.valueOf(card.cardType)
@@ -274,7 +353,7 @@ class CardsViewModel @Inject constructor(
                     }
                     if (templateType == null) {
                         _currentPreviews.value = emptyMap()
-                        return@collect
+                        return@collectLatest
                     }
                     try {
                         _currentPreviews.value = schedulingRepository.previewIntervals(
@@ -321,7 +400,16 @@ class CardsViewModel @Inject constructor(
      * - 错误消息区分来源:调度失败 vs 学习进度记录失败 vs 错题记录失败(报告 P2-9)
      */
     fun rateCard(rating: CardRating) {
-        val current = uiState.value.currentCard ?: return
+        // v0.8.14 P0-1 修复:双击/快速连点防护。
+        // 原实现从 `uiState.value.currentCard` 读取当前卡,但 _uiState 在 init 协程中
+        // 异步更新(combine + collect),两次同步 rateCard 调用之间 _uiState 不会重新 emit,
+        // 导致第二次调用仍读到旧卡,同一张卡被评分两次,统计虚高 + 跳过下一张。
+        //
+        // 修复:从 [sessionCards] + [_currentIndex](SavedStateHandle-backed,同步可见)读取,
+        // 第一次调用写入 currentIndex+1 后,第二次调用立即读到新索引对应的卡。
+        // sessionCards 可能为 null(首次加载未完成),此时 uiState 仍是 isLoading,UI 不会
+        // 显示评分按钮,但兜底 return 防御。
+        val current = sessionCards?.getOrNull(_currentIndex.value) ?: return
         val pointId = current.pointId
         val cardTypeStr = current.cardType
 
@@ -336,28 +424,17 @@ class CardsViewModel @Inject constructor(
         }
 
         // 无 pointId 的卡片仅推进索引 + 入栈(undo 需回退 sessionReviewedCount)
-        // v0.8.10 P2-C3 修复:无 pointId 卡评 AGAIN 仍记录错题。
-        // 原实现直接 return,跳过错题记录,用户评 AGAIN 表达"不会"但错题本不更新。
-        // 现改为 AGAIN 时异步记录错题(pointId 传 null),然后 return。
+        // v0.8.14 P0-4 修复:无 pointId 卡评 AGAIN 不再记录错题。
+        // 原实现(v0.8.10 P2-C3)传入 pointId=null 调用 recordWrongAnswer,但
+        // [WrongAnswerRepository] 契约要求"pointId 与 examQuestionId 至少一个非空"。
+        // WrongAnswerRepositoryImpl 对 null pointId 的处理是 existing=null,
+        // 导致每次评分都 upsert 新记录,无法去重、无法关联知识点、无法通过
+        // observeByPoint 查询,成为错题本里的"孤儿数据"。
+        //
+        // 现恢复 v0.8.5 设计:无 pointId 卡不记录错题(无知识点关联,记录无意义)。
+        // TODO:如需记录,需要 schema 改动用 cardId 作为关联键。
         if (pointId.isBlank()) {
-            ratingHistory.addLast(RatingStep(rating = rating, pointId = "", triggeredSchedule = false))
-            if (rating == CardRating.AGAIN) {
-                viewModelScope.launch {
-                    try {
-                        wrongAnswerRepository.recordWrongAnswer(
-                            pointId = null,
-                            examQuestionId = null,
-                            userAnswer = "（评分AGAIN：未回忆）",
-                            correctAnswer = current.back,
-                            source = WrongAnswerRepository.SOURCE_CARD_AGAIN,
-                        )
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        _errorMessage.value = "错题记录失败：${e.message ?: "未知错误"}"
-                    }
-                }
-            }
+            ratingHistory.addLast(RatingStep(rating = rating, pointId = ""))
             return
         }
 
@@ -365,10 +442,13 @@ class CardsViewModel @Inject constructor(
         val shouldSchedule = pointId !in ratedPointIds
         if (shouldSchedule) {
             ratedPointIds.add(pointId)
+            // v0.8.13 P1-1:记录该 pointId 的首张评分卡 id,
+            // 供 isSiblingAlreadyRated 区分 undo 回退场景
+            ratedPointFirstCardIds[pointId] = current.id
         }
 
-        // v0.8.8:入栈评分历史,undo 时据此回退 sessionReviewedCount/sessionAgainCount/ratedPointIds
-        ratingHistory.addLast(RatingStep(rating = rating, pointId = pointId, triggeredSchedule = shouldSchedule))
+        // v0.8.8:入栈评分历史,undo 时据此回退 sessionReviewedCount/sessionAgainCount
+        ratingHistory.addLast(RatingStep(rating = rating, pointId = pointId))
 
         viewModelScope.launch {
             val fsrsRating = when (rating) {
@@ -386,7 +466,6 @@ class CardsViewModel @Inject constructor(
                     null
                 }
                 if (templateType != null) {
-                    val oldFailCount = lastFailCounts[pointId] ?: 0
                     val updated = try {
                         schedulingRepository.rateCard(pointId, fsrsRating, templateType)
                     } catch (e: CancellationException) {
@@ -398,6 +477,26 @@ class CardsViewModel @Inject constructor(
                     }
 
                     if (updated != null) {
+                        // v0.8.17 P1-3 修复:oldFailCount 计算改为延迟到 updated != null 块内,
+                        // 支持进程恢复后 lastFailCounts 为空时从 updated.failCount 反推基准。
+                        //
+                        // 背景:进程被杀恢复后 lastFailCounts(内存)丢失,原实现 oldFailCount = 0,
+                        // 若 DB 中 failCount 已 >= 8(之前已跨 Leech 阈值),评分后 failCount 继续增长,
+                        // 触发 `0 < 8 && newFailCount >= 8` → Leech 警告误报(用户之前已见过此警告)。
+                        //
+                        // 修复:从 updated.failCount 反推 oldFailCount:
+                        // - AGAIN 评分:FSRS-6 中 lapses+1,所以 oldFailCount = updated.failCount - 1
+                        // - GOOD/HARD/EASY 评分:lapses 不变,oldFailCount = updated.failCount
+                        //   (但此时 updated.failCount 不会刚跨阈值,因为非 AGAIN 评分不增加 failCount,
+                        //    若 updated.failCount >= 8 说明之前已 >= 8,oldFailCount 也 >= 8,不触发警告)
+                        //
+                        // 仅当内存有记录时优先用内存值(更准确,反映本次会话内的连续 AGAIN 序列),
+                        // 内存无记录时才反推(进程恢复场景)。
+                        val oldFailCount = lastFailCounts[pointId] ?: when (fsrsRating) {
+                            Rating.AGAIN -> (updated.failCount - 1).coerceAtLeast(0)
+                            else -> updated.failCount
+                        }
+
                         // 更新 failCount 跟踪
                         lastFailCounts[pointId] = updated.failCount
 
@@ -439,7 +538,11 @@ class CardsViewModel @Inject constructor(
                         pointId = pointId,
                         examQuestionId = null,
                         userAnswer = "（评分AGAIN：未回忆）",
-                        correctAnswer = current.back,
+                        // v0.8.13 P0-2:用 extractCorrectAnswer 提取真实答案,
+                        // DistinctionCard.back 是占位文本"$item1 与 $item2 的区别见要点",
+                        // EssayPointsCard.back 是 summary 散文,均不适合作为 correctAnswer。
+                        // 现按模板类型提取结构化答案(differences/keyPoints/quote 等)。
+                        correctAnswer = extractCorrectAnswer(current),
                         source = WrongAnswerRepository.SOURCE_CARD_AGAIN,
                     )
                 } catch (e: CancellationException) {
@@ -469,11 +572,13 @@ class CardsViewModel @Inject constructor(
      * 与 [undo] 配合:skip 后 undo 回到被跳过的卡,可正常评分。
      */
     fun skipCard() {
-        val current = uiState.value.currentCard ?: return
+        // v0.8.14 P0-1 修复:与 rateCard 一致,从 sessionCards + _currentIndex 读取,
+        // 避免快速连点 skipCard 时同一张卡被跳过多次,索引错位。
+        val current = sessionCards?.getOrNull(_currentIndex.value) ?: return
         savedStateHandle["isFlipped"] = false
         savedStateHandle["currentIndex"] = _currentIndex.value + 1
         // skip 不累加 sessionReviewedCount/sessionAgainCount,但入栈供 undo 回退索引
-        ratingHistory.addLast(RatingStep(rating = null, pointId = current.pointId, triggeredSchedule = false))
+        ratingHistory.addLast(RatingStep(rating = null, pointId = current.pointId))
     }
 
     /**
@@ -526,20 +631,6 @@ class CardsViewModel @Inject constructor(
     }
 
     /**
-     * 获取会话时长(分钟,v0.8.6 新增)。
-     *
-     * 用于完成态显示"本次用时 X 分钟"。基于 [_sessionStartTime] 计算,
-     * 至少 1 分钟(避免显示 0 分钟让用户觉得没学到东西)。
-     *
-     * v0.8.9:[_sessionStartTime] 持久化到 SavedStateHandle,进程被杀恢复后
-     * 会话时长统计仍准确(基于原始开始时间)。
-     */
-    fun getSessionDurationMinutes(): Int {
-        val millis = System.currentTimeMillis() - _sessionStartTime.value
-        return (millis / 60_000L).toInt().coerceAtLeast(1)
-    }
-
-    /**
      * 重试加载。
      *
      * v0.8.5：重置会话状态（sessionCards + ratedPointIds + 统计），
@@ -554,6 +645,8 @@ class CardsViewModel @Inject constructor(
     fun retry() {
         sessionCards = null
         ratedPointIds.clear()
+        // v0.8.13 P1-1:同步清空首张评分卡记录,避免 retry 后 isSiblingAlreadyRated 误判
+        ratedPointFirstCardIds.clear()
         ratingHistory.clear()
         // v0.8.12 P1:retry 清理 lastFailCounts,避免恢复后 Leech 检测基准错误
         lastFailCounts.clear()
@@ -567,7 +660,18 @@ class CardsViewModel @Inject constructor(
         savedStateHandle["currentIndex"] = 0
         savedStateHandle["isFlipped"] = false
         savedStateHandle[KEY_SESSION_LOADED] = false
-        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+        // v0.8.13 P0-3:retry 也要重置 isFinished 字段
+        // 原实现仅 copy(isLoading=true, error=null),未重置 isFinished,
+        // 导致 retry 后到 _retryTrigger Flow 重新 emit 前的窗口期 isFinished 仍为 true。
+        // 虽然 isLoading 优先级更高使 Crossfade 显示 loading,但状态不一致,
+        // 且若 retry 在 isFinished=true 时被连续调用,第二次 retry 会读到残留 isFinished=true。
+        _uiState.value = _uiState.value.copy(
+            isLoading = true,
+            error = null,
+            isFinished = false,
+            currentIndex = 0,
+            isFlipped = false,
+        )
         _retryTrigger.value++
     }
 
@@ -575,12 +679,18 @@ class CardsViewModel @Inject constructor(
     private fun CardTemplate.toUiItem(index: Int): CardItem = CardItem(
         // v0.8.8:稳定 ID(替代 index-based),基于 pointId+类型+内容哈希
         // sibling 卡(同 pointId 同类型)靠 front 内容区分,保证 ID 唯一且稳定
+        //
+        // v0.8.14 P1-1 修复:原用 `front.take(16).hashCode()` 仅取前 16 字符,
+        // 两张同 pointId 卡如果 front 前 16 字符相同(如"建安风骨 — 时代特征"和
+        // "建安风骨 — 时代背景"前 16 字符都是"建安风骨 — 时代"),ID 完全相同,
+        // 导致 ratedPointFirstCardIds 判断错乱、Compose key 重复。
+        // 现用全文 hashCode,降低碰撞概率(仍非密码学安全,但业务场景足够)。
         id = buildString {
             append(templateType.name)
             append('_')
             if (pointId.isNotBlank()) append(pointId) else append(front.hashCode())
             append('_')
-            append(front.take(16).hashCode())
+            append(front.hashCode())
         },
         front = front,
         back = back,
@@ -588,6 +698,75 @@ class CardsViewModel @Inject constructor(
         pointId = pointId,
         template = this,
     )
+
+    /**
+     * 从卡片模板提取真实的"正确答案"文本,用于错题记录的 correctAnswer 字段(v0.8.13 P0-2)。
+     *
+     * 原实现所有卡片类型都用 [CardItem.back],但部分模板的 back 是占位文本或非结构化答案:
+     * - [DistinctionCard.back] = "$item1 与 $item2 的区别见要点"(占位提示,无信息量)
+     * - [EssayPointsCard.back] = summary(可能是散文,但 keyPoints 才是结构化要点)
+     * - [SchoolComparisonCard] 无有意义的 back(由 schools 列表组成)
+     *
+     * 现按模板类型提取最适合作为"正确答案"的文本:
+     * - DistinctionCard: differences 列表拼接("要点1; 要点2; 要点3")
+     * - EssayPointsCard: keyPoints 带序号拼接("1. 要点1; 2. 要点2")
+     * - SchoolComparisonCard: 各流派名称+主张拼接
+     * - TermExplanationCard: 优先 fullExplanation(完整解释),降级 back(维度答案)
+     * - ClozeQuoteCard: quote(完整名句,含答案)
+     * - WorkAuthorBidirectionalCard: back(对应作者/作品名)
+     * - template 为 null: back(降级,保证不丢失)
+     *
+     * @return 真实答案文本(可能为空字符串,recordWrongAnswer 接受 String?),
+     *         调用方无需判空,直接传入 correctAnswer 参数即可
+     */
+    private fun extractCorrectAnswer(card: CardItem): String? {
+        val template = card.template ?: return card.back.takeIf { it.isNotBlank() }
+        return when (template) {
+            is DistinctionCard -> {
+                // 区分卡:用 differences 列表拼接为完整答案
+                // 占位文本"$item1 与 $item2 的区别见要点"无信息量,不能作为 correctAnswer
+                if (template.differences.isNotEmpty()) {
+                    template.differences.joinToString(separator = "; ")
+                } else {
+                    card.back.takeIf { it.isNotBlank() }
+                }
+            }
+            is EssayPointsCard -> {
+                // 论述要点卡:keyPoints 是结构化要点,比 summary(可能是散文)更适合作为答案
+                if (template.keyPoints.isNotEmpty()) {
+                    template.keyPoints.mapIndexed { index, point ->
+                        "${index + 1}. $point"
+                    }.joinToString(separator = "; ")
+                } else {
+                    card.back.takeIf { it.isNotBlank() }
+                }
+            }
+            is SchoolComparisonCard -> {
+                // 流派对照卡:各流派名称 + 主张拼接
+                if (template.schools.isNotEmpty()) {
+                    template.schools.joinToString(separator = "; ") { school ->
+                        "${school.name}: ${school.proposition}"
+                    }
+                } else {
+                    card.back.takeIf { it.isNotBlank() }
+                }
+            }
+            is TermExplanationCard -> {
+                // 名词解释卡:优先用 fullExplanation(完整解释,信息密度高),
+                // 降级到 back(维度答案,如"1921年")
+                template.fullExplanation?.takeIf { it.isNotBlank() } ?: card.back
+            }
+            is ClozeQuoteCard -> {
+                // 名句填空卡:quote 是完整名句(含答案),back 是 blank(仅答案词)
+                // 用 quote 让错题本展示完整名句上下文
+                template.quote.takeIf { it.isNotBlank() } ?: card.back
+            }
+            is WorkAuthorBidirectionalCard -> {
+                // 作品-作者双向卡:back 是对应作者或作品名,直接用
+                card.back
+            }
+        }
+    }
 
     companion object {
         /** SavedStateHandle key:会话是否已加载(用于检测进程被杀) */
@@ -645,13 +824,14 @@ enum class CardRating {
  *
  * @property rating 评分类型(null 表示 skip,跳过不评分)
  * @property pointId 关联知识点 ID(空字符串表示无 pointId 的卡)
- * @property triggeredSchedule 此步是否触发了 FSRS 调度(首次评分同 pointId 时为 true)
- *                             undo 时据此决定是否从 ratedPointIds 移除,让重新评分能再触发
+ *
+ * v0.8.18 清理:原 `triggeredSchedule: Boolean` 字段已删除。
+ * v0.8.12 P0 修复后,undo 不再回退 [CardsViewModel.ratedPointIds](避免重新评分触发
+ * FSRS 重复调度导致 stability 异常增长),该字段失去消费者,成为死代码。
  */
 private data class RatingStep(
     val rating: CardRating?,
     val pointId: String,
-    val triggeredSchedule: Boolean,
 )
 
 /**

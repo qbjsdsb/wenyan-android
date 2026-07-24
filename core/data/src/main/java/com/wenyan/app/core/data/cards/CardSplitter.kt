@@ -98,12 +98,18 @@ object CardSplitter {
             val head = cards.take(TARGET_SPLIT_MAX - 1)
             val tail = cards.drop(TARGET_SPLIT_MAX - 1)
             val mergedBack = tail.joinToString(separator = "\n") { it.back }
-            // 合并卡不附带 society/work(避免与非首张 sibling 卡行为不一致)
+            // 合并卡不附带 society/work(避免与非首张 sibling 卡行为不一致),
+            // 但必须保留 category(v0.8.15 P1-5 修复):
+            // 原实现未传 category,默认 TermCategory.SOCIETY,当原名词是作品类(WORK)时,
+            // 合并卡正面会错误显示"(名词解释 · 社团类)",与 head 卡的"(名词解释 · 作品类)"不一致,
+            // 用户翻到最后一张卡看到类别切换,误以为拆卡错误。
+            // 现传入 [category] 保持与 head 卡类别一致。
             head + buildTermDimensionCard(
                 term = term,
                 dimension = "其他要点",
                 answer = mergedBack,
                 pointId = pointId,
+                category = category,
                 fullExplanation = fullExplanation,
                 studyText = studyText,
             )
@@ -203,6 +209,15 @@ object CardSplitter {
         "代表作家" to "代表作家",
         "人物" to "人物",
         "作家" to "代表作家",
+        // v0.8.16 P2-B 新增："作者" 标签映射为独立维度"作者"。
+        // 原缺失："作者：沈从文" 标签会被 extractLabeledContent 忽略（TERM_LABELS 无映射），
+        // 导致作品类名词（如《边城》）的作者信息在拆卡时丢失。
+        // "作者" 与 "代表作家" 区别：
+        // - "代表作家" 用于社团类（如"文学研究会"代表作家是郑振铎等多人）
+        // - "作者" 用于作品类（如《边城》作者是沈从文，单一人）
+        // 用独立维度 "作者" 而非复用 "代表作家"，避免社团/作品作者语义混淆，
+        // 且 determineCategory 可据此识别作品类。
+        "作者" to "作者",
         "刊物" to "刊物",
         "主张" to "主张",
         "风格" to "风格特征",
@@ -296,14 +311,18 @@ object CardSplitter {
      * 根据解析到的维度推断名词类别（社团类/作品类）。
      *
      * - "刊物"或"主张"出现 → 社团类（SOCIETY 独有维度）
-     * - "内容"出现 → 作品类（WORK 独有维度）
+     * - "作者"或"内容"出现 → 作品类（WORK 独有维度）
+     *   v0.8.16 P2-B 新增："作者" 作为作品类指示（社团用"代表作家"而非"作者"）。
+     *   原仅靠"内容"识别作品类，若 seed 数据缺"内容"标签但有"作者"标签
+     *   （如《边城》"作者：沈从文"+ 风格/影响等），会被误判为 SOCIETY，
+     *   导致渲染时显示"社团类"标签 + SocietyFieldsList（社团字段语义错乱）。
      * - 其他 → 默认社团类
      */
     private fun determineCategory(dimensions: List<Pair<String, String>>): TermCategory {
         val names = dimensions.map { it.first }.toSet()
         return when {
             "刊物" in names || "主张" in names -> TermCategory.SOCIETY
-            "内容" in names -> TermCategory.WORK
+            "作者" in names || "内容" in names -> TermCategory.WORK
             else -> TermCategory.SOCIETY
         }
     }
@@ -325,7 +344,10 @@ object CardSplitter {
     private fun buildWorkFields(dimensions: List<Pair<String, String>>): WorkTermFields {
         val map = dimensions.toMap()
         return WorkTermFields(
-            author = map["代表作家"] ?: map["人物"] ?: "",
+            // v0.8.16 P2-B:优先 "作者"（作品类独有维度，单一作者），
+            // 降级 "代表作家"（社团/作品共用维度，可能多人），
+            // 再降级 "人物"（社团用，作品类一般不命中）。
+            author = map["作者"] ?: map["代表作家"] ?: map["人物"] ?: "",
             era = map["时代"] ?: map["年代"] ?: map["时期"] ?: "",
             content = map["内容"] ?: "",
             feature = map["特色"] ?: map["特征"] ?: map["风格特征"] ?: "",

@@ -2,6 +2,11 @@ package com.wenyan.app.feature.cards
 
 import com.wenyan.app.core.data.cards.CardTemplate
 import com.wenyan.app.core.data.cards.ClozeQuoteCard
+import com.wenyan.app.core.data.cards.DistinctionCard
+import com.wenyan.app.core.data.cards.EssayPointsCard
+import com.wenyan.app.core.data.cards.SocietyTermFields
+import com.wenyan.app.core.data.cards.TermCategory
+import com.wenyan.app.core.data.cards.TermExplanationCard
 import com.wenyan.app.core.data.repository.CardRepository
 import com.wenyan.app.core.data.repository.IntervalPreview
 import com.wenyan.app.core.data.repository.SchedulingRepository
@@ -170,4 +175,88 @@ fun testClozeCard(
     quote = "${front}____",
     blank = back,
     hint = "提示",
+)
+
+/**
+ * 创建测试用 TermExplanationCard(v0.8.13 P1-5 新增)。
+ *
+ * 生产环境中 CardRepository.generateCardsFromKnowledgePoint 实际生成的是
+ * TermExplanationCard(不是 ClozeQuoteCard),但原测试全部用 ClozeQuoteCard,
+ * 导致生产卡片类型在 ViewModel 层无测试覆盖。
+ *
+ * 默认构造一个社团类名词解释卡(文学研究会),含结构化字段,
+ * 用于验证 ViewModel 对生产卡片类型的处理(评分/调度/错题记录)。
+ */
+fun testTermCard(
+    front: String = "文学研究会 — 时代",
+    back: String = "1921年",
+    pointId: String = "point_1",
+    category: TermCategory = TermCategory.SOCIETY,
+): TermExplanationCard = TermExplanationCard(
+    front = front,
+    back = back,
+    pointId = pointId,
+    category = category,
+    society = if (category == TermCategory.SOCIETY) {
+        SocietyTermFields(time = back, place = "北京", members = "郑振铎、沈雁冰")
+    } else {
+        null
+    },
+    work = null,
+    fullExplanation = "文学研究会是1921年成立于北京的文学团体",
+    studyText = null,
+)
+
+/**
+ * 创建测试用 DistinctionCard(v0.8.13 P0-2 新增)。
+ *
+ * 用于验证 AGAIN 评分时 correctAnswer 从 differences 列表提取,
+ * 而非从 back(占位文本"$item1 与 $item2 的区别见要点")提取。
+ *
+ * 默认对比"建安风骨"与"正始风骨",含 3 条结构化区别要点。
+ */
+fun testDistinctionCard(
+    front: String = "区分：建安风骨 与 正始风骨",
+    back: String = "建安风骨 与 正始风骨 的区别见要点",
+    pointId: String = "point_1",
+    item1: String = "建安风骨",
+    item2: String = "正始风骨",
+    differences: List<String> = listOf(
+        "建安风骨产生于汉末建安年间,正始风骨产生于魏晋正始年间",
+        "建安风骨代表作家为三曹七子,正始风骨代表作家为竹林七贤",
+        "建安风骨风格慷慨悲凉,正始风骨风格玄远幽邃",
+    ),
+): DistinctionCard = DistinctionCard(
+    front = front,
+    back = back,
+    pointId = pointId,
+    item1 = item1,
+    item2 = item2,
+    differences = differences,
+)
+
+/**
+ * 创建测试用 EssayPointsCard(v0.8.13 P0-2 新增)。
+ *
+ * 用于验证 AGAIN 评分时 correctAnswer 从 keyPoints 列表提取,
+ * 而非从 back(summary 散文)提取。
+ *
+ * 默认论述题"建安风骨的文学史意义",含 3 个关键词要点。
+ */
+fun testEssayPointsCard(
+    front: String = "建安风骨的文学史意义",
+    back: String = "建安风骨是中国文学史上的重要转折点,标志着文人诗的成熟",
+    pointId: String = "point_1",
+    question: String = "建安风骨的文学史意义",
+    keyPoints: List<String> = listOf(
+        "标志着文人诗的成熟",
+        "奠定五言诗基础",
+        "影响后世边塞诗派",
+    ),
+): EssayPointsCard = EssayPointsCard(
+    front = front,
+    back = back,
+    pointId = pointId,
+    question = question,
+    keyPoints = keyPoints,
 )
