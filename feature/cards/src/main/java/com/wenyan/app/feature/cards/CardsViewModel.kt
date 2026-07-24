@@ -80,9 +80,14 @@ class CardsViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
-    /** Leech 警告(v0.8.6 创建,v0.8.8 携带 pointId):某知识点 failCount 达阈值时弹提示 */
-    private val _leechWarning = MutableStateFlow<LeechWarning?>(null)
-    val leechWarning: StateFlow<LeechWarning?> = _leechWarning.asStateFlow()
+    /** Leech 警告队列(v0.8.12 改为列表,避免连续 Leech 覆盖) */
+    private val _leechWarnings = MutableStateFlow<List<LeechWarning>>(emptyList())
+    val leechWarnings: StateFlow<List<LeechWarning>> = _leechWarnings.asStateFlow()
+
+    /** 向后兼容:暴露队首 Leech 警告(若有) */
+    val leechWarning: StateFlow<LeechWarning?> = _leechWarnings
+        .map { it.firstOrNull() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /** 重试触发器 */
     private val _retryTrigger = MutableStateFlow(0)
@@ -110,6 +115,14 @@ class CardsViewModel @Inject constructor(
      */
     private val _sessionAgainCount = savedStateHandle.getStateFlow("sessionAgainCount", 0)
     val sessionAgainCount: StateFlow<Int> = _sessionAgainCount
+
+    /**
+     * 各知识点的上次 failCount(v0.8.12 P1 新增,用于 Leech "新增"检测)。
+     *
+     * Leech 检测原实现用累计 failCount >= 8 判断,导致一旦达到 8 后每次评分都弹警告。
+     * 现改为检测"新增 leech":仅当 oldFailCount < 8 && newFailCount >= 8 时弹警告。
+     */
+    private val lastFailCounts = mutableMapOf<String, Int>()
 
     /**
      * 评分历史栈(v0.8.8 新增,替代 v0.8.7 的 `lastRatingWasAgain: Boolean`)。
@@ -373,38 +386,48 @@ class CardsViewModel @Inject constructor(
                     null
                 }
                 if (templateType != null) {
-                    // v0.8.9 P1-4:把 Leech 检测和 studyProgress 解耦
-                    // 原实现把 recordStudySession 放在 rateCard 与 Leech 检测之间,
-                    // 若 studyProgress 抛异常会跳过 Leech 检测,用户该看到警告却看不到
+                    val oldFailCount = lastFailCounts[pointId] ?: 0
                     val updated = try {
                         schedulingRepository.rateCard(pointId, fsrsRating, templateType)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        // v0.8.12 P1-3:错误优先级调度失败 > 学习进度 > 错题,用 hasSchedulingError 标记
                         _errorMessage.value = "评分调度失败：${e.message ?: "未知错误"}"
                         null
                     }
 
-                    // Leech 检测(独立于 studyProgress,确保一定能执行)
-                    // v0.8.8:携带 pointId 供 UI 跳转知识点详情
-                    if (updated != null && updated.failCount >= LEECH_THRESHOLD) {
-                        _leechWarning.value = LeechWarning(
-                            message = buildString {
-                                append("这张卡片已复习 ${updated.failCount} 次仍记不住。")
-                                append("建议拆分为更小的卡片,或联系 AI 助手辅助理解。")
-                            },
-                            pointId = pointId,
-                        )
-                    }
+                    if (updated != null) {
+                        // 更新 failCount 跟踪
+                        lastFailCounts[pointId] = updated.failCount
 
-                    // 学习进度记录(独立 try-catch,失败不影响 Leech 检测/错题记录)
-                    try {
-                        studyProgressRepository.recordStudySession(pointId)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        // v0.8.9 P2-9:文案明确区分学习进度记录失败(非调度失败)
-                        _errorMessage.value = "学习进度记录失败：${e.message ?: "未知错误"}"
+                        // v0.8.12 P1-1:Leech 检测改为"新增 leech"
+                        // 原实现用累计 failCount >= 8,导致达到阈值后每次评分都弹警告
+                        // 现仅当 oldFailCount < 8 && newFailCount >= 8 时弹警告(首次跨阈值)
+                        if (oldFailCount < LEECH_THRESHOLD && updated.failCount >= LEECH_THRESHOLD) {
+                            _leechWarnings.value = _leechWarnings.value + LeechWarning(
+                                message = "这张卡片已连续答错 ${updated.failCount} 次，" +
+                                    "建议查看知识点详情重新理解，或问 AI 助手辅助。",
+                                pointId = pointId,
+                            )
+                        }
+
+                        // v0.8.12 P0-2:recordStudySession 移入 if (updated != null) 块
+                        // 原实现在 rateCard 失败(updated=null)时仍调用 recordStudySession,
+                        // 导致 study_progress 更新(learning streak +1)但 memo_records 未更新(FSRS 失败),
+                        // 数据不一致。现仅调度成功后才记录学习进度。
+                        try {
+                            studyProgressRepository.recordStudySession(pointId)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            // v0.8.12 P1-3:仅在无更高优先级错误时显示
+                            if (_errorMessage.value == null ||
+                                !_errorMessage.value!!.startsWith("评分调度失败")
+                            ) {
+                                _errorMessage.value = "学习进度记录失败：${e.message ?: "未知错误"}"
+                            }
+                        }
                     }
                 }
             }
@@ -422,7 +445,12 @@ class CardsViewModel @Inject constructor(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    _errorMessage.value = "错题记录失败：${e.message ?: "未知错误"}"
+                    // v0.8.12 P1-3:仅在无更高优先级错误时显示
+                    if (_errorMessage.value == null ||
+                        !_errorMessage.value!!.startsWith("评分调度失败")
+                    ) {
+                        _errorMessage.value = "错题记录失败：${e.message ?: "未知错误"}"
+                    }
                 }
             }
         }
@@ -457,23 +485,26 @@ class CardsViewModel @Inject constructor(
      *   撤销仅让用户回看上一张卡片内容。
      * - 边界：currentIndex == 0 时无操作。
      *
-     * v0.8.8 重写:用 [ratingHistory] 栈精确回退三项统计:
+     * v0.8.8 重写:用 [ratingHistory] 栈精确回退两项统计:
      * - sessionReviewedCount(评分才 -1,skip 不 -1)
      * - sessionAgainCount(AGAIN 评分才 -1)
-     * - ratedPointIds(triggeredSchedule=true 时移除 pointId,让重新评分能再触发 FSRS)
      *
-     * 修复 v0.8.7 的 bug:原 `lastRatingWasAgain: Boolean` 只记录最近一次评分,
-     * 连续撤销(AGAIN→GOOD→undo GOOD→undo AGAIN)时第二次 undo 丢失 AGAIN 回退。
+     * v0.8.12 P0 修复:undo **不再回退** ratedPointIds。
+     * 原实现(v0.8.8)undo 时从 ratedPointIds 移除 pointId"让重新评分能再触发 FSRS",
+     * 但 FSRS 调度不可逆(已写入 DB),重新评分会第二次调用 rateCard,
+     * 基于已调度的 stability 再次计算,导致 stability 异常增长,FSRS 数据失真。
+     * 现恢复 v0.8.5 设计:undo 仅回退 UI + 统计,ratedPointIds 保持不变,
+     * 重新评分时 shouldSchedule=false(调度被"吞"),用户 UI 回退但 FSRS 保持第一次结果。
+     * GOOD/HARD/EASY 都是 pass,影响小;AGAIN 已记录错题,用户可从错题本复习。
      */
     fun undo() {
         if (_currentIndex.value <= 0) return
-        // v0.8.8:从栈顶弹出最近一步,据此精确回退
+        // v0.8.8:从栈顶弹出最近一步,据此精确回退统计
         val step = ratingHistory.removeLastOrNull() ?: return
         savedStateHandle["currentIndex"] = _currentIndex.value - 1
         savedStateHandle["isFlipped"] = false
         // skip(rating=null)不影响统计,仅回退索引
         if (step.rating != null) {
-            // v0.8.9:SavedStateHandle-backed StateFlow,通过 savedStateHandle 写入
             savedStateHandle["sessionReviewedCount"] =
                 (_sessionReviewedCount.value - 1).coerceAtLeast(0)
             if (step.rating == CardRating.AGAIN) {
@@ -481,10 +512,7 @@ class CardsViewModel @Inject constructor(
                     (_sessionAgainCount.value - 1).coerceAtLeast(0)
             }
         }
-        // 回退 sibling 去重状态:若此步触发了 FSRS 调度,移除 pointId 让重新评分能再触发
-        if (step.triggeredSchedule && step.pointId.isNotBlank()) {
-            ratedPointIds.remove(step.pointId)
-        }
+        // v0.8.12 P0:不再回退 ratedPointIds,避免重新评分导致 FSRS 重复调度
     }
 
     /** 清除错误提示 */
@@ -492,9 +520,9 @@ class CardsViewModel @Inject constructor(
         _errorMessage.value = null
     }
 
-    /** 清除 Leech 警告(v0.8.6) */
+    /** 清除当前 Leech 警告(队首),显示队列中下一个(若有) */
     fun clearLeechWarning() {
-        _leechWarning.value = null
+        _leechWarnings.value = _leechWarnings.value.drop(1)
     }
 
     /**
@@ -527,10 +555,14 @@ class CardsViewModel @Inject constructor(
         sessionCards = null
         ratedPointIds.clear()
         ratingHistory.clear()
+        // v0.8.12 P1:retry 清理 lastFailCounts,避免恢复后 Leech 检测基准错误
+        lastFailCounts.clear()
         savedStateHandle["sessionReviewedCount"] = 0
         savedStateHandle["sessionAgainCount"] = 0
-        _leechWarning.value = null
+        _leechWarnings.value = emptyList()
         _currentPreviews.value = emptyMap()
+        // v0.8.12 P1:retry 清除残留错误消息
+        _errorMessage.value = null
         savedStateHandle["sessionStartTime"] = System.currentTimeMillis()
         savedStateHandle["currentIndex"] = 0
         savedStateHandle["isFlipped"] = false

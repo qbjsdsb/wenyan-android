@@ -333,9 +333,12 @@ private fun SchoolComparisonContent(card: SchoolComparisonCard, isFlipped: Boole
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            card.schools.forEach { school ->
+            // v0.8.12 P2-8：修复尾部分割线，用 forEachIndexed 跳过最后一个
+            card.schools.forEachIndexed { index, school ->
                 SchoolRow(school)
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                if (index < card.schools.lastIndex) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                }
             }
         }
     }

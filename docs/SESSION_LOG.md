@@ -3434,3 +3434,96 @@ CardSplitterTest 新增 1 个场景：
 1. **P0**：emulator 实测 v0.8.11 — 验证 sibling 卡提示 + skip/undo 交互 + Leech 警告跳转 + 进程恢复
 2. **P1**：启用剩余 3 种卡片模板（需扩展 seed 数据）
 3. **P2**：全局字符串硬编码抽取 strings.xml（系统性问题）
+
+## 2026-07-24 v0.8.12 知识卡片功能第二轮深度打磨
+
+### 背景
+
+用户反馈"知识卡片功能还不够好，不够完善，以及有没有问题，深入调查研究，反复打磨"。
+本会话启动三路并行深度调研（CardSplitter/ViewModel/UI），共发现 8 个 P0 + 18 个 P1 + 24 个 P2 共 50 个问题。
+本次修复其中 13 项关键问题（5 P0 + 6 P1 + 2 P2），数据层问题（结构化标签/contrast_ids）记录待管线配合。
+
+### 修复清单
+
+#### P0 关键修复（5 项）
+
+1. **P0-1: undo 不回退 ratedPointIds（恢复 v0.8.5 设计）**
+   - 问题：v0.8.8 的"修复"undo 时从 ratedPointIds 移除 pointId，导致重新评分第二次调用 rateCard，基于已调度的 stability 再次计算，stability 异常增长，FSRS 数据失真
+   - 修复：undo 仅回退 UI + 统计，ratedPointIds 保持不变，重新评分时 shouldSchedule=false
+   - 测试：场景 21 重写为"undo 后重新评分不重复触发 FSRS"
+
+2. **P0-2: recordStudySession 移入 if (updated != null) 块**
+   - 问题：rateCard 失败(updated=null)时仍调用 recordStudySession，导致 study_progress 更新但 memo_records 未更新，数据不一致
+   - 修复：仅调度成功后才记录学习进度
+
+3. **P0-5: 翻转滚动架构修复**
+   - 问题：verticalScroll 在外层 Box（受 graphicsLayer rotationY 影响），背面 180° 翻转后滚动方向与手势相反
+   - 修复：verticalScroll 移到内层 Box（已用 rotationY=180 抵消翻转）
+
+4. **P0-7: SiblingRatedHint 文案去术语化 + 图标改 Info**
+   - 问题：文案"同知识点首卡已调度"含 FSRS 术语，图标 CheckCircle 误导为"答对了"
+   - 修复：改为"这张卡和刚复习的卡同属一个知识点，评分不会改变复习计划"，图标改 Info
+
+5. **P0-8: Leech 警告增加"问 AI 助手"按钮**
+   - 问题：文案建议"联系 AI 助手"但对话框无此按钮，操作路径断裂；建议"拆分卡片"但 App 不支持
+   - 修复：对话框增加"问 AI 助手"按钮，文案移除"拆分卡片"
+
+#### P1 修复（6 项）
+
+6. **P1-1: Leech 检测改为"新增 leech"**
+   - 问题：原用累计 failCount >= 8，达到阈值后每次评分都弹警告
+   - 修复：改为 oldFailCount < 8 && newFailCount >= 8（首次跨阈值才弹），新增 lastFailCounts 跟踪
+
+7. **P1-3: errorMessage 优先级（调度失败 > 学习进度 > 错题）**
+   - 问题：三步异步操作失败时后者覆盖前者，最严重的"调度失败"被"错题记录失败"覆盖
+   - 修复：调度失败后后续错误不覆盖
+
+8. **P1-3UI: 翻转动画时长对齐 WenyanMotion.DurationMedium(300ms)**
+   - 问题：翻转 400ms 与设计规范 300ms 脱节，容器色 300ms 与翻转不同步
+   - 修复：统一为 DurationMedium + EmphasizedEasing，容器色同步
+
+9. **P1-4UI: 完成态 reviewedCount=0 文案修复**
+   - 问题：reviewedCount=0 时显示"暂无数据"与标题"本次复习完成"矛盾
+   - 修复：改为"本次没有需要复习的卡片"
+
+10. **P1-7UI: Leech 警告队列化**
+    - 问题：_leechWarning 是单值，连续两张卡触发 Leech 时后者覆盖前者
+    - 修复：改为 List<LeechWarning> 队列，clearLeechWarning drop(1) 显示下一个
+
+11. **P1-2UI: retry 清除 errorMessage + lastFailCounts**
+    - 问题：retry 遗漏清除 _errorMessage 和 lastFailCounts
+    - 修复：retry 中清除两者
+
+#### P2 修复（2 项）
+
+12. **P2-2: EASY 视觉权重修复**
+    - 问题：EASY 用 primary/onPrimary 在 FilledTonalButton 上，视觉比 GOOD 的 Button 更醒目，颠倒视觉强调
+    - 修复：改用 primaryContainer/onPrimaryContainer
+
+13. **P2-8: SchoolComparison 多余尾部分割线修复**
+    - 问题：forEach 最后一个流派后也渲染 HorizontalDivider
+    - 修复：forEachIndexed 跳过最后一个
+
+14. **P2-14: 未翻转状态也显示 UndoButton**
+    - 问题：未翻转只有 SkipButton，跳过后想撤销必须先翻转才能看到 UndoButton
+    - 修复：未翻转也显示 Undo + Skip 横排
+
+### 已知未修复项（待后续处理）
+
+- **P0-3 结构化标签拆分对 94% 真实数据不生效**：根因在 seed 数据无标签，需管线层（extract_knowledge.py）配合
+- **P0-4 contrast_ids 全空导致 DistinctionCard 失效**：需管线层填充对比关系
+- **P1-1UI 无滑动切卡（HorizontalPager）**：Anki 核心交互，工作量大，单独迭代
+- **P1-2UI 大屏适配**：需逐页加 BoxWithConstraints
+- **P1-1UI strings.xml 抽取**：系统性问题，50+ 条字符串
+- **3 种卡片模板死代码**（ClozeQuoteCard/WorkAuthorBidirectionalCard/SchoolComparisonCard）：需补齐生成逻辑或删除
+
+### 验证状态
+
+⚠ 沙箱 Android SDK 不可用（环境变化），无法编译验证。
+代码审查确认：
+- 所有修改的导入已补齐（Icons.Default.Info / WenyanMotion.EmphasizedEasing）
+- leechWarning 向后兼容 StateFlow 保留，UI 无需改动
+- 测试场景 21 已重写匹配新行为
+- lastFailCounts 在 retry 中已清理
+
+待 emulator 环境恢复后需验证：assembleDebug + testDebugUnitTest 全量。

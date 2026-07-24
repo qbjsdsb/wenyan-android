@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.SkipNext
@@ -128,18 +129,27 @@ fun CardsScreen(
 
     // v0.8.7 P0：Leech 警告用 AlertDialog 展示（比 Snackbar 更醒目，需用户主动确认）
     // v0.8.8：携带 pointId，新增"查看知识点"按钮直接跳转 detail 页处理
+    // v0.8.12 P0-8：新增"问 AI 助手"按钮，补全操作路径；文案移除"拆分卡片"（App 不支持）
     leechWarning?.let { warning ->
         AlertDialog(
             onDismissRequest = viewModel::clearLeechWarning,
             title = { Text("需要重点关注") },
             text = { Text(warning.message) },
             confirmButton = {
-                TextButton(onClick = {
-                    val pid = warning.pointId
-                    viewModel.clearLeechWarning()
-                    if (pid.isNotBlank()) onNavigateToDetail(pid)
-                }) {
-                    Text("查看知识点")
+                Row {
+                    TextButton(onClick = {
+                        viewModel.clearLeechWarning()
+                        onNavigateToAiAssistant()
+                    }) {
+                        Text("问 AI 助手")
+                    }
+                    TextButton(onClick = {
+                        val pid = warning.pointId
+                        viewModel.clearLeechWarning()
+                        if (pid.isNotBlank()) onNavigateToDetail(pid)
+                    }) {
+                        Text("查看知识点")
+                    }
                 }
             },
             dismissButton = {
@@ -364,7 +374,7 @@ private fun CardReviewContent(
             enter = fadeIn(),
             exit = fadeOut(),
         ) {
-            // 翻转前的辅助提示 + 跳过按钮（未翻转也能跳过）
+            // 翻转前的辅助提示 + 撤销/跳过按钮
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -375,8 +385,17 @@ private fun CardReviewContent(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                // v0.8.8：未翻转也允许跳过（卡片看不懂时直接跳）
-                SkipButton(onSkip = onSkip)
+                // v0.8.12 P2-14：未翻转也显示撤销/跳过按钮（与翻转后一致）
+                // 原实现未翻转只显示跳过，用户跳过后想撤销必须先翻转才能看到撤销按钮，操作迂回
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    if (uiState.currentIndex > 0) {
+                        UndoButton(onUndo = onUndo, modifier = Modifier.weight(1f))
+                    }
+                    SkipButton(onSkip = onSkip, modifier = Modifier.weight(1f))
+                }
             }
         }
     }
@@ -396,10 +415,11 @@ private fun CardReviewContent(
  */
 @Composable
 private fun SiblingRatedHint(modifier: Modifier = Modifier) {
+    // v0.8.12 P0-7：文案去术语化，图标从 CheckCircle 改为 Info
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .semantics { contentDescription = "此卡与已评分的兄弟卡共享知识点，评分仅记录错题，不触发 FSRS 调度" },
+            .semantics { contentDescription = "这张卡和刚复习的卡同属一个知识点，评分不会改变复习计划，但仍会记入错题本" },
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.medium,
     ) {
@@ -408,13 +428,13 @@ private fun SiblingRatedHint(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = Icons.Default.CheckCircle,
+                imageVector = Icons.Default.Info,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(end = Spacing.xs),
             )
             Text(
-                text = "同知识点首卡已调度，评分仅记录错题",
+                text = "这张卡和刚复习的卡同属一个知识点，评分不会改变复习计划",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = Spacing.xs),
@@ -491,8 +511,9 @@ private fun SessionCompleteState(
         0f
     }
     // 鼓励文案：根据掌握率选择
+    // v0.8.12 P2：reviewedCount==0 不应进入完成态，但防御性处理
     val encouragement = when {
-        reviewedCount == 0 -> "暂无数据"
+        reviewedCount == 0 -> "本次没有需要复习的卡片"
         masteryRate >= 0.85f -> "掌握得很好，继续保持"
         masteryRate >= 0.6f -> "稳步进步，下次再战"
         else -> "需要重点巩固，加油"
@@ -686,63 +707,59 @@ private fun FlipCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // 翻转角度动画：用 tween 让动画更干净利落（spring 默认有轻微过冲）
+    // 翻转角度动画：v0.8.12 P1-3 对齐 WenyanMotion.DurationMedium(300ms)
     val rotation by animateFloatAsState(
         targetValue = if (isFlipped) 180f else 0f,
-        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+        animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.EmphasizedEasing),
         label = "card_flip",
     )
 
-    // 容器色平滑过渡（避免硬切）
+    // 容器色平滑过渡（v0.8.12 P1-3：与翻转同步 300ms）
     val containerColor by animateColorAsState(
         targetValue = if (isFlipped) {
-            MaterialTheme.colorScheme.secondaryContainer
+            // v0.8.12 P2：翻转后用 surfaceContainerHighest 而非 secondaryContainer(绿)，
+            // 避免"查看答案"被潜意识误读为"已答对"
+            MaterialTheme.colorScheme.surfaceContainerHighest
         } else {
             MaterialTheme.colorScheme.surfaceContainerHigh
         },
-        animationSpec = tween(durationMillis = 300),
+        animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.EmphasizedEasing),
         label = "card_color",
     )
 
-    // P2 性能修复：用 derivedStateOf 包裹 shouldShowBack(rotation)，
-    // 使 showBack 仅在 rotation 跨过 90° 临界点（布尔值翻转）时触发重组，
-    // 而非 400ms 翻转动画的每一帧都重组 CardContent。
-    // 同时，containerColor 动画（300ms）导致父组件重组时，
-    // showBack 不变 → CardContent 参数不变 → Compose 编译器跳过 CardContent 调用。
     val showBack by remember { derivedStateOf { shouldShowBack(rotation) } }
 
     Card(
         modifier = modifier
             .graphicsLayer {
                 rotationY = rotation
-                // 修正 3D 透视失真：cameraDistance 越大透视效果越弱（边缘拉伸越小）
-                // 默认值偏小导致 180° 翻转时边缘严重拉伸
                 cameraDistance = 12 * density
             }
             .semantics {
                 role = Role.Button
-                // v0.8.7：修正"双击"→"单击"（Card.onClick 是单击触发，非双击）
                 contentDescription = if (isFlipped) "答案面，单击返回问题" else "问题面，单击查看答案"
                 stateDescription = if (isFlipped) "已翻转" else "未翻转"
             },
         colors = CardDefaults.cardColors(containerColor = containerColor),
         onClick = onClick,
     ) {
-        // 长答案（论述题范文、名词解释）超出卡片可视区时被截断，
-        // 给内容容器加 verticalScroll 让长内容可在卡片内滚动阅读。
-        // 滚动放在外层 Box（未受 graphicsLayer rotationY 影响），
-        // 避免背面 180° 旋转后滚动方向反向的体验问题。
+        // v0.8.12 P0-5 修复：verticalScroll 移到内层旋转抵消的 Box 上。
+        // 原实现把 verticalScroll 放在外层 Box(受 graphicsLayer rotationY 影响),
+        // 背面 180° 翻转后滚动容器坐标空间也被翻转,导致滚动方向与手势相反。
+        // 现外层 Box 仅做居中,内层 Box(已用 rotationY=180 抵消翻转)负责滚动,
+        // 滚动方向始终与手势一致。
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
             val template = card.template
             Box(
-                modifier = Modifier.graphicsLayer {
-                    rotationY = if (showBack) 180f else 0f
-                },
+                modifier = Modifier
+                    .graphicsLayer {
+                        rotationY = if (showBack) 180f else 0f
+                    }
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
                 contentAlignment = Alignment.Center,
             ) {
                 if (template != null) {
@@ -832,12 +849,14 @@ private fun RatingButtons(
 
         // EASY：蓝色（"很简单"，加成间隔，Anki 惯例蓝=超预期）
         // v0.8.9:从 secondaryContainer(绿) 改为 primary(蓝),与 Anki Mobile 对齐
+        // v0.8.12 P2-2:改用 primaryContainer 而非 primary,保持 FilledTonalButton 视觉层级
+        // 弱于 GOOD 的 Button(filled),避免 EASY 比 GOOD 更醒目颠倒视觉强调
         RatingButton(
             label = "简单",
             intervalText = previews[Rating.EASY]?.displayText,
             onClick = { onRate(CardRating.EASY) },
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             isPrimary = false,
             modifier = Modifier.weight(1f),
         )

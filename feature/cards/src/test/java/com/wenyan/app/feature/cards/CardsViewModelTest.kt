@@ -867,13 +867,16 @@ class CardsViewModelTest {
     }
 
     /**
-     * 场景 21（P0）：undo 后 ratedPointIds 回退，重新评分触发 FSRS。
+     * 场景 21（P0）：undo 后 ratedPointIds 不回退，重新评分不重复触发 FSRS。
      *
-     * 用户评 GOOD(sibling 首卡触发调度) → undo(回退 ratedPointIds) →
-     * 重新评 GOOD(应再次触发调度,因为 ratedPointIds 已回退)。
+     * v0.8.12 P0-1 修复:原实现 undo 回退 ratedPointIds 导致重新评分重复调度 FSRS,
+     * stability 异常增长。现 undo 不回退 ratedPointIds,重新评分时 shouldSchedule=false。
+     *
+     * 用户评 GOOD(触发调度) → undo(UI 回退,FSRS 不回滚) →
+     * 重新评 GOOD(shouldSchedule=false,不重复调度)。
      */
     @Test
-    fun `undo 后 ratedPointIds 回退重新评分触发 FSRS`() = runTest(testDispatcher) {
+    fun `undo 后重新评分不重复触发 FSRS`() = runTest(testDispatcher) {
         val cards = listOf(
             testClozeCard(front = "卡 A", back = "答案 A", pointId = "p1"),
             testClozeCard(front = "卡 B", back = "答案 B", pointId = "p2"),
@@ -896,16 +899,17 @@ class CardsViewModelTest {
         advanceUntilIdle()
         assertEquals("首次评分应触发调度", 1, schedulingRepository.rateCardCalls.size)
 
-        // undo 回退 ratedPointIds
+        // undo 仅回退 UI,不回退 ratedPointIds
         viewModel.undo()
         advanceUntilIdle()
+        assertEquals("undo 后 currentIndex 回到 0", 0, viewModel.uiState.value.currentIndex)
 
-        // 重新评 GOOD 应再次触发调度
+        // 重新评 GOOD 不应再次触发调度(ratedPointIds 未回退)
         viewModel.rateCard(CardRating.GOOD)
         advanceUntilIdle()
         assertEquals(
-            "undo 后重新评分应再次触发调度(ratedPointIds 已回退)",
-            2,
+            "undo 后重新评分不应重复触发 FSRS(避免 stability 异常增长)",
+            1,
             schedulingRepository.rateCardCalls.size,
         )
     }
