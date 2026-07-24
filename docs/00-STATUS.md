@@ -5,13 +5,13 @@
 
 ## ✅ 当前状态
 
-**v0.8.4 第二轮深度打磨完成** — 6 文件 7 项修复：AMOLED 模式补全 3 个 surface 字段（卡片层次可见性）+ EmptyState/ErrorState mergeDescendants 语义 + LoadingIndicator 加载状态语义 + 主题动画参数优化（去过冲+缩短时长）+ DefaultSeedColor 死代码清理 + ThemeRepositoryImpl @Singleton + ThemeViewModel 错误事件流。assembleDebug + testDebugUnitTest 全绿。
+**v0.8.11 知识卡片功能深度打磨完成** — 7 文件 11 项修复（3 P0 + 5 P1 + 3 P2）：CardSplitter 6维度限制修复 + SiblingRatedHint 不再隐藏评分按钮 + 进程恢复统计重置 + sibling 卡预览误导修复 + rateCard 异步失败分离 + 评分按钮颜色对齐 Anki + sibling 卡字段去冗余 + Leech 警告跳转修复 + 无pointId错题记录 + 会话统计持久化 + 3处编译错误修复。新增 7 个测试场景，assembleDebug + testDebugUnitTest 全绿（280 tests）。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | 待提交（v0.8.4 第二轮深度打磨） |
-| 最新 Release | **v0.7.5**（待打 tag） — v0.8.4 待 emulator 实测后打 tag |
-| 编译验证 | **:app:assembleDebug + :app:testDebugUnitTest SUCCESSFUL** |
+| 最新 commit | 待提交（v0.8.11 知识卡片功能深度打磨） |
+| 最新 Release | **v0.7.5**（待打 tag） — v0.8.11 待 emulator 实测后打 tag |
+| 编译验证 | **:app:assembleDebug + testDebugUnitTest SUCCESSFUL（280 tests, 0 failures）** |
 | 知识点 | **910 个**（entities/relations 数据补全，自动入图） |
 | 真题 | **485 道**（v0.7.6 已删除 sample_essay 冗余字段） |
 | seed 版本 | **2.11.0**（触发重新导入，保留用户 FSRS 学习进度） |
@@ -21,8 +21,9 @@
 | 图谱覆盖率 | **100%**（原 4.4%，910 知识点全部入图） |
 | 图谱布局 | **三模式可切换**：时间轴（默认）/ 邻域力导向 / 径向概览 |
 | 视觉编码 | **3 层正交**：颜色=掌握度 / 尺寸=重要性 / 形状=类型（圆/方/菱/三角/星） |
+| 卡片测试 | **29 个**（CardsViewModelTest）+ **7 个**（CardSplitterTest） |
 | 阻塞 | **CI 账单问题** — 需用户处理，不影响 Release（debug 签名可用） |
-| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-24 v0.8.3 全面 UI/UX 打磨） |
+| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-24 v0.8.11 知识卡片深度打磨） |
 
 ## 🚨 新会话首要任务
 

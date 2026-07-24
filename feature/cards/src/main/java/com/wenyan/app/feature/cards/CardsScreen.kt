@@ -44,6 +44,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -127,14 +128,14 @@ fun CardsScreen(
 
     // v0.8.7 P0：Leech 警告用 AlertDialog 展示（比 Snackbar 更醒目，需用户主动确认）
     // v0.8.8：携带 pointId，新增"查看知识点"按钮直接跳转 detail 页处理
-    if (leechWarning != null) {
+    leechWarning?.let { warning ->
         AlertDialog(
             onDismissRequest = viewModel::clearLeechWarning,
             title = { Text("需要重点关注") },
-            text = { Text(leechWarning.message) },
+            text = { Text(warning.message) },
             confirmButton = {
                 TextButton(onClick = {
-                    val pid = leechWarning.pointId
+                    val pid = warning.pointId
                     viewModel.clearLeechWarning()
                     if (pid.isNotBlank()) onNavigateToDetail(pid)
                 }) {
@@ -327,13 +328,23 @@ private fun CardReviewContent(
             exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 4 }),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                // v0.8.9 P1-2:sibling 已评分时,显示提示而非误导性预期间隔
-                // sibling 卡评分不触发 FSRS 调度,显示"GOOD→6天"会让用户误以为评分会改变调度
+                // v0.8.10 P1-B3 修复:sibling 已评分时仍保留评分按钮,仅隐藏预期间隔。
+                // 原实现 isSiblingAlreadyRated=true 时完全隐藏 RatingButtons,导致用户
+                // 无法评分推进(只能跳过),也无法记录错题(sibling AGAIN 仍会调用
+                // wrongAnswerRepository.recordWrongAnswer,但 UI 隐藏按钮后用户无法触发)。
+                //
+                // 修复策略:
+                // - SiblingRatedHint 作为信息提示放在评分按钮上方(非替换)
+                // - RatingButtons 始终渲染,sibling 时传空 previews(不显示预期间隔)
+                //   避免误导用户以为评分会改变调度间隔
+                // - 用户可正常评分推进,AGAIN 评分仍记录错题(不影响 FSRS 调度)
                 if (isSiblingAlreadyRated) {
                     SiblingRatedHint()
-                } else {
-                    RatingButtons(onRate = onRate, previews = previews)
                 }
+                RatingButtons(
+                    onRate = onRate,
+                    previews = if (isSiblingAlreadyRated) emptyMap() else previews,
+                )
                 // v0.8.8：撤销 + 跳过按钮横排
                 // 撤销：回退上一张（currentIndex > 0 才显示）
                 // 跳过：不评分推进到下一张（避免乱评污染 FSRS）
@@ -356,7 +367,7 @@ private fun CardReviewContent(
             // 翻转前的辅助提示 + 跳过按钮（未翻转也能跳过）
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.CenterHorizontally,
+                horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 Text(
@@ -372,40 +383,41 @@ private fun CardReviewContent(
 }
 
 /**
- * sibling 卡已评分提示(v0.8.9 P1-2 新增)。
+ * sibling 卡已评分提示(v0.8.9 P1-2 新增,v0.8.10 P1-B3 重构)。
  *
  * 当前卡片与已评分的首张 sibling 卡共享同一知识点,评分不会触发 FSRS 调度
  * (调度已在首张卡完成,参考 Anki sibling burying 避免重复评分导致 stability 虚高)。
  *
- * 用 InfoCard 风格而非评分按钮,避免误导用户以为评分会改变调度间隔。
- * 用户仍可评分推进到下一张(评分结果仅影响错题记录,不触发 FSRS)。
+ * v0.8.10 P1-B3 修复:
+ * - 原实现用 SiblingRatedHint **替换** RatingButtons,导致用户无法评分推进
+ * - 现改为 SiblingRatedHint 作为信息提示放在 RatingButtons **上方**
+ * - 评分按钮始终渲染(不显示预期间隔),用户可正常评分推进
+ * - AGAIN 评分仍记录错题(不影响 FSRS 调度,但保留错题本更新)
  */
 @Composable
 private fun SiblingRatedHint(modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .semantics { contentDescription = "此卡与已评分的兄弟卡共享知识点，评分不会触发 FSRS 调度" },
+            .semantics { contentDescription = "此卡与已评分的兄弟卡共享知识点，评分仅记录错题，不触发 FSRS 调度" },
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.medium,
     ) {
         Row(
-            modifier = Modifier.padding(Spacing.md),
+            modifier = Modifier.padding(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
         ) {
             Icon(
                 imageVector = Icons.Default.CheckCircle,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(end = Spacing.sm),
+                modifier = Modifier.padding(end = Spacing.xs),
             )
             Text(
-                text = "已调度（同知识点首卡已评分，可继续翻卡）",
-                style = MaterialTheme.typography.bodyMedium,
+                text = "同知识点首卡已调度，评分仅记录错题",
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(start = Spacing.xs),
             )
         }
     }

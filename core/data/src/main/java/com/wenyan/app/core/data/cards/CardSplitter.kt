@@ -219,6 +219,14 @@ object CardSplitter {
     /**
      * 解析 [definition] 中的结构化标签，提取"维度-内容"对。
      * 标签格式："标签：内容"或"标签：内容。"，支持中英文冒号。
+     *
+     * v0.8.10 修复(P1-D1):移除 `if (result.size >= TARGET_SPLIT_MAX) break` 限制。
+     * 原实现最多提取 6 个维度,超过的维度(如"时代/地点/人物/刊物/主张/风格/特色/意义/影响/区别"
+     * 共 10 个标签)会被直接丢弃,信息丢失。而 [splitTermExplanation] 的 `trimmed` 合并逻辑
+     * 期望处理 >6 张的情况(前 5 张 + 合并"其他要点"),但因 parseStructuredDimensions 已
+     * 限制 ≤6,`cards.size > TARGET_SPLIT_MAX` 永远为 false,trimmed 合并分支是死代码。
+     *
+     * 现提取所有命中的维度,让 trimmed 逻辑正确合并超过 6 张的部分,保留完整信息。
      */
     private fun parseStructuredDimensions(
         term: String,
@@ -233,8 +241,6 @@ object CardSplitter {
             if (content.isBlank()) continue
             result.add(dimension to content)
             seenLabels.add(dimension)
-            // 命中6个维度即满足最大张数
-            if (result.size >= TARGET_SPLIT_MAX) break
         }
         return result
     }

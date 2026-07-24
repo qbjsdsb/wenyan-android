@@ -116,4 +116,51 @@ class CardSplitterTest {
         assertEquals(6, cards.size)
         assertTrue("最后一张应为合并的'其他要点'", cards.last().front.contains("其他要点"))
     }
+
+    // ===================== v0.8.10 修复：结构化标签 >6 维度不再被截断 =====================
+
+    /**
+     * v0.8.10 P1-D1 修复验证：结构化标签超过 6 个维度时，不应被 [parseStructuredDimensions] 截断，
+     * 而应提取全部维度后由 [splitTermExplanation] 的 `trimmed` 逻辑合并尾段为"其他要点"。
+     *
+     * 原实现 `parseStructuredDimensions` 内有 `if (result.size >= TARGET_SPLIT_MAX) break`，
+     * 导致超过 6 个维度（如 10 个标签）时第 7 个及之后的维度被直接丢弃，信息丢失；
+     * 同时 `trimmed` 合并分支因 `cards.size` 永远 ≤6 而成为死代码。
+     *
+     * 现修复后：10 个结构化标签 → 全部提取 → trimmed 合并为 6 张（前 5 + "其他要点"）。
+     */
+    @Test
+    fun splitTermExplanation_structuredLabelsMoreThan6_notTruncated() {
+        // 10 个不同的结构化标签（均命中 TERM_LABELS，去重后维度唯一）
+        val definition = """
+            时代：汉末建安年间。
+            地点：中原地区。
+            代表作家：曹操、曹丕、曹植。
+            刊物：《建安诗集》。
+            主张：回归风雅传统。
+            风格：慷慨悲凉。
+            特色：刚健有力。
+            意义：奠定五言诗基础。
+            影响：深远影响后世边塞诗。
+            区别：与正始诗歌不同。
+        """.trimIndent()
+        val cards = CardSplitter.splitTermExplanation("建安风骨", definition)
+        // 应合并为 6 张（前 5 张 + "其他要点"），而非截断为 6 张丢失后 4 个维度
+        assertEquals("应合并为 6 张", 6, cards.size)
+        // 最后一张应为合并的"其他要点"，且包含被合并的多个维度内容
+        val lastCard = cards.last()
+        assertTrue(
+            "最后一张应为'其他要点'，实际 front=${lastCard.front}",
+            lastCard.front.contains("其他要点"),
+        )
+        // 验证被合并的尾段确实包含后几个维度的内容（未被丢弃）
+        assertTrue(
+            "合并的尾段应包含'影响'维度内容，实际 back=${lastCard.back}",
+            lastCard.back.contains("深远影响"),
+        )
+        assertTrue(
+            "合并的尾段应包含'区别'维度内容，实际 back=${lastCard.back}",
+            lastCard.back.contains("正始诗歌"),
+        )
+    }
 }

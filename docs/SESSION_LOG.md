@@ -3319,3 +3319,118 @@ OCR 残留清理（6 处）：
 2. **P1**：启用剩余 3 种卡片模板（需先扩展 seed_data.json 结构 + 知识提取管线）
 3. **P2**：修复 `fuzz 后未 clamp 到 maximumInterval`（FsrsWrapper 第 184 行加 coerceAtMost）
 4. **P2**：将 enableFuzz 纳入 TierFsrsConfig 字段（消除配置分散）
+
+---
+
+## v0.8.11 知识卡片功能深度打磨（2026-07-24）
+
+### 背景
+
+用户反馈"知识卡片功能还不够好，不够完善，以及有没有问题，深入调查研究，反复打磨"。
+对 CardsViewModel / CardsScreen / CardSplitter / SchedulingRepository 进行深度审查，
+发现并修复 11 项问题（3 P0 + 5 P1 + 3 P2），新增 6 个测试场景。
+
+### 修复清单
+
+#### P0 修复（3 项）
+
+1. **P0-D1：CardSplitter 6 维度限制导致信息丢失**
+   - 问题：`parseStructuredDimensions` 中 `if (result.size >= TARGET_SPLIT_MAX) break`
+     限制最多提取 6 个维度，超过的维度（如 10 个结构化标签）被直接丢弃。
+     同时 `trimmed` 合并逻辑因 `cards.size` 永远 ≤6 而成为死代码。
+   - 修复：移除 `break` 限制，提取所有命中维度，让 `trimmed` 逻辑正确合并超过 6 张的部分。
+   - 文件：`core/data/.../cards/CardSplitter.kt`
+   - 测试：`splitTermExplanation_structuredLabelsMoreThan6_notTruncated`
+
+2. **P0-B3：SiblingRatedHint 隐藏评分按钮导致无法评分/记录错题**
+   - 问题：`isSiblingAlreadyRated=true` 时用 `SiblingRatedHint` 完全替换 `RatingButtons`，
+     用户无法评分推进，也无法记录错题（AGAIN 评分仍应调用 `wrongAnswerRepository`）。
+   - 修复：将 `SiblingRatedHint` 改为在评分按钮上方显示（信息提示），始终保留 `RatingButtons`，
+     sibling 卡时传空 `previews` 隐藏预期间隔（避免误导）。
+   - 文件：`feature/cards/.../CardsScreen.kt`
+
+3. **P0-E2+F1：进程恢复后统计重复计数 + sibling 去重失效**
+   - 问题：进程被杀恢复后，`sessionReviewedCount`/`sessionAgainCount` 保留旧值，
+     用户重新评分时统计重复累加（如已评 5 张被杀，恢复后重评 5 张，count=10）。
+     `ratedPointIds` 内存丢失导致 sibling 去重失效。
+   - 修复：进程恢复路径中重置 `sessionReviewedCount` 和 `sessionAgainCount` 为 0，
+     清空 `ratingHistory` 栈。会话时长保留（反映总学习时间）。
+     FSRS 调度由数据库 `next_review_at` 控制，不会真正重复调度。
+   - 文件：`feature/cards/.../CardsViewModel.kt`
+
+#### P1 修复（5 项）
+
+4. **P1-2：sibling 卡 previewIntervals 误导**
+   - 问题：sibling 卡（同 pointId 已评分）仍显示预期间隔，用户可能误以为评分会影响调度。
+   - 修复：新增 `isSiblingAlreadyRated` StateFlow，当为 sibling 卡时 UI 显示提示而非预期间隔。
+   - 文件：`feature/cards/.../CardsViewModel.kt` + `CardsScreen.kt`
+
+5. **P1-4：rateCard 异步失败处理不当**
+   - 问题：`recordStudySession` 失败会导致 Leech 检测被跳过，且错误提示不区分来源。
+   - 修复：将 `recordStudySession` 移到独立 try-catch 块，确保 Leech 检测执行，
+     并区分"评分调度失败"/"学习进度记录失败"/"错题记录失败"。
+   - 文件：`feature/cards/.../CardsViewModel.kt`
+
+6. **P1：评分按钮颜色与 Anki 惯例不符**
+   - 问题：GOOD 按钮为蓝色，EASY 按钮为绿色，与 Anki 的 GOOD=绿、EASY=蓝惯例相反。
+   - 修复：GOOD 按钮 → `secondaryContainer`（绿），EASY 按钮 → `primary`（蓝）。
+   - 文件：`feature/cards/.../CardsScreen.kt`
+
+7. **P1：sibling 卡冗余展示完整字段**
+   - 问题：每张 sibling 卡都附带完整的 society/work 结构化字段，导致信息冗余。
+   - 修复：仅在首张 sibling 卡附带 society/work 字段，后续卡片不附带。
+   - 文件：`core/data/.../cards/CardSplitter.kt`
+
+8. **P1：Leech 警告"查看知识点"按钮无效**
+   - 问题：`WenyanNavHost` 中 `cardsDestination` 未传递 `onNavigateToDetail` 参数。
+   - 修复：修改 `cardsDestination` 函数定义，添加 `onNavigateToDetail` 参数并在调用处传入导航逻辑。
+   - 文件：`app/.../navigation/WenyanNavHost.kt`
+
+#### P2 修复（3 项）
+
+9. **P2-C3：无 pointId 卡评 AGAIN 不记录错题**
+   - 问题：无 pointId 卡片评分时直接 return，跳过错题记录逻辑。
+   - 修复：在 `pointId.isBlank()` 分支中，若评 AGAIN 则异步记录错题（pointId 传 null）。
+   - 文件：`feature/cards/.../CardsViewModel.kt`
+
+10. **P2-1/P2-2：会话统计和时长在进程被杀后丢失**
+    - 问题：`sessionReviewedCount`、`sessionAgainCount`、`sessionStartTime` 未持久化。
+    - 修复：将这些状态通过 `SavedStateHandle` 持久化。
+    - 文件：`feature/cards/.../CardsViewModel.kt`
+
+11. **编译错误修复（3 处）**
+    - `CardsViewModel.kt`：`savedStateHandle.getStateFlow()` 返回 `StateFlow<T>` 而非
+      `MutableStateFlow<T>`，移除多余的 `.asStateFlow()` 调用（2 处）。
+    - `CardsScreen.kt`：`leechWarning` 为委托属性无法 smart cast，改用 `?.let { warning -> }`。
+    - `CardsScreen.kt`：`Column` 误用 `horizontalArrangement`（应为 `horizontalAlignment`）。
+
+### 新增测试（6 个场景，共 29 个 cards 测试 + 7 个 CardSplitter 测试）
+
+CardsViewModelTest 新增场景 18-23：
+
+18. `skipCard 推进索引但不影响统计`（P1 skip 功能）
+19. `skip 后 undo 回退到被跳过的卡`（P1 skip+undo 交互）
+20. `多步 undo 精确回退 AGAIN GOOD undo undo`（P0 栈式撤销）
+21. `undo 后 ratedPointIds 回退重新评分触发 FSRS`（P0 撤销后 sibling 去重回退）
+22. `无 pointId 卡评 AGAIN 记录错题`（P2 错题记录修复）
+23. `无 pointId 卡评 GOOD 不记录错题`（P2 反例验证）
+
+CardSplitterTest 新增 1 个场景：
+
+- `splitTermExplanation_structuredLabelsMoreThan6_notTruncated`（P0 6 维度限制修复验证）
+
+### 验证结果
+
+| 检查项 | 结果 |
+|--------|------|
+| :core:data:testDebugUnitTest (CardSplitterTest) | ✓ BUILD SUCCESSFUL（7 tests） |
+| :feature:cards:testDebugUnitTest | ✓ BUILD SUCCESSFUL（29 tests） |
+| :app:assembleDebug | ✓ BUILD SUCCESSFUL |
+| testDebugUnitTest 全量 | ✓ 全绿（280 tests，0 failures） |
+| 涉及文件 | 7 个（CardsViewModel/CardsScreen/CardSplitter/CardsViewModelTest/CardSplitterTest/WenyanNavHost/Fakes） |
+
+### 下一步建议
+
+1. **P0**：emulator 实测 v0.8.11 — 验证 sibling 卡提示 + skip/undo 交互 + Leech 警告跳转 + 进程恢复
+2. **P1**：启用剩余 3 种卡片模板（需扩展 seed 数据）
+3. **P2**：全局字符串硬编码抽取 strings.xml（系统性问题）

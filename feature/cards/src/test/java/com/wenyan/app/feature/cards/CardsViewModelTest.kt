@@ -716,6 +716,291 @@ class CardsViewModelTest {
             viewModel.sessionReviewedCount.value,
         )
     }
+
+    // ---------- v0.8.10 新增：skip + 多步 undo + ratedPointIds 回退测试 ----------
+
+    /**
+     * 场景 18（P1）：skipCard 推进索引但不影响统计。
+     *
+     * skip 不评分推进到下一张,sessionReviewedCount/sessionAgainCount 不变。
+     */
+    @Test
+    fun `skipCard 推进索引但不影响统计`() = runTest(testDispatcher) {
+        val cards = listOf(
+            testClozeCard(front = "卡 A", back = "答案 A", pointId = "p1"),
+            testClozeCard(front = "卡 B", back = "答案 B", pointId = "p2"),
+        )
+        cardRepository = FakeCardRepository(cards)
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        assertEquals("初始 currentIndex=0", 0, viewModel.uiState.value.currentIndex)
+        assertEquals("初始 sessionReviewedCount=0", 0, viewModel.sessionReviewedCount.value)
+
+        viewModel.skipCard()
+        advanceUntilIdle()
+
+        assertEquals("skip 后 currentIndex=1", 1, viewModel.uiState.value.currentIndex)
+        assertEquals(
+            "skip 不影响 sessionReviewedCount",
+            0,
+            viewModel.sessionReviewedCount.value,
+        )
+        assertEquals(
+            "skip 不触发 FSRS 调度",
+            0,
+            schedulingRepository.rateCardCalls.size,
+        )
+    }
+
+    /**
+     * 场景 19（P1）：skip 后 undo 回退到被跳过的卡。
+     *
+     * skip 入栈 rating=null,undo 时仅回退索引,不回退统计。
+     */
+    @Test
+    fun `skip 后 undo 回退到被跳过的卡`() = runTest(testDispatcher) {
+        val cards = listOf(
+            testClozeCard(front = "卡 A", back = "答案 A", pointId = "p1"),
+            testClozeCard(front = "卡 B", back = "答案 B", pointId = "p2"),
+        )
+        cardRepository = FakeCardRepository(cards)
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        viewModel.skipCard()
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.currentIndex)
+
+        viewModel.undo()
+        advanceUntilIdle()
+
+        assertEquals("undo 后 currentIndex 回到 0", 0, viewModel.uiState.value.currentIndex)
+        assertEquals(
+            "undo skip 不影响 sessionReviewedCount",
+            0,
+            viewModel.sessionReviewedCount.value,
+        )
+    }
+
+    /**
+     * 场景 20（P0）：多步 undo 精确回退（AGAIN→GOOD→undo→undo）。
+     *
+     * 验证 v0.8.8 ratingHistory 栈的精确回退:
+     * - 评 AGAIN:sessionReviewedCount=1, sessionAgainCount=1
+     * - 评 GOOD:sessionReviewedCount=2, sessionAgainCount=1
+     * - undo GOOD:sessionReviewedCount=1, sessionAgainCount=1
+     * - undo AGAIN:sessionReviewedCount=0, sessionAgainCount=0
+     *
+     * 原实现 lastRatingWasAgain:Boolean 在第二次 undo 丢失 AGAIN 回退。
+     */
+    @Test
+    fun `多步 undo 精确回退 AGAIN GOOD undo undo`() = runTest(testDispatcher) {
+        val cards = listOf(
+            testClozeCard(front = "卡 A", back = "答案 A", pointId = "p1"),
+            testClozeCard(front = "卡 B", back = "答案 B", pointId = "p2"),
+        )
+        cardRepository = FakeCardRepository(cards)
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        // AGAIN → GOOD
+        viewModel.rateCard(CardRating.AGAIN)
+        advanceUntilIdle()
+        viewModel.rateCard(CardRating.GOOD)
+        advanceUntilIdle()
+
+        assertEquals("AGAIN+GOOD 后 reviewedCount=2", 2, viewModel.sessionReviewedCount.value)
+        assertEquals("AGAIN+GOOD 后 againCount=1", 1, viewModel.sessionAgainCount.value)
+        // 注意:_currentIndex(SavedStateHandle)=2,但 UI state 的 currentIndex 被 coerceIn
+        // 到 safeIndex=1(cards.size=2,safeIndex∈[0,1])。此时 isFinished=true。
+        assertTrue("两卡都评完后应 isFinished=true", viewModel.uiState.value.isFinished)
+
+        // undo GOOD
+        viewModel.undo()
+        advanceUntilIdle()
+        assertEquals("undo GOOD 后 reviewedCount=1", 1, viewModel.sessionReviewedCount.value)
+        assertEquals("undo GOOD 后 againCount 仍为 1", 1, viewModel.sessionAgainCount.value)
+        assertEquals("undo GOOD 后 currentIndex=1", 1, viewModel.uiState.value.currentIndex)
+
+        // undo AGAIN
+        viewModel.undo()
+        advanceUntilIdle()
+        assertEquals(
+            "undo AGAIN 后 reviewedCount=0",
+            0,
+            viewModel.sessionReviewedCount.value,
+        )
+        assertEquals(
+            "undo AGAIN 后 againCount=0",
+            0,
+            viewModel.sessionAgainCount.value,
+        )
+        assertEquals("undo AGAIN 后 currentIndex=0", 0, viewModel.uiState.value.currentIndex)
+    }
+
+    /**
+     * 场景 21（P0）：undo 后 ratedPointIds 回退，重新评分触发 FSRS。
+     *
+     * 用户评 GOOD(sibling 首卡触发调度) → undo(回退 ratedPointIds) →
+     * 重新评 GOOD(应再次触发调度,因为 ratedPointIds 已回退)。
+     */
+    @Test
+    fun `undo 后 ratedPointIds 回退重新评分触发 FSRS`() = runTest(testDispatcher) {
+        val cards = listOf(
+            testClozeCard(front = "卡 A", back = "答案 A", pointId = "p1"),
+            testClozeCard(front = "卡 B", back = "答案 B", pointId = "p2"),
+        )
+        cardRepository = FakeCardRepository(cards)
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        // 评 GOOD 触发调度
+        viewModel.rateCard(CardRating.GOOD)
+        advanceUntilIdle()
+        assertEquals("首次评分应触发调度", 1, schedulingRepository.rateCardCalls.size)
+
+        // undo 回退 ratedPointIds
+        viewModel.undo()
+        advanceUntilIdle()
+
+        // 重新评 GOOD 应再次触发调度
+        viewModel.rateCard(CardRating.GOOD)
+        advanceUntilIdle()
+        assertEquals(
+            "undo 后重新评分应再次触发调度(ratedPointIds 已回退)",
+            2,
+            schedulingRepository.rateCardCalls.size,
+        )
+    }
+
+    /**
+     * 场景 22（P2）：无 pointId 卡评 AGAIN 记录错题。
+     *
+     * v0.8.10 P2-C3 修复:原实现无 pointId 卡评分时直接 return,跳过错题记录。
+     * 现改为 AGAIN 时仍记录错题(pointId=null)。
+     */
+    @Test
+    fun `无 pointId 卡评 AGAIN 记录错题`() = runTest(testDispatcher) {
+        val cards: List<CardTemplate> = listOf(
+            ClozeQuoteCard(
+                front = "无 pointId 卡",
+                back = "答案",
+                pointId = "",
+                quote = "____",
+                blank = "答案",
+                hint = "提示",
+            ),
+        )
+        cardRepository = FakeCardRepository(cards)
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        viewModel.rateCard(CardRating.AGAIN)
+        advanceUntilIdle()
+
+        assertEquals(
+            "无 pointId 卡不应触发 FSRS 调度",
+            0,
+            schedulingRepository.rateCardCalls.size,
+        )
+        assertEquals(
+            "无 pointId 卡评 AGAIN 应记录错题",
+            1,
+            wrongAnswerRepository.recordedWrongAnswers.size,
+        )
+        val record = wrongAnswerRepository.recordedWrongAnswers[0]
+        assertNull("无 pointId 卡的错题记录 pointId 应为 null", record.pointId)
+        assertEquals(
+            "source 应为 CARD_AGAIN",
+            WrongAnswerRepository.SOURCE_CARD_AGAIN,
+            record.source,
+        )
+    }
+
+    /**
+     * 场景 23（P1）：无 pointId 卡评 GOOD 不记录错题。
+     *
+     * 只有 AGAIN 记录错题,GOOD/HARD/EASY 不记录。
+     */
+    @Test
+    fun `无 pointId 卡评 GOOD 不记录错题`() = runTest(testDispatcher) {
+        val cards: List<CardTemplate> = listOf(
+            ClozeQuoteCard(
+                front = "无 pointId 卡",
+                back = "答案",
+                pointId = "",
+                quote = "____",
+                blank = "答案",
+                hint = "提示",
+            ),
+        )
+        cardRepository = FakeCardRepository(cards)
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        viewModel.rateCard(CardRating.GOOD)
+        advanceUntilIdle()
+
+        assertTrue(
+            "无 pointId 卡评 GOOD 不应记录错题",
+            wrongAnswerRepository.recordedWrongAnswers.isEmpty(),
+        )
+    }
 }
 
 /** 测试用 StudyProgressRepository(P0 v0.7.2 新增,直接实例化 + Fake DAO) */

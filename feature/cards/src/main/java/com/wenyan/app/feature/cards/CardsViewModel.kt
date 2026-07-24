@@ -84,24 +84,6 @@ class CardsViewModel @Inject constructor(
     private val _leechWarning = MutableStateFlow<LeechWarning?>(null)
     val leechWarning: StateFlow<LeechWarning?> = _leechWarning.asStateFlow()
 
-    /**
-     * 当前卡片是否为"已评分 sibling 卡"(v0.8.9 新增,修复 P1-2)。
-     *
-     * - true:当前卡 [CardItem.pointId] 已在 [ratedPointIds] 中(同知识点的兄弟卡已评分过)
-     * - UI 据此隐藏 [currentPreviews] 的预期间隔显示,避免误导用户
-     *   (sibling 卡评分不会触发 FSRS 调度,显示"GOOD→6天"是误导)
-     * - UI 改为显示"已调度(同知识点首卡已评分)"提示
-     *
-     * 用 derivedStateOf 不持久化,因为 [ratedPointIds] 本身不持久化。
-     */
-    val isSiblingAlreadyRated: StateFlow<Boolean> = _uiState
-        .map { it.currentCard?.pointId in ratedPointIds }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Eagerly,
-            initialValue = false,
-        )
-
     /** 重试触发器 */
     private val _retryTrigger = MutableStateFlow(0)
 
@@ -119,7 +101,7 @@ class CardsViewModel @Inject constructor(
      * 含 sibling 卡。进程被杀恢复后保留统计,完成态展示准确。
      */
     private val _sessionReviewedCount = savedStateHandle.getStateFlow("sessionReviewedCount", 0)
-    val sessionReviewedCount: StateFlow<Int> = _sessionReviewedCount.asStateFlow()
+    val sessionReviewedCount: StateFlow<Int> = _sessionReviewedCount
 
     /**
      * 会话内评 AGAIN 的张数(v0.8.9 持久化,修复 P2-2)。
@@ -127,7 +109,7 @@ class CardsViewModel @Inject constructor(
      * 用于完成态"掌握率"计算。进程被杀恢复后保留统计。
      */
     private val _sessionAgainCount = savedStateHandle.getStateFlow("sessionAgainCount", 0)
-    val sessionAgainCount: StateFlow<Int> = _sessionAgainCount.asStateFlow()
+    val sessionAgainCount: StateFlow<Int> = _sessionAgainCount
 
     /**
      * 评分历史栈(v0.8.8 新增,替代 v0.8.7 的 `lastRatingWasAgain: Boolean`)。
@@ -168,6 +150,28 @@ class CardsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<CardsUiState>(CardsUiState(isLoading = true))
     val uiState: StateFlow<CardsUiState> = _uiState.asStateFlow()
 
+    /**
+     * 当前卡片是否为"已评分 sibling 卡"(v0.8.9 新增,修复 P1-2)。
+     *
+     * - true:当前卡 [CardItem.pointId] 已在 [ratedPointIds] 中(同知识点的兄弟卡已评分过)
+     * - UI 据此隐藏 [currentPreviews] 的预期间隔显示,避免误导用户
+     *   (sibling 卡评分不会触发 FSRS 调度,显示"GOOD→6天"是误导)
+     * - UI 改为显示"已调度(同知识点首卡已评分)"提示
+     *
+     * 注意:声明顺序必须在 [_uiState] 和 [ratedPointIds] 之后,否则初始化时
+     * 它们还未初始化(backing field 为 null),会导致 NPE。
+     * stateIn 持有 viewModelScope 和 SharingStarted.Eagerly,会立即开始收集,
+     * 但 map 的 lambda 是惰性执行的(Flow emit 时才执行),此时 [ratedPointIds]
+     * 已完成初始化。
+     */
+    val isSiblingAlreadyRated: StateFlow<Boolean> = _uiState
+        .map { it.currentCard?.pointId in ratedPointIds }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = false,
+        )
+
     init {
         viewModelScope.launch {
             _retryTrigger
@@ -190,10 +194,26 @@ class CardsViewModel @Inject constructor(
                         } else if (sessionCards == null) {
                             // 进程被杀后恢复:sessionLoaded=true 但 sessionCards=null
                             // 重置 currentIndex 避免错位,重新加载 cards
+                            //
+                            // v0.8.10 P1-E2+F1 修复:
+                            // 原实现只重置 currentIndex,保留 sessionReviewedCount/sessionAgainCount,
+                            // 导致用户重新评分时统计重复累加(如已评 5 张被杀,恢复后重评 5 张,count=10)。
+                            // 同时 ratedPointIds(内存)丢失,sibling 去重失效,可能重复触发 FSRS 调度。
+                            //
+                            // 修复策略:进程恢复时重置统计计数为 0,避免重复计数。
+                            // 会话时长保留(基于原始 sessionStartTime,反映总学习时间)。
+                            // ratedPointIds 已在内存丢失(空 set),sibling 去重自然失效,
+                            // 但 FSRS 调度由数据库 next_review_at 控制,不会真正重复调度
+                            // (已调度的卡 next_review_at > now,不会出现在 getCardsForReview 中)。
                             if (currentIndex > 0) {
                                 savedStateHandle["currentIndex"] = 0
                                 savedStateHandle["isFlipped"] = false
                             }
+                            // 重置统计计数,避免恢复后重新评分导致重复计数
+                            savedStateHandle["sessionReviewedCount"] = 0
+                            savedStateHandle["sessionAgainCount"] = 0
+                            // 清空评分历史栈(内存已丢失,同步清空避免 undo 错位)
+                            ratingHistory.clear()
                             val newCards = cards.mapIndexed { index, card -> card.toUiItem(index) }
                             sessionCards = newCards
                             newCards
@@ -303,8 +323,28 @@ class CardsViewModel @Inject constructor(
         }
 
         // 无 pointId 的卡片仅推进索引 + 入栈(undo 需回退 sessionReviewedCount)
+        // v0.8.10 P2-C3 修复:无 pointId 卡评 AGAIN 仍记录错题。
+        // 原实现直接 return,跳过错题记录,用户评 AGAIN 表达"不会"但错题本不更新。
+        // 现改为 AGAIN 时异步记录错题(pointId 传 null),然后 return。
         if (pointId.isBlank()) {
             ratingHistory.addLast(RatingStep(rating = rating, pointId = "", triggeredSchedule = false))
+            if (rating == CardRating.AGAIN) {
+                viewModelScope.launch {
+                    try {
+                        wrongAnswerRepository.recordWrongAnswer(
+                            pointId = null,
+                            examQuestionId = null,
+                            userAnswer = "（评分AGAIN：未回忆）",
+                            correctAnswer = current.back,
+                            source = WrongAnswerRepository.SOURCE_CARD_AGAIN,
+                        )
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        _errorMessage.value = "错题记录失败：${e.message ?: "未知错误"}"
+                    }
+                }
+            }
             return
         }
 
