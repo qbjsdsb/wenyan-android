@@ -10,3 +10,15 @@ java = "17.0.2"
 # 同时配置 HTTPS 代理 — Robolectric 测试 worker JVM 不继承 Gradle 代理设置，
 # 需在 JAVA_TOOL_OPTIONS 中配置才能让 MavenArtifactFetcher 通过代理下载 android-all jar
 JAVA_TOOL_OPTIONS = "-XX:-UseContainerSupport -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=18080 -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=18080 -Dhttp.nonProxyHosts=localhost|127.0.0.1|.svc|.cluster.local"
+# Android SDK 路径（沙箱标准位置，与 docs/01-QUICK-RECOVERY.md 一致）
+ANDROID_HOME = "/opt/android-sdk"
+ANDROID_SDK_ROOT = "/opt/android-sdk"
+
+# 将 Android SDK 的可执行文件加入 PATH（cmdline-tools/bin 含 sdkmanager/avdmanager，
+# platform-tools 含 adb，build-tools 含 aapt2/d8）
+# mise 语法：[env] 节下用 _.path 数组追加到 PATH
+_.path = [
+    "/opt/android-sdk/cmdline-tools/latest/bin",
+    "/opt/android-sdk/platform-tools",
+    "/opt/android-sdk/build-tools/35.0.0",
+]
