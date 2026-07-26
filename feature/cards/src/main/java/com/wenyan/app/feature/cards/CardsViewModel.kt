@@ -258,6 +258,19 @@ class CardsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            // v0.8.20 P1-2 修复 retry-after-error bug:
+            // 原结构 `.flatMapLatest { combine... }.catch { emit(...) }.collect {...}`
+            // 中 .catch 在 flatMapLatest 外层。当 combine 抛异常时,.catch emit 错误态后
+            // 整条 Flow 终止,viewModelScope.launch 协程返回。此后 retry() 触发的
+            // _retryTrigger.value++ 无法被任何 collector 接收(retry 只同步设置
+            // isLoading=true),导致 UI 永远停留在 loading 态。
+            //
+            // 修复:把 .catch 移入 flatMapLatest 的 lambda 内部,使其仅终止"本次订阅"
+            // 的 inner Flow,而非外层 Flow。外层 Flow 仍由 _retryTrigger 驱动,retry()
+            // 触发新值时 flatMapLatest 会创建新的 inner Flow(combine + catch),
+            // 实现"出错后 retry 真正重新加载"。
+            //
+            // 单元测试验证:`加载失败后 retry 清空错误并重新加载`(场景 38)。
             _retryTrigger
                 .flatMapLatest {
                     combine(
@@ -320,12 +333,28 @@ class CardsViewModel @Inject constructor(
                             isFinished = isFinished,
                         )
                     }
-                }
-                .catch { e ->
-                    // v0.8.14 P1-7 修复:原仅取 e.message 丢失堆栈,生产排查困难。
-                    // 现加 Log.e 输出完整堆栈,UI 仍只展示 message(用户无需看堆栈)。
-                    android.util.Log.e("CardsViewModel", "loadCards failed", e)
-                    emit(CardsUiState(error = e.message ?: "加载失败"))
+                    // v0.8.20 P1-2:.catch 必须在 flatMapLatest 内部(见 init 头注释),
+                    // 仅终止本次订阅的 inner Flow,使外层 Flow 仍由 _retryTrigger 驱动,
+                    // 支持 retry() 重新触发加载。
+                    .catch { e ->
+                        // v0.8.14 P1-7 修复:原仅取 e.message 丢失堆栈,生产排查困难。
+                        // 现加 Log.e 输出完整堆栈,UI 仍只展示友好提示(用户无需看堆栈)。
+                        //
+                        // v0.8.20 P1-2 统一错误处理:
+                        // 原用 `e.message ?: "加载失败"` 直接暴露原始异常文本(可能是英文堆栈
+                        // 或类名如 "java.net.SocketTimeoutException: failed to connect"),
+                        // 与 KnowledgeViewModel 错误提示不一致(知识模块已用 friendlyErrorMessage
+                        // 映射为中文友好提示)。
+                        // 现复用 core/common/util/friendlyErrorMessage,与 feature/knowledge 保持
+                        // 用户体验一致:网络异常→"网络超时,请检查网络后重试",
+                        // 数据库异常→"本地数据异常,请重启 App",未知异常→"加载失败,请重试"。
+                        android.util.Log.e("CardsViewModel", "loadCards failed", e)
+                        emit(
+                            CardsUiState(
+                                error = com.wenyan.app.core.common.util.friendlyErrorMessage(e),
+                            ),
+                        )
+                    }
                 }
                 .collect { _uiState.value = it }
         }

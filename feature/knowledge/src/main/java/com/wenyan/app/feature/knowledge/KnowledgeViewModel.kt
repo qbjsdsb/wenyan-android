@@ -273,28 +273,16 @@ enum class KnowledgeCategory(val label: String, val keyword: String) {
 }
 
 /**
- * 将异常映射为用户友好的中文错误提示(v0.8.20 P1-5 新增)。
+ * 将异常映射为用户友好的中文错误提示。
  *
- * 原实现直接展示 `e.message ?: "加载失败"`,异常 message 可能是
- * 英文堆栈("android.database.sqlite.SQLiteException: no such table...")、
- * SQL 错误("UNIQUE constraint failed: knowledge_points.id")、
- * 网络错误("timeout")等,对用户不友好。
+ * v0.8.20 P1-5 新增,v0.8.20 P1-2 重构:
+ * 实现已抽取到 core/common 模块 [com.wenyan.app.core.common.util.friendlyErrorMessage]
+ * 作为公共 API,供 feature/knowledge、feature/cards 等模块共享。
  *
- * 现按异常类型映射为中文提示,raw message 仍由 catchAndLog 在 Repository 层
- * 用 Log.e 输出供排查。
+ * 本 internal 包装仅为保持旧 API 兼容(feat/knowledge 测试文件仍引用
+ * `friendlyErrorMessage`),实际委托到 core/common 实现。
  *
- * v0.8.13 重构:从 [KnowledgeViewModel] companion object private 函数移到
- * top-level internal 函数,供同 package 的 [KnowledgePointDetailViewModel] 复用
- * (原详情页 catch 用 raw `e.message ?: "加载失败"`,与本规范不一致,违反 P1-5)。
+ * 历史背景详见 [com.wenyan.app.core.common.util.friendlyErrorMessage] 的 KDoc。
  */
-internal fun friendlyErrorMessage(e: Throwable): String = when {
-    e is java.net.SocketTimeoutException || e is java.net.UnknownHostException ->
-        "网络超时,请检查网络后重试"
-    e is android.database.sqlite.SQLiteException ->
-        "本地数据异常,请重启 App"
-    e is kotlinx.coroutines.TimeoutCancellationException ->
-        "加载超时,请重试"
-    e.message != null && e.message!!.contains("no such table", ignoreCase = true) ->
-        "数据库版本异常,请重启 App"
-    else -> "加载失败,请重试"
-}
+internal fun friendlyErrorMessage(e: Throwable): String =
+    com.wenyan.app.core.common.util.friendlyErrorMessage(e)

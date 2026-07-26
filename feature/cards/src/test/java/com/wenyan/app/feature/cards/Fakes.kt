@@ -18,20 +18,33 @@ import com.wenyan.app.core.fsrs.Rating
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 
 /**
  * [CardRepository] 的 Fake 实现,供 [CardsViewModelTest] 使用(NF-PP5 Wave 3.2)。
  *
- * 通过 [cards] 可控地注入测试卡片流。
+ * 通过 [initialCards] 可控地注入测试卡片流。
+ *
+ * v0.8.20 P1-2 新增 [throwOnGetCards] 参数,用于测试 CardsViewModel 的加载失败分支:
+ * - 非 null 时 [getCardsForReview] 返回一个在 collect 时抛出指定异常的 Flow,
+ *   触发 CardsViewModel init 块的 .catch 分支,验证错误提示文案。
+ * - 默认 null,与历史行为兼容(返回 [initialCards] 对应的 StateFlow)。
+ *
+ * 用 flow { throw ... } 而非直接在 getCardsForReview() 抛异常,确保异常在 collect
+ * 时触发(模拟真实场景:DB 查询异常发生在 Flow collect 阶段,而非构造阶段)。
  */
 class FakeCardRepository(
     initialCards: List<CardTemplate> = emptyList(),
+    var throwOnGetCards: Throwable? = null,
 ) : CardRepository {
 
     private val _cards = MutableStateFlow(initialCards)
 
-    override fun getCardsForReview(): Flow<List<CardTemplate>> = _cards.asStateFlow()
+    override fun getCardsForReview(): Flow<List<CardTemplate>> =
+        throwOnGetCards?.let { e ->
+            flow { throw e }
+        } ?: _cards.asStateFlow()
 }
 
 /**

@@ -24,6 +24,9 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
+import android.database.sqlite.SQLiteException
 
 /**
  * [CardsViewModel] 单元测试。
@@ -1486,6 +1489,273 @@ class CardsViewModelTest {
             0,
             viewModel.sessionDurationMinutes.value,
         )
+    }
+
+    // ---------- v0.8.20 P1-2 新增:错误处理统一测试 ----------
+
+    /**
+     * 场景 34(P0):getCardsForReview 抛 SQLiteException 时,UI 显示"本地数据异常,请重启 App"。
+     *
+     * v0.8.20 P1-2 修复回归测试:
+     * 原实现 catch 块用 `e.message ?: "加载失败"` 暴露原始 SQL 错误文本(如
+     * "UNIQUE constraint failed: knowledge_points.id"),用户看到英文堆栈无措。
+     * 现复用 core/common/util/friendlyErrorMessage,SQLiteException 统一映射为
+     * "本地数据异常,请重启 App",与 KnowledgeViewModel 错误提示一致。
+     *
+     * 测试依赖:feature/cards build.gradle.kts 已配置
+     * testOptions.unitTests.isReturnDefaultValues=true(允许实例化 Android SQLiteException)。
+     */
+    @Test
+    fun `加载失败 SQLiteException 显示本地数据异常友好提示`() = runTest(testDispatcher) {
+        cardRepository = FakeCardRepository(
+            initialCards = emptyList(),
+            throwOnGetCards = SQLiteException("UNIQUE constraint failed: knowledge_points.id"),
+        )
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        val error = viewModel.uiState.value.error
+        assertNotNull("SQLiteException 时 uiState.error 应非 null", error)
+        assertEquals(
+            "SQLiteException 应映射为'本地数据异常,请重启 App'(不暴露英文 SQL 错误)",
+            "本地数据异常,请重启 App",
+            error,
+        )
+        assertFalse(
+            "错误提示不应包含英文 SQL 文本",
+            error!!.contains("UNIQUE constraint", ignoreCase = true),
+        )
+    }
+
+    /**
+     * 场景 35(P0):getCardsForReview 抛 SocketTimeoutException 时,UI 显示"网络超时,请检查网络后重试"。
+     *
+     * 模拟 FSRS 调度服务调用超时(虽然本仓库 FSRS 是本地实现,但保留网络异常分支
+     * 与 KnowledgeViewModel 一致,future-proofing 远程 FSRS 接入)。
+     */
+    @Test
+    fun `加载失败 SocketTimeoutException 显示网络超时友好提示`() = runTest(testDispatcher) {
+        cardRepository = FakeCardRepository(
+            initialCards = emptyList(),
+            throwOnGetCards = SocketTimeoutException("connect timed out"),
+        )
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        val error = viewModel.uiState.value.error
+        assertNotNull("SocketTimeoutException 时 uiState.error 应非 null", error)
+        assertEquals(
+            "SocketTimeoutException 应映射为'网络超时,请检查网络后重试'",
+            "网络超时,请检查网络后重试",
+            error,
+        )
+        assertFalse(
+            "错误提示不应包含英文 connect timed out",
+            error!!.contains("connect timed out", ignoreCase = true),
+        )
+    }
+
+    /**
+     * 场景 36(P1):getCardsForReview 抛 UnknownHostException 时,UI 显示"网络超时,请检查网络后重试"。
+     *
+     * 与场景 35 互补,验证 UnknownHostException 也走网络异常分支。
+     */
+    @Test
+    fun `加载失败 UnknownHostException 显示网络超时友好提示`() = runTest(testDispatcher) {
+        cardRepository = FakeCardRepository(
+            initialCards = emptyList(),
+            throwOnGetCards = UnknownHostException("api.example.com"),
+        )
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        val error = viewModel.uiState.value.error
+        assertEquals(
+            "UnknownHostException 应映射为'网络超时,请检查网络后重试'",
+            "网络超时,请检查网络后重试",
+            error,
+        )
+    }
+
+    /**
+     * 场景 37(P0):getCardsForReview 抛未知 RuntimeException 时,UI 显示兜底"加载失败,请重试"。
+     *
+     * 验证 friendlyErrorMessage 的兜底分支,以及与原 `e.message ?: "加载失败"` 的差异:
+     * 原实现会暴露 e.message(如 "unexpected null pointer"),
+     * 现统一映射为"加载失败,请重试",不暴露任何英文文本。
+     */
+    @Test
+    fun `加载失败未知 RuntimeException 显示兜底友好提示`() = runTest(testDispatcher) {
+        cardRepository = FakeCardRepository(
+            initialCards = emptyList(),
+            throwOnGetCards = RuntimeException("unexpected null pointer in parser"),
+        )
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        val error = viewModel.uiState.value.error
+        assertNotNull("未知异常时 uiState.error 应非 null", error)
+        assertEquals(
+            "未知异常应映射为兜底'加载失败,请重试'(不暴露原始 message)",
+            "加载失败,请重试",
+            error,
+        )
+        assertFalse(
+            "错误提示不应包含英文 unexpected",
+            error!!.contains("unexpected", ignoreCase = true),
+        )
+        assertFalse(
+            "错误提示不应包含 null pointer",
+            error.contains("null pointer", ignoreCase = true),
+        )
+    }
+
+    /**
+     * 场景 38(P1):加载失败后调用 retry(),错误清空并重新加载成功。
+     *
+     * 验证 retry() 的契约:
+     * - 1. retry() 立即设置 isLoading=true,error=null(快速反馈)
+     * - 2. retry() 触发 _retryTrigger,Flow 重新订阅
+     * - 3. 重新加载成功后 uiState.isLoading=false, cards 非空, error=null
+     *
+     * 使用 FakeCardRepository 的 throwOnGetCards 字段(可变)模拟"先失败后成功":
+     * - 初始:抛 SQLiteException
+     * - retry 前:清空 throwOnGetCards(恢复正常返回空列表的 Flow)
+     */
+    @Test
+    fun `加载失败后 retry 清空错误并重新加载`() = runTest(testDispatcher) {
+        // 初始:抛异常
+        cardRepository = FakeCardRepository(
+            initialCards = listOf(testClozeCard()),
+            throwOnGetCards = SQLiteException("no such table: memo_records"),
+        )
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        // 验证初始为错误态
+        assertNotNull("初始应加载失败", viewModel.uiState.value.error)
+        assertEquals(
+            "初始错误应为本地数据异常",
+            "本地数据异常,请重启 App",
+            viewModel.uiState.value.error,
+        )
+
+        // 修复 Fake:清空 throwOnGetCards,恢复返回正常卡片流
+        cardRepository.throwOnGetCards = null
+        // 触发 retry
+        viewModel.retry()
+        // advanceUntilIdle 让 retry 的 _retryTrigger Flow 重新订阅 + 加载完成
+        //
+        // v0.8.20 P1-2 修复:原 CardsViewModel 把 .catch 放在 flatMapLatest 外层,
+        // 导致首次加载失败后 .catch emit 错误态使整条 Flow 终止,retry() 设置
+        // isLoading=true 后再无 collector 把它改回 false,UI 永远卡 loading。
+        // 现已把 .catch 移入 flatMapLatest 内部,仅终止本次订阅,外层 Flow 仍由
+        // _retryTrigger 驱动,retry() 真正重新触发加载。本测试是此修复的回归保护。
+        advanceUntilIdle()
+        advanceUntilIdle()
+
+        // 验证 retry 后清空错误 + 重新加载
+        assertNull(
+            "retry 后 error 应清空",
+            viewModel.uiState.value.error,
+        )
+        assertFalse(
+            "retry 后 isLoading 应为 false(加载完成)",
+            viewModel.uiState.value.isLoading,
+        )
+        assertNotNull(
+            "retry 后应能加载到卡片(throwOnGetCards 已清空)",
+            viewModel.uiState.value.currentCard,
+        )
+    }
+
+    /**
+     * 场景 39(P1):rateCard 时 schedulingRepository.rateCard 抛异常,error message 以"评分调度失败"开头。
+     *
+     * v0.8.20 P1-2 审计发现:此路径用 `e.message ?: "未知错误"` 暴露 raw exception message,
+     * 与加载失败的 friendlyErrorMessage 不一致(记为 P2 finding,不在本批修复)。
+     *
+     * 本测试锁定当前行为(以"评分调度失败"前缀 + raw message),作为后续 P2 修复的基线:
+     * - 验证错误确实被捕获到 _errorMessage(不冒泡崩溃)
+     * - 验证前缀"评分调度失败："存在(用户能识别错误来源)
+     * - 不强制断言具体 message 内容(允许 P2 修复后改为 friendlyErrorMessage)
+     */
+    @Test
+    fun `评分调度失败时 errorMessage 包含评分调度失败前缀`() = runTest(testDispatcher) {
+        cardRepository = FakeCardRepository(listOf(testClozeCard()))
+        schedulingRepository = FakeSchedulingRepository().apply {
+            // 让 rateCard 抛 RuntimeException
+            throwException = RuntimeException("FSRS algorithm crashed: division by zero")
+        }
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        // 评分触发调度失败
+        viewModel.rateCard(CardRating.GOOD)
+        advanceUntilIdle()
+
+        val error = viewModel.errorMessage.value
+        assertNotNull("评分调度失败时 errorMessage 应非 null", error)
+        assertTrue(
+            "errorMessage 应以'评分调度失败'开头(标识错误来源),实际: $error",
+            error!!.startsWith("评分调度失败"),
+        )
+        // v0.8.20 P2 finding:当前实现暴露 raw message("FSRS algorithm crashed: division by zero")
+        // 后续 P2 修复应改为 friendlyErrorMessage,届时此断言需相应更新。
+        // 现仅断言前缀存在,允许 message 内容变化。
     }
 }
 

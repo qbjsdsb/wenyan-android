@@ -25,9 +25,20 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // v0.8.20 P1-2 新增:与 feature/knowledge 一致。
+    // 单元测试 JVM 环境不 mock Android 框架类(如 android.database.sqlite.SQLiteException),
+    // isReturnDefaultValues=true 使未 mock 的方法返回默认值而非抛 RuntimeException,
+    // 允许在测试中实例化 SQLiteException 验证 friendlyErrorMessage 的"本地数据异常"分支。
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 dependencies {
+    // core:common 提供 friendlyErrorMessage(P1-2 抽取,跨模块复用)
     implementation(project(":core:common"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:data"))

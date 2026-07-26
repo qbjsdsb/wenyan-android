@@ -3916,4 +3916,80 @@ CardSplitterTest 新增 1 个场景：
 
 - 待提交：5 修复 + 5 新增测试文件 + SESSION_LOG 更新
 
+---
+
+## 2026-07-26 知识卡片功能第三轮深度审计（错误处理统一 + retry-after-error bug 修复）
+
+### 背景
+
+用户要求"详细检查一下知识卡片功能有没有问题或者可以完善的地方，严谨仔细调查研究，反复检查，努力做到最好，完了做好交接"。延续 v0.8.5 / v0.8.12 / v0.8.18 三轮卡片深度打磨，本轮聚焦跨模块错误处理一致性 + retry 失效 bug。
+
+应用 Staff Engineer Mode 工程决策框架，对 feature/cards 的错误处理路径做端到端审计，发现 2 个 P1 问题 + 1 个隐藏 P0 bug。
+
+### 修复清单
+
+#### P1-2: 跨模块错误提示碎片化（friendlyErrorMessage 抽取到 core/common）
+
+- **问题**：feature/knowledge 在 v0.8.19 P1-5 已将异常映射为中文友好提示（`friendlyErrorMessage`），但 feature/cards 仍用 `e.message ?: "加载失败"` 直接暴露原始异常文本。两个模块同一类异常展示不同文案：
+  - knowledge: SQLiteException → "本地数据异常,请重启 App"
+  - cards: SQLiteException → "android.database.sqlite.SQLiteException: no such table..."（英文堆栈泄露）
+- **修复**：
+  - 将 `friendlyErrorMessage` 从 feature/knowledge 抽取到 `core/common/src/main/java/com/wenyan/app/core/common/util/FriendlyErrorMessage.kt`，作为 public API
+  - feature/knowledge 保留 internal 包装函数（旧测试仍引用 `friendlyErrorMessage`），委托到 core/common
+  - feature/cards/CardsViewModel.kt 的 `.catch` 改用 `com.wenyan.app.core.common.util.friendlyErrorMessage(e)`
+  - feature/cards/build.gradle.kts 添加 `implementation(project(":core:common"))` 依赖 + `testOptions.unitTests.isReturnDefaultValues = true`（允许测试实例化 Android SQLiteException）
+- **文件**：`core/common/src/main/java/com/wenyan/app/core/common/util/FriendlyErrorMessage.kt`（新增）+ `feature/knowledge/.../KnowledgeViewModel.kt` + `feature/cards/.../CardsViewModel.kt` + `feature/cards/build.gradle.kts`
+
+#### P0: retry-after-error bug（.catch 位置错误导致 Flow 链终止）
+
+- **问题**：CardsViewModel.init 中 Flow 结构为
+  ```
+  _retryTrigger.flatMapLatest { combine... }.catch { emit(...) }.collect { ... }
+  ```
+  `.catch` 在 `flatMapLatest` **外层**。当 combine 抛异常时，.catch emit 错误态后整条 Flow 终止，`viewModelScope.launch` 协程返回。此后 retry() 触发的 `_retryTrigger.value++` 无法被任何 collector 接收（retry 仅同步设置 `isLoading=true`），导致 UI 永远停留在 loading 态。
+- **根因**：`.catch` 的 emit 是 terminal operation，emit 后 Flow 完成；外层 .collect 返回；后续 _retryTrigger 发射无人监听。
+- **修复**：把 `.catch` 移入 `flatMapLatest` 的 lambda 内部（成为 inner Flow 的 operator），仅终止本次订阅的 inner Flow。外层 Flow 仍由 _retryTrigger 驱动，retry() 触发新值时 flatMapLatest 创建新的 inner Flow（combine + catch），实现"出错后 retry 真正重新加载"。
+- **文件**：`feature/cards/src/main/java/com/wenyan/app/feature/cards/CardsViewModel.kt`
+
+### 新增测试（5 个场景，全绿）
+
+| 测试文件 | 测试数 | 覆盖点 |
+|----------|--------|--------|
+| `CardsViewModelTest`（场景 34-38，原 34 → 39） | +5 | SQLiteException → 本地数据异常 / SocketTimeoutException → 网络超时 / UnknownHostException → 网络超时 / 未知 RuntimeException → 加载失败 / retry 后清空错误并重新加载（P0 修复回归保护） |
+| `Fakes.kt`（FakeCardRepository） | - | 新增 `throwOnGetCards: Throwable?` 字段，支持错误注入测试 |
+
+场景 39（评分调度失败）作为 P2 finding 记录：`e.message ?: "未知错误"` 路径仍暴露 raw exception message，与加载失败分支不一致，待后续修复。
+
+### 验证状态
+
+✅ 沙箱编译 + 测试全绿（2026-07-26）：
+- `:core:common:compileDebugKotlin :feature:cards:compileDebugKotlin :feature:knowledge:compileDebugKotlin` BUILD SUCCESSFUL
+- `assembleDebug` BUILD SUCCESSFUL（421 tasks，1m22s）
+- `:feature:cards:testDebugUnitTest` 45 tests（39 CardsViewModelTest + 6 FlipCardLogicTest），0 failures
+- `:feature:knowledge:testDebugUnitTest` 42 tests（8 FriendlyErrorMessageTest + 12 KnowledgePointDetailViewModelTest + 7 KnowledgeViewModelRetryTest + 15 KnowledgeViewModelTest），0 failures
+
+### commit
+
+- 待提交：5 文件改动 + SESSION_LOG 更新
+  - 新增：`core/common/src/main/java/com/wenyan/app/core/common/util/FriendlyErrorMessage.kt`
+  - 修改：`feature/cards/build.gradle.kts`（依赖 + testOptions）
+  - 修改：`feature/cards/src/main/java/com/wenyan/app/feature/cards/CardsViewModel.kt`（friendlyErrorMessage + .catch 位置修复）
+  - 修改：`feature/cards/src/test/java/com/wenyan/app/feature/cards/Fakes.kt`（throwOnGetCards）
+  - 修改：`feature/cards/src/test/java/com/wenyan/app/feature/cards/CardsViewModelTest.kt`（5 个新测试）
+  - 修改：`feature/knowledge/src/main/java/com/wenyan/app/feature/knowledge/KnowledgeViewModel.kt`（friendlyErrorMessage 委托到 core/common）
+
+### 交接给下一会话
+
+1. **本批不引入新功能**，仅统一错误处理 + 修 retry bug + 加回归测试
+2. **未修复的 P2 finding**（场景 39 测试已锁定基线）：CardsViewModel.rateCard 失败路径用 `e.message ?: "未知错误"`，建议下一轮改为 `friendlyErrorMessage(e)` 与加载分支对齐
+3. **未覆盖的审计维度**（建议下一轮）：
+   - CardsScreen.kt 仍用 `Icons.Filled.MenuBook`（已 deprecated，应改 `Icons.AutoMirrored.Filled.MenuBook`，编译 warning）
+   - feature/cards ViewModel 的状态机正确性（state-machine-correctness specialist）：isLoading / error / isFinished / hasCards 优先级组合的边界情况
+   - SchedulingRepository 与 CardRepository 的契约测试（Fake 与真实实现行为一致性）
+4. **CI 仍待恢复**：GitHub Actions 账单问题，本批改动属纯 Kotlin/Compose 业务逻辑 + 测试，按 CI 验证策略不需等 CI 即可 push
+5. **emulator 实测建议**：本批改动改了 CardsViewModel 的 Flow 结构（.catch 移入 flatMapLatest），emulator 实测应重点验证：
+   - 关闭网络后启动 App，进卡片页 → 应显示"网络超时,请检查网络后重试"
+   - 点击 retry → 应重新加载（不再卡 loading）
+   - 评分过程中杀进程 → 恢复后状态正确
+
 
