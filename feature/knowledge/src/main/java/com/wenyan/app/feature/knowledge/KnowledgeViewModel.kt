@@ -15,8 +15,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -96,8 +98,15 @@ class KnowledgeViewModel @Inject constructor(
             _retryTrigger
                 .flatMapLatest {
                     // v0.8.19 P1-UI-1: 搜索词 debounce 300ms 后触发查询
+                    // v0.8.13 P0-1 修复: retry 时跳过 debounce 立即重试。
+                    // 原 _searchQuery.debounce(300ms) 在 retry 后仍要等 300ms 才重新查询,
+                    // 违反 retry 的"立即重试"语义。用 onStart 在 debounce 之后立即 emit 当前值,
+                    // 跳过首次 debounce 等待;distinctUntilChanged 过滤掉 debounce 后相同值的
+                    // 重复 emit,避免首次加载/retry 触发两次相同 DB 查询。
                     _searchQuery
                         .debounce(SEARCH_DEBOUNCE_MS)
+                        .onStart { emit(_searchQuery.value) }
+                        .distinctUntilChanged()
                         .flatMapLatest { query ->
                             val pointsFlow = if (query.isBlank()) {
                                 knowledgeRepository.getVerifiedWithSubject()
@@ -187,29 +196,6 @@ class KnowledgeViewModel @Inject constructor(
          */
         private const val MAX_SEARCH_QUERY_LENGTH = 50
 
-        /**
-         * 将异常映射为用户友好的中文错误提示(v0.8.20 P1-5 新增)。
-         *
-         * 原实现直接展示 `e.message ?: "加载失败"`,异常 message 可能是
-         * 英文堆栈("android.database.sqlite.SQLiteException: no such table...")、
-         * SQL 错误("UNIQUE constraint failed: knowledge_points.id")、
-         * 网络错误("timeout")等,对用户不友好。
-         *
-         * 现按异常类型映射为中文提示,raw message 仍由 catchAndLog 在 Repository 层
-         * 用 Log.e 输出供排查。
-         */
-        private fun friendlyErrorMessage(e: Throwable): String = when {
-            e is java.net.SocketTimeoutException || e is java.net.UnknownHostException ->
-                "网络超时,请检查网络后重试"
-            e is android.database.sqlite.SQLiteException ->
-                "本地数据异常,请重启 App"
-            e is kotlinx.coroutines.TimeoutCancellationException ->
-                "加载超时,请重试"
-            e.message != null && e.message!!.contains("no such table", ignoreCase = true) ->
-                "数据库版本异常,请重启 App"
-            else -> "加载失败,请重试"
-        }
-
 
         /**
          * 按科目筛选知识点。
@@ -284,4 +270,31 @@ enum class KnowledgeCategory(val label: String, val keyword: String) {
     MODERN("现当代文学", "现当代"),
     FOREIGN("外国文学", "外国"),
     THEORY("文学理论", "理论"),
+}
+
+/**
+ * 将异常映射为用户友好的中文错误提示(v0.8.20 P1-5 新增)。
+ *
+ * 原实现直接展示 `e.message ?: "加载失败"`,异常 message 可能是
+ * 英文堆栈("android.database.sqlite.SQLiteException: no such table...")、
+ * SQL 错误("UNIQUE constraint failed: knowledge_points.id")、
+ * 网络错误("timeout")等,对用户不友好。
+ *
+ * 现按异常类型映射为中文提示,raw message 仍由 catchAndLog 在 Repository 层
+ * 用 Log.e 输出供排查。
+ *
+ * v0.8.13 重构:从 [KnowledgeViewModel] companion object private 函数移到
+ * top-level internal 函数,供同 package 的 [KnowledgePointDetailViewModel] 复用
+ * (原详情页 catch 用 raw `e.message ?: "加载失败"`,与本规范不一致,违反 P1-5)。
+ */
+internal fun friendlyErrorMessage(e: Throwable): String = when {
+    e is java.net.SocketTimeoutException || e is java.net.UnknownHostException ->
+        "网络超时,请检查网络后重试"
+    e is android.database.sqlite.SQLiteException ->
+        "本地数据异常,请重启 App"
+    e is kotlinx.coroutines.TimeoutCancellationException ->
+        "加载超时,请重试"
+    e.message != null && e.message!!.contains("no such table", ignoreCase = true) ->
+        "数据库版本异常,请重启 App"
+    else -> "加载失败,请重试"
 }

@@ -33,6 +33,15 @@ android {
         // P1-M2：SettingsScreen 版本号读取 BuildConfig.VERSION_NAME，需显式启用 buildConfig
         buildConfig = true
     }
+
+    // 单元测试 JVM 环境不 mock Log，默认抛 RuntimeException。
+    // isReturnDefaultValues=true 使 Log 方法返回默认值（0）而非抛异常（与 core/data、feature:knowledge 一致）。
+    // StudyProgressRepository.observeProgress 的 catch 分支调用 Log.e，需此配置避免测试崩溃。
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 dependencies {

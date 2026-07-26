@@ -301,6 +301,29 @@ class KnowledgePointDetailViewModelTest {
         assertEquals("新加载", state.point?.title)
     }
 
+    /**
+     * v0.8.13 P0-2 修复测试:retry() 立即设置 isLoading=true 并清空 error,
+     * 让 UI 立即显示 loading 反馈(无需等 DB emit)。
+     */
+    @Test
+    fun retry_setsIsLoadingTrueImmediately() = runTest(testDispatcher) {
+        val point = makePoint(id = "kp_1", title = "建安风骨")
+        knowledgePointDao.setPoints(mapOf("kp_1" to point))
+        val viewModel = createViewModel(pointId = "kp_1")
+        backgroundScope.launch { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+        // 加载完成
+        assertFalse(viewModel.uiState.value.isLoading)
+
+        // retry() 应立即设置 isLoading=true(同步,无需 advanceUntilIdle)
+        viewModel.retry()
+        assertTrue(
+            "retry() 应立即设置 isLoading=true,让 UI 立即显示 loading 反馈",
+            viewModel.uiState.value.isLoading,
+        )
+        assertNull("retry() 应清空 error", viewModel.uiState.value.error)
+    }
+
     // ── 工厂方法 ──────────────────────────────────────────────
 
     private fun makePoint(

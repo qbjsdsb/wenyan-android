@@ -353,47 +353,73 @@ private fun ExamCountdownCard() {
  * 展示:连续学习天数、累计学习时长、上次学习的知识点 ID。
  * 数据由 [StudyProgressViewModel] 观察 study_progress 表,
  * 卡片复习评分时由 CardsViewModel 调用 StudyProgressRepository.recordStudySession 写入。
+ *
+ * v0.8.13 P2-1 修复:用 [StudyProgressUiState] 区分 Loading / Loaded。
+ * 原实现 loading 时 progress=null 被当成"streak=0",显示
+ * "连续学习 0 天 / 开始今天的学习吧",误导用户。现 loading 时显示占位文案。
  */
 @Composable
 private fun StudyProgressCard(
     viewModel: StudyProgressViewModel = hiltViewModel(),
 ) {
-    val progress by viewModel.progress.collectAsStateWithLifecycle()
-    val streak = progress?.streakDays ?: 0
-    val totalSeconds = progress?.totalStudyTime ?: 0
-    val totalHours = totalSeconds / 3600
-    val totalMinutes = (totalSeconds % 3600) / 60
-    val timeText = if (totalHours > 0) {
-        "${totalHours}小时${totalMinutes}分钟"
-    } else {
-        "${totalMinutes}分钟"
-    }
-    val lastVisited = progress?.lastVisitedAt
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     GroupedCard(title = "学习进度") {
-        GroupedCardItem(
-            title = "连续学习 $streak 天",
-            subtitle = if (streak == 0) "开始今天的学习吧" else "保持下去！",
-        )
-        GroupedCardDivider()
-        GroupedCardItem(
-            title = "累计学习时长",
-            subtitle = timeText,
-        )
-        if (lastVisited != null) {
-            GroupedCardDivider()
-            GroupedCardItem(
-                title = "上次学习",
-                subtitle = formatRelativeTime(lastVisited),
-            )
+        when (val state = uiState) {
+            StudyProgressUiState.Loading -> {
+                GroupedCardItem(
+                    title = "加载中…",
+                    subtitle = "正在获取学习进度",
+                )
+            }
+
+            is StudyProgressUiState.Loaded -> {
+                val entity = state.entity
+                val streak = entity.streakDays ?: 0
+                val totalSeconds = entity.totalStudyTime ?: 0
+                val totalHours = totalSeconds / 3600
+                val totalMinutes = (totalSeconds % 3600) / 60
+                val timeText = if (totalHours > 0) {
+                    "${totalHours}小时${totalMinutes}分钟"
+                } else {
+                    "${totalMinutes}分钟"
+                }
+                val lastVisited = entity.lastVisitedAt
+
+                GroupedCardItem(
+                    title = "连续学习 $streak 天",
+                    subtitle = if (streak == 0) "开始今天的学习吧" else "保持下去！",
+                )
+                GroupedCardDivider()
+                GroupedCardItem(
+                    title = "累计学习时长",
+                    subtitle = timeText,
+                )
+                if (lastVisited != null) {
+                    GroupedCardDivider()
+                    GroupedCardItem(
+                        title = "上次学习",
+                        subtitle = formatRelativeTime(lastVisited),
+                    )
+                }
+            }
         }
     }
 }
 
-/** 将时间戳格式化为相对时间文本(如"3小时前"/"昨天"/"3天前") */
-private fun formatRelativeTime(timestamp: Long): String {
+/**
+ * 将时间戳格式化为相对时间文本(如"3小时前"/"昨天"/"3天前")。
+ *
+ * v0.8.13 P1-1 修复:改为 internal 以便单元测试覆盖未来时间戳分支
+ * (原 private 无法在测试中调用,导致该边界条件无测试保护)。
+ */
+internal fun formatRelativeTime(timestamp: Long): String {
     val now = System.currentTimeMillis()
     val diffMillis = now - timestamp
+    // v0.8.13 P1-1 修复:未来时间戳(时钟回拨或异常数据)直接返回"刚刚",
+    // 避免下面计算结果为负数,显示"-3 分钟前"等异常文案。
+    // 与 KnowledgePointDetailScreen.formatRelativeTime 保持一致(该处已修复)。
+    if (diffMillis < 0) return "刚刚"
     val diffMinutes = diffMillis / (60 * 1000)
     val diffHours = diffMillis / (60 * 60 * 1000)
     val diffDays = diffMillis / (24 * 60 * 60 * 1000)

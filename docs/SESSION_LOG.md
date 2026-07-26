@@ -3858,4 +3858,62 @@ CardSplitterTest 新增 1 个场景：
 - `./gradlew :core:data:compileDebugKotlin :core:data:testDebugUnitTest`
 - emulator 实测：列表卡片考频 chip 显示 + 详情页错题答案截断 + retry 后 Flow 重订阅
 
+---
+
+## 2026-07-27 知识点 + 设置界面深度审计与修复
+
+### 背景
+
+用户要求检查知识点和设置界面有没有问题，有问题就修，严谨反复仔细调查研究。对两个模块的生产代码 + 测试做了完整审计，修复 5 个问题，新增 54 个测试。
+
+### 修复清单
+
+#### P0-1: KnowledgeViewModel.retry() 跳过 debounce 立即重试
+- **问题**：`_searchQuery.debounce(300ms)` 在 retry 后仍要等 300ms 才重新查询，违反 retry 的"立即重试"语义
+- **修复**：在 debounce 之后加 `.onStart { emit(_searchQuery.value) }` 跳过首次 debounce 等待，加 `.distinctUntilChanged()` 过滤掉 debounce 后相同值的重复 emit
+- **文件**：`KnowledgeViewModel.kt`
+
+#### P0-2/P0-3: KnowledgePointDetailViewModel 重构为 MutableStateFlow+collect
+- **问题 1**：retry() 不立即显示 loading（原 stateIn 不暴露 setter，retry() 只触发 retryTrigger++，uiState 仍是 error 状态）
+- **问题 2**：catch 用 raw `e.message ?: "加载失败"` 违反 P1-5（可能展示英文堆栈）
+- **修复**：重构为 MutableStateFlow + collect（与 KnowledgeViewModel 一致），retry() 先设置 isLoading=true 让 UI 立即显示 loading，catch 用 friendlyErrorMessage 映射中文提示，catch 时保留已有 detail/wrongAnswers 不清空
+- **文件**：`KnowledgePointDetailViewModel.kt`
+
+#### P1-1: SettingsScreen.formatRelativeTime 未处理未来时间戳
+- **问题**：未来时间戳（时钟回拨或异常数据）导致 diffMillis < 0，下游计算为负数，显示"-3 分钟前"等异常文案
+- **修复**：函数开头加 `if (diffMillis < 0) return "刚刚"`，与 KnowledgePointDetailScreen.formatRelativeTime 保持一致
+- **文件**：`SettingsScreen.kt`（同时改为 internal 以便测试）
+
+#### P1-5: friendlyErrorMessage 抽取为 top-level internal 函数
+- **问题**：原是 KnowledgeViewModel companion object private 函数，KnowledgePointDetailViewModel 无法复用，用 raw e.message
+- **修复**：移到 top-level internal 函数，供同 package 的两个 ViewModel 共用。映射 SocketTimeoutException/UnknownHostException→网络超时、SQLiteException→本地数据异常、TimeoutCancellationException→加载超时、"no such table"→数据库版本异常、其他→加载失败
+- **文件**：`KnowledgeViewModel.kt`
+
+#### P2-1: StudyProgressCard loading 状态区分加载中/无数据
+- **问题**：`progress: StateFlow<StudyProgressEntity?>` 的 `initialValue = null` 与"加载中"语义重合，UI 在加载阶段把 null 当成"streak=0"，显示"连续学习 0 天 / 开始今天的学习吧"，误导用户
+- **修复**：引入 sealed `StudyProgressUiState`（Loading / Loaded），ViewModel 暴露 `uiState` 替代 `progress`，UI 在 Loading 时显示"加载中…"占位
+- **文件**：`StudyProgressViewModel.kt` + `SettingsScreen.kt`
+
+### 新增测试（54 个，全绿）
+
+| 测试文件 | 测试数 | 覆盖点 |
+|----------|--------|--------|
+| `FriendlyErrorMessageTest` | 8 | 5 个异常分支 + null message + 大小写不敏感 + 不泄露英文堆栈 |
+| `KnowledgeViewModelRetryTest` | 7 | retry 立即 loading / retry 重新加载 / retry+搜索过滤 / searchQuery 持久化 / 长度截断 / clearSearch / 分类持久化 |
+| `KnowledgePointDetailViewModelTest` | +1（原 11→12） | retry 立即设置 isLoading=true |
+| `FormatRelativeTimeTest` | 8 | 未来时间戳 / 刚刚 / 分钟 / 小时 / 昨天 / 天 / 月 |
+| `StudyProgressViewModelTest` | 4 | 初始 Loading / DB emit null→Loaded默认实体 / DB emit实体→Loaded / DB更新反映 |
+| settings build.gradle.kts | - | 新增 testOptions.isReturnDefaultValues（Log 不崩） |
+
+### 验证状态
+
+✅ 沙箱编译 + 测试全绿（2026-07-27）：
+- `assembleDebug` BUILD SUCCESSFUL（421 tasks）
+- `testDebugUnitTest` BUILD SUCCESSFUL（全项目，54 新增测试全绿，无回归）
+- feature:knowledge 42 tests / feature:settings 12 tests
+
+### commit
+
+- 待提交：5 修复 + 5 新增测试文件 + SESSION_LOG 更新
+
 
