@@ -30,6 +30,7 @@ class FakeKnowledgePointDao(
     override fun observeAll(): Flow<List<KnowledgePointEntity>> = flowOf(searchResults)
     override fun observeVerifiedForReview(): Flow<List<KnowledgePointEntity>> = flowOf(emptyList())
     override fun observeVerifiedWithSubject(): Flow<List<KnowledgePointWithSubject>> = flowOf(emptyList())
+    override fun observeSearchWithSubject(keyword: String): Flow<List<KnowledgePointWithSubject>> = flowOf(emptyList())
     override suspend fun updateOcrStatus(id: String, status: String) {}
 
     override suspend fun searchByKeyword(keyword: String, limit: Int): List<KnowledgePointEntity> {
