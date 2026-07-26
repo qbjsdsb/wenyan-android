@@ -8,6 +8,8 @@ build/
 
 # 本地配置
 local.properties
+.env*
+.env.android.sh
 
 # Android Studio / IntelliJ
 *.iml
