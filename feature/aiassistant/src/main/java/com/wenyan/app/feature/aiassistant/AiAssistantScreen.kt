@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -695,7 +694,7 @@ private fun RoteWarningBanner(
                 // NF-UA2 修复：原触控目标 ~28dp（padding sm+xs），低于 WCAG 48dp 标准。
                 // defaultMinSize 强制最小 48dp 触控区域，手指粗用户也能准确点击。
                 .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                .clip(RoundedCornerShape(4.dp))
+                .clip(MaterialTheme.shapes.small)
                 .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f))
                 .clickable(role = Role.Button, onClick = onDismiss)
                 .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
