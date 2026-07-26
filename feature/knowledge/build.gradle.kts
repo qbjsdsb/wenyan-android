@@ -25,6 +25,14 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // 单元测试 JVM 环境不 mock Log，默认抛 RuntimeException。
+    // isReturnDefaultValues=true 使 Log 方法返回默认值（0）而非抛异常（与 core/data 一致）。
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 dependencies {

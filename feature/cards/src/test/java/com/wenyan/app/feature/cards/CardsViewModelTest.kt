@@ -75,7 +75,7 @@ class CardsViewModelTest {
 
     /**
      * 场景 1:rateCard(AGAIN) 后 wrongAnswerRepository.recordWrongAnswer 被调用,
-     * source = SOURCE_CARD_AGAIN,pointId 与当前卡片一致,correctAnswer = 卡片背面。
+     * source = SOURCE_CARD_AGAIN,pointId 与当前卡片一致,correctAnswer = 完整 quote(ClozeQuoteCard 取 quote 而非 back)。
      */
     @Test
     fun `rateCard AGAIN 后记录错题且 source 为 CARD_AGAIN`() = runTest(testDispatcher) {
@@ -95,7 +95,7 @@ class CardsViewModelTest {
         val record = wrongAnswerRepository.recordedWrongAnswers[0]
         assertEquals("pointId 应为 point_1", "point_1", record.pointId)
         assertEquals("source 应为 CARD_AGAIN", WrongAnswerRepository.SOURCE_CARD_AGAIN, record.source)
-        assertEquals("correctAnswer 应为卡片背面", "北宋文学家", record.correctAnswer)
+        assertEquals("correctAnswer 应为完整 quote(ClozeQuoteCard v0.8.13 设计)", "苏轼____", record.correctAnswer)
     }
 
     /**
@@ -624,6 +624,7 @@ class CardsViewModelTest {
         assertNotNull("应弹出 leechWarning", viewModel.leechWarning.value)
 
         viewModel.clearLeechWarning()
+        advanceUntilIdle()
         assertNull("clearLeechWarning 后应为 null", viewModel.leechWarning.value)
     }
 

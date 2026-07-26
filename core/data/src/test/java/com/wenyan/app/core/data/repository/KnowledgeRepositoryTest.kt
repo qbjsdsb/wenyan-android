@@ -217,7 +217,7 @@ class KnowledgeRepositoryTest {
 
     @Test
     fun escapeLikeWildcards_mixedWildcards() {
-        assertEquals("100\\%_50\\_", repository.escapeLikeWildcards("100%_50_"))
+        assertEquals("100\\%\\_50\\_", repository.escapeLikeWildcards("100%_50_"))
     }
 
     @Test

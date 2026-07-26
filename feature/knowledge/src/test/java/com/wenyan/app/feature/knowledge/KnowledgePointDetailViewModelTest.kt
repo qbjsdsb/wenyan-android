@@ -6,6 +6,7 @@ import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -83,6 +84,7 @@ class KnowledgePointDetailViewModelTest {
     @Test
     fun uiState_blankPointId_showsNotFound() = runTest(testDispatcher) {
         val viewModel = createViewModel(pointId = null)
+        backgroundScope.launch { viewModel.uiState.collect { } }
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -97,6 +99,7 @@ class KnowledgePointDetailViewModelTest {
     fun uiState_pointIdNotFound_showsNotFound() = runTest(testDispatcher) {
         knowledgePointDao.setPoints(emptyMap()) // 知识点表为空
         val viewModel = createViewModel(pointId = "ghost")
+        backgroundScope.launch { viewModel.uiState.collect { } }
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -113,6 +116,7 @@ class KnowledgePointDetailViewModelTest {
         knowledgePointDao.setPoints(mapOf("kp_1" to point))
         dataSourceDao.setSourcesForPoint("kp_1", listOf(makeDataSource("ds_1", "kp_1")))
         val viewModel = createViewModel(pointId = "kp_1")
+        backgroundScope.launch { viewModel.uiState.collect { } }
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -145,6 +149,7 @@ class KnowledgePointDetailViewModelTest {
             ),
         )
         val viewModel = createViewModel(pointId = "kp_main")
+        backgroundScope.launch { viewModel.uiState.collect { } }
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -170,6 +175,7 @@ class KnowledgePointDetailViewModelTest {
             ),
         )
         val viewModel = createViewModel(pointId = "kp_main")
+        backgroundScope.launch { viewModel.uiState.collect { } }
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -203,6 +209,7 @@ class KnowledgePointDetailViewModelTest {
         wrongAnswerRepository.setWrongAnswersForPoint("kp_1", listOf(unresolved, resolved))
 
         val viewModel = createViewModel(pointId = "kp_1")
+        backgroundScope.launch { viewModel.uiState.collect { } }
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -217,6 +224,7 @@ class KnowledgePointDetailViewModelTest {
         val point = makePoint(id = "kp_1")
         knowledgePointDao.setPoints(mapOf("kp_1" to point))
         val viewModel = createViewModel(pointId = "kp_1")
+        backgroundScope.launch { viewModel.uiState.collect { } }
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -233,6 +241,7 @@ class KnowledgePointDetailViewModelTest {
         wrongAnswerRepository.setWrongAnswersForPoint("kp_1", listOf(wrong))
 
         val viewModel = createViewModel(pointId = "kp_1")
+        backgroundScope.launch { viewModel.uiState.collect { } }
         advanceUntilIdle()
         assertEquals(1, viewModel.uiState.value.wrongAnswers.size)
 
@@ -248,6 +257,7 @@ class KnowledgePointDetailViewModelTest {
     @Test
     fun markWrongAnswerResolved_callsRepositoryMarkResolved() = runTest(testDispatcher) {
         val viewModel = createViewModel(pointId = "kp_1")
+        backgroundScope.launch { viewModel.uiState.collect { } }
         viewModel.markWrongAnswerResolved("wa_1")
         advanceUntilIdle()
 
@@ -259,6 +269,7 @@ class KnowledgePointDetailViewModelTest {
     fun markWrongAnswerResolved_repositoryThrows_doesNotCrash() = runTest(testDispatcher) {
         wrongAnswerRepository.markResolvedThrowable = RuntimeException("DB error")
         val viewModel = createViewModel(pointId = "kp_1")
+        backgroundScope.launch { viewModel.uiState.collect { } }
 
         // 不应抛异常(被 try-catch 吞掉 + Log.w)
         viewModel.markWrongAnswerResolved("wa_1")
@@ -274,6 +285,7 @@ class KnowledgePointDetailViewModelTest {
     fun retry_reloadesDetailAfterPointBecomesAvailable() = runTest(testDispatcher) {
         // 初始无知识点 → notFound
         val viewModel = createViewModel(pointId = "kp_1")
+        backgroundScope.launch { viewModel.uiState.collect { } }
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value.notFound)
 
