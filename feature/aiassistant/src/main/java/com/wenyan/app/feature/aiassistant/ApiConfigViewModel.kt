@@ -38,6 +38,10 @@ class ApiConfigViewModel @Inject constructor(
     private val apiConfigRepository: ApiConfigRepository,
 ) : ViewModel() {
 
+    private companion object {
+        const val TAG = "ApiConfigViewModel"
+    }
+
     /** 表单状态（添加/编辑时使用） */
     private val _formState = MutableStateFlow(ApiConfigFormState())
     val formState: StateFlow<ApiConfigFormState> = _formState.asStateFlow()
@@ -55,22 +59,58 @@ class ApiConfigViewModel @Inject constructor(
     private val editingId = MutableStateFlow<String?>(null)
 
     /**
+     * 重试触发器：用户点击"重试"按钮时递增，驱动 [flatMapLatest] 重新订阅数据流。
+     *
+     * v0.8.13 修复（P0-3）：原 uiState 直接订阅 [apiConfigRepository.observeAllConfigs]，
+     * 加载失败后进入 [catch] 分支 emit 终态，但无法重试 —— StateFlow 终态后无新数据。
+     * 现以 _retryTrigger 作为上游触发器，retry() 递增后 flatMapLatest 重新订阅，实现"重试"语义。
+     */
+    private val _retryTrigger = MutableStateFlow(0)
+
+    /** 用户点击重试 */
+    fun retry() {
+        _retryTrigger.value++
+    }
+
+    /**
      * UI 状态：合并配置列表 + 当前配置标记。
      *
      * 配置列表中 apiKey 已由 ApiConfigRepository 解密，
      * 但 UI 层不展示完整 apiKey（仅显示掩码），避免泄露。
      *
-     * P1-3 修复：加 [catch] 捕获数据流异常。
-     * [apiConfigRepository.observeAllConfigs] 内部会做 apiKey 解密（DES key 由 Android Keystore 提供），
-     * 解密失败抛 GeneralSecurityException / IllegalBlockSizeException 会冒泡导致 app crash。
-     * 现捕获并降级为 error 状态。
+     * v0.8.13 修复（P0-3 + P0-3b）：
+     * - 原直接订阅 [apiConfigRepository.observeAllConfigs]，加载失败后 StateFlow 终态无法重试。
+     * - 现以 [_retryTrigger] 为上游 flatMapLatest 触发重试，retry() 递增后重新订阅数据流。
+     * - 错误信息用 [friendlyErrorMessage] 统一映射，避免裸 e.message 暴露英文堆栈给用户。
+     * - Log.e 输出原始异常便于排查。
+     *
+     * **关键实现细节（P0-3b 修复）**：`.catch` 必须放在 `flatMapLatest` 内部，
+     * 作用于内部 flow，**不能**放在外层。
+     *
+     * 原因：catch 操作符执行后 flow **正常完成**。若放在外层：
+     * ```
+     * _retryTrigger.flatMapLatest { ... }.catch { emit(error) }
+     * ```
+     * 内部 observeAllConfigs 抛异常 → 冒泡到外层 catch → emit 错误态 → 外层 flow 完成。
+     * 此时即使 _retryTrigger（StateFlow 不完成）继续发射新值，已完成的下游 chain 不会再被激活，
+     * **retry() 永久失效**，用户无法从加载失败状态恢复（Kotlin issue #3594）。
+     *
+     * 正确模式：catch 放在 flatMapLatest 内部，仅作用于内部 flow。
+     * 内部 flow 异常被 catch 后 emit 错误态并完成，但外层 _retryTrigger 仍活跃，
+     * retry() 递增 → flatMapLatest 取消上一个（已完成的）内部 flow → 重新订阅新的内部 flow。
+     *
      * 注意：本 [error] 与 [_errorMessage] 不同维度——后者是用户操作（save/delete）反馈，
      * 前者是流加载错误。两者不应混用。
      */
-    val uiState: StateFlow<ApiConfigUiState> = apiConfigRepository.observeAllConfigs()
-        .map { configs -> ApiConfigUiState(isLoading = false, configs = configs) }
-        .catch { e ->
-            emit(ApiConfigUiState(error = e.message ?: "加载失败"))
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val uiState: StateFlow<ApiConfigUiState> = _retryTrigger
+        .flatMapLatest {
+            apiConfigRepository.observeAllConfigs()
+                .map { configs -> ApiConfigUiState(isLoading = false, configs = configs) }
+                .catch { e ->
+                    Log.e(TAG, "load ApiConfigs failed", e)
+                    emit(ApiConfigUiState(error = friendlyErrorMessage(e)))
+                }
         }
         .stateIn(
             scope = viewModelScope,

@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Inbox
@@ -63,6 +64,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.database.entity.ApiConfigEntity
 import com.wenyan.app.core.designsystem.component.EmptyState
+import com.wenyan.app.core.designsystem.component.ErrorState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.TonalCard
@@ -131,11 +133,16 @@ fun ApiConfigScreen(
                 .padding(innerPadding),
         ) {
             Crossfade(
-                targetState = uiState.isLoading to uiState.configs.isEmpty(),
+                // v0.8.13 修复（P0-3）：原仅 (isLoading, isEmpty) 两元组，
+                // 加载失败时 configs 仍为空 → fallthrough 到 isEmpty 分支误显示"暂无 API 配置"，
+                // 用户无法区分"真的没配置"还是"加载失败"。
+                // 现改为三元组 (isLoading, error, isEmpty)，error 优先级最高，
+                // 进入 ErrorState 分支并提供"重试"按钮调用 viewModel::retry() 重新拉取数据流。
+                targetState = Triple(uiState.isLoading, uiState.error, uiState.configs.isEmpty()),
                 animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
                 label = "api_config_state",
                 modifier = Modifier.fillMaxSize(),
-            ) { (isLoading, isEmpty) ->
+            ) { (isLoading, error, isEmpty) ->
                 when {
                     isLoading -> {
                         Box(
@@ -143,6 +150,19 @@ fun ApiConfigScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             WenyanLoadingIndicator()
+                        }
+                    }
+                    error != null -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            ErrorState(
+                                icon = Icons.Default.CloudOff,
+                                title = "加载失败",
+                                message = error,
+                                onRetry = viewModel::retry,
+                            )
                         }
                     }
                     isEmpty -> {
