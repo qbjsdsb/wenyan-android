@@ -270,6 +270,40 @@
 
 ---
 
+## #016 沙箱 Android SDK 缺失 + services.gradle.org 不可达 + mise.toml path 语法错误
+
+- **日期**：2026-07-26
+- **现象**：新会话执行 `./gradlew help` 时报 `ANDROID_HOME` 未设置 / `sdkmanager not found`；后续 `./gradlew --version` 下载 gradle-8.14.4 时 `javax.net.ssl.SSLHandshakeException: Remote host terminated the handshake`；修正 `mise.toml` 时 `path = [...]` 报 `data did not match any variant of untagged enum Val`
+- **根因 + 修复**：
+
+  1. **沙箱 Android SDK 完全未安装**
+     - 现象：`/opt/android-sdk` 目录不存在；`which sdkmanager adb` 均未找到；`find / -name android.jar` 无结果
+     - 根因：尽管 [docs/01-QUICK-RECOVERY.md](01-QUICK-RECOVERY.md) 写明 SDK 应在 `/opt/android-sdk`，但沙箱镜像实际未预装。前几次会话能跑构建是因为 mise 缓存或会话内手动安装过；新会话恢复时缓存被清空
+     - 修复（沙箱）：从 `https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip` 下载 150MB cmdline-tools（直连可用，HTTP 200），解压到 `/opt/android-sdk/cmdline-tools/latest`（必须叫 `latest`，否则 sdkmanager 找不到）。然后 `yes | sdkmanager --licenses` + `sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"`
+     - **关键**：cmdline-tools 解压后顶层是 `cmdline-tools/`，必须重命名为 `cmdline-tools/latest/`（再嵌一层），sdkmanager 才能识别
+
+  2. **`services.gradle.org` 直连超时 + 代理 18080 实际未监听**
+     - 现象：`./gradlew --version` 尝试下载 `gradle-8.14.4-bin.zip`，10 秒后 `SSLHandshakeException: Remote host terminated the handshake`
+     - 根因：沙箱网络对 `services.gradle.org` 直连超时（`curl --max-time 15` 返回 HTTP 000）；`mise.toml` 配置的 `JAVA_TOOL_OPTIONS` 含 `-Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=18080`，但 `127.0.0.1:18080` 实际无进程监听（`/dev/tcp/127.0.0.1/18080` 拒绝连接）。该代理是 Robolectric 测试下 android-all jar 用的，wrapper 下载 gradle distribution 不应走它
+     - 修复（沙箱）：用 mise 已安装的 gradle-8.14.4 填充 wrapper 缓存。复制 `/root/.local/share/mise/installs/gradle/8.14.4/gradle-8.14.4` 到 `/root/.gradle/wrapper/dists/gradle-8.14.4-bin/92wwslzcyst3phie3o264zltu/`，并 `touch` 一个 `gradle-8.14.4-bin.zip.ok` marker 文件。wrapper 检测到 `.ok` 就跳过下载直接用本地副本
+     - **hash 目录名 `92wwslzcyst3phie3o264zltu`** 是 wrapper 根据 distributionUrl 计算的，不同 Gradle 版本会变；可通过先 `./gradlew --version` 让 wrapper 创建 `.part` 文件后看 `ls /root/.gradle/wrapper/dists/gradle-X.Y.Z-bin/` 得到
+
+  3. **mise.toml `[env]` 节 PATH 数组语法错误**
+     - 现象：`mise exec` 报 `Invalid TOML in config file: /workspace/mise.toml` 指向 `path = [...]` 行，错误 `data did not match any variant of untagged enum Val`
+     - 根因：mise `[env]` 节中追加 PATH 必须用键名 `_.path`（前缀下划线表示 mise 内部指令），不能直接用 `path`。直接用 `path` 会被当作普通环境变量赋值，但数组类型不匹配字符串枚举
+     - 修复：改为 `_.path = ["/opt/android-sdk/cmdline-tools/latest/bin", ...]`
+     - 参考：mise 官方文档 `[env]` 节 `_.path` / `_.source` / `_.file` 是特殊键
+
+- **教训**：
+  1. **沙箱不预装 Android SDK**——`/opt/android-sdk` 路径只是文档约定的"标准位置"，每次新会话需重新安装（除非 commit 到持久化目录，但 SDK 体积大不入仓库）
+  2. **services.gradle.org 在沙箱不可达**——必须用 mise 已装的 gradle 填充 wrapper 缓存，否则 `./gradlew` 任何命令都会卡在下载 distribution
+  3. **mise `[env]` 节追加 PATH 用 `_.path`**——直接写 `path = [...]` 会 TOML 解析失败
+  4. **JAVA_TOOL_OPTIONS 中的代理对非 Robolectric 任务有害**——`-Dhttps.proxyHost=127.0.0.1` 让 wrapper 把 services.gradle.org 流量发到不存在的代理，导致 SSL 握手失败。Robolectric 测试需要代理，但 `assembleDebug` 不需要
+  5. **wrapper hash 目录名稳定**——只要 distributionUrl 不变，hash 目录名不变，缓存填充一次后多次会话可用（除非 `/root/.gradle` 被清空）
+- **相关文件**：`mise.toml`、`gradle/wrapper/gradle-wrapper.properties`、`docs/01-QUICK-RECOVERY.md`、`docs/reference/ENVIRONMENT_SETUP.md`
+
+---
+
 ## 模板（新失败方案按此格式记录）
 
 ```markdown

@@ -1,17 +1,20 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-07-24
+> 最后更新：2026-07-26
 
 ## ✅ 当前状态
 
 **v0.8.11 知识卡片功能深度打磨完成** — 7 文件 11 项修复（3 P0 + 5 P1 + 3 P2）：CardSplitter 6维度限制修复 + SiblingRatedHint 不再隐藏评分按钮 + 进程恢复统计重置 + sibling 卡预览误导修复 + rateCard 异步失败分离 + 评分按钮颜色对齐 Anki + sibling 卡字段去冗余 + Leech 警告跳转修复 + 无pointId错题记录 + 会话统计持久化 + 3处编译错误修复。新增 7 个测试场景，assembleDebug + testDebugUnitTest 全绿（280 tests）。
 
+**2026-07-26 沙箱环境完整配置就位** — 详见 [01-QUICK-RECOVERY.md "沙箱首次配置"](01-QUICK-RECOVERY.md)。`./gradlew assembleDebug` 实测 12m36s SUCCESS（421 tasks, APK 27MB, cgroup OOM=0）。
+
 | 项 | 值 |
 |----|-----|
-| 最新 commit | 待提交（v0.8.11 知识卡片功能深度打磨） |
+| 最新 commit | 待提交（2026-07-26 沙箱环境配置文档交接） |
 | 最新 Release | **v0.7.5**（待打 tag） — v0.8.11 待 emulator 实测后打 tag |
-| 编译验证 | **:app:assembleDebug + testDebugUnitTest SUCCESSFUL（280 tests, 0 failures）** |
+| 编译验证 | **:app:assembleDebug SUCCESSFUL in 12m36s**（2026-07-26 沙箱实测，421 tasks, 0 failures） |
+| 沙箱环境 | ✅ Android SDK + Gradle 8.14.4 + JDK 17.0.2 + wrapper 缓存就位（每次新会话按 [01-QUICK-RECOVERY.md "沙箱首次配置"](01-QUICK-RECOVERY.md) 3 步走） |
 | 知识点 | **910 个**（entities/relations 数据补全，自动入图） |
 | 真题 | **485 道**（v0.7.6 已删除 sample_essay 冗余字段） |
 | seed 版本 | **2.11.0**（触发重新导入，保留用户 FSRS 学习进度） |

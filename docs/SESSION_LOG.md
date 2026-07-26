@@ -3858,4 +3858,59 @@ CardSplitterTest 新增 1 个场景：
 - `./gradlew :core:data:compileDebugKotlin :core:data:testDebugUnitTest`
 - emulator 实测：列表卡片考频 chip 显示 + 详情页错题答案截断 + retry 后 Flow 重订阅
 
+---
+
+## 2026-07-26 会话：沙箱环境严谨配置 + assembleDebug 实测
+
+- **完成**：
+  - **沙箱环境完整配置**（解决上次会话末尾"沙箱 Android SDK 不可用"阻塞）：
+    - 安装 Android SDK 到 `/opt/android-sdk`（cmdline-tools 12.0 + platform-tools 37.0.0 + platforms;android-35 + build-tools;35.0.0，约 1GB）
+    - 修复 [mise.toml](../mise.toml) 持久化 Android 环境变量（`ANDROID_HOME` / `ANDROID_SDK_ROOT` / `_.path`）
+    - 填充 gradle wrapper 缓存（避开 `services.gradle.org` 在沙箱不可达，用 mise 已装的 gradle-8.14.4 复制到 `/root/.gradle/wrapper/dists/gradle-8.14.4-bin/92wwslzcyst3phie3o264zltu/` + `.ok` marker）
+    - 修复 `mise.toml` 中 `path = [...]` → `_.path = [...]`（mise `[env]` 节特殊键名）
+  - **完整编译验证**：
+    - `./gradlew --version` → Gradle 8.14.4, Launcher JVM 17.0.2 ✅
+    - `./gradlew help` → BUILD SUCCESSFUL in 4m42s ✅
+    - `./gradlew projects` → 13 模块全部识别（:app + 6 core + 6 feature）✅
+    - **`./gradlew assembleDebug` → BUILD SUCCESSFUL in 12m36s** ✅
+      - 421 actionable tasks：343 executed + 78 from cache
+      - APK：`/workspace/app/build/outputs/apk/debug/app-debug.apk`（27MB，含 18 个 classes*.dex）
+      - cgroup OOM 事件全程 0（`oom_kill=0`），daemon RSS 峰值 2.1GB，留 1.8GB 余量
+  - **文档交接**（本次会话核心产出）：
+    - 新增 [03-FAILED-ATTEMPTS.md #016](03-FAILED-ATTEMPTS.md)：沙箱 Android SDK 缺失 + services.gradle.org 不可达 + mise.toml path 语法错误（3 个坑 + 5 条教训）
+    - 重写 [01-QUICK-RECOVERY.md](01-QUICK-RECOVERY.md) 沙箱段：新增"沙箱首次配置"3 步流程（约 3 分钟）+ "assembleDebug 卡死排查"段（cgroup v2 OOM killer 静默杀 daemon 诊断）
+    - 更新 [00-STATUS.md](00-STATUS.md) 沙箱配置状态
+
+- **进行中**：
+  - 无（环境配置已闭环）
+
+- **阻塞**：
+  - 无新增（GitHub Actions 账单问题仍存在，但不影响沙箱构建）
+
+- **下次继续**：
+  - 上次会话遗留的 `./gradlew :feature:knowledge:testDebugUnitTest` 与 `:core:data:testDebugUnitTest` 现在可以跑了（环境已就位）
+  - 跑 `testDebugUnitTest` 全量验证 v0.8.20 知识点功能第二轮打磨（280+ tests）
+  - emulator 实测 v0.8.11+ 各项功能（用户反馈"知识图谱"等）
+
+- **关键发现**（5 条核心教训，已写入 #016）：
+  1. **沙箱镜像不预装 Android SDK**——`/opt/android-sdk` 只是文档约定位置，每次新会话需重新安装（SDK 体积大约 1GB，不入仓库）
+  2. **`services.gradle.org` 在沙箱不可达**——必须用 mise 已装的 gradle 填充 wrapper 缓存（hash 目录名 `92wwslzcyst3phie3o264zltu` 由 distributionUrl 决定，稳定不变）
+  3. **mise `[env]` 节追加 PATH 用 `_.path`**——直接写 `path = [...]` 会 TOML 解析失败
+  4. **JAVA_TOOL_OPTIONS 中的代理 18080 实际未监听**——该代理对 Robolectric 测试有用（下载 android-all jar），但对 wrapper 下载 gradle distribution 有害（SSL 握手失败）。当前用 wrapper 缓存填充绕过此问题，但跑 `testDebugUnitTest` 时若 Robolectric 仍失败，需起代理或预下载 android-all jar
+  5. **assembleDebug 卡死真因**——cgroup v2 OOM killer 静默杀 daemon（不像 cgroup v1 抛 OOM exception），Gradle launcher 无限等待 socket → "卡死"假象。严格用 `-Xmx1536m -XX:MaxMetaspaceSize=768m --max-workers=1 -Dorg.gradle.parallel=false` 覆盖可稳定 12 分钟内跑完
+
+- **环境配置已就位清单**（新会话只需按 [01-QUICK-RECOVERY.md "沙箱首次配置"](01-QUICK-RECOVERY.md) 3 步走）：
+  - ✅ [mise.toml](../mise.toml) 持久化 ANDROID_HOME / ANDROID_SDK_ROOT / _.path / JAVA_TOOL_OPTIONS
+  - ✅ gradlew wrapper 三件套入仓库
+  - ✅ gradle.properties 沙箱覆盖参数文档化（不改原文件，CI 保留原配置）
+  - ✅ 沙箱构建命令模板实测验证（assembleDebug 12m36s SUCCESS）
+
+- **commit**：
+  - 待提交（本次会话仅文档 + mise.toml 修改，无 Kotlin 代码改动）：
+    - `mise.toml`：添加 ANDROID_HOME / ANDROID_SDK_ROOT / _.path 持久化
+    - `docs/03-FAILED-ATTEMPTS.md`：新增 #016
+    - `docs/01-QUICK-RECOVERY.md`：重写沙箱段 + 新增首次配置流程 + 卡死排查段
+    - `docs/SESSION_LOG.md`：追加本节
+    - `docs/00-STATUS.md`：更新沙箱配置状态
+
 

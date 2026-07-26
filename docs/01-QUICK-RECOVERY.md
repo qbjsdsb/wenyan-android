@@ -144,31 +144,76 @@ git push origin main
 ### Trae 沙箱环境（Linux）
 
 - **沙箱路径**：`/workspace`（不是 `D:\wenyan`）
-- **JDK 17 路径**：`/root/.local/share/mise/installs/java/17.0.2`
-- **Android SDK 路径**：`/opt/android-sdk`（cmdline-tools/latest + platform-tools 37.0.0 + platforms;android-35 + build-tools;35.0.0）
+- **JDK 17 路径**：`/root/.local/share/mise/installs/java/17.0.2`（由 [mise.toml](../mise.toml) 锁定，沙箱默认 java=25.0.2 会让 AGP 8.6.0 加载失败）
+- **Android SDK 路径**：`/opt/android-sdk`（**沙箱镜像不预装**，每次新会话需重新安装，详见 [#016](03-FAILED-ATTEMPTS.md)）
 - **Gradle 8.14.4**：通过 mise 安装（命令 `gradle`），仓库也含 `./gradlew` wrapper（2026-07-23 补齐）
-- **JAVA_TOOL_OPTIONS**：必须设置 `-XX:-UseContainerSupport`（JDK 17.0.2 cgroup v2 bug），且 Robolectric 测试需代理 `-Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=18080`（已写入 mise.toml）
-- **环境变量**：每次新会话需重新 source（沙箱不持久化）：`export ANDROID_HOME=/opt/android-sdk && export ANDROID_SDK_ROOT=/opt/android-sdk && export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH && export JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2`
+- **JAVA_TOOL_OPTIONS**：已写入 [mise.toml](../mise.toml) `[env]` 节，自动生效。含 `-XX:-UseContainerSupport`（JDK 17.0.2 cgroup v2 bug）+ 代理 `127.0.0.1:18080`（Robolectric 测试下 android-all jar 用）
+- **环境变量**：[mise.toml](../mise.toml) 已持久化 `ANDROID_HOME` / `ANDROID_SDK_ROOT` / `_.path`，运行 `mise exec -- <cmd>` 自动加载。若直接用 `./gradlew` 不走 mise，需手动 `export ANDROID_HOME=/opt/android-sdk && export ANDROID_SDK_ROOT=/opt/android-sdk && export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH`
 - **CI=true 绕过**：`app/build.gradle.kts` 第 71 行 release keystore fail-fast 在配置阶段抛异常，沙箱跑 debug 任务需 `unset CI && export CI=false`
 - **4GB cgroup OOM**：默认 `-Xmx2048m -XX:MaxMetaspaceSize=1g` + 多 worker 会 OOM，沙箱用 `-Xmx1536m -XX:MaxMetaspaceSize=768m --max-workers=1 -Dorg.gradle.parallel=false` 覆盖（详见 [03-FAILED-ATTEMPTS.md #015](03-FAILED-ATTEMPTS.md)）
-- **沙箱不保留状态**：会话结束即清空，所有改动必须 commit + push 到 GitHub
+- **沙箱不保留状态**：会话结束即清空，所有改动必须 commit + push 到 GitHub。`/root/.gradle/wrapper/dists/` 缓存也会被清空，需重新填充
 - **GitHub token**：由用户提供，不写入仓库（环境变量或临时使用）
 
-### 沙箱构建命令模板（已验证可用）
+### 沙箱首次配置（每次新会话必做，约 3 分钟）
+
+> **触发条件**：`/opt/android-sdk` 不存在 或 `./gradlew --version` SSL 握手失败
+> 详细坑见 [03-FAILED-ATTEMPTS.md #016](03-FAILED-ATTEMPTS.md)
 
 ```bash
-# 环境准备（每次新会话）
+# === Step 1: 安装 Android SDK（约 2 分钟，下载 150MB）===
+mkdir -p /opt/android-sdk
+cd /tmp
+wget -q --timeout=60 --tries=3 -O /tmp/cmdline-tools.zip \
+  "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
+unzip -q /tmp/cmdline-tools.zip -d /opt/android-sdk/
+# 关键：必须嵌套一层 latest/，否则 sdkmanager 找不到
+mv /opt/android-sdk/cmdline-tools /opt/android-sdk/cmdline-tools-tmp
+mkdir -p /opt/android-sdk/cmdline-tools/latest
+mv /opt/android-sdk/cmdline-tools-tmp/* /opt/android-sdk/cmdline-tools/latest/
+rmdir /opt/android-sdk/cmdline-tools-tmp
+
+# 接受 license + 安装组件
 export ANDROID_HOME=/opt/android-sdk
 export ANDROID_SDK_ROOT=/opt/android-sdk
-export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
-export JAVA_HOME=/root/.local/share/mise/installs/java/17.0.2
-unset CI && export CI=false
+export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+yes | sdkmanager --licenses > /tmp/sdk-licenses.log 2>&1
+sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-# 编译验证
-./gradlew assembleDebug --no-daemon --max-workers=1 -Dorg.gradle.parallel=false \
+# === Step 2: 填充 gradle wrapper 缓存（避开 services.gradle.org 不可达）===
+# 用 mise 已装的 gradle-8.14.4 复制到 wrapper 期望位置
+WRAPPER_HASH_DIR="/root/.gradle/wrapper/dists/gradle-8.14.4-bin/92wwslzcyst3phie3o264zltu"
+mkdir -p "$WRAPPER_HASH_DIR"
+# 先跑一次 --version 让 wrapper 创建 .part 文件并暴露 hash 目录名
+./gradlew --version 2>&1 | tail -3 || true
+# 复制 mise 的 gradle 到 wrapper 缓存
+cp -r /root/.local/share/mise/installs/gradle/8.14.4/gradle-8.14.4 "$WRAPPER_HASH_DIR/"
+touch "$WRAPPER_HASH_DIR/gradle-8.14.4-bin.zip.ok"
+rm -f "$WRAPPER_HASH_DIR/gradle-8.14.4-bin.zip.part"
+
+# === Step 3: 验证 ===
+./gradlew --version  # 应显示 Gradle 8.14.4, Launcher JVM 17.0.2
+```
+
+### 沙箱构建命令模板（已验证可用，2026-07-26 实测 assembleDebug 12m36s SUCCESS）
+
+```bash
+cd /workspace && unset CI && export CI=false
+
+# 编译验证（assembleDebug 实测 12m36s，APK 27MB）
+mise exec -- ./gradlew assembleDebug --no-daemon --max-workers=1 \
+  -Dorg.gradle.parallel=false -Dorg.gradle.workers.max=1 \
   -Dorg.gradle.jvmargs="-Xmx1536m -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8 -XX:+UseParallelGC -XX:-UseContainerSupport"
 
 # 测试验证
-./gradlew testDebugUnitTest --no-daemon --max-workers=1 -Dorg.gradle.parallel=false \
+mise exec -- ./gradlew testDebugUnitTest --no-daemon --max-workers=1 \
+  -Dorg.gradle.parallel=false -Dorg.gradle.workers.max=1 \
   -Dorg.gradle.jvmargs="-Xmx1536m -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8 -XX:+UseParallelGC -XX:-UseContainerSupport"
 ```
+
+### assembleDebug 卡死排查（重要）
+
+如果 `./gradlew assembleDebug` 看起来卡住不动，**几乎可以肯定是 cgroup v2 OOM killer 静默杀 daemon**：
+- 现象：Gradle launcher 无限等待 daemon socket，无报错无输出
+- 验证：`cat /sys/fs/cgroup/memory.events` 看 `oom_kill` 计数是否 > 0
+- 根因：未用上面"沙箱构建命令模板"中的 `-Xmx1536m -XX:MaxMetaspaceSize=768m --max-workers=1 -Dorg.gradle.parallel=false` 覆盖参数，走了 `gradle.properties` 默认值（`-Xmx2048m + MaxMetaspaceSize=1g + workers.max=3 + parallel=true`），峰值内存 5-6GB 超 4GB cgroup 限制
+- 修复：严格按上面命令模板执行，不要省略任何覆盖参数
