@@ -128,8 +128,9 @@ fun CardsScreen(
     // 修复策略:leechWarning 非空时暂存 errorMessage 不弹,leechWarning 清除后
     // errorMessage 仍存在(未 clearError),LaunchedEffect 重新触发弹 Snackbar。
     LaunchedEffect(errorMessage, leechWarning) {
-        if (errorMessage != null && leechWarning == null) {
-            snackbarHostState.showSnackbar(errorMessage)
+        val error = errorMessage
+        if (error != null && leechWarning == null) {
+            snackbarHostState.showSnackbar(error)
             viewModel.clearError()
         }
     }

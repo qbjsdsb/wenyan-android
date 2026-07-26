@@ -163,13 +163,13 @@ fun KnowledgeScreen(
                             icon = Icons.Filled.Inbox,
                             title = title,
                             // 搜索 + 分类叠加下 0 结果时,提供"查看全部分类"快捷操作
-                            action = if (searchQuery.isNotBlank() && isFiltered) {
-                                {
+                            action = {
+                                if (searchQuery.isNotBlank() && isFiltered) {
                                     TextButton(onClick = { viewModel.selectCategory(KnowledgeCategory.ALL) }) {
                                         Text("查看全部分类")
                                     }
                                 }
-                            } else null,
+                            },
                         )
                     }
                     else -> {

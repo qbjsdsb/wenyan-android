@@ -66,7 +66,7 @@ class KnowledgeViewModel @Inject constructor(
      * 300ms 参考 Anki 搜索防抖默认值,平衡响应速度与 DB 负载。
      */
     private val _searchQuery = savedStateHandle.getStateFlow("searchQuery", "")
-    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+    val searchQuery: StateFlow<String> = _searchQuery
 
     /**
      * 重试触发器（P0-6 新增）。点击重试时自增，[flatMapLatest] 会重新订阅数据流。
