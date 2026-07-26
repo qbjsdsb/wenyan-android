@@ -266,12 +266,22 @@ $correctAnswer
      * 解析 L3 LLM 返回的 JSON。
      *
      * 用正则提取 score 和 reason，不依赖严格 JSON（LLM 可能加额外文本）。
+     *
+     * v0.8.12 修复（P1-2 反向验证发现）：原实现 `?: 0` 让解析失败时 score=0，
+     * 0 < 60 → AGAIN，导致 LLM 返回非 JSON 文本时用户被错误判定为"完全不会"。
+     * 现改为解析失败时抛 [IllegalStateException]，由 [checkL3Llm] 传播，
+     * [checkRecall] 的 try-catch 捕获后降级为 L2 结果（HARD 而非 AGAIN）。
+     *
+     * 降级语义：L2 已判定"部分正确"（60-75% 相似度）才触发 L3，L3 失败时
+     * 用 L2 的 HARD 评分合理（覆盖率部分正确，FSRS 调度按 HARD 推进，
+     * 不至于像 AGAIN 那样重置记忆进度）。
      */
     private fun parseL3Response(response: String): Pair<Int, String> {
         // 用正则提取 score
         val scoreRegex = Regex("\"score\"\\s*:\\s*(\\d+)")
         val scoreMatch = scoreRegex.find(response)
-        val score = scoreMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        val score = scoreMatch?.groupValues?.get(1)?.toIntOrNull()
+            ?: throw IllegalStateException("L3 响应解析失败：未找到 score 字段，response=${response.take(200)}")
 
         // 用正则提取 reason
         val reasonRegex = Regex("\"reason\"\\s*:\\s*\"([^\"]+)\"")

@@ -9,6 +9,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 
@@ -340,17 +341,50 @@ class RecallCheckerTest {
         assertEquals("部分正确", result.reason)
     }
 
+    /**
+     * v0.8.12 P1-2 修复：L3 响应非 JSON 时抛异常（原 `?: 0` 误判 AGAIN）。
+     *
+     * 修复前：parseL3Response 解析失败 score=0，0 < 60 → AGAIN，用户被错误判定"完全不会"。
+     * 修复后：解析失败抛 IllegalStateException，[checkL3Llm] 传播异常。
+     *
+     * 直接调用 [checkL3Llm] 时应抛异常（不降级）。
+     * 通过 [checkRecall] 调用时降级为 L2 结果，见 [c5_17_l3_invalidJson_fallsBackToL2]。
+     */
     @Test
-    fun c5_17_l3_invalidJson_returnsDefaults() = runTest {
+    fun c5_17_l3_invalidJson_throwsException() = runTest {
         aiService.response = "这不是 JSON 格式"
 
-        val result = checker.checkL3Llm("答案", "正确答案")
+        try {
+            checker.checkL3Llm("答案", "正确答案")
+            fail("非 JSON 响应应抛 IllegalStateException")
+        } catch (e: IllegalStateException) {
+            assertTrue("异常信息应包含 score 字段", e.message?.contains("score") == true)
+        }
+    }
 
-        // score 解析失败 → 0，0 < 60 → AGAIN
-        assertEquals(0, result.score)
-        assertEquals(RecallRating.AGAIN, result.rating)
-        // reason 解析失败 → 默认提示
-        assertNotNull("reason 应有默认值", result.reason)
+    /**
+     * v0.8.12 P1-2 修复：L3 解析失败时 [checkRecall] 降级为 L2 结果（HARD 而非 AGAIN）。
+     *
+     * 场景：用户答案与正确答案 Jaccard 相似度 ≈ 0.667 ∈ [0.60, 0.75) → L2 判定 HARD + 触发 L3。
+     * L3 返回非 JSON 文本，[parseL3Response] 抛异常，[checkL3Llm] 传播，
+     * [checkRecall] 的 try-catch 捕获后降级为 L2 结果（HARD，coverage=0.667）。
+     *
+     * 这是用户实际遇到 LLM 异常时的关键降级路径，避免误判 AGAIN 重置 FSRS 记忆进度。
+     */
+    @Test
+    fun c5_17_l3_invalidJson_fallsBackToL2() = runTest {
+        aiService.response = "这不是 JSON 格式"
+        val correctAnswer = "建安风骨是汉末诗歌"
+        val userAnswer = "建安风骨是汉末诗歌代表特征"
+
+        val result = checker.checkRecall(userAnswer, correctAnswer, QuestionType.ESSAY).first()
+
+        // L3 失败降级为 L2 结果
+        assertEquals("L3 失败应降级为 L2", RecallLevel.L2, result.level)
+        assertEquals("L2 评分应为 HARD（部分正确），而非 AGAIN", RecallRating.HARD, result.rating)
+        assertEquals("Jaccard 应为 0.667", 0.667f, result.coverage, 0.001f)
+        assertNull("L2 结果 score 应为 null", result.score)
+        assertNull("L2 结果 reason 应为 null", result.reason)
     }
 
     @Test

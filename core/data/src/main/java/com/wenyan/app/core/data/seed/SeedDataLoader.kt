@@ -108,22 +108,39 @@ class SeedDataLoader @Inject constructor(
         val currentVersion = seedData.metadata.version.ifBlank { DEFAULT_SEED_VERSION }
         val storedVersion = getStoredSeedVersion()
 
-        if (initialized && storedVersion == currentVersion) return
+        // 主内容（subjects/chapters/knowledge_points/exam_questions/writing_materials）
+        // 已初始化且版本一致 → 跳过主流程。但图谱导入可能上次失败，需独立检查。
+        val mainContentReady = initialized && storedVersion == currentVersion
 
-        val isUpgrade = initialized && storedVersion != currentVersion
-        if (isUpgrade) {
-            Log.i(TAG, "Seed version upgrade: $storedVersion → $currentVersion, re-importing content (MemoRecord preserved)")
+        if (mainContentReady && isGraphInitialized()) {
+            // 主内容 + 图谱都就绪，直接返回
+            return
         }
-        importToDatabase(seedData, isUpgrade = isUpgrade)
-        markInitialized()
-        storeSeedVersion(currentVersion)
+
+        if (!mainContentReady) {
+            val isUpgrade = initialized && storedVersion != currentVersion
+            if (isUpgrade) {
+                Log.i(TAG, "Seed version upgrade: $storedVersion → $currentVersion, re-importing content (MemoRecord preserved)")
+            }
+            importToDatabase(seedData, isUpgrade = isUpgrade)
+            markInitialized()
+            storeSeedVersion(currentVersion)
+        } else {
+            Log.i(TAG, "Main content ready but graph not initialized, retrying graph import")
+        }
 
         // v0.7.2 修复：图谱骨架导入移出主事务，用独立事务 + try-catch。
         // 原实现在 [importToDatabase] 的 withTransaction 内调用 [importGraphSkeleton]，
         // 一旦图谱 FK 约束失败（如 SUBJECT_ID 与 seed_data.json 不匹配），
         // 整个事务回滚，909 条知识点全部丢失。
         // 现在主事务已提交 + markInitialized 已执行，图谱失败只影响图谱功能，
-        // 知识点不受影响。图谱失败时 Log.w 记录，下次启动重试（@Upsert 幂等）。
+        // 知识点不受影响。
+        //
+        // v0.8.12 修复（P1-1 反向验证发现）：原实现注释说"下次启动重试"，
+        // 但实际 [ensureSeedDataLoaded] 在 initialized=true 且版本一致时直接 return，
+        // 永不重试图谱导入 → 图谱首次失败就永久缺失。
+        // 现新增 [graph_initialized] 独立标志：图谱导入成功才置 true，
+        // 下次启动主流程跳过后仍检查 [isGraphInitialized]，false 则重试。
         try {
             database.withTransaction {
                 importGraphSkeleton()
@@ -131,8 +148,9 @@ class SeedDataLoader @Inject constructor(
                 // 覆盖率从 4.4%（40 硬编码节点）→ 100%（2123 实体 + 968 边）。
                 importGraphFromSeedEntities(seedData)
             }
+            markGraphInitialized()
         } catch (e: Exception) {
-            Log.w(TAG, "Graph import failed, knowledge points unaffected", e)
+            Log.w(TAG, "Graph import failed, will retry on next launch (graph_initialized stays false)", e)
         }
     }
 
@@ -191,6 +209,38 @@ class SeedDataLoader @Inject constructor(
             preferencesDataStore.edit { it[SEED_VERSION_KEY] = version }
         } catch (e: IOException) {
             Log.w(TAG, "DataStore write failed for seed version: $version", e)
+        }
+    }
+
+    /**
+     * 读取图谱导入状态（v0.8.12 P1-1 修复）。
+     *
+     * 与主 [isInitialized] 解耦：主内容（知识点等）导入成功 ≠ 图谱导入成功。
+     * 图谱导入在独立事务中，可能因 FK 约束失败而 [ensureSeedDataLoaded] 的
+     * try-catch 吞掉异常。若不独立追踪，下次启动会因主 initialized=true 直接 return，
+     * 图谱永久缺失。
+     *
+     * IOException 时返回 false（让图谱重试导入，@Upsert 幂等无副作用）。
+     */
+    private suspend fun isGraphInitialized(): Boolean = try {
+        preferencesDataStore.data.map { it[SEED_GRAPH_INITIALIZED_KEY] ?: false }.first()
+    } catch (e: IOException) {
+        Log.w(TAG, "DataStore read failed for graph_initialized, assuming false", e)
+        false
+    }
+
+    /**
+     * 标记图谱导入完成（v0.8.12 P1-1 修复）。
+     *
+     * 仅在 [ensureSeedDataLoaded] 的图谱导入事务成功提交后调用。
+     * IOException 时仅 Log.w 不冒泡：下次启动 [isGraphInitialized] 返回 false
+     * 会重新导入图谱（@Upsert 幂等，重复节点/边无副作用）。
+     */
+    private suspend fun markGraphInitialized() {
+        try {
+            preferencesDataStore.edit { it[SEED_GRAPH_INITIALIZED_KEY] = true }
+        } catch (e: IOException) {
+            Log.w(TAG, "DataStore write failed for graph_initialized, will retry on next launch", e)
         }
     }
 
@@ -666,6 +716,8 @@ class SeedDataLoader @Inject constructor(
         private val SEED_INITIALIZED_KEY = booleanPreferencesKey("seed_initialized")
         /** P1-AUDIT-4：种子版本号，用于版本感知升级 */
         private val SEED_VERSION_KEY = stringPreferencesKey("seed_version")
+        /** v0.8.12 P1-1：图谱独立初始化标志，与主 seed_initialized 解耦 */
+        private val SEED_GRAPH_INITIALIZED_KEY = booleanPreferencesKey("seed_graph_initialized")
         /** seed_data.json metadata.version 为空时的默认版本（视为首次安装） */
         private const val DEFAULT_SEED_VERSION = "v1"
 

@@ -1,23 +1,30 @@
 package com.wenyan.app.core.database.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import com.wenyan.app.core.database.entity.ApiConfigEntity
 import kotlinx.coroutines.flow.Flow
 
 /**
  * API 配置表 DAO。
+ *
+ * v0.8.12 修复（P1-3 反向验证发现）：原 [insert] / [insertAll] 用
+ * `@Insert(onConflict = OnConflictStrategy.REPLACE)`，REPLACE 在 SQLite 中等价于
+ * DELETE + INSERT。删除 api_configs 行时，子表 ai_grading_records 的
+ * `api_config_id` 外键（onDelete = ForeignKey.SET_NULL）被置 NULL，
+ * 导致历史批改记录丢失"使用哪个 API 配置"的关联信息。
+ * 现改用 [@Upsert]（INSERT ... ON CONFLICT DO UPDATE），不触发 DELETE，
+ * 安全更新已存在的配置行。
  */
 @Dao
 interface ApiConfigDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insert(entity: ApiConfigEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertAll(entities: List<ApiConfigEntity>)
 
     @Update
