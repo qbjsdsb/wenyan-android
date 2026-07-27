@@ -4082,3 +4082,42 @@ CardSplitterTest 新增 1 个场景：
    - L3 评估返回 `"score": 85.0` 等变体时正确解析
 
 
+
+## 2026-07-27 会话：v0.8.16 知识图谱优化 + 发布
+
+### SEM 评审 Receipt
+
+**PRR Receipt**（production-readiness-review）：
+- 评审时间：2026-07-27
+- 评审产物：已展示给用户（External Output 紧凑就绪矩阵）
+- Launch scope：External Artifact（GitHub Release APK）
+- Impact 维度：External commitment ✅ / Customer-criticality 中 / Data sensitivity 否 / State durability 否 / Blast radius 全量
+- Blocker：B1 versionCode=23 与 v0.8.15 重复 → 已修复到 24
+- Advisory posture：修复 B1 后可发布
+- 用户决策：合并为 v0.8.16（用户确认）
+
+**RBR Receipt**（release-build-reproducibility）：
+- 评审时间：2026-07-27
+- 评审产物：已展示给用户（构建流水线图 + Pinned-input 检查清单 + Artifact identity）
+- Pinned inputs：源码 tag / Gradle 8.14.4 / JDK temurin 17 / Kotlin KSP AGP 锁定 / Keystore GitHub Secret
+- Hermeticity：本地 --offline 验证通过
+- Artifact identity：wenyan-v0.8.16.apk（versionCode=24, versionName=0.8.16）
+- Release checks：assembleDebug ✅ / testDebugUnitTest 443 tests ✅ / versionCode 递增 ✅
+- Rollback：重装 v0.8.15 APK（GitHub Release 历史保留）
+
+**PR Review Receipt**（agent-pr-review）：
+- 评审时间：2026-07-27
+- 评审产物：已展示给用户（结构化 PR Review，含 5 个 review anchors）
+- Intent match：✅ 完全匹配
+- Failure-mode pass：✅ 无未解决问题
+- Behavior verification：✅ 67 新增测试覆盖变更行为（distSq 复用为 follow-up）
+- Code quality：✅ 全维度 OK
+- Verdict：READY TO MERGE
+- Override posture：无未解决 gap，agent 可自主 commit
+
+### 本地验证
+- assembleDebug: BUILD SUCCESSFUL
+- testDebugUnitTest: 443 tests, 0 failures, 0 errors, 0 skipped（38 suites）
+- 新增测试：GraphLayoutTest 23 + GraphViewModelTest 44 = 67 tests
+- versionCode: 23 → 24
+- versionName: "0.8.15" → "0.8.16"

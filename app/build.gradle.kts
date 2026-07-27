@@ -18,10 +18,10 @@ android {
         targetSdk = 35
         // P0-M2 修正：versionCode 必须每次发版递增，否则包安装器无法区分版本。
         // v0.1.0=1, v0.2.0=2, v0.3.0=3, v0.4.0=4, v0.5.0=5, v0.6.0=6, v0.7.0=7, v0.7.1=8, v0.7.2=9（修复图谱FK回滚）, v0.7.3=10（481真题答案+卡片镜像+图谱扩充）, v0.7.4=11（481真题范文+卡片内容增强+多维视角解析+考频派生）, v0.7.5=12（610综合卷127题科目重新分类+UI修复+图谱重写）, v0.7.6=13（数据瘦身+图谱时间轴布局）, v0.8.1=14（图谱三模式重构+形状编码+覆盖率100%）, v0.8.2=15（修复图谱闪退：lanes越界+IN子句超限）, v0.8.3=16（全面UI/UX打磨：设计系统修复+输入校验+无障碍+性能优化）, v0.8.4=17（第二轮深度打磨：AMOLED补全+无障碍语义+动画优化+死代码清理+错误反馈）, v0.8.5=18（知识卡片功能深度修复：FSRS调度粒度sibling去重+会话内cards冻结+isFinished状态正确传递到UI+撤销功能+会话统计+评分按钮颜色编码+keyPoints切分修复）, v0.8.11=19（知识卡片功能深度打磨：CardSplitter 6维度限制修复+SiblingRatedHint不隐藏评分按钮+进程恢复统计重置+sibling卡预览误导修复+rateCard异步失败分离+评分按钮颜色对齐Anki+sibling卡字段去冗余+Leech警告跳转修复+无pointId错题记录+会话统计持久化+3处编译错误修复，280 tests全绿）, v0.8.12=20（知识卡片第二轮深度打磨：undo不回退ratedPointIds避免FSRS重复调度+recordStudySession移入if避免部分写入+翻转滚动架构修复+SiblingRatedHint去术语化+Leech警告新增问AI助手按钮+Leech检测改为新增判定+errorMessage优先级+翻转动画对齐WenyanMotion+Leech警告队列化+retry清除错误状态+完成态文案修复+EASY视觉权重降级+SchoolComparison尾部分割线+未翻转也显示UndoButton，327 tests全绿）, v0.8.13=21（stark UI 审计修复：ApiConfig ErrorState 错误状态覆盖+ViewModel retry 触发+GraphScreen 3 处 Surface(onClick) 加 role=Button 语义+AiAssistantScreen RoundedCornerShape(4dp) 改 MaterialTheme.shapes.small+GraphScreen 修复 deprecated MenuBook→AutoMirrored，361 tests 全绿）, v0.8.14=22（P0-3b 紧急修复：catch 位置错误导致 retry() 永久失效+ApiConfigScreen Crossfade 改用 Triple 处理 error 状态，361 tests 全绿）
-        versionCode = 23
+        versionCode = 24
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
-        // v0.8.15：横屏布局优化（Stage 1+2）。Stage 1：7 个 Screen（Settings/Quiz/WrongAnswer/Knowledge/KnowledgePointDetail/ApiConfig/AiAssistant）添加 MaxContentWidth 内容宽度限制并居中，横屏下避免行宽过宽阅读疲劳，竖屏不受影响。Stage 2：WenyanLargeTopAppBar 在 Medium/Expanded（横屏/平板）自动降级为标准 TopAppBar，节省 88dp 垂直空间，subtitle 合并到标题行用 " · " 分隔保留信息。assembleDebug + feature tests 全绿（沙箱本地构建供下载测试，GitHub 账单问题 CI 无法跑）。
-        versionName = "0.8.15"
+        // v0.8.16：AI 审计修复（RetryInterceptor isCancellation 修复 + LLM 输入长度限制 + prompt injection 边界标记等 9 项，ef6fe3d）+ 知识图谱发布前回归测试与性能优化（GraphLayout TreeSet O(log n) 替代 O(n²) 防重叠 + distSq 复用 + NEIGHBORHOOD_MAX_NODES 1 跳截断 + 67 新增测试覆盖三模式布局/筛选流水线/邻居发现）。assembleDebug + testDebugUnitTest 全绿（443 tests, 0 failures）。
+        versionName = "0.8.16"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

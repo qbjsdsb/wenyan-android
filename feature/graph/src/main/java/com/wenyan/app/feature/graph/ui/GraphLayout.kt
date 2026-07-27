@@ -265,16 +265,22 @@ internal object GraphLayout {
 
         // 同泳道节点防重叠：x 坐标最小间距
         // v0.8.3：提取到 GraphConstants.TIMELINE_MIN_SPACING / TIMELINE_OVERLAP_OFFSET
-        val laneNodeXs = mutableMapOf<Int, MutableList<Float>>()
+        // v0.8.2 性能修复：原 O(n²) count 改为 TreeSet subSet O(log n)，
+        // 2123 节点 ALL 模式从 ~450 万次比较降到 ~2.3 万次比较（n log n）。
+        val laneNodeXs = mutableMapOf<Int, java.util.TreeSet<Float>>()
 
         for (node in nodes) {
             val laneIdx = nodeLaneIndex(node).coerceIn(0, lanes.lastIndex)
             val x = nodeX(node)
             val y = lanes[laneIdx].y
 
-            // 防重叠：如果同泳道同 x 附近已有节点，垂直偏移
-            val xs = laneNodeXs.getOrPut(laneIdx) { mutableListOf() }
-            val overlapCount = xs.count { kotlin.math.abs(it - x) < GraphConstants.TIMELINE_MIN_SPACING }
+            // 防重叠：统计同泳道 x ∈ (x - MIN_SPACING, x + MIN_SPACING) 的已添加节点数
+            // TreeSet.subSet(from, fromInclusive, to, toInclusive) 是 O(log n)
+            val xs = laneNodeXs.getOrPut(laneIdx) { java.util.TreeSet() }
+            val low = x - GraphConstants.TIMELINE_MIN_SPACING
+            val high = x + GraphConstants.TIMELINE_MIN_SPACING
+            // subSet(low, false, high, false) 排除两端，等价于 abs(it - x) < MIN_SPACING
+            val overlapCount = xs.subSet(low, false, high, false).size
             xs.add(x)
             val finalY = y + overlapCount * GraphConstants.TIMELINE_OVERLAP_OFFSET * (if (overlapCount % 2 == 0) 1 else -1)
 
@@ -354,9 +360,18 @@ internal object GraphLayout {
             }
         }
         // 限制总数到 NEIGHBORHOOD_MAX_NODES
+        // v0.8.2 修复：原实现对 1 跳邻居未限制，导致 50+ 直连场景超出 MAX_NODES。
+        // 现 1 跳与 2 跳合并后统一裁剪，优先保留 1 跳（LinkedHashSet 保留插入顺序，
+        // 直连邻居先加入，2 跳后加入，take(N) 自然优先保留近邻）。
         val remaining = GraphConstants.NEIGHBORHOOD_MAX_NODES - neighbors.size
         if (remaining > 0) {
             neighbors.addAll(twoHopCandidates.take(remaining))
+        }
+        // v0.8.2 修复：若 1 跳邻居已超出 MAX_NODES，截断到 MAX_NODES
+        if (neighbors.size > GraphConstants.NEIGHBORHOOD_MAX_NODES) {
+            val limited = neighbors.take(GraphConstants.NEIGHBORHOOD_MAX_NODES).toMutableSet()
+            neighbors.clear()
+            neighbors.addAll(limited)
         }
 
         val subNodes = nodes.filter { it.id in neighbors }
@@ -406,6 +421,7 @@ internal object GraphLayout {
             }
 
             // 斥力（所有节点对）
+            // v0.8.2 性能修复：复用 distSq 计算，避免 hypot 重复 sqrt(dx*dx+dy*dy)
             for (i in subNodes.indices) {
                 for (j in (i + 1) until subNodes.size) {
                     val p1 = currentPositions[subNodes[i].id] ?: continue
@@ -413,7 +429,7 @@ internal object GraphLayout {
                     val dx = p2.x - p1.x
                     val dy = p2.y - p1.y
                     val distSq = (dx * dx + dy * dy).coerceAtLeast(1f)
-                    val dist = hypot(dx, dy)
+                    val dist = kotlin.math.sqrt(distSq)
                     val force = GraphConstants.FORCE_REPULSION_K / distSq
                     val fx = force * dx / dist
                     val fy = force * dy / dist
