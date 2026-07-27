@@ -1,6 +1,5 @@
 package com.wenyan.app.core.designsystem.theme
 
-import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 /**
@@ -76,12 +76,8 @@ class ThemeViewModel @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "主题操作失败: ${e.message}", e)
+            Timber.w(e, "主题操作失败: ${e.message}")
             _errorEvents.tryEmit("设置未保存：${e.message ?: "存储异常"}")
         }
-    }
-
-    private companion object {
-        private const val TAG = "ThemeViewModel"
     }
 }

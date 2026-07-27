@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 /**
@@ -348,7 +349,8 @@ class CardsViewModel @Inject constructor(
                         // 现复用 core/common/util/friendlyErrorMessage,与 feature/knowledge 保持
                         // 用户体验一致:网络异常→"网络超时,请检查网络后重试",
                         // 数据库异常→"本地数据异常,请重启 App",未知异常→"加载失败,请重试"。
-                        android.util.Log.e("CardsViewModel", "loadCards failed", e)
+                        // v0.8.21: 改用 Timber 结构化日志(原 android.util.Log.e)
+                        Timber.e(e, "loadCards failed")
                         emit(
                             CardsUiState(
                                 error = com.wenyan.app.core.common.util.friendlyErrorMessage(e),

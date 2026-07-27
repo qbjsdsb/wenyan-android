@@ -2,6 +2,7 @@ package com.wenyan.app.core.data.graph
 
 import com.wenyan.app.core.data.repository.GraphRepository
 import kotlinx.coroutines.flow.Flow
+import timber.log.Timber
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
@@ -57,8 +58,8 @@ class PrerequisiteChecker @Inject constructor(
             .take(MAX_PREREQUISITES)
         if (rawPrerequisiteNodes.size > MAX_PREREQUISITES) {
             // 截断告警：数据异常或图过大，避免下游 R 值计算 N+1 查询拖垮性能
-            android.util.Log.w(
-                TAG,
+            // v0.8.21: android.util.Log.w → Timber.w（tag 由 Timber 自动推断为 "PrerequisiteChecker"）
+            Timber.w(
                 "Prerequisites truncated for nodeId=$nodeId: ${rawPrerequisiteNodes.size} > $MAX_PREREQUISITES",
             )
         }
@@ -115,8 +116,6 @@ class PrerequisiteChecker @Inject constructor(
          * 并防御未来递归遍历传递闭包时遭遇环或超大图导致 N+1 R 值查询。
          */
         private const val MAX_PREREQUISITES = 100
-
-        private const val TAG = "PrerequisiteChecker"
     }
 }
 

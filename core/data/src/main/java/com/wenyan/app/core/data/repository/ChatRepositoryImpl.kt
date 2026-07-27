@@ -1,6 +1,5 @@
 package com.wenyan.app.core.data.repository
 
-import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -14,6 +13,7 @@ import com.wenyan.app.core.database.entity.ChatMessageEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import timber.log.Timber
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -117,7 +117,8 @@ class ChatRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             // DataStore 写失败不冒泡(与 SeedDataLoader.markInitialized 同样策略),
             // 下次启动 loadOrInitCurrent 会重新从 DB 推断
-            Log.w(TAG, "setCurrentConversation failed for id=$id", e)
+            // v0.8.21: Log.w → Timber.w（tag 自动推断）
+            Timber.w(e, "setCurrentConversation failed for id=$id")
         }
     }
 
@@ -131,7 +132,8 @@ class ChatRepositoryImpl @Inject constructor(
                 return stored
             }
             // 对话已删除,清除 DataStore 中的失效引用
-            Log.i(TAG, "Stored conversation id=$stored no longer exists, clearing")
+            // v0.8.21: Log.i → Timber.i（tag 自动推断）
+            Timber.i("Stored conversation id=$stored no longer exists, clearing")
             setCurrentConversation(null)
         }
 
@@ -143,7 +145,6 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     private companion object {
-        private const val TAG = "ChatRepositoryImpl"
         private val KEY_CURRENT_CONVERSATION_ID = stringPreferencesKey("current_chat_conversation_id")
     }
 }

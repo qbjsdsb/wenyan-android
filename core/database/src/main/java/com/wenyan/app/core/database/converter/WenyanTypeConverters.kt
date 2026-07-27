@@ -1,9 +1,9 @@
 package com.wenyan.app.core.database.converter
 
-import android.util.Log
 import androidx.room.TypeConverter
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import timber.log.Timber
 
 /**
  * 文研App Room 数据库 TypeConverter。
@@ -42,7 +42,7 @@ class WenyanTypeConverters {
         // P0-1 修复：解析失败降级为空列表，避免单行损坏导致整表读取失败
         return runCatching { json.decodeFromString<List<String>>(value) }
             .onFailure { e ->
-                Log.w(TAG, "Failed to decode List<String> from JSON, returning empty list", e)
+                Timber.w(e, "Failed to decode List<String> from JSON, returning empty list")
             }
             .getOrNull()
             ?: emptyList()
@@ -62,13 +62,9 @@ class WenyanTypeConverters {
         // P0-1 修复：解析失败降级为空 Map，避免单行损坏导致整表读取失败
         return runCatching { json.decodeFromString<Map<String, String>>(value) }
             .onFailure { e ->
-                Log.w(TAG, "Failed to decode Map<String, String> from JSON, returning empty map", e)
+                Timber.w(e, "Failed to decode Map<String, String> from JSON, returning empty map")
             }
             .getOrNull()
             ?: emptyMap()
-    }
-
-    private companion object {
-        private const val TAG = "WenyanTypeConverters"
     }
 }

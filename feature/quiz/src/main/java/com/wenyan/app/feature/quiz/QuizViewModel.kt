@@ -1,6 +1,5 @@
 package com.wenyan.app.feature.quiz
 
-import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -24,6 +23,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 /**
@@ -51,8 +51,6 @@ class QuizViewModel @Inject constructor(
 ) : ViewModel() {
 
     private companion object {
-        private const val TAG = "QuizViewModel"
-
         /**
          * 用户答题输入最大长度(v0.8.21 修复 M4 新增)。
          *
@@ -178,7 +176,7 @@ class QuizViewModel @Inject constructor(
                     // 避免数据库偶发异常导致已加载内容瞬间清空,用户丢失正在浏览的上下文
                     // (与 KnowledgeViewModel catch 保留 knowledgePoints 策略一致)。
                     .catch { e ->
-                        Log.e(TAG, "loadQuiz failed", e)
+                        Timber.e(e, "loadQuiz failed")
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             error = friendlyErrorMessage(e),
@@ -324,7 +322,7 @@ class QuizViewModel @Inject constructor(
                     // 原 `catch {}` 静默吞异常与 CardsViewModel 不一致,生产排查困难。
                     // 错题记录失败不阻塞主流程(自评状态已更新),
                     // 用户可查看错题本或通过 errorMessage Snackbar 感知失败。
-                    Log.w(TAG, "selfEvaluate recordWrongAnswer failed: questionId=$questionId", e)
+                    Timber.w(e, "selfEvaluate recordWrongAnswer failed: questionId=$questionId")
                     _errorMessage.value = "错题记录失败：${e.message ?: "未知错误"}"
                 }
             }

@@ -1,6 +1,5 @@
 package com.wenyan.app.core.designsystem.theme
 
-import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.core.DataStore
@@ -12,6 +11,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -55,7 +55,7 @@ class ThemeRepositoryImpl @Inject constructor(
             seedColor = Color(prefs[SEED_COLOR_KEY] ?: DEFAULT_SEED_COLOR_ARGB),
         )
     }.catch { e ->
-        Log.e(TAG, "themeConfig failed: ${e.message}", e)
+        Timber.e(e, "themeConfig failed: ${e.message}")
         emit(ThemeConfig())
     }
 
@@ -88,7 +88,6 @@ class ThemeRepositoryImpl @Inject constructor(
     }
 
     private companion object {
-        private const val TAG = "ThemeRepositoryImpl"
         val COLOR_MODE_KEY = stringPreferencesKey("color_mode")
         val AMOLED_KEY = booleanPreferencesKey("amoled_mode")
         val PALETTE_STYLE_KEY = stringPreferencesKey("palette_style")

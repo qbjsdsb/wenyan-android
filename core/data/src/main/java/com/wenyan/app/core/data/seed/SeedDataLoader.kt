@@ -1,7 +1,6 @@
 package com.wenyan.app.core.data.seed
 
 import android.content.Context
-import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -32,6 +31,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.json.Json
+import timber.log.Timber
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -112,7 +112,7 @@ class SeedDataLoader @Inject constructor(
 
         val isUpgrade = initialized && storedVersion != currentVersion
         if (isUpgrade) {
-            Log.i(TAG, "Seed version upgrade: $storedVersion → $currentVersion, re-importing content (MemoRecord preserved)")
+            Timber.i("Seed version upgrade: $storedVersion → $currentVersion, re-importing content (MemoRecord preserved)")
         }
         importToDatabase(seedData, isUpgrade = isUpgrade)
         markInitialized()
@@ -132,7 +132,7 @@ class SeedDataLoader @Inject constructor(
                 importGraphFromSeedEntities(seedData)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Graph import failed, knowledge points unaffected", e)
+            Timber.w(e, "Graph import failed, knowledge points unaffected")
         }
     }
 
@@ -146,7 +146,7 @@ class SeedDataLoader @Inject constructor(
     private suspend fun isInitialized(): Boolean = try {
         preferencesDataStore.data.map { it[SEED_INITIALIZED_KEY] ?: false }.first()
     } catch (e: IOException) {
-        Log.w(TAG, "DataStore read failed, assuming seed not initialized", e)
+        Timber.w(e, "DataStore read failed, assuming seed not initialized")
         false
     }
 
@@ -163,7 +163,7 @@ class SeedDataLoader @Inject constructor(
         try {
             preferencesDataStore.edit { it[SEED_INITIALIZED_KEY] = true }
         } catch (e: IOException) {
-            Log.w(TAG, "DataStore write failed, seed will re-import on next launch", e)
+            Timber.w(e, "DataStore write failed, seed will re-import on next launch")
         }
     }
 
@@ -176,7 +176,7 @@ class SeedDataLoader @Inject constructor(
     private suspend fun getStoredSeedVersion(): String = try {
         preferencesDataStore.data.map { it[SEED_VERSION_KEY] ?: "" }.first()
     } catch (e: IOException) {
-        Log.w(TAG, "DataStore read failed for seed version, assuming empty", e)
+        Timber.w(e, "DataStore read failed for seed version, assuming empty")
         ""
     }
 
@@ -190,7 +190,7 @@ class SeedDataLoader @Inject constructor(
         try {
             preferencesDataStore.edit { it[SEED_VERSION_KEY] = version }
         } catch (e: IOException) {
-            Log.w(TAG, "DataStore write failed for seed version: $version", e)
+            Timber.w(e, "DataStore write failed for seed version: $version")
         }
     }
 
@@ -322,7 +322,7 @@ class SeedDataLoader @Inject constructor(
             memoRecordDao.insertAll(memoRecords)
         }
         if (isUpgrade) {
-            Log.i(TAG, "Seed upgrade: created ${memoRecords.size} new MemoRecords, preserved ${existingMemoPointIds.size} existing")
+            Timber.i("Seed upgrade: created ${memoRecords.size} new MemoRecords, preserved ${existingMemoPointIds.size} existing")
         }
 
         // 步骤5：导入真题（按 subject 字段映射到 subjectId）
@@ -507,7 +507,7 @@ class SeedDataLoader @Inject constructor(
             graphRepository.insertNode(node)
             nodeCount++
         }
-        Log.i(TAG, "Auto graph: imported $nodeCount nodes from ${seedData.knowledgePoints.size} knowledge points")
+        Timber.i("Auto graph: imported $nodeCount nodes from ${seedData.knowledgePoints.size} knowledge points")
 
         // ── 2. 关系去重建边 ──
         // 构建 normalized|type → nodeId 映射（用于边端点查找）
@@ -569,7 +569,7 @@ class SeedDataLoader @Inject constructor(
             graphRepository.insertEdge(edge)
             edgeCount++
         }
-        Log.i(TAG, "Auto graph: imported $edgeCount edges (skipped $skippedCount with missing endpoints)")
+        Timber.i("Auto graph: imported $edgeCount edges (skipped $skippedCount with missing endpoints)")
     }
 
     /**
@@ -660,7 +660,6 @@ class SeedDataLoader @Inject constructor(
     }
 
     companion object {
-        private const val TAG = "SeedDataLoader"
         private const val SEED_DATA_FILE = "seed_data.json"
         // NF-DS7 修复：Key 命名统一为 XXX_KEY 后缀式，与 ThemeRepositoryImpl 一致。
         private val SEED_INITIALIZED_KEY = booleanPreferencesKey("seed_initialized")

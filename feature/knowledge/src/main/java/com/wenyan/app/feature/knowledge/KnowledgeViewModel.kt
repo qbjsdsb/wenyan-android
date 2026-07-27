@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 /**
@@ -135,7 +136,7 @@ class KnowledgeViewModel @Inject constructor(
                         // v0.8.20 P1-4:catch 时保留已有 knowledgePoints,
                         // 避免数据库偶发异常导致列表瞬间清空,用户丢失正在浏览的上下文。
                         .catch { e ->
-                            android.util.Log.e("KnowledgeViewModel", "loadKnowledgePoints failed", e)
+                            Timber.e(e, "loadKnowledgePoints failed")
                             _uiState.value = _uiState.value.copy(
                                 isLoading = false,
                                 error = friendlyErrorMessage(e),

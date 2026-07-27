@@ -1,8 +1,8 @@
 package com.wenyan.app.core.data.mapper
 
-import android.util.Log
 import com.wenyan.app.core.ai.RagReference
 import kotlinx.serialization.json.Json
+import timber.log.Timber
 
 /**
  * 聊天消息映射器(NF-PP6 Wave 2.3)。
@@ -18,8 +18,6 @@ import kotlinx.serialization.json.Json
  * - 空列表序列化为 "[]"(非 null),null 输入返回 null(表示无引用字段)
  */
 object ChatMessageMapper {
-
-    private const val TAG = "ChatMessageMapper"
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -63,8 +61,8 @@ object ChatMessageMapper {
             // - 测试 Fake 数据格式错误
             // 输出 JSON 前 200 字符（避免超长日志），异常 message 含具体原因
             val preview = jsonStr.take(200)
-            Log.w(TAG, "deserializeReferences failed, returning empty list", e)
-            Log.w(TAG, "invalid JSON (first 200 chars): $preview")
+            Timber.w(e, "deserializeReferences failed, returning empty list")
+            Timber.w("invalid JSON (first 200 chars): $preview")
             emptyList()
         }
     }

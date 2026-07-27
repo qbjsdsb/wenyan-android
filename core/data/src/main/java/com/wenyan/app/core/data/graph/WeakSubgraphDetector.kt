@@ -1,12 +1,12 @@
 package com.wenyan.app.core.data.graph
 
-import android.util.Log
 import com.wenyan.app.core.data.repository.GraphRepository
 import com.wenyan.app.core.database.entity.GraphEdgeEntity
 import com.wenyan.app.core.database.entity.GraphNodeEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -141,8 +141,8 @@ class WeakSubgraphDetector @Inject constructor(
             val sourceAdj = adjacency[edge.sourceId]
             val targetAdj = adjacency[edge.targetId]
             if (sourceAdj == null || targetAdj == null) {
-                Log.w(
-                    TAG,
+                // v0.8.21: Log.w → Timber.w（tag 自动推断为 "WeakSubgraphDetector"）
+                Timber.w(
                     "Orphan edge dropped: sourceId=${edge.sourceId}, targetId=${edge.targetId}, " +
                         "type=${edge.type}. Node(s) not in current graph nodes list.",
                 )
@@ -221,8 +221,6 @@ class WeakSubgraphDetector @Inject constructor(
         private const val EXAM_FREQUENCY_HIGH = "HIGH"
         private const val EXAM_FREQUENCY_MEDIUM = "MEDIUM"
         private const val EXAM_FREQUENCY_LOW = "LOW"
-
-        private const val TAG = "WeakSubgraphDetector"
     }
 }
 

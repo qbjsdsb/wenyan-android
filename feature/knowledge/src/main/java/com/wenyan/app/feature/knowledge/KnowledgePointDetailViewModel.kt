@@ -1,6 +1,5 @@
 package com.wenyan.app.feature.knowledge
 
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,6 +19,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 /**
@@ -53,10 +53,6 @@ class KnowledgePointDetailViewModel @Inject constructor(
     private val knowledgeRepository: KnowledgeRepository,
     private val wrongAnswerRepository: WrongAnswerRepository,
 ) : ViewModel() {
-
-    private companion object {
-        private const val TAG = "KnowledgePointDetailViewModel"
-    }
 
     /**
      * 从导航参数获取知识点 ID(v0.8.19 P1-UI-6 改为 StateFlow)。
@@ -140,7 +136,7 @@ class KnowledgePointDetailViewModel @Inject constructor(
                     // 避免数据库偶发异常导致详情页内容瞬间清空,用户丢失正在浏览的上下文。
                     // v0.8.17 修复 B1 + M4:catch 移入 flatMapLatest 内部 + 加 Log.e。
                     .catch { e ->
-                        Log.e(TAG, "loadKnowledgePointDetail failed: pointId=$pointId", e)
+                        Timber.e(e, "loadKnowledgePointDetail failed: pointId=$pointId")
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             error = friendlyErrorMessage(e),
@@ -187,7 +183,7 @@ class KnowledgePointDetailViewModel @Inject constructor(
             } catch (e: Exception) {
                 // 标记失败不影响主流程,Flow 会保持当前状态
                 // 用户可重试或查看错题本处理
-                Log.w(TAG, "markWrongAnswerResolved failed: id=$wrongAnswerId", e)
+                Timber.w(e, "markWrongAnswerResolved failed: id=$wrongAnswerId")
             }
         }
     }

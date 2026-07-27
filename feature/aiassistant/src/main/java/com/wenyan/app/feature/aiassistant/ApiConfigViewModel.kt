@@ -1,6 +1,5 @@
 package com.wenyan.app.feature.aiassistant
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.common.util.friendlyErrorMessage
@@ -19,6 +18,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.util.UUID
 import javax.inject.Inject
 
@@ -37,10 +37,6 @@ import javax.inject.Inject
 class ApiConfigViewModel @Inject constructor(
     private val apiConfigRepository: ApiConfigRepository,
 ) : ViewModel() {
-
-    private companion object {
-        const val TAG = "ApiConfigViewModel"
-    }
 
     /** 表单状态（添加/编辑时使用） */
     private val _formState = MutableStateFlow(ApiConfigFormState())
@@ -108,7 +104,7 @@ class ApiConfigViewModel @Inject constructor(
             apiConfigRepository.observeAllConfigs()
                 .map { configs -> ApiConfigUiState(isLoading = false, configs = configs) }
                 .catch { e ->
-                    Log.e(TAG, "load ApiConfigs failed", e)
+                    Timber.e(e, "load ApiConfigs failed")
                     emit(ApiConfigUiState(error = friendlyErrorMessage(e)))
                 }
         }

@@ -1,6 +1,5 @@
 package com.wenyan.app.feature.quiz
 
-import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,6 +17,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 /**
@@ -49,10 +49,6 @@ import javax.inject.Inject
 class WrongAnswerViewModel @Inject constructor(
     private val wrongAnswerRepository: WrongAnswerRepository,
 ) : ViewModel() {
-
-    private companion object {
-        private const val TAG = "WrongAnswerViewModel"
-    }
 
     /** 当前过滤模式(默认未解决,这是用户最常看的视图) */
     private val _filter = MutableStateFlow(WrongAnswerFilter.UNRESOLVED)
@@ -105,7 +101,7 @@ class WrongAnswerViewModel @Inject constructor(
                         // 加 Log.e + friendlyErrorMessage,与 feature/knowledge + feature/cards 一致。
                         // catch 时保留已有 items,避免列表瞬间清空。
                         .catch { e ->
-                            Log.e(TAG, "loadWrongAnswers failed: filter=$currentFilter", e)
+                            Timber.e(e, "loadWrongAnswers failed: filter=$currentFilter")
                             _uiState.value = _uiState.value.copy(
                                 isLoading = false,
                                 error = friendlyErrorMessage(e),

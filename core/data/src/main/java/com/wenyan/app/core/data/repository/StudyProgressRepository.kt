@@ -1,11 +1,11 @@
 package com.wenyan.app.core.data.repository
 
-import android.util.Log
 import com.wenyan.app.core.database.dao.StudyProgressDao
 import com.wenyan.app.core.database.entity.StudyProgressEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import timber.log.Timber
 import java.util.Calendar
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -29,7 +29,6 @@ class StudyProgressRepository @Inject constructor(
 ) {
 
     private companion object {
-        private const val TAG = "StudyProgressRepository"
         private const val DEFAULT_ID = "default"
     }
 
@@ -49,7 +48,8 @@ class StudyProgressRepository @Inject constructor(
                 lastCheckIn = null,
             )
         }.catch { e ->
-            Log.e(TAG, "observeProgress failed", e)
+            // v0.8.21: Log.e → Timber.e（tag 自动推断为 "StudyProgressRepository"）
+            Timber.e(e, "observeProgress failed")
             StudyProgressEntity(
                 id = DEFAULT_ID,
                 lastPointId = null,

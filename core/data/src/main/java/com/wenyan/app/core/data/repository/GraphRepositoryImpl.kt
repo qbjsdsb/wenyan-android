@@ -1,6 +1,5 @@
 package com.wenyan.app.core.data.repository
 
-import android.util.Log
 import com.wenyan.app.core.data.util.catchAndLog
 import com.wenyan.app.core.database.dao.GraphEdgeDao
 import com.wenyan.app.core.database.dao.GraphNodeDao
@@ -14,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.pow
@@ -215,7 +215,9 @@ class GraphRepositoryImpl @Inject constructor(
                 knowledgePointDao.getByIds(ids).associate { it.id to it.title }
             }
         } catch (e: Exception) {
-            Log.w(TAG, "getKnowledgePointTitles failed for ids=${ids.take(3)}...", e)
+            // v0.8.21: Log.w → Timber.w（tag 自动推断为 "GraphRepositoryImpl"）
+            // 注：TAG 常量保留，因 catchAndLog(TAG, ...) 仍需显式传入
+            Timber.w(e, "getKnowledgePointTitles failed for ids=${ids.take(3)}...")
             emptyMap()
         }
 

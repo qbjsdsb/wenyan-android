@@ -1,12 +1,12 @@
 package com.wenyan.app.core.data.repository
 
-import android.util.Log
 import com.wenyan.app.core.data.crypto.ApiKeyCrypto
 import com.wenyan.app.core.database.dao.ApiConfigDao
 import com.wenyan.app.core.database.entity.ApiConfigEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -38,7 +38,7 @@ class ApiConfigRepository @Inject constructor(
         apiConfigDao.observeCurrent()
             .map { it?.decryptedOrNull() }
             .catch { e ->
-                Log.e(TAG, "observeCurrentConfig failed", e)
+                Timber.e(e, "observeCurrentConfig failed")
                 emit(null)
             }
 
@@ -59,7 +59,7 @@ class ApiConfigRepository @Inject constructor(
         apiConfigDao.observeEnabled()
             .map { list -> list.mapNotNull { it.decryptedOrNull() } }
             .catch { e ->
-                Log.e(TAG, "observeEnabledConfigs failed", e)
+                Timber.e(e, "observeEnabledConfigs failed")
                 emit(emptyList())
             }
 
@@ -73,7 +73,7 @@ class ApiConfigRepository @Inject constructor(
         apiConfigDao.observeAll()
             .map { list -> list.mapNotNull { it.decryptedOrNull() } }
             .catch { e ->
-                Log.e(TAG, "observeAllConfigs failed", e)
+                Timber.e(e, "observeAllConfigs failed")
                 emit(emptyList())
             }
 
@@ -125,11 +125,7 @@ class ApiConfigRepository @Inject constructor(
     private fun ApiConfigEntity.decryptedOrNull(): ApiConfigEntity? =
         runCatching { copy(apiKey = apiKeyCrypto.decrypt(apiKey)) }
             .onFailure { e ->
-                Log.w(TAG, "decrypt failed for config id=$id: ${e.message}", e)
+                Timber.w(e, "decrypt failed for config id=$id: ${e.message}")
             }
             .getOrNull()
-
-    private companion object {
-        private const val TAG = "ApiConfigRepository"
-    }
 }

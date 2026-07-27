@@ -1,8 +1,8 @@
 package com.wenyan.app.core.data.repository
 
-import android.util.Log
 import com.wenyan.app.core.database.dao.AppMetaDao
 import com.wenyan.app.core.database.entity.AppMetaEntity
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -64,8 +64,8 @@ class ClockGuard @Inject constructor(
         return if (lastKnown != null && current < lastKnown - TOLERANCE_MS) {
             // P1-AUDIT-2 修正：lastKnown + 1 确保单调递增,避免回拨期间 elapsedDays = 0
             val effective = lastKnown + 1
-            Log.w(
-                TAG,
+            // v0.8.21: Log.w → Timber.w（tag 自动推断为 "ClockGuard"）
+            Timber.w(
                 "Clock rollback detected: current=$current, lastKnown=$lastKnown " +
                     "(rollback=${lastKnown - current}ms > tolerance=$TOLERANCE_MS ms), " +
                     "using effective=$effective (lastKnown+1 for monotonic increment)",
@@ -91,7 +91,6 @@ class ClockGuard @Inject constructor(
     }
 
     companion object {
-        private const val TAG = "ClockGuard"
         private const val KEY_LAST_KNOWN_TS = "last_known_timestamp_ms"
 
         /** 时钟回拨容差（ms）：超过此值视为异常回拨，NTP 正常波动 < 1 分钟 */
