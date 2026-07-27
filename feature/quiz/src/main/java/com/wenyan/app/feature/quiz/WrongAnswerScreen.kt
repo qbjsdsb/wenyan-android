@@ -62,10 +62,14 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * 错题本界面(NF-PP5 Wave 3.2)。
+ * 错题本界面。
+ *
+ * v0.9.0 起 WrongAnswer 从 quiz 子路由提升为顶级 Tab，支持两种形态：
+ * - **顶级 Tab 模式**（默认）：onBack = null，顶栏无返回箭头，由底部 NavigationBar 切换
+ * - **子路由模式**（保留兼容）：onBack 非 null，顶栏左侧显示返回箭头，popBackStack 返回上层
  *
  * 功能:
- * - 顶栏返回按钮 + "错题本" 标题
+ * - 顶栏 "错题本" 标题（按需显示返回按钮）
  * - 过滤行:"未解决"(默认) / "全部"
  * - 错题列表:每张卡片展示来源 / 答错次数 / 用户答案 / 正确答案 / 时间
  * - 卡片操作行:
@@ -78,7 +82,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WrongAnswerScreen(
-    onBack: () -> Unit = {},
+    onBack: (() -> Unit)? = null,
     viewModel: WrongAnswerViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

@@ -10,7 +10,6 @@ import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import com.wenyan.app.feature.aiassistant.AiAssistantScreen
 import com.wenyan.app.feature.aiassistant.ApiConfigScreen
 import com.wenyan.app.feature.cards.CardsScreen
-import com.wenyan.app.feature.graph.GraphScreen
 import com.wenyan.app.feature.knowledge.KnowledgePointDetailScreen
 import com.wenyan.app.feature.knowledge.KnowledgeScreen
 import com.wenyan.app.feature.quiz.QuizScreen
@@ -24,16 +23,19 @@ import com.wenyan.app.feature.settings.SettingsScreen
  * - knowledge：知识点列表
  * - quiz：真题练习
  * - cards：记忆卡片
- * - graph：知识图谱
+ * - wrong_answer：错题本（v0.9.0 起从 quiz 子路由提升为顶级 Tab，占据原 graph 位置）
  * - settings：设置（v0.6 起从子路由提升为顶级 Tab）
  *
  * 子路由（非顶级目的地）：
  * - aiassistant：AI 助手（v0.6 起从顶级 Tab 降为子路由，Push/Pop slide）
  * - knowledge_detail/{pointId}：知识点详情（Spec C1.27 多教材对照 + C7.2 来源溯源）
  * - api_config：API 配置（Spec C5.7a 设计文档 3.6.4 多服务商配置）
- * - wrong_answer：错题本（NF-PP5 Wave 3.2，从 quiz TopBar Inbox 图标进入）
  *
- * 4 个主屏（knowledge/quiz/cards/graph）TopBar 右上角均提供 AI 入口（SmartToy 图标），
+ * v0.9.0 变更：
+ * - 移除 graph 顶级 Tab（feature:graph 模块整体删除，知识点关联改走树结构）
+ * - WrongAnswer 从子路由提升为顶级 Tab，删除 quiz TopBar Inbox 入口
+ *
+ * 3 个主屏（knowledge/quiz/cards）TopBar 右上角均提供 AI 入口（SmartToy 图标），
  * 点击后以子路由 Push 动画进入 AI 助手，避免与底部 NavigationBar 叠加冲突。
  */
 @Composable
@@ -87,12 +89,6 @@ fun WenyanNavHost(
                     launchSingleTop = true
                 }
             },
-            onNavigateToWrongAnswer = {
-                // NF-PP5 Wave 3.2: 错题本子路由(Push/Pop slide + launchSingleTop)
-                navController.navigate(ROUTE_WRONG_ANSWER) {
-                    launchSingleTop = true
-                }
-            },
         )
         cardsDestination(
             onNavigateToAiAssistant = {
@@ -121,21 +117,9 @@ fun WenyanNavHost(
                 }
             },
         )
-        graphDestination(
-            onNavigateToAiAssistant = {
-                navController.navigate(ROUTE_AI_ASSISTANT) {
-                    launchSingleTop = true
-                }
-            },
-            onNavigateToDetail = { pointId ->
-                navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId") {
-                    popUpTo("$ROUTE_KNOWLEDGE_DETAIL/{pointId}") {
-                        inclusive = true
-                    }
-                    launchSingleTop = true
-                }
-            },
-        )
+        // v0.9.0：WrongAnswer 提升为顶级 Tab（原 graphDestination 位置）
+        // 不传 onBack → WrongAnswerScreen 顶级模式（无返回箭头）
+        wrongAnswerDestination()
         settingsDestination(
             onNavigateToApiConfig = {
                 navController.navigate(ROUTE_API_CONFIG) {
@@ -168,10 +152,6 @@ fun WenyanNavHost(
                 }
             },
         )
-        // NF-PP5 Wave 3.2: 错题本子路由
-        wrongAnswerDestination(
-            onBack = { navController.popBackStack() },
-        )
     }
 }
 
@@ -191,13 +171,11 @@ private fun NavGraphBuilder.knowledgeDestination(
 private fun NavGraphBuilder.quizDestination(
     onNavigateToAiAssistant: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
-    onNavigateToWrongAnswer: () -> Unit,
 ) {
     composable(TopLevelDestination.ROUTE_QUIZ) {
         QuizScreen(
             onNavigateToAiAssistant = onNavigateToAiAssistant,
             onNavigateToDetail = onNavigateToDetail,
-            onNavigateToWrongAnswer = onNavigateToWrongAnswer,
         )
     }
 }
@@ -216,15 +194,11 @@ private fun NavGraphBuilder.cardsDestination(
     }
 }
 
-private fun NavGraphBuilder.graphDestination(
-    onNavigateToAiAssistant: () -> Unit,
-    onNavigateToDetail: (String) -> Unit,
-) {
-    composable(TopLevelDestination.ROUTE_GRAPH) {
-        GraphScreen(
-            onNavigateToAiAssistant = onNavigateToAiAssistant,
-            onNavigateToDetail = onNavigateToDetail,
-        )
+// v0.9.0：WrongAnswer 顶级 Tab，用 NavHost 默认 Tab fade（无 Push/Pop slide）
+// onBack 为 null 时 WrongAnswerScreen 隐藏返回箭头（顶级模式）
+private fun NavGraphBuilder.wrongAnswerDestination() {
+    composable(TopLevelDestination.ROUTE_WRONG_ANSWER) {
+        WrongAnswerScreen()
     }
 }
 
@@ -293,23 +267,7 @@ private fun NavGraphBuilder.knowledgeDetailDestination(
     }
 }
 
-// NF-PP5 Wave 3.2: 错题本子路由(Push/Pop slide transition)
-private fun NavGraphBuilder.wrongAnswerDestination(
-    onBack: () -> Unit,
-) {
-    composable(
-        route = ROUTE_WRONG_ANSWER,
-        enterTransition = { WenyanMotion.PushEnterTransition },
-        exitTransition = { WenyanMotion.PushExitTransition },
-        popEnterTransition = { WenyanMotion.PopEnterTransition },
-        popExitTransition = { WenyanMotion.PopExitTransition },
-    ) {
-        WrongAnswerScreen(onBack = onBack)
-    }
-}
-
 // 子路由常量
 private const val ROUTE_API_CONFIG = "api_config"
 private const val ROUTE_AI_ASSISTANT = "aiassistant"
 private const val ROUTE_KNOWLEDGE_DETAIL = "knowledge_detail"
-private const val ROUTE_WRONG_ANSWER = "wrong_answer"

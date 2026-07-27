@@ -79,6 +79,9 @@ import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
  * - 关联知识点入口（跳转知识点详情）
  * - AI助手入口（跳转AI助手，苏格拉底式引导）
  *
+ * v0.9.0 变更：移除 TopBar 错题本入口（Inbox 图标），
+ * 错题本已提升为顶级 Tab，由底部 NavigationBar 直接切换。
+ *
  * 布局：年份选择（LazyRow）+ 题目列表（LazyColumn）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,7 +89,6 @@ import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 fun QuizScreen(
     onNavigateToAiAssistant: () -> Unit = {},
     onNavigateToDetail: (String) -> Unit = {},
-    onNavigateToWrongAnswer: () -> Unit = {},
     viewModel: QuizViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -112,13 +114,7 @@ fun QuizScreen(
             WenyanLargeTopAppBar(
                 title = "真题练习",
                 actions = {
-                    // NF-PP5 Wave 3.2: 错题本入口
-                    IconButton(onClick = onNavigateToWrongAnswer) {
-                        Icon(
-                            imageVector = Icons.Default.Inbox,
-                            contentDescription = "错题本",
-                        )
-                    }
+                    // v0.9.0：错题本入口已移除（提升为顶级 Tab，由底部 NavigationBar 切换）
                     IconButton(onClick = onNavigateToAiAssistant) {
                         Icon(
                             imageVector = Icons.Default.SmartToy,

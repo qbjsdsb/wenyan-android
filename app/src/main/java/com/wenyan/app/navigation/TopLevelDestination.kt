@@ -2,7 +2,7 @@ package com.wenyan.app.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
-import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Style
@@ -15,11 +15,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
  * - 知识点（knowledge）
  * - 真题（quiz）
  * - 卡片（cards）
- * - 图谱（graph）
+ * - 错题本（wrong_answer）— v0.9.0：从 quiz 子路由提升为顶级 Tab，原"图谱"位置
  * - 设置（settings）
  *
- * AI 助手（aiassistant）不再是顶级目的地，改为子路由，
- * 由 4 个主屏 TopBar 右上角 SmartToy 图标进入。
+ * 变更历史：
+ * - v0.6：AiAssistant 从顶级 Tab 降为子路由，由 4 个主屏 TopBar SmartToy 图标进入
+ * - v0.9.0：移除 Graph 顶级 Tab（feature:graph 模块整体删除，知识点关联改走树结构），
+ *           WrongAnswer 从 quiz 子路由提升为顶级 Tab，占据原 Graph 位置
  *
  * 使用 sealed class 确保导航目的地穷举可控。
  */
@@ -46,10 +48,10 @@ sealed class TopLevelDestination(
         icon = Icons.Filled.Style,
     )
 
-    data object Graph : TopLevelDestination(
-        route = ROUTE_GRAPH,
-        label = "图谱",
-        icon = Icons.Filled.Hub,
+    data object WrongAnswer : TopLevelDestination(
+        route = ROUTE_WRONG_ANSWER,
+        label = "错题本",
+        icon = Icons.Filled.ErrorOutline,
     )
 
     data object Settings : TopLevelDestination(
@@ -63,7 +65,7 @@ sealed class TopLevelDestination(
         const val ROUTE_KNOWLEDGE = "knowledge"
         const val ROUTE_QUIZ = "quiz"
         const val ROUTE_CARDS = "cards"
-        const val ROUTE_GRAPH = "graph"
+        const val ROUTE_WRONG_ANSWER = "wrong_answer"
         const val ROUTE_SETTINGS = "settings"
 
         // 全部顶级目的地，按底部导航顺序排列
@@ -71,7 +73,7 @@ sealed class TopLevelDestination(
             Knowledge,
             Quiz,
             Cards,
-            Graph,
+            WrongAnswer,
             Settings,
         )
     }
