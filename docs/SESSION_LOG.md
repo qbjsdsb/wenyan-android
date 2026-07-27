@@ -4121,3 +4121,32 @@ CardSplitterTest 新增 1 个场景：
 - 新增测试：GraphLayoutTest 23 + GraphViewModelTest 44 = 67 tests
 - versionCode: 23 → 24
 - versionName: "0.8.15" → "0.8.16"
+
+### RBR Exception Receipt（发布前记录）
+
+**Iron Law**: `NO RELEASE WITHOUT PINNED INPUTS, REPRODUCIBLE BUILD, IMMUTABLE ARTIFACT, AND TRACEABLE PROMOTION`
+
+**Exception**: GitHub Actions 账单问题导致 Release workflow 无法运行，正式 keystore（wenyan-release.jks）存储在 GitHub Secrets 本地不可访问。
+
+**Compensating control**:
+- 本地构建 release APK（unset CI → fallback 到 debug 签名）
+- 功能与正式版完全一致，仅签名不同（v0.8.14/v0.8.15 已有先例）
+- APK 已通过本地 assembleDebug + testDebugUnitTest 全绿验证（443 tests, 0 failures）
+
+**Expiry**: GitHub Actions 账单问题解决后，重新用正式 keystore 构建并替换 v0.8.16 release APK
+
+**用户接受**: 用户已确认"本地构建 debug 签名 + gh 上传（与 v0.8.14/v0.8.15 一致）"
+
+**Artifact identity**:
+- 文件: app-release.apk (19265936 bytes / 18.4 MB)
+- versionCode: 24
+- versionName: 0.8.16
+- Source revision: d9ce713 (commit hash)
+- Build: gradle 8.14.4 + JDK 17 + Kotlin 2.3.10
+- 签名: Android Debug（fallback）
+
+**Traceability**:
+- tag: v0.8.16
+- commit: d9ce713
+- 上传方式: gh release create v0.8.16 + gh release upload
+- Rollback target: 重装 v0.8.15 release APK（GitHub Release 历史永久保留）
