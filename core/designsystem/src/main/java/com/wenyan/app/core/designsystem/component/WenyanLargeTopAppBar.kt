@@ -10,8 +10,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,6 +38,14 @@ import androidx.compose.ui.text.style.TextOverflow
  * - 支持副标题（[subtitle]），展开时显示在标题下方
  * - 展开时为大标题样式（headlineMedium），收起时为标准标题样式
  *
+ * **v0.8.15 Stage 2: 横屏自动降级**
+ * - Compact（手机竖屏 < 600dp）：保持 [LargeFlexibleTopAppBar]（展开大标题，体验不变）
+ * - Medium/Expanded（横屏/平板 ≥ 600dp）：自动降级为 [TopAppBar]（标准高度 64dp，
+ *   节省垂直空间，避免横屏下 Large 标题挤压内容区）
+ * - subtitle 在 Compact 模式下显示在标题下方，在降级模式下合并到标题行尾
+ *   （用 " · " 分隔，例如 "知识点详情 · 高频 · 难度3/5"），保留信息不丢失
+ * - 9 个调用点无需任何改动，全部自动适配
+ *
  * @param title 标题文本
  * @param modifier 修饰符
  * @param subtitle 副标题文本，可选（如知识点分类、章节归属）
@@ -53,43 +64,73 @@ fun WenyanLargeTopAppBar(
     actions: @Composable RowScope.() -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
-    LargeFlexibleTopAppBar(
-        title = {
-            Text(
-                text = title,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
-        modifier = modifier,
-        subtitle = subtitle?.let {
-            @Composable {
+    // v0.8.15 Stage 2: 横屏/平板（Medium/Expanded）下 Large 标题展开态过高（152dp），
+    // 挤压本就紧张的垂直内容区。降级为标准 TopAppBar（64dp）节省 88dp 垂直空间。
+    val windowWidthSizeClass = currentWindowAdaptiveInfo().windowSizeClass.windowWidthSizeClass
+    val useLarge = windowWidthSizeClass == WindowWidthSizeClass.COMPACT
+
+    val colors = TopAppBarDefaults.topAppBarColors(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        titleContentColor = MaterialTheme.colorScheme.onSurface,
+        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+    )
+
+    val navigationIcon: @Composable () -> Unit = {
+        if (onBack != null) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "返回",
+                )
+            }
+        }
+    }
+
+    if (useLarge) {
+        // Compact（手机竖屏）：保持 LargeFlexibleTopAppBar 体验不变
+        LargeFlexibleTopAppBar(
+            title = {
                 Text(
-                    text = it,
-                    style = MaterialTheme.typography.titleMedium,
+                    text = title,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-            }
-        },
-        navigationIcon = {
-            if (onBack != null) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "返回",
+            },
+            modifier = modifier,
+            subtitle = subtitle?.let {
+                @Composable {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
-            }
-        },
-        actions = actions,
-        titleHorizontalAlignment = Alignment.Start,
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-            titleContentColor = MaterialTheme.colorScheme.onSurface,
-            navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-            actionIconContentColor = MaterialTheme.colorScheme.onSurface,
-        ),
-        scrollBehavior = scrollBehavior,
-    )
+            },
+            navigationIcon = navigationIcon,
+            actions = actions,
+            titleHorizontalAlignment = Alignment.Start,
+            colors = colors,
+            scrollBehavior = scrollBehavior,
+        )
+    } else {
+        // Medium/Expanded（横屏/平板）：降级为标准 TopAppBar，subtitle 合并到标题行
+        // 用 " · " 分隔保留信息（如 "知识点详情 · 高频 · 难度3/5"）
+        val combinedTitle = if (subtitle != null) "$title · $subtitle" else title
+        TopAppBar(
+            title = {
+                Text(
+                    text = combinedTitle,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
+            modifier = modifier,
+            navigationIcon = navigationIcon,
+            actions = actions,
+            colors = colors,
+            scrollBehavior = scrollBehavior,
+        )
+    }
 }

@@ -7,11 +7,13 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
@@ -41,6 +43,7 @@ import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.GroupedCard
 import com.wenyan.app.core.designsystem.component.GroupedCardDivider
 import com.wenyan.app.core.designsystem.component.GroupedCardItem
+import com.wenyan.app.core.designsystem.component.MaxContentWidth
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.designsystem.theme.ColorMode
@@ -90,13 +93,19 @@ fun SettingsScreen(
             )
         },
     ) { padding ->
-        LazyColumn(
+        // v0.8.15 Stage 1: 横屏/平板下限制内容最大宽度并居中，避免设置项行宽过宽阅读疲劳。
+        // 竖屏（<600dp）下 widthIn(max=600) 不生效（屏幕宽 < max），不影响竖屏布局。
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .padding(padding),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xl),
+            contentAlignment = Alignment.TopCenter,
         ) {
+            LazyColumn(
+                modifier = Modifier.widthIn(max = MaxContentWidth.compact),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xl),
+            ) {
             // P0 v0.7.2: 考研倒计时卡片(接通 ExamCountdownManager,原完全未接入)
             item { ExamCountdownCard() }
 
@@ -289,7 +298,8 @@ fun SettingsScreen(
                     )
                 }
             }
-        }
+            } // LazyColumn end
+        } // Box end
     }
 }
 

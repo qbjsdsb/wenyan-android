@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -57,6 +58,7 @@ import com.wenyan.app.core.designsystem.component.ContentSourceBadge
 import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ErrorState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
+import com.wenyan.app.core.designsystem.component.MaxContentWidth
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.TonalCard
 import com.wenyan.app.core.designsystem.component.WenyanInfoChip
@@ -230,24 +232,31 @@ private fun QuestionList(
     onNavigateToDetail: (String) -> Unit,
     contentPadding: PaddingValues,
 ) {
-    LazyColumn(
+    // v0.8.15 Stage 1: 横屏/平板下限制内容最大宽度并居中，避免题目卡片行宽过宽阅读疲劳。
+    // 竖屏（<720dp）下 widthIn(max=720) 不生效（屏幕宽 < max），不影响竖屏布局。
+    Box(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = contentPadding,
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        items(items = questions, key = { it.id }, contentType = { "question" }) { question ->
-            QuestionCard(
-                question = question,
-                isExpanded = question.id in expandedIds,
-                answerState = answers[question.id] ?: QuizAnswerState(),
-                onToggleExpanded = { onToggleExpanded(question.id) },
-                onUpdateAnswer = { text -> onUpdateAnswer(question.id, text) },
-                onSubmitAnswer = { onSubmitAnswer(question.id) },
-                onSelfEvaluate = { isCorrect -> onSelfEvaluate(question.id, isCorrect) },
-                onNavigateToAiAssistant = onNavigateToAiAssistant,
-                onNavigateToDetail = onNavigateToDetail,
-                modifier = Modifier.animateItem(),
-            )
+        LazyColumn(
+            modifier = Modifier.widthIn(max = MaxContentWidth.comfortable),
+            contentPadding = contentPadding,
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            items(items = questions, key = { it.id }, contentType = { "question" }) { question ->
+                QuestionCard(
+                    question = question,
+                    isExpanded = question.id in expandedIds,
+                    answerState = answers[question.id] ?: QuizAnswerState(),
+                    onToggleExpanded = { onToggleExpanded(question.id) },
+                    onUpdateAnswer = { text -> onUpdateAnswer(question.id, text) },
+                    onSubmitAnswer = { onSubmitAnswer(question.id) },
+                    onSelfEvaluate = { isCorrect -> onSelfEvaluate(question.id, isCorrect) },
+                    onNavigateToAiAssistant = onNavigateToAiAssistant,
+                    onNavigateToDetail = onNavigateToDetail,
+                    modifier = Modifier.animateItem(),
+                )
+            }
         }
     }
 }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -70,6 +71,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.ai.SocraticStage
 import com.wenyan.app.core.designsystem.component.ContentSourceBadge
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
+import com.wenyan.app.core.designsystem.component.MaxContentWidth
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 
@@ -284,12 +286,17 @@ fun AiAssistantScreen(
                         )
                     }
                 } else {
-                    LazyColumn(
+                    // v0.8.15 Stage 1: 横屏/平板下限制消息列表最大宽度并居中，避免对话气泡行宽过宽阅读疲劳。
+                    Box(
                         modifier = Modifier.fillMaxSize(),
-                        state = listState,
-                        contentPadding = PaddingValues(Spacing.lg),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                        contentAlignment = Alignment.TopCenter,
                     ) {
+                        LazyColumn(
+                            modifier = Modifier.widthIn(max = MaxContentWidth.compact),
+                            state = listState,
+                            contentPadding = PaddingValues(Spacing.lg),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                        ) {
                         // P2-LAZY-1 修正：混合列表加 contentType，帮助 LazyList 复用 item cache
                         // 消息项 contentType="message"，加载指示器 contentType="loading"
                         items(items = uiState.messages, key = { it.id }, contentType = { "message" }) { message ->
@@ -304,7 +311,8 @@ fun AiAssistantScreen(
                                     WenyanLoadingIndicator()
                                 }
                             }
-                        }
+                            } // LazyColumn end
+                        } // Box end
                     }
                 }
             }

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -66,6 +67,7 @@ import com.wenyan.app.core.database.entity.ApiConfigEntity
 import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ErrorState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
+import com.wenyan.app.core.designsystem.component.MaxContentWidth
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.TonalCard
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
@@ -246,20 +248,26 @@ private fun ConfigList(
     onDelete: (ApiConfigEntity) -> Unit,
     contentPadding: PaddingValues,
 ) {
-    LazyColumn(
+    // v0.8.15 Stage 1: 横屏/平板下限制内容最大宽度并居中，避免配置卡片行宽过宽阅读疲劳。
+    Box(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = contentPadding,
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        items(configs, key = { it.id }, contentType = { "config" }) { config ->
-            ConfigCard(
-                config = config,
-                isCurrent = config.id == currentConfigId,
-                onSetCurrent = { onSetCurrent(config.id) },
-                onEdit = { onEdit(config) },
-                onDelete = { onDelete(config) },
-                modifier = Modifier.animateItem(),
-            )
+        LazyColumn(
+            modifier = Modifier.widthIn(max = MaxContentWidth.comfortable),
+            contentPadding = contentPadding,
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            items(configs, key = { it.id }, contentType = { "config" }) { config ->
+                ConfigCard(
+                    config = config,
+                    isCurrent = config.id == currentConfigId,
+                    onSetCurrent = { onSetCurrent(config.id) },
+                    onEdit = { onEdit(config) },
+                    onDelete = { onDelete(config) },
+                    modifier = Modifier.animateItem(),
+                )
+            }
         }
     }
 }
