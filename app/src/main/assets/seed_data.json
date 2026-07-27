@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "version": "2.11.0",
+    "version": "2.12.0",
     "generated_at": "2026-07-24T00:01:38.475972",
-    "description": "文研App种子数据（南师大文学考研）- v14 知识图谱考频接通（KnowledgePointSeed 解析 exam_frequency 字段，图谱节点 metadata 写入 examFrequency + sourceKpCount）",
+    "description": "文研App种子数据（南师大文学考研）- v15 章节树重构（ADR-001 B1.3：每科根章节 + 文学史时段子章节，知识点按 tags/title 匹配到子章节）",
     "source": "Phase 1 资料数字化管线输出",
     "fixes": [
       "subjects使用全称",

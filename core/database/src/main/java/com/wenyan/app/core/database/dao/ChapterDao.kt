@@ -39,4 +39,28 @@ interface ChapterDao {
 
     @Query("SELECT * FROM chapters WHERE subject_id = :subjectId AND parent_id IS NULL ORDER BY sort_order ASC")
     fun observeRoots(subjectId: String): Flow<List<ChapterEntity>>
+
+    /**
+     * 递归 CTE 查询：返回以 [rootId] 为根的整棵子树（含根），按 sort_order 排序。
+     *
+     * 用于章节树视图一次性拉取整棵子树，避免 N+1 查询。
+     * SQLite 自 3.8.3 起支持 WITH RECURSIVE，Android API 21+（minSdk 26 满足）。
+     */
+    @Query(
+        """
+        WITH RECURSIVE tree AS (
+            SELECT * FROM chapters WHERE id = :rootId
+            UNION ALL
+            SELECT c.* FROM chapters c JOIN tree t ON c.parent_id = t.id
+        )
+        SELECT * FROM tree ORDER BY sort_order ASC
+        """,
+    )
+    fun observeTree(rootId: String): Flow<List<ChapterEntity>>
+
+    /**
+     * 统计有父章节的子章节数量（用于 seed 导入后自检章节树已生成）。
+     */
+    @Query("SELECT COUNT(*) FROM chapters WHERE parent_id IS NOT NULL")
+    suspend fun countNonRootChapters(): Int
 }

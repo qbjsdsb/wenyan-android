@@ -3,6 +3,8 @@ package com.wenyan.app.core.data.di
 import com.wenyan.app.core.ai.LlmConfigProvider
 import com.wenyan.app.core.data.repository.CardRepository
 import com.wenyan.app.core.data.repository.CardRepositoryImpl
+import com.wenyan.app.core.data.repository.ChapterRepository
+import com.wenyan.app.core.data.repository.ChapterRepositoryImpl
 import com.wenyan.app.core.data.repository.ChatRepository
 import com.wenyan.app.core.data.repository.ChatRepositoryImpl
 import com.wenyan.app.core.data.repository.ExamRepository
@@ -101,4 +103,14 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindCardRepository(impl: CardRepositoryImpl): CardRepository
+
+    /**
+     * 绑定 [ChapterRepository] 到 [ChapterRepositoryImpl]（ADR-001 B1.2）。
+     *
+     * ChapterRepositoryImpl 通过 @Inject constructor 注入 SubjectDao + ChapterDao +
+     * KnowledgePointDao，DAO 由 DatabaseModule 提供。
+     */
+    @Binds
+    @Singleton
+    abstract fun bindChapterRepository(impl: ChapterRepositoryImpl): ChapterRepository
 }

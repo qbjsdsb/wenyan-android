@@ -239,30 +239,59 @@ class SeedDataLoader @Inject constructor(
         // 构建 subjectName → subjectId 映射（供知识点/真题映射）
         val subjectNameToId = seedData.subjects.associate { it.name to it.id }
 
-        // 步骤2：为每科创建默认章节（知识点外键依赖 chapters）
-        val defaultChapters = seedData.subjects.map { seed ->
-            ChapterEntity(
-                id = "chapter_default_${seed.code}",
-                subjectId = seed.id,
-                parentId = null,
-                title = "${seed.name}·默认章节",
-                sortOrder = 0,
+        // 步骤2（ADR-001 B1.3 章节树）：为每科创建根章节 + 文学史时段子章节
+        // 根章节：parentId=null，title=科目名（不再叫"默认章节"，作为章节树根）
+        // 子章节：parentId=根章节ID，title=时段名（如"先秦文学"），按 PERIOD_CHAPTERS 预定义
+        val allChapters = mutableListOf<ChapterEntity>()
+        // subjectName → 根章节ID 映射（供知识点兜底分配）
+        val subjectNameToRootChapterId = mutableMapOf<String, String>()
+
+        for (seed in seedData.subjects) {
+            val rootChapterId = "chapter_default_${seed.code}"
+            subjectNameToRootChapterId[seed.name] = rootChapterId
+            allChapters.add(
+                ChapterEntity(
+                    id = rootChapterId,
+                    subjectId = seed.id,
+                    parentId = null,
+                    title = seed.name,
+                    sortOrder = 0,
+                ),
             )
+            // 为该科目生成时段子章节（chapter ID 由 matchPeriodChapter 按 subjectCode+idx 生成）
+            val periods = PERIOD_CHAPTERS[seed.name] ?: emptyList()
+            for ((idx, period) in periods.withIndex()) {
+                allChapters.add(
+                    ChapterEntity(
+                        id = "chapter_${seed.code}_$idx",
+                        subjectId = seed.id,
+                        parentId = rootChapterId,
+                        title = period.title,
+                        sortOrder = idx + 1,
+                    ),
+                )
+            }
         }
-        if (defaultChapters.isNotEmpty()) {
-            chapterDao.insertAll(defaultChapters)
+        if (allChapters.isNotEmpty()) {
+            chapterDao.insertAll(allChapters)
         }
 
-        // 构建 subjectName → chapterId 映射
-        val subjectNameToChapterId = seedData.subjects.associate {
-            it.name to "chapter_default_${it.code}"
-        }
+        // 构建 subjectName → chapterId 映射（兼容旧逻辑，指向根章节）
+        val subjectNameToChapterId = subjectNameToRootChapterId.toMap()
 
-        // 步骤3：导入知识点（按 subject 字段映射到默认章节）
+        // 步骤3：导入知识点（按 subject + tags/title 匹配到时段子章节，未匹配留根章节）
         // 注意：若知识点 subject 不在 subjects 列表中，跳过该知识点（避免外键约束失败）
         val knowledgePointEntities = seedData.knowledgePoints.mapNotNull { seed ->
-            val chapterId = subjectNameToChapterId[seed.subject]
+            val rootChapterId = subjectNameToChapterId[seed.subject]
                 ?: return@mapNotNull null
+            // ADR-001 B1.3：按 tags + title 匹配时段子章节，未匹配留根
+            val periodChapterId = matchPeriodChapter(
+                subjectName = seed.subject,
+                subjectCode = seedData.subjects.first { it.name == seed.subject }.code,
+                title = seed.title,
+                tags = seed.tags,
+            )
+            val chapterId = periodChapterId ?: rootChapterId
             KnowledgePointEntity(
                 id = seed.id,
                 chapterId = chapterId,
@@ -675,6 +704,106 @@ class SeedDataLoader @Inject constructor(
             "foreign" to 3,
             "theory" to 4,
         )
+
+        /**
+         * 章节树预定义时段（ADR-001 B1.3）。
+         *
+         * 为每个科目定义文学史标准分期，用于从 tags/title 自动分类知识点到章节树。
+         * 匹配规则：知识点的 tags + title 任一包含某时段的关键词，则归入该时段子章节。
+         * 未匹配的知识点保留在根章节（科目级"全部"）。
+         *
+         * 时段定义基于南师大文学院现当代文学考研（050106）教材结构。
+         *
+         * 可见性为 internal 以便 [SeedDataLoaderTest] 直接验证匹配逻辑，
+         * 无需通过 assets 加载完整 seed_data.json（library 模块测试无法访问 app 模块 assets）。
+         */
+        internal val PERIOD_CHAPTERS: Map<String, List<PeriodChapter>> = mapOf(
+            "中国古代文学" to listOf(
+                PeriodChapter("先秦文学", listOf("先秦", "诗经", "楚辞", "诸子", "左传", "国语", "战国策", "屈原", "离骚")),
+                PeriodChapter("秦汉文学", listOf("秦汉", "汉赋", "史记", "班固", "乐府", "汉乐府")),
+                PeriodChapter("魏晋南北朝文学", listOf("魏晋", "南北朝", "建安", "三曹", "陶渊明", "谢灵运", "志怪", "世说新语", "古诗十九首")),
+                PeriodChapter("隋唐五代文学", listOf("隋唐", "唐代", "唐诗", "五代", "李白", "杜甫", "白居易", "韩愈", "古文运动", "传奇")),
+                PeriodChapter("宋辽金文学", listOf("宋代", "宋词", "辽金", "苏轼", "李清照", "辛弃疾", "陆游", "话本")),
+                PeriodChapter("元代文学", listOf("元代", "元杂剧", "元曲", "关汉卿", "王实甫", "散曲", "西厢记")),
+                PeriodChapter("明代文学", listOf("明代", "三国演义", "水浒传", "西游记", "牡丹亭", "拟话本", "公安派", "前后七子")),
+                PeriodChapter("清代文学", listOf("清代", "红楼梦", "聊斋", "儒林外史", "桐城派", "龚自珍", "纳兰")),
+            ),
+            "中国现当代文学" to listOf(
+                PeriodChapter("五四文学革命", listOf("五四", "文学革命", "新文化", "胡适", "陈独秀", "狂人日记")),
+                PeriodChapter("二十年代文学", listOf("文学研究会", "创造社", "语丝", "新月", "周作人", "郁达夫", "沉沦")),
+                PeriodChapter("三十年代文学", listOf("左翼", "茅盾", "巴金", "老舍", "曹禺", "新月派", "雷雨", "骆驼祥子", "家", "子夜")),
+                PeriodChapter("四十年代文学", listOf("抗战", "解放区", "赵树理", "孙犁", "艾青", "穆旦", "九叶", "围城")),
+                PeriodChapter("十七年文学", listOf("十七年", "50年代", "60年代", "柳青", "杨沫", "郭小川", "创业史", "青春之歌")),
+                PeriodChapter("新时期文学", listOf("新时期", "80年代", "寻根", "先锋", "朦胧诗", "王蒙", "贾平凹", "莫言", "红高粱", "伤痕", "反思")),
+                PeriodChapter("九十年代以来", listOf("90年代", "新写实", "网络文学", "余华", "阎连科", "私人化", "身体写作")),
+            ),
+            "外国文学" to listOf(
+                PeriodChapter("古代文学", listOf("古希腊", "罗马", "荷马", "伊利亚特", "奥德赛", "悲剧", "埃斯库罗斯", "索福克勒斯")),
+                PeriodChapter("中世纪文学", listOf("中世纪", "但丁", "神曲", "骑士", "英雄史诗")),
+                PeriodChapter("文艺复兴时期", listOf("文艺复兴", "莎士比亚", "塞万提斯", "堂吉诃德", "哈姆雷特", "十日谈")),
+                PeriodChapter("17世纪文学", listOf("17世纪", "古典主义", "莫里哀", "弥尔顿", "失乐园")),
+                PeriodChapter("18世纪文学", listOf("18世纪", "启蒙", "歌德", "卢梭", "菲尔丁", "少年维特", "浮士德")),
+                PeriodChapter("19世纪浪漫主义", listOf("浪漫主义", "雨果", "拜伦", "雪莱", "普希金", "巴黎圣母院", "悲惨世界")),
+                PeriodChapter("19世纪现实主义", listOf("现实主义", "巴尔扎克", "托尔斯泰", "陀思妥耶夫斯基", "狄更斯", "安娜", "战争与和平", "罪与罚", "红与黑")),
+                PeriodChapter("20世纪现代主义", listOf("现代主义", "卡夫卡", "意识流", "乔伊斯", "福克纳", "存在主义", "荒诞", "变形记", "等待戈多", "百年孤独")),
+            ),
+            "文学理论" to listOf(
+                PeriodChapter("文学本质论", listOf("本质", "意识形态", "审美", "反映论", "社会性", "认识论")),
+                PeriodChapter("文学创作论", listOf("创作", "灵感", "想象", "构思", "题材", "作家", "天才")),
+                PeriodChapter("文学作品论", listOf("作品", "文本", "叙事", "结构", "意境", "典型", "情节", "语言", "风格")),
+                PeriodChapter("文学接受论", listOf("接受", "读者", "阐释", "期待视野", "接受美学", "阅读")),
+                PeriodChapter("文学批评", listOf("批评", "批评学", "流派", "思潮", "韦勒克", "卡勒", "新批评", "结构主义")),
+                PeriodChapter("文学发展论", listOf("发展", "起源", "演变", "继承", "革新", "文学史")),
+            ),
+        )
+
+        /**
+         * 章节树时段定义（ADR-001 B1.3）。
+         *
+         * @property title 时段名称（用作章节标题）
+         * @property keywords 匹配关键词列表（知识点 tags/title 包含任一关键词则归入此时段）
+         */
+        internal data class PeriodChapter(
+            val title: String,
+            val keywords: List<String>,
+        )
+
+        /**
+         * 为知识点匹配最合适的时段子章节 ID。
+         *
+         * 匹配规则：遍历 [PERIOD_CHAPTERS] 中该科目的时段，知识点 tags + title 任一包含某时段关键词，
+         * 则返回该时段子章节 ID。多个匹配取第一个。无匹配返回 null（留根章节）。
+         *
+         * 放在 companion object 中以便单元测试直接调用（[SeedDataLoaderTest]），
+         * 无需构造完整实例（Context/DB/DAO 等依赖）。
+         *
+         * @param subjectName 科目名（如"中国古代文学"）
+         * @param subjectCode 科目代码（如"ancient"）
+         * @param title 知识点标题
+         * @param tags 知识点标签列表（可为空）
+         * @return 子章节 ID（如"chapter_ancient_0"），或 null 表示留根章节
+         */
+        internal fun matchPeriodChapter(
+            subjectName: String,
+            subjectCode: String,
+            title: String,
+            tags: List<String>?,
+        ): String? {
+            val periods = PERIOD_CHAPTERS[subjectName] ?: return null
+            // 合并 title + tags 作为待匹配文本
+            val haystacks = buildList {
+                add(title)
+                tags?.let { addAll(it) }
+            }
+            for ((idx, period) in periods.withIndex()) {
+                for (keyword in period.keywords) {
+                    if (haystacks.any { it.contains(keyword) }) {
+                        return "chapter_${subjectCode}_$idx"
+                    }
+                }
+            }
+            return null
+        }
     }
 }
 
