@@ -1,17 +1,18 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-07-24
+> 最后更新：2026-07-27
 
 ## ✅ 当前状态
 
-**v0.8.11 知识卡片功能深度打磨完成** — 7 文件 11 项修复（3 P0 + 5 P1 + 3 P2）：CardSplitter 6维度限制修复 + SiblingRatedHint 不再隐藏评分按钮 + 进程恢复统计重置 + sibling 卡预览误导修复 + rateCard 异步失败分离 + 评分按钮颜色对齐 Anki + sibling 卡字段去冗余 + Leech 警告跳转修复 + 无pointId错题记录 + 会话统计持久化 + 3处编译错误修复。新增 7 个测试场景，assembleDebug + testDebugUnitTest 全绿（280 tests）。
+**v0.8.18 启动图标 v3 印章文重构 + Logging.kt 统一日志门面已发布** — App 启动图标 v3（米色印面 + 墨黑"文"字 + M3E medium-large 圆角 12dp + monochrome 适配 Android 13+ themed icons）+ Logging.kt 统一日志门面（Timber 封装 + Release 降级 WARN/ERROR + 20+ 文件迁移）+ scripts/setup-env.sh 一键环境准备（沙箱/云端/CI 通用）+ mise.toml 锁定 JDK 17.0.2 + Gradle 8.14.4。本地构建 + gh 上传（CI 账单问题，debug 签名 fallback，Exception E1）。assembleDebug + assembleRelease + testDebugUnitTest 全绿（450 tests）。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | 待提交（v0.8.11 知识卡片功能深度打磨） |
-| 最新 Release | **v0.7.5**（待打 tag） — v0.8.11 待 emulator 实测后打 tag |
-| 编译验证 | **:app:assembleDebug + testDebugUnitTest SUCCESSFUL（280 tests, 0 failures）** |
+| 最新 commit | `060a281` release(v0.8.18): 启动图标 v3 印章文重构 + Logging.kt 统一日志门面 |
+| 最新 Release | **v0.8.18**（2026-07-27 发布，debug 签名 fallback — Exception E1） |
+| 编译验证 | **:app:assembleDebug + :app:assembleRelease + testDebugUnitTest SUCCESSFUL（450 tests, 0 failures）** |
+| versionCode / versionName | **26 / "0.8.18"** |
 | 知识点 | **910 个**（entities/relations 数据补全，自动入图） |
 | 真题 | **485 道**（v0.7.6 已删除 sample_essay 冗余字段） |
 | seed 版本 | **2.11.0**（触发重新导入，保留用户 FSRS 学习进度） |
@@ -21,45 +22,42 @@
 | 图谱覆盖率 | **100%**（原 4.4%，910 知识点全部入图） |
 | 图谱布局 | **三模式可切换**：时间轴（默认）/ 邻域力导向 / 径向概览 |
 | 视觉编码 | **3 层正交**：颜色=掌握度 / 尺寸=重要性 / 形状=类型（圆/方/菱/三角/星） |
-| 卡片测试 | **29 个**（CardsViewModelTest）+ **7 个**（CardSplitterTest） |
+| 启动图标 | **v3 "印章文"**（米色印面 + 墨黑"文"字 + 圆角 12dp + monochrome 适配） |
+| 日志门面 | **Logging.kt**（Timber 封装，Debug=Logcat / Release=WARN+ERROR） |
+| 工具链锁定 | **mise.toml**（JDK 17.0.2 + Gradle 8.14.4） |
 | 阻塞 | **CI 账单问题** — 需用户处理，不影响 Release（debug 签名可用） |
-| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-24 v0.8.11 知识卡片深度打磨） |
+| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-27 v0.8.18 启动图标 + Logging.kt + 发布） |
 
 ## 🚨 新会话首要任务
 
-**v0.8.1 完成用户反馈"知识图谱还是一团糟，要做到最好"的深度重构**（2026-07-24）：
+**v0.8.18 已发布（2026-07-27）**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.8.18
 
-1. **数据层 — 知识点自动入图**（覆盖率 4.4% → 100%）：
-   - SeedDataLoader 新增 `importKnowledgeEntities()`：从知识点 entities/relations 自动生成图谱节点和边
-   - 修复考频数据丢失（解析 `exam_frequency` 字段，原硬编码 "NEVER"）
-   - seed 版本 2.9.0 → 2.11.0
+下一步优先级（按顺序）：
 
-2. **布局层 — 三模式可切换**（GraphLayout.kt）：
-   - **TIMELINE（默认）**：文学史时间轴泳道布局，横轴 1915-2030，纵轴 6 泳道
-   - **NEIGHBORHOOD**：邻域力导向布局（spring-electric 模型，80 次迭代），Obsidian Local Graph 范式
-   - **RADIAL**：径向科目概览，按 subjectId 分扇区
-   - 修复硬编码 UUID 体裁判定（改为 BELONGS_TO 边 + label 匹配）
-   - 修复无年份节点随机散布（改为按类型+科目确定性分配）
+1. **P0**：emulator 实测 v0.8.18 — 验证启动图标渲染（前景层 + monochrome themed icon + 不同 launcher 形状裁剪：圆/方/squircle）
+2. **P0**：emulator 实测 v0.8.1 知识图谱（三模式切换 + 形状编码 + 边标签 + 2123 节点性能 + 缩放平移）
+3. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 38+ commit 待 CI 验证（不影响 Release，已通过本地构建 + gh 上传绕过）
+4. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 并替换 v0.8.18 asset（消除 Exception E1）
+5. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
+6. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
 
-3. **视觉编码 — 3 层正交无冲突**：
-   - 颜色 = 掌握度（灰=未学/红=薄弱/橙=巩固/绿=已掌握）—— 主视觉
-   - 尺寸 = 重要性（sourceKpIds.size 4 档：核心 1.6x / 重要 1.3x / 常规 1.0x / 边缘 0.7x）
-   - 形状 = 类型（圆=作家/方=作品/菱=概念/三角=流派运动/星=知识点）—— 替代描边色
+### v0.8.18 工程化审查（per staff-engineer-mode Iron Law）
 
-4. **边语义化**（Novak 概念图理论 + Nesbit & Adesope 元分析）：
-   - 12 种边类型 → 中文标签（"受影响"/"同时期"/"对比"/"先于"/"属于"等）
-   - 线型编码关系类型（实线/虚线/加粗/箭头）
-   - 有标签边的图比无标签图学习价值高 3-5 倍
+按 Iron Law "Before tags, versions, hosted releases, packages, artifacts, or promotions, read `release-build-reproducibility` and `production-readiness-review`, show the structured review artifacts to the user, record the receipt in its own shell command, then run the release command in a separate shell command" 完成三项审查：
 
-5. **UI 优化**：
-   - LegendBar 可折叠（默认收起，释放 88dp 垂直空间）
-   - LayoutModeSelector（SegmentedButton 三模式切换）
-   - NodeDetailSheet 显示知识点标题（替代 UUID）
-   - 边标签 LOD 阈值 1.8 → 1.0（放大即显示）
+| 审查 | 结果 | 关键点 |
+|------|------|--------|
+| PRR（production-readiness-review） | ✅ READY TO RELEASE | External Artifact / Blocker B1 → Exception E1 |
+| RBR（release-build-reproducibility） | ✅ PASS | Pinned inputs（JDK 17.0.2 / Gradle 8.14.4 / AGP 8.6.0 / Kotlin 2.3.10 / KSP 2.3.2 / Compose BOM 2025.12.00 / Material3 1.5.0-alpha18 / compileSdk 35 / versionCode 26 / versionName "0.8.18"）+ APK SHA-256 `933c915015d18af27d59fc9b156d97c6ad81efc629c3a70d404d2036145431b8`（19266156 bytes）+ signer `CN=Android Debug` |
+| agent-pr-review | ✅ SAFE TO COMMIT | Intent matches diff / no failure-mode / assembleDebug + assembleRelease + testDebugUnitTest 全绿 |
 
-**P0 待办**（无需用户干预）：
-- GitHub Actions 账单问题：AI 无法解决，需用户充值或解除限制
-- 跑 emulator 实测 v0.8.1（三模式切换 + 形状编码 + 边标签 + 2123 节点性能 + 缩放平移）
+详见 [docs/release-receipts/v0.8.18-receipt.md](release-receipts/v0.8.18-receipt.md) + [SESSION_LOG.md](SESSION_LOG.md) 最后一节。
+
+### v0.8.18 RBR Exception E1（debug 签名 fallback）
+
+- **Exception**: GitHub Actions 账单问题导致 Release workflow 无法运行，正式 keystore 存储在 GitHub Secrets 本地不可访问
+- **Compensating control**: 本地构建 + gh 上传（与 v0.8.14/v0.8.15/v0.8.16/v0.8.17 一致，用户已接受）+ Release notes 明示 debug 签名 + GitHub Release 历史保留所有旧版 APK 可回滚
+- **Expiry**: GitHub Actions 账单问题解决后，重新用正式 keystore 构建并替换 v0.8.18 release APK
 
 ## 🆕 最新改动（2026-07-23 v0.7.5 610综合卷科目深度修复）
 
@@ -255,8 +253,10 @@
 
 ## 📦 已交付
 
-- GitHub Release v0.1.0（2026-07-12）+ v0.2.0（2026-07-13）+ v0.3.0（2026-07-15，debug 签名）+ v0.4.0（2026-07-14，debug 签名 fallback）+ v0.5.0（2026-07-16，本地构建 + GitHub API 上传）+ **v0.7.0（2026-07-16，909 知识点）+ v0.7.2（2026-07-16，修复 FK 回滚）**
-- 签名 APK：`wenyan-v0.7.2.apk`（v0.7.2，debug 签名 fallback，修复 GraphSkeleton FK 回滚导致知识点全部丢失）
+- GitHub Release v0.1.0（2026-07-12）+ v0.2.0（2026-07-13）+ v0.3.0（2026-07-15，debug 签名）+ v0.4.0（2026-07-14，debug 签名 fallback）+ v0.5.0（2026-07-16，本地构建 + GitHub API 上传）+ **v0.7.0（2026-07-16，909 知识点）+ v0.7.2（2026-07-16，修复 FK 回滚）+ v0.7.4（2026-07-23，UX 修复 + GraphCanvas 重写）+ v0.7.5（2026-07-23，610 综合卷科目重新分类）+ v0.7.6（2026-07-24，数据瘦身 + 图谱时间轴）+ v0.8.1（2026-07-24，图谱三模式 + 形状编码 100% 覆盖）+ v0.8.2-v0.8.17（多轮深度审计 + 修复 + UI 打磨）+ v0.8.18（2026-07-27，启动图标 v3 + Logging.kt）**
+- 签名 APK：`wenyan-v0.8.18.apk`（v0.8.18，debug 签名 fallback — Exception E1，启动图标 v3 印章文 + Logging.kt 统一日志门面）
+- **v0.8.18 工程化审查**（per staff-engineer-mode Iron Law）：PRR ✅ + RBR ✅ + agent-pr-review ✅，详见 [docs/release-receipts/v0.8.18-receipt.md](release-receipts/v0.8.18-receipt.md)
+- **v0.8.18 RBR Exception E1**：CI 账单问题导致 release workflow 无法运行，本地构建 + gh 上传（与 v0.8.14-v0.8.17 一致，用户已接受）；CI 恢复后用正式 keystore 重新构建并替换 v0.8.18 asset
 - **沙箱编译验证 v0.7.2 通过**（2026-07-23）：assembleDebug + 258 tests 0 failures，详见 [03-FAILED-ATTEMPTS.md #015](03-FAILED-ATTEMPTS.md)
 - **gradlew wrapper 补齐**（2026-07-23）：`gradlew` / `gradlew.bat` / `gradle-wrapper.jar` 三件套此前从未入仓库，CI runner 无法用 wrapper 启动，现已修复
 - KSU 风格 UI 升级 Phase 0-3（4 个组件 + 9 个 Screen 迁移，已合并 main + CI 全绿）

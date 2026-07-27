@@ -143,16 +143,19 @@ tools/                           # Python 管线脚本
 - commit message 说清"为什么改"，不只是"改了什么"
 - 用户偏好：中文交流、严谨验证、反复检查、有趣的教学风格、M3 谷歌味道 UI
 
-## 7. 当前状态（2026-07-24）
+## 7. 当前状态（2026-07-27）
 
-**✅ v0.8.1 知识图谱三模式重构 + 形状编码完成** — 图谱覆盖率 4.4%→100%（910 知识点全部入图，2123+ 节点 968+ 边）+ 三模式布局可切换（时间轴/邻域力导向/径向概览）+ 形状编码替代描边色（圆/方/菱/三角/星）+ 边语义化（12 种中文标签 + 线型编码）+ LegendBar 可折叠，485 真题数据全绿。
+**✅ v0.8.18 启动图标 v3 印章文重构 + Logging.kt 统一日志门面已发布** — App 启动图标 v3（米色印面 + 墨黑"文"字 + M3E medium-large 圆角 12dp + monochrome 适配 Android 13+ themed icons）+ Logging.kt 统一日志门面（Timber 封装 + Release 降级 WARN/ERROR + 20+ 文件迁移）+ scripts/setup-env.sh 一键环境准备 + mise.toml 锁定 JDK 17.0.2 + Gradle 8.14.4。本地构建 + gh 上传（CI 账单问题，debug 签名 fallback，Exception E1）。assembleDebug + assembleRelease + testDebugUnitTest 全绿（450 tests）。
 
-- 最新 commit：待提交（v0.8.1 知识图谱三模式重构）
-- 最新 Release：**v0.7.5**（待打 tag） — v0.8.1 待 emulator 实测后打 tag
-- 沙箱验证（2026-07-24）：`:feature:graph` + `:core:data` compileDebugKotlin SUCCESSFUL
+- 最新 commit：`060a281` release(v0.8.18): 启动图标 v3 印章文重构 + Logging.kt 统一日志门面
+- 最新 Release：**v0.8.18**（2026-07-27 发布，debug 签名 fallback — Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.8.18
+- 本地验证（2026-07-27）：`:app:assembleDebug` + `:app:assembleRelease` + `testDebugUnitTest` 全绿（450 tests, 0 failures）
+- v0.8.18 核心改动：ic_launcher_foreground.xml v3 印章文（米色印面 + 墨黑"文"字 + 圆角 12dp）+ ic_launcher_monochrome.xml v3（Android 13+ themed icons）+ Logging.kt（Timber 封装）+ 20+ 文件 Log.d/.e → Logging.kt 迁移 + scripts/setup-env.sh（沙箱/云端/CI 通用）+ mise.toml（JDK 17.0.2 + Gradle 8.14.4）+ timber 5.0.1 依赖 + versionCode 25→26 + versionName "0.8.17"→"0.8.18"
+- v0.8.18 工程化审查（per staff-engineer-mode Iron Law）：PRR ✅ + RBR ✅ + agent-pr-review ✅，详见 [docs/release-receipts/v0.8.18-receipt.md](docs/release-receipts/v0.8.18-receipt.md)
+- v0.8.18 RBR Exception E1：CI 账单问题，本地构建 + gh 上传（与 v0.8.14-v0.8.17 一致，用户已接受）；CI 恢复后用正式 keystore 重新构建并替换 v0.8.18 asset
+- v0.8.17 核心改动：staff-engineer-mode 三功能审计（知识点 + 错题本 + 知识卡片 retry-after-error Blocker 修复）+ 错误处理一致性 + 5 项 Must-Fix + 9 新测试，455 tests 全绿
 - v0.8.1 核心改动：SeedDataLoader.importKnowledgeEntities() 自动入图（2123+ 节点）+ GraphLayout.kt 三模式布局 + GraphConstants.kt 常量集中 + NodeShape 形状编码 + EDGE_TYPE_LABELS 边语义化 + GraphViewModel LayoutMode 切换 + GraphCanvas drawNodeShape + GraphScreen 可折叠 LegendBar + seed 2.9.0→2.11.0
-- v0.7.6 核心改动：删除 910 知识点 multi_perspectives + 485 真题 sample_essay（-21.6 万字符）+ DB v5→v6 删列迁移 + GraphSkeleton 扩 7 时段+35 跨类边 + GraphCanvas 重写为文学史时间轴泳道布局 + seed 2.8.0→2.9.0
-- CI 阻塞：GitHub Actions 账单问题，38+ commit 待 CI 验证（不影响 Release，已通过 API 绕过）
+- CI 阻塞：GitHub Actions 账单问题，38+ commit 待 CI 验证（不影响 Release，已通过本地构建 + gh 上传绕过）
 - 详见 [docs/00-STATUS.md](docs/00-STATUS.md) + [docs/SESSION_LOG.md](docs/SESSION_LOG.md) 最后一节
 
 ## 8. 项目阶段总览
@@ -184,18 +187,22 @@ tools/                           # Python 管线脚本
 | v0.7.5 610 综合卷科目深度修复 | ✅ 完成（2026-07-23） | 610 综合卷 127 题科目重新分类（古代36/现当代32/外国26/理论33），seed 2.7.0→2.8.0 |
 | v0.7.6 数据瘦身 + 知识图谱时间轴布局 | ✅ 完成（2026-07-24） | 删除 multi_perspectives/sample_essay 冗余字段 + DB v5→v6 迁移 + GraphCanvas 重构为文学史时间轴泳道布局（4 泳道 + 35 跨类边 + 7 时段节点），seed 2.8.0→2.9.0 |
 | v0.8.1 知识图谱三模式重构 + 形状编码 | ✅ 完成（2026-07-24） | 图谱覆盖率 4.4%→100%（910 知识点自动入图，2123+ 节点 968+ 边）+ 三模式布局（时间轴/邻域力导向/径向）+ 形状编码（圆/方/菱/三角/星）+ 边语义化（12 中文标签 + 线型）+ LegendBar 可折叠，seed 2.9.0→2.11.0 |
+| v0.8.2-v0.8.17 多轮深度审计 + UI 打磨 | ✅ 完成（2026-07-24 → 2026-07-27） | 图谱闪退修复 + UI/UX 深度打磨（AMOLED + 无障碍 + 动画）+ 知识卡片功能深度修复（FSRS 调度 + sibling 卡 + Leech 警告）+ stark UI 审计 + retry-after-error Blocker 修复，455 tests 全绿 |
+| v0.8.18 启动图标 v3 + Logging.kt + 发布 | ✅ 完成（2026-07-27） | App 启动图标 v3 "印章文"（米色印面 + 墨黑"文"字 + M3E 圆角 12dp + monochrome 适配 Android 13+）+ Logging.kt 统一日志门面（Timber 封装 + 20+ 文件迁移）+ scripts/setup-env.sh + mise.toml 工具链锁定，versionCode 25→26，450 tests 全绿，本地构建 + gh 上传（Exception E1 debug 签名） |
 
 ## 9. 下一步优先级
 
-1. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 38+ commit 待 CI 验证
-2. **P0**：跑 emulator 实测 v0.8.1 — 验证三模式切换（时间轴/邻域/径向）+ 形状编码 + 边标签 + 2123 节点性能 + 缩放平移 + seed 2.11.0 重新导入 + FSRS 调度
-3. **P2 优化项（非阻塞）**：`app/build.gradle.kts` 第 71 行 release keystore fail-fast 应移到 task 执行阶段（当前在配置阶段抛异常，沙箱跑 debug 任务也触发，需 `unset CI` 绕过）
-4. **P1 Phase 2 剩余维度审计**：
+1. **P0**：跑 emulator 实测 v0.8.18 — 验证启动图标渲染（前景层 + monochrome themed icon + 不同 launcher 形状裁剪：圆/方/squircle）+ Logging.kt Logcat 输出
+2. **P0**：跑 emulator 实测 v0.8.1 知识图谱 — 验证三模式切换（时间轴/邻域/径向）+ 形状编码 + 边标签 + 2123 节点性能 + 缩放平移 + seed 2.11.0 重新导入 + FSRS 调度
+3. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 38+ commit 待 CI 验证（不影响 Release，已通过本地构建 + gh 上传绕过）
+4. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 并替换 v0.8.18 asset（消除 Exception E1）
+5. **P2 优化项（非阻塞）**：`app/build.gradle.kts` 第 71 行 release keystore fail-fast 应移到 task 执行阶段（当前在配置阶段抛异常，沙箱跑 debug 任务也触发，需 `unset CI` 绕过）
+6. **P1 Phase 2 剩余维度审计**：
    - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）
-   - 2.L：错误处理一致性 + 日志规范（sealed AppError + Timber + Snackbar 统一）
+   - 2.L：错误处理一致性 + 日志规范（sealed AppError + Timber + Snackbar 统一） — v0.8.18 已完成 Timber 引入，剩 sealed AppError + Snackbar 统一
    - 2.M：Compose 副作用 + Accessibility + M3 Expressive
    - 2.N 剩余：NF-DS7-13 DataStore Key 治理
-5. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
-6. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
-7. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
-8. **P4**：架构重构 — getVerifiedWithSubject 职责应在 KnowledgeRepository（详见 SESSION_LOG 第四条）
+7. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
+8. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+9. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
+10. **P4**：架构重构 — getVerifiedWithSubject 职责应在 KnowledgeRepository（详见 SESSION_LOG 第四条）
