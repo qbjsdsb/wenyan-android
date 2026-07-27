@@ -2,15 +2,56 @@
 <!-- 启动图标 monochrome 层（Android 13+ themed icon）。
      系统会根据用户壁纸/主题自动着色此矢量图。
      使用白色（#FFFFFF），系统会替换为主题色。
-     与 ic_launcher_foreground 的 path 一致（书 + "文"字负空间 evenOdd 镂空）。
-     themed icon 模式下系统着色后，书的轮廓 + "文"字负空间保留识别度。 -->
+     与 ic_launcher_foreground v2 的 path 一致（印章方框 + "文"字 3 笔画）。
+     themed icon 模式下系统着色后，印章轮廓 + "文"字笔画保留识别度。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- 印章方框（与 foreground 同 path） -->
     <path
         android:fillColor="#FFFFFF"
-        android:fillType="evenOdd"
-        android:pathData="M18,32 L52,32 L54,40 L56,32 L90,32 L90,72 L56,72 L54,80 L52,72 L18,72 Z M30,50 L74,50 L74,54 L30,54 Z M50,54 L54,54 L42,68 L38,68 Z M54,54 L58,54 L70,68 L66,68 Z" />
+        android:pathData="
+            M30,28
+            l48,0
+            q8,0 8,8
+            l0,36
+            q0,8 -8,8
+            l-48,0
+            q-8,0 -8,-8
+            l0,-36
+            q0,-8 8,-8
+            z" />
+    <!-- "文"字横画 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="
+            M40,46
+            l28,0
+            l0,5
+            l-28,0
+            z" />
+    <!-- "文"字撇画 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="
+            M52,49
+            l4,0
+            l-10,18
+            q-1,2 -3,2
+            l-3,0
+            q-2,0 -1,-2
+            z" />
+    <!-- "文"字捺画 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="
+            M56,49
+            l-4,0
+            l10,18
+            q1,2 3,2
+            l3,0
+            q2,0 1,-2
+            z" />
 </vector>
