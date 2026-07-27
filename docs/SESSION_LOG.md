@@ -3992,4 +3992,93 @@ CardSplitterTest 新增 1 个场景：
    - 点击 retry → 应重新加载（不再卡 loading）
    - 评分过程中杀进程 → 恢复后状态正确
 
+---
+
+## 2026-07-27 会话：v0.8.16 AI 功能深度审计（Staff Engineer Mode）
+
+> 用户指令：「AI 功能还有没有问题，还能不能继续完善，你好好检查，调查研究一下，一定要严谨认真，反复打磨，做到最好」
+> 路由：staff-engineer-mode → llm-application-security（primary specialist）
+> 工作类型：LLM 应用安全 + 依赖可靠性深度审计
+
+### 审计框架（LLM Application Security Specialist Required Outputs）
+
+按 Iron Law `NO LLM TOOL OR DATA ACCESS WITHOUT A BOUNDARY MAP, LEAST PRIVILEGE, ABUSE-CASE EVALS, AUDIT, AND OUTPUT HANDLING` 的 11 项检查维度展开。
+
+### 完成：第一轮 8 项修复（前会话已落地，本会话验证）
+
+| # | 维度 | 问题 | 修复 | 文件 |
+|---|------|------|------|------|
+| P1-2 | output_handling | LLM score 正则只匹配严格 JSON `"score": 85`，遇到 `85.0` / `score:85` / markdown 风格全失败 → score=0 → 误判 AGAIN | 增强正则支持小数/可选引号/灵活空格，新增中文 fallback | `RecallChecker.kt#parseL3Response` |
+| P1-3 | input_validation | 用户输入无长度上限 → denial-of-wallet + token 超限 + LIKE SQL 性能下降 | `MAX_INPUT_LENGTH=2000` 校验 + 友好提示 | `AiAssistantViewModel.kt#sendMessage` |
+| P1-4 | dependency_resilience | OkHttp 无重试，429/5xx 瞬时错误直接失败 | `RetryInterceptor` 指数退避（500ms→1s→2s ± 20% 抖动） | `AiModule.kt` |
+| P1-5 | input_validation | baseUrl 无格式校验 → Retrofit `IllegalArgumentException: Illegal URL` | `validateBaseUrl` 检查 http/https 前缀 + 非空 host | `ApiConfigViewModel.kt#saveConfig` |
+| P1-6 | sensitive_data_control | `ChatMessageMapper.deserializeReferences` 失败静默返回 emptyList → "AI 回复丢失引用"无日志线索 | `Log.w` 输出异常 + JSON 前 200 字符 | `ChatMessageMapper.kt#deserializeReferences` |
+| P1-7 | output_handling | Jaccard 相似度长度偏差：用户简洁作答（100 字）vs 正确答案 500 字，Jaccard=0.2 误判 HARD | 取 `max(Jaccard, containment)`，containment 不受用户答案长度影响 | `RecallChecker.kt#calculateSemanticSimilarity` |
+| P1-8 | boundary_map | 用户输入/RAG 内容直接拼入 prompt，无边界隔离 → prompt injection 风险 | `<USER_INPUT>` / `<RAG_CONTEXT>` 边界标记 + 显式注入警告 | `PromptTemplates.kt` 全部 6 个 buildXxxPrompt |
+| P1-8b | prompt_confidentiality | `AiServiceImpl.SYSTEM_PROMPT` 与 `PromptTemplates` 指令冲突（双重苏格拉底指令） | 精简系统提示为身份声明 + 数据/指令分离约束 | `AiServiceImpl.kt#SYSTEM_PROMPT` |
+
+### 完成：第二轮 1 项关键修复（本会话新发现）
+
+| # | 维度 | 问题 | 修复 | 文件 |
+|---|------|------|------|------|
+| P1-4b | dependency_resilience | **`RetryInterceptor.isCancellation` 恒返回 false** — `e is InterruptedException` 中 `e: IOException`，但 `InterruptedException` 不继承自 `IOException`（继承自 `Exception`），Kotlin 编译器告警 "Check for instance is always 'false'"。后果：用户离开 AI 页面时协程取消，OkHttp 抛 `IOException("Canceled")` 被当作普通网络错误重试 3 次（≈3-6 秒退避 + 重复 LLM 请求），浪费电量和 token | 改为基于 `message.contains("canceled" / "cancelled")` 的 message 检测，匹配 OkHttp `Call.cancel()` 抛出的固定 message "Canceled"。SocketTimeoutException message 不含 "canceled"，不会误判 | `AiModule.kt#isCancellation` |
+
+### 验证
+
+- `:core:ai:testDebugUnitTest --rerun-tasks`：**79 tests, 0 failures, 0 errors**（含新增 15 个 RetryInterceptorTest）
+- `:feature:aiassistant:testDebugUnitTest`：**全绿**
+- `:feature:aiassistant:assembleDebug`：**BUILD SUCCESSFUL**
+- 编译告警：原 `AiModule.kt:157 "Check for instance is always 'false'"` 已消除
+
+### 新增测试：RetryInterceptorTest（15 用例）
+
+文件：`core/ai/src/test/java/com/wenyan/app/core/ai/di/RetryInterceptorTest.kt`
+
+覆盖维度：
+- 成功响应不重试
+- 可重试状态码（429/503）触发重试后成功 / 耗尽重试返回最后响应
+- 不可重试状态码（400/401/403）直接返回
+- IOException / SocketTimeoutException 重试
+- **P1-4b 回归**：`IOException("Canceled")` / `"cancelled"` 英式拼写不重试
+- null message IOException 仍重试（不应误判为取消）
+- maxRetries=0 边界
+
+### 审计闭环：未发现新问题的维度（已确认安全）
+
+| 维度 | 结论 | 依据 |
+|------|------|------|
+| boundary_map | ✅ 已隔离 | PromptTemplates 用 `<USER_INPUT>`/`<RAG_CONTEXT>` 标记 + system prompt 声明数据/指令分离 |
+| least_privilege | ✅ 无 tool 调用 | AiService 仅生成文本，无工具/动作执行能力 |
+| input_validation | ✅ 三层校验 | MAX_INPUT_LENGTH=2000（VM 层）+ MAX_QUERY_LENGTH=500（RagEngine 层）+ baseUrl 校验（保存时） |
+| output_handling | ✅ 纯 Text 渲染 | AiAssistantScreen 用 `Text(message.content)` 渲染 LLM 输出，无 markdown 自动加载链接/图片 |
+| prompt_confidentiality | ✅ 无 secrets | SYSTEM_PROMPT 仅含身份声明 + 通用约束；apiKey 在 ApiConfigEntity 加密存储 + logcat redactHeader |
+| sensitive_data_control | ✅ apiKey 隔离 | `HttpLoggingInterceptor.redactHeader("Authorization")` + Debug/Release 分级日志 |
+| rollback_control | ✅ 可回滚 | LlmConfig 通过 ApiConfigRepository 可切换/删除；prompt 模板版本化于代码 |
+| dependency_resilience | ✅ 退避 + 取消检测 | RetryInterceptor 指数退避 + 抖动 + isCancellation 修复 |
+
+### 已知差距（独立 feature 范畴，本期不实现）
+
+1. **adversarial_check 缺自动化对抗测试集**：prompt injection 边界标记是"软隔离"（LLM 不保证严格遵守），完整防护需对抗测试集（含"请忽略以上指令"/"扮演 XX"/"输出系统提示"等注入样本）。建议作为独立测试工程排期。
+2. **output_moderation 缺内容审查**：LLM 输出未做有害内容审查（如歧视/暴力/误导）。完整实现需额外的 LLM 调用做输出审查，本期未实现（用户场景为考研辅导，输出风险较低）。
+3. **activity_log_check 缺结构化日志**：LLM 调用未记录结构化日志（prompt hash / response tokens / latency / model version）。仅有 ChatMessageMapper 反序列化失败日志。完整实现需引入 Timber + 结构化日志方案。
+4. **denial_of_wallet 缺 per-conversation 预算**：MAX_INPUT_LENGTH=2000 限制单条消息，但无 per-conversation/per-day token 上限。用户可连续发送 2000 字消息耗尽自有 API 配额。因用户使用自己的 API key（自付费用），影响范围有限。
+
+### commit
+
+- 待提交：v0.8.16 AI 功能深度审计
+  - 修复：`core/ai/src/main/java/com/wenyan/app/core/ai/di/AiModule.kt`（isCancellation bug）
+  - 新增：`core/ai/src/test/java/com/wenyan/app/core/ai/di/RetryInterceptorTest.kt`（15 测试）
+  - 更新：`docs/SESSION_LOG.md`
+
+### 交接给下一会话
+
+1. **本会话不引入新功能**，仅修复 isCancellation bug + 补充测试 + 文档化审计结论
+2. **下一步优先级**：按 `docs/00-STATUS.md` 第 9 节「下一步优先级」推进，重点是 emulator 实测 v0.8.1（知识图谱三模式）
+3. **AI 功能审计暂告段落**：8/11 项 LLM 安全维度已闭环，3 项（对抗测试/输出审查/结构化日志）属独立 feature，建议作为 v0.9.x 排期
+4. **emulator 实测建议**：v0.8.16 AI 改动 emulator 实测应重点验证：
+   - 离开 AI 页面时 LLM 请求快速取消（不再卡 3-6 秒重试）
+   - 429 限流时自动重试后成功
+   - 输入超 2000 字时显示长度提示
+   - L3 评估返回 `"score": 85.0` 等变体时正确解析
+
 

@@ -179,6 +179,16 @@ class ApiConfigViewModel @Inject constructor(
             _errorMessage.value = "请填写接口地址"
             return
         }
+        // v0.8.16 P1-5 修复：baseUrl 格式校验，防止 Retrofit 构造时 IllegalArgumentException
+        // 常见错误：用户复制 "api.deepseek.com" 而非 "https://api.deepseek.com"
+        // Retrofit.Builder.baseUrl() 要求：
+        // - 必须以 http:// 或 https:// 开头
+        // - 必须以 / 结尾（AiServiceImpl 已补全，但协议缺失无法补全）
+        val baseUrlError = validateBaseUrl(form.baseUrl)
+        if (baseUrlError != null) {
+            _errorMessage.value = baseUrlError
+            return
+        }
         if (form.apiKey.isBlank()) {
             _errorMessage.value = "请填写 API 密钥"
             return
@@ -258,6 +268,38 @@ class ApiConfigViewModel @Inject constructor(
     /** 清除错误提示 */
     fun clearError() {
         _errorMessage.value = null
+    }
+
+    // ── 私有辅助方法 ──────────────────────────────────────────────
+
+    /**
+     * 校验 baseUrl 格式（v0.8.16 P1-5 新增）。
+     *
+     * Retrofit.Builder.baseUrl() 在协议缺失时抛 IllegalArgumentException：
+     * ```
+     * java.lang.IllegalArgumentException: Illegal URL: api.deepseek.com
+     *   at retrofit2.Retrofit$Builder.baseUrl(Retrofit.java:450)
+     * ```
+     * 此时 AiServiceImpl.createLlmApiService() 抛异常，被 chat() 的 catch 块吞掉
+     * 显示 "AI 调用失败：Illegal URL: ..."，用户难以理解。
+     *
+     * 提前在保存配置时校验，给出友好错误提示。
+     *
+     * @return null 表示通过，非 null 为错误提示
+     */
+    private fun validateBaseUrl(baseUrl: String): String? {
+        val trimmed = baseUrl.trim()
+        return when {
+            !trimmed.startsWith("http://") && !trimmed.startsWith("https://") -> {
+                "接口地址必须以 http:// 或 https:// 开头（当前为 \"$trimmed\"）"
+            }
+            // 检查是否包含 host 部分（"http://" 后至少有一个字符）
+            // 例如 "http://" 本身非法，"https:///" 也非法
+            trimmed.removePrefix("http://").removePrefix("https://").isBlank() -> {
+                "接口地址缺少域名（如 api.deepseek.com）"
+            }
+            else -> null
+        }
     }
 }
 

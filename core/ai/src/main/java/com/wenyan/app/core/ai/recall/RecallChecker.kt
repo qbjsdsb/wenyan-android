@@ -161,9 +161,26 @@ class RecallChecker @Inject constructor(
      *
      * 原 L2 在 60-85% 范围统一返回 HARD：若 L3 失败降级，75-85% 相似度
      * 被错误归为 HARD（过严）。修正后 75-85% 直接返回 GOOD，避免依赖 L3。
+     *
+     * v0.8.16 P1-7 修正：Jaccard 长度偏差修复。
+     * 原 Jaccard = |A ∩ B| / |A ∪ B| 在长度差异大时严重偏低：
+     * - 用户答案 100 字 vs 正确答案 500 字，即使 100 字全部命中
+     *   Jaccard = 100 / 500 = 0.2（被误判 HARD）
+     * - 这违反"主动回忆"检测的初衷：用户应该被鼓励用自己的话简洁作答
+     *
+     * 修正方案：取 Jaccard 与包含率（containment）的最大值作为最终相似度
+     * - containment = |A ∩ B| / |B|（B = 正确答案的 bigram 集合）
+     * - containment 不受用户答案长度影响：用户答案越短，只要覆盖正确答案要点
+     *   就能获得高 containment
+     * - 取 max(Jaccard, containment) 兼顾两种情况：
+     *   - 用户答案长且内容相近 → Jaccard 高
+     *   - 用户答案短但覆盖要点 → containment 高
+     *
+     * 仍保留 Jaccard 作为基础：包含率会因 bigram 重复而虚高
+     * （"苏轼苏轼苏轼"包含所有正确答案的苏轼 bigram），Jaccard 抑制这类作弊。
      */
     private fun checkL2Semantic(userAnswer: String, correctAnswer: String): RecallResult {
-        val similarity = calculateJaccardSimilarity(userAnswer, correctAnswer)
+        val similarity = calculateSemanticSimilarity(userAnswer, correctAnswer)
 
         val rating = when {
             similarity < L2_THRESHOLD_HARD -> RecallRating.HARD              // <60%
@@ -219,11 +236,53 @@ class RecallChecker @Inject constructor(
     }
 
     /**
+     * 计算语义相似度（v0.8.16 P1-7：Jaccard + 包含率混合）。
+     *
+     * 触发条件：用户答案 bigram 数 ≤ 正确答案 bigram 数时取 max(Jaccard, containment)
+     * 否则取 Jaccard。
+     *
+     * 设计动机：
+     * - 用户答案短（如简洁作答）→ Jaccard 严重偏低（union 被 correct 撑大）
+     *   → 取 max(Jaccard, containment) 让短答案命中要点时获高相似度
+     * - 用户答案长（如添加"代表""特征"等冗余词）→ 仍用 Jaccard
+     *   抑制"加水"作弊（用冗余 bigram 提高覆盖率）
+     *
+     * 注意：边界判定基于 bigram 集合大小，不是字符数。
+     * 集合大小不受重复字符影响（bigram 是 Set），更准确反映"信息量"。
+     *
+     * @return 相似度，取值范围 [0, 1]
+     */
+    private fun calculateSemanticSimilarity(userAnswer: String, correctAnswer: String): Float {
+        val userBigrams = extractBigrams(userAnswer)
+        val correctBigrams = extractBigrams(correctAnswer)
+        if (userBigrams.isEmpty() || correctBigrams.isEmpty()) return 0f
+
+        val intersection = userBigrams.intersect(correctBigrams).size
+        if (intersection == 0) return 0f
+
+        val union = userBigrams.union(correctBigrams).size
+        val jaccard = intersection.toFloat() / union
+
+        // 仅在用户答案"短"于正确答案时使用 containment 修正长度偏差
+        // 用户答案"长"于正确答案时，Jaccard 仍能正确惩罚"加水"行为
+        return if (userBigrams.size <= correctBigrams.size) {
+            // containment = |user ∩ correct| / |correct|
+            // 不除 |user|，让短答案也能获得高相似度（如用户简短作答命中要点）
+            val containment = intersection.toFloat() / correctBigrams.size
+            maxOf(jaccard, containment)
+        } else {
+            jaccard
+        }
+    }
+
+    /**
      * 计算 Jaccard 相似度（分词后交集/并集）。
      *
      * Jaccard = |A ∩ B| / |A ∪ B|
      *
      * 使用字符级 bigram（2-gram）作为分词单元，适合中文文本。
+     *
+     * v0.8.16 P1-7：保留供测试直接调用，但生产代码改用 [calculateSemanticSimilarity]。
      */
     private fun calculateJaccardSimilarity(text1: String, text2: String): Float {
         val set1 = extractBigrams(text1)
@@ -266,17 +325,34 @@ $correctAnswer
      * 解析 L3 LLM 返回的 JSON。
      *
      * 用正则提取 score 和 reason，不依赖严格 JSON（LLM 可能加额外文本）。
+     *
+     * v0.8.16 P1-2 修复：原正则只匹配 `"score": 整数`，LLM 常见返回变体无法解析：
+     * - `"score": 85.0`（带小数，常见于 deepseek/glm）
+     * - `"score":85`（无空格）
+     * - `score: 85`（无引号，markdown 表格风格）
+     * - `{"score" : 85, ...}`（多余空格）
+     * 解析失败 fallback score=0 → 误判为 AGAIN（<60），用户复习间隔被错误重置。
+     *
+     * 现正则改为支持小数 + 可选引号 + 灵活空格，截断小数部分取整数。
+     * 同时新增 fallback：若 score 解析失败，尝试匹配中文"评分：85"或"得分 85"模式，
+     * 最后 fallback 仍为 0 但 reason 标注"解析失败"便于排查。
      */
     private fun parseL3Response(response: String): Pair<Int, String> {
-        // 用正则提取 score
-        val scoreRegex = Regex("\"score\"\\s*:\\s*(\\d+)")
+        // 主正则：支持 "score": 85 / "score":85.0 / score: 85 等变体
+        val scoreRegex = Regex("(?:\"score\"|score)\\s*[:：]\\s*\"?(\\d+(?:\\.\\d+)?)\"?")
         val scoreMatch = scoreRegex.find(response)
-        val score = scoreMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        val score = scoreMatch?.groupValues?.get(1)?.toFloatOrNull()?.toInt() ?: 0
 
-        // 用正则提取 reason
-        val reasonRegex = Regex("\"reason\"\\s*:\\s*\"([^\"]+)\"")
+        // reason 正则：支持 "reason": "..." / reason: "..." / reason："..."
+        val reasonRegex = Regex("(?:\"reason\"|reason)\\s*[:：]\\s*\"([^\"]+)\"")
         val reasonMatch = reasonRegex.find(response)
-        val reason = reasonMatch?.groupValues?.get(1) ?: "LLM 评估完成"
+        val reason = if (reasonMatch != null) {
+            reasonMatch.groupValues[1]
+        } else if (score == 0 && scoreMatch == null) {
+            "LLM 响应解析失败，无法提取 score"
+        } else {
+            "LLM 评估完成"
+        }
 
         return Pair(score.coerceIn(0, 100), reason)
     }

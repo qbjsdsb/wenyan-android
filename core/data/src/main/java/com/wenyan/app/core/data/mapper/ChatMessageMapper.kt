@@ -1,5 +1,6 @@
 package com.wenyan.app.core.data.mapper
 
+import android.util.Log
 import com.wenyan.app.core.ai.RagReference
 import kotlinx.serialization.json.Json
 
@@ -17,6 +18,8 @@ import kotlinx.serialization.json.Json
  * - 空列表序列化为 "[]"(非 null),null 输入返回 null(表示无引用字段)
  */
 object ChatMessageMapper {
+
+    private const val TAG = "ChatMessageMapper"
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -37,8 +40,14 @@ object ChatMessageMapper {
     /**
      * 反序列化 JSON 字符串为 [RagReference] 列表。
      *
+     * v0.8.16 P1-6 修复：原实现反序列化失败时静默返回 emptyList()，
+     * 用户重启 App 后看到"AI 回复丢失了引用"，但日志中无任何线索。
+     * 现添加 Log.w 输出原始异常 + JSON 前 200 字符，便于排查 schema 不兼容或数据损坏。
+     *
+     * 仍保持 fallback 为 emptyList()（不阻塞消息展示），与之前行为一致。
+     *
      * @param jsonStr JSON 字符串(可为 null 或空)
-     * @return 引用列表,null 或空字符串返回空列表
+     * @return 引用列表,null 或空字符串返回空列表;反序列化失败也返回空列表(并记录日志)
      */
     fun deserializeReferences(jsonStr: String?): List<RagReference> {
         if (jsonStr.isNullOrBlank()) return emptyList()
@@ -47,6 +56,16 @@ object ChatMessageMapper {
                 kotlinx.serialization.builtins.ListSerializer(RagReference.serializer()),
                 jsonStr,
             )
-        }.getOrElse { emptyList() }
+        }.getOrElse { e ->
+            // v0.8.16 P1-6：记录反序列化失败，便于排查
+            // - schema 变更后旧数据无法反序列化
+            // - DB 损坏 / 写入中断
+            // - 测试 Fake 数据格式错误
+            // 输出 JSON 前 200 字符（避免超长日志），异常 message 含具体原因
+            val preview = jsonStr.take(200)
+            Log.w(TAG, "deserializeReferences failed, returning empty list", e)
+            Log.w(TAG, "invalid JSON (first 200 chars): $preview")
+            emptyList()
+        }
     }
 }

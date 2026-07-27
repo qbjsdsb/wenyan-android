@@ -97,6 +97,18 @@ class AiAssistantViewModel @Inject constructor(
      */
     fun sendMessage(text: String) {
         if (text.isBlank()) return
+        // v0.8.16 P1-3 修复：限制输入长度，防止用户粘贴超长文本导致：
+        // - LLM prompt token 超限（多数模型 context window 8k-32k tokens）
+        // - LLM API 报 400/413 错误
+        // - 浪费 token 配额（denial-of-wallet）
+        // - RAG LIKE 查询超长 SQL 性能下降（RagEngine 已 limit 500，但 prompt 仍会超长）
+        // 2000 字约等于 3000-4000 tokens，足以承载完整的考研知识点提问。
+        if (text.length > MAX_INPUT_LENGTH) {
+            _uiState.update {
+                it.copy(errorMessage = "输入过长（${text.length} 字），请控制在 $MAX_INPUT_LENGTH 字以内")
+            }
+            return
+        }
 
         val userMessage = AiMessage(
             id = nextId(),
@@ -554,6 +566,18 @@ class AiAssistantViewModel @Inject constructor(
 
         /** 用户输入内容来源标识(NF-PP6) */
         private const val CONTENT_SOURCE_USER_INPUT = "USER_INPUT"
+
+        /**
+         * 用户输入最大长度（v0.8.16 P1-3）。
+         *
+         * 限制原因：
+         * - 多数 LLM context window 8k-32k tokens，超长输入触发 400/413
+         * - 防止 denial-of-wallet（用户粘贴大文本耗尽 token 配额）
+         * - RagEngine 已限制 LIKE 查询 500 字，但 prompt 仍会拼接超长 user 内容
+         *
+         * 2000 中文字约等于 3000-4000 tokens，足够承载完整的考研知识点提问。
+         */
+        private const val MAX_INPUT_LENGTH = 2000
     }
 }
 
