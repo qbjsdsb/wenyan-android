@@ -44,9 +44,9 @@ include(":core:fsrs")
 include(":core:ai")
 
 // 功能模块（互相独立，可单独编译测试）
+// v0.9.0：feature:graph 已移除（图谱功能弃用，改走知识点树结构 + 关联模块）
 include(":feature:knowledge")
 include(":feature:quiz")
 include(":feature:cards")
-include(":feature:graph")
 include(":feature:aiassistant")
 include(":feature:settings")

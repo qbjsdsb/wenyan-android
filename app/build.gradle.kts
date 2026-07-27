@@ -118,7 +118,6 @@ dependencies {
     implementation(project(":feature:knowledge"))
     implementation(project(":feature:quiz"))
     implementation(project(":feature:cards"))
-    implementation(project(":feature:graph"))
     implementation(project(":feature:aiassistant"))
     implementation(project(":feature:settings"))
 
