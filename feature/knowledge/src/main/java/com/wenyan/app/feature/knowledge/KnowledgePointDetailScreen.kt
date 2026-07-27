@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -22,9 +24,12 @@ import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
 import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ErrorState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.NorthEast
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -38,6 +43,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
@@ -52,6 +59,9 @@ import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.TonalCardLow
 import com.wenyan.app.core.designsystem.component.WenyanInfoChip
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
+import com.wenyan.app.core.designsystem.theme.ColorMode
+import com.wenyan.app.core.designsystem.theme.ThemeConfig
+import com.wenyan.app.core.designsystem.theme.WenyanTheme
 import com.wenyan.app.core.database.entity.DataSourceEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
@@ -414,6 +424,42 @@ private fun SourceRow(source: DataSourceEntity) {
 
 // ── 关联知识点 ──────────────────────────────────────────────
 
+/**
+ * 关联知识点的关系类型（ADR-001 B2.1 视觉编码）。
+ *
+ * 三种关系类型用 icon + chipVariant 双重编码，色盲友好：
+ * - [RELATED] 关联：Link 图标 + PRIMARY 色（与 title 色一致，表示强关联）
+ * - [CONTRAST] 对比：CompareArrows 图标 + SECONDARY 色（双向箭头表对比）
+ * - [EXTENSION] 延伸：NorthEast 图标 + TERTIARY 色（右上箭头表延伸方向）
+ *
+ * 色彩选择遵循 M3 Expressive "tonal layering"：primary/secondary/tertiary
+ * 是 M3 colorScheme 的三个强调色族，互不重叠，视觉区分度高。
+ */
+private enum class RelationshipType(
+    val label: String,
+    val icon: ImageVector,
+    val chipVariant: ChipVariant,
+) {
+    RELATED("关联", Icons.Filled.Link, ChipVariant.PRIMARY),
+    CONTRAST("对比", Icons.AutoMirrored.Filled.CompareArrows, ChipVariant.SECONDARY),
+    EXTENSION("延伸", Icons.Filled.NorthEast, ChipVariant.TERTIARY),
+}
+
+/**
+ * 关联知识点区块的容器颜色（按关系类型取 M3 container 色）。
+ *
+ * 用于 [RelatedGroup] 标题栏图标的 tint，使三种关系类型在标题栏就有视觉区分。
+ * 不用 [MaterialTheme.colorScheme.primary] 统一色，避免三种关系看起来相同。
+ */
+@Composable
+private fun RelationshipType.iconTint() = when (chipVariant) {
+    ChipVariant.PRIMARY -> MaterialTheme.colorScheme.primary
+    ChipVariant.SECONDARY -> MaterialTheme.colorScheme.secondary
+    ChipVariant.TERTIARY -> MaterialTheme.colorScheme.tertiary
+    ChipVariant.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
+    ChipVariant.ERROR -> MaterialTheme.colorScheme.error
+}
+
 @Composable
 private fun RelatedPointsSection(
     detail: com.wenyan.app.core.data.repository.KnowledgePointDetail?,
@@ -430,21 +476,21 @@ private fun RelatedPointsSection(
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
         if (hasRelated) {
             RelatedGroup(
-                title = "关联",
+                type = RelationshipType.RELATED,
                 points = detail.relatedPoints,
                 onNavigateToDetail = onNavigateToDetail,
             )
         }
         if (hasContrast) {
             RelatedGroup(
-                title = "对比",
+                type = RelationshipType.CONTRAST,
                 points = detail.contrastPoints,
                 onNavigateToDetail = onNavigateToDetail,
             )
         }
         if (hasExtension) {
             RelatedGroup(
-                title = "延伸",
+                type = RelationshipType.EXTENSION,
                 points = detail.extensionPoints,
                 onNavigateToDetail = onNavigateToDetail,
             )
@@ -452,16 +498,46 @@ private fun RelatedPointsSection(
     }
 }
 
+/**
+ * 关联知识点分组卡片（B2.1 视觉编码 + B2.2 信息密度增强）。
+ *
+ * 标题栏：关系类型图标 + 关系名 + 数量 chip（如"3 个"），用 [type.chipVariant] 着色
+ * 列表项：知识点标题 + 摘要预览 + 考频 chip + 难度 chip（[RelatedPointItem]）
+ *
+ * 视觉编码层级：
+ * 1. 标题栏 icon + chipVariant 色 → 一眼区分三种关系类型
+ * 2. 列表项 trailing chip → 快速判断知识点重要度（考频）和难度
+ * 3. 列表项 description → 摘要预览，无需点进去即可粗略判断是否需要复习
+ */
 @Composable
 private fun RelatedGroup(
-    title: String,
+    type: RelationshipType,
     points: List<KnowledgePointEntity>,
     onNavigateToDetail: (String) -> Unit,
 ) {
-    GroupedCard(title = title) {
+    GroupedCard(
+        title = type.label,
+        titleTrailing = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                Icon(
+                    imageVector = type.icon,
+                    contentDescription = null, // 装饰性，title 已读"关联/对比/延伸"
+                    tint = type.iconTint(),
+                    modifier = Modifier.size(18.dp),
+                )
+                WenyanInfoChip(
+                    text = "${points.size} 个",
+                    variant = type.chipVariant,
+                )
+            }
+        },
+    ) {
         points.forEachIndexed { index, point ->
-            GroupedCardItem(
-                title = point.title,
+            RelatedPointItem(
+                point = point,
                 onClick = { onNavigateToDetail(point.id) },
             )
             if (index < points.size - 1) {
@@ -469,6 +545,81 @@ private fun RelatedGroup(
             }
         }
     }
+}
+
+/**
+ * 关联知识点列表项（B2.2 信息密度增强）。
+ *
+ * 基于 [GroupedCardItem] 复用其成熟的无障碍支持（48dp 触控目标 + mergeDescendants），
+ * 增强：
+ * - [description]：摘要预览（截断到 [RELATED_SUMMARY_PREVIEW_LENGTH] 字符 + …），无摘要时不显示
+ * - [trailing]：考频 chip（仅非 NEVER 时）+ 难度 chip，用 Row 横向排列
+ *
+ * 不用 [GroupedCardItem.leadingIcon]：关系类型视觉编码已在 [RelatedGroup] 标题栏，
+ * 列表项保持简洁，避免每行都重复关系类型图标造成视觉噪音。
+ *
+ * @param point 关联知识点
+ * @param onClick 点击跳转到该知识点详情
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RelatedPointItem(
+    point: KnowledgePointEntity,
+    onClick: () -> Unit,
+) {
+    GroupedCardItem(
+        title = point.title,
+        description = point.summary
+            ?.takeIf { it.isNotBlank() }
+            ?.let { summary ->
+                if (summary.length > RELATED_SUMMARY_PREVIEW_LENGTH) {
+                    summary.take(RELATED_SUMMARY_PREVIEW_LENGTH) + "…"
+                } else {
+                    summary
+                }
+            },
+        onClick = onClick,
+        trailing = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // 考频 chip：仅非 NEVER 时显示（NEVER 语义为"未考"，不展示避免噪音）
+                if (point.examFrequency != "NEVER") {
+                    val (freqLabel, freqVariant) = examFrequencyChip(point.examFrequency)
+                    WenyanInfoChip(text = freqLabel, variant = freqVariant)
+                }
+                // 难度 chip：始终显示（1-5 是知识点固有属性）
+                WenyanInfoChip(
+                    text = "${point.difficulty}/5",
+                    variant = ChipVariant.NEUTRAL,
+                )
+            }
+        },
+    )
+}
+
+/**
+ * 关联知识点摘要预览的最大字符数（B2.2）。
+ *
+ * 80 字符：覆盖大多数知识点摘要的前 1-2 句，足够用户判断是否需要跳转。
+ * 超长截断 + …，避免单条关联项撑高卡片导致详情页无限滚动。
+ */
+private const val RELATED_SUMMARY_PREVIEW_LENGTH = 80
+
+/**
+ * 考频文本 + chip variant 映射（与 [HeaderSection] 一致，确保全 App 考频编码统一）。
+ *
+ * - HIGH 高频 → PRIMARY（红色系强调，提醒重点复习）
+ * - MEDIUM 中频 → SECONDARY
+ * - LOW 低频 → TERTIARY
+ * - 其他 → NEUTRAL
+ */
+private fun examFrequencyChip(examFrequency: String): Pair<String, ChipVariant> = when (examFrequency) {
+    "HIGH" -> "高频" to ChipVariant.PRIMARY
+    "MEDIUM" -> "中频" to ChipVariant.SECONDARY
+    "LOW" -> "低频" to ChipVariant.TERTIARY
+    else -> "未考" to ChipVariant.NEUTRAL
 }
 
 // ── 错题记录(v0.8.19 P1-REL-1 新增) ───────────────────────
@@ -638,5 +789,155 @@ private fun formatRelativeTime(timestamp: Long): String {
         diffDays == 1L -> "昨天"
         diffDays < 30 -> "${diffDays}天前"
         else -> "${diffDays / 30}个月前"
+    }
+}
+
+// ── Previews（B2.3 关联知识点视觉编码预览）─────────────────
+
+/**
+ * Preview 用的样本知识点（B2.3）。
+ *
+ * 覆盖四种考频 × 三种难度组合，验证：
+ * - HIGH/MEDIUM/LOW 显示对应 chip（PRIMARY/SECONDARY/TERTIARY）
+ * - NEVER 不显示考频 chip（仅显示难度 chip）
+ * - 摘要预览截断（80 字符 + …）
+ */
+private fun sampleRelatedPoint(
+    id: String,
+    title: String,
+    summary: String?,
+    examFrequency: String,
+    difficulty: Int,
+): KnowledgePointEntity = KnowledgePointEntity(
+    id = id,
+    chapterId = "chapter_sample",
+    title = title,
+    summary = summary,
+    coreConclusion = "",
+    fullContent = "",
+    multiPerspectives = null,
+    relatedIds = null,
+    contrastIds = null,
+    extensionIds = null,
+    examRecords = null,
+    examFrequency = examFrequency,
+    termTemplate = null,
+    tags = null,
+    difficulty = difficulty,
+    createdAt = 0L,
+    updatedAt = 0L,
+    contentSource = "TEXTBOOK_NATIVE",
+    ocrStatus = "VERIFIED",
+    sourceFile = null,
+    sourcePage = null,
+    studyText = null,
+)
+
+/** 长摘要样本（> 80 字符，验证截断） */
+private const val LONG_SUMMARY =
+    "中国现代文学史上第一篇白话短篇小说，发表于 1918 年《新青年》。作品借" +
+        "狂人之口揭示封建礼教吃人的本质，开创了中国现代小说的先河，对后世文学影响深远。"
+
+private val sampleRelatedPoints = listOf(
+    sampleRelatedPoint(
+        id = "kp_link_1",
+        title = "鲁迅《狂人日记》",
+        summary = LONG_SUMMARY,
+        examFrequency = "HIGH",
+        difficulty = 4,
+    ),
+    sampleRelatedPoint(
+        id = "kp_link_2",
+        title = "《呐喊》自序",
+        summary = "鲁迅第一部小说集《呐喊》的序言，阐述文学救国的创作动机。",
+        examFrequency = "MEDIUM",
+        difficulty = 3,
+    ),
+    sampleRelatedPoint(
+        id = "kp_link_3",
+        title = "新文化运动",
+        summary = null, // 验证无摘要时不显示 description
+        examFrequency = "NEVER",
+        difficulty = 2,
+    ),
+)
+
+private val sampleContrastPoints = listOf(
+    sampleRelatedPoint(
+        id = "kp_contrast_1",
+        title = "胡适《文学改良刍议》",
+        summary = "1917 年发表于《新青年》，提出文学改良八事，主张白话文。",
+        examFrequency = "HIGH",
+        difficulty = 3,
+    ),
+    sampleRelatedPoint(
+        id = "kp_contrast_2",
+        title = "陈独秀《文学革命论》",
+        summary = "1917 年发表，提出三大主义，比胡适更激进地主张文学革命。",
+        examFrequency = "LOW",
+        difficulty = 4,
+    ),
+)
+
+private val sampleExtensionPoints = listOf(
+    sampleRelatedPoint(
+        id = "kp_ext_1",
+        title = "五四文学思潮",
+        summary = "1919 年五四运动前后的文学思潮，包括浪漫主义、现实主义等流派。",
+        examFrequency = "MEDIUM",
+        difficulty = 5,
+    ),
+)
+
+/**
+ * 三种关系类型同时展示的 Preview 内容（供 Light/Dark/AMOLED 复用）。
+ */
+@Composable
+private fun RelatedPointsPreviewContent() {
+    Surface {
+        Column(
+            modifier = Modifier.padding(Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+        ) {
+            RelatedGroup(
+                type = RelationshipType.RELATED,
+                points = sampleRelatedPoints,
+                onNavigateToDetail = {},
+            )
+            RelatedGroup(
+                type = RelationshipType.CONTRAST,
+                points = sampleContrastPoints,
+                onNavigateToDetail = {},
+            )
+            RelatedGroup(
+                type = RelationshipType.EXTENSION,
+                points = sampleExtensionPoints,
+                onNavigateToDetail = {},
+            )
+        }
+    }
+}
+
+@Preview(name = "Related - Light", showBackground = true)
+@Composable
+private fun RelatedPointsLightPreview() {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT, dynamicColor = false)) {
+        RelatedPointsPreviewContent()
+    }
+}
+
+@Preview(name = "Related - Dark", showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun RelatedPointsDarkPreview() {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.DARK, dynamicColor = false)) {
+        RelatedPointsPreviewContent()
+    }
+}
+
+@Preview(name = "Related - AMOLED", showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun RelatedPointsAmoledPreview() {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.DARK, amoledMode = true, dynamicColor = false)) {
+        RelatedPointsPreviewContent()
     }
 }
