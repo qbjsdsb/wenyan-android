@@ -1,21 +1,22 @@
 package com.wenyan.app.feature.quiz
 
+import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wenyan.app.core.common.util.friendlyErrorMessage
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -28,6 +29,19 @@ import javax.inject.Inject
  * - [markResolved]:标记错题为已解决(从"未解决"列表移除)
  * - [deleteById]:永久删除错题记录
  *
+ * v0.8.21 修复 B1+M1+M2(对照 feature/knowledge v0.8.17 修复模式):
+ * - **B1**:原 `catch` 在 `flatMapLatest` 外层,异常触发后整流终止,
+ *   `retry()` 通过切换 filter 再切回触发重订阅的 hack 失效(外层流已 cancel)。
+ *   现引入 [retryTrigger],catch 移入 flatMapLatest 内部,仅终止 inner Flow,
+ *   外层流仍由 retryTrigger 驱动,retry() 真正生效。
+ * - **M1**:catch 内加 `Log.e` 输出完整堆栈,生产排查不丢上下文
+ *   (对照 feature/cards v0.8.14 P1-7 修复)。
+ * - **M2**:catch 用 raw `e.message` 改为 [friendlyErrorMessage],
+ *   统一中文友好提示(网络/数据库/超时/未知),
+ *   与 feature/knowledge + feature/cards 错误处理一致。
+ * - 重构为 MutableStateFlow + collect 模式(对照 KnowledgeViewModel v0.8.13 P1-4),
+ *   retry() 立即设置 isLoading=true 让 UI 即时反馈,保留 filter 不清空。
+ *
  * @property wrongAnswerRepository 错题仓库
  */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -35,6 +49,10 @@ import javax.inject.Inject
 class WrongAnswerViewModel @Inject constructor(
     private val wrongAnswerRepository: WrongAnswerRepository,
 ) : ViewModel() {
+
+    private companion object {
+        private const val TAG = "WrongAnswerViewModel"
+    }
 
     /** 当前过滤模式(默认未解决,这是用户最常看的视图) */
     private val _filter = MutableStateFlow(WrongAnswerFilter.UNRESOLVED)
@@ -45,24 +63,58 @@ class WrongAnswerViewModel @Inject constructor(
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
     /**
-     * 错题列表 UI 状态。
+     * 重试触发器(v0.8.21 新增,替代 v0.8.4 的"切换 filter 再切回"hack)。
      *
-     * [filter] 切换时通过 [flatMapLatest] 自动取消上一个订阅,
-     * 切换到对应的 observe 流。
+     * 自增整数,每次 [retry] 时 +1,触发 [uiState] 的 flatMapLatest 重新订阅。
      */
-    val uiState: StateFlow<WrongAnswerUiState> = _filter
-        .flatMapLatest { currentFilter ->
-            when (currentFilter) {
-                WrongAnswerFilter.UNRESOLVED -> wrongAnswerRepository.observeUnresolved()
-                WrongAnswerFilter.ALL -> wrongAnswerRepository.observeAll()
-            }
+    private val _retryTrigger = MutableStateFlow(0)
+
+    /**
+     * 错题列表 UI 状态(v0.8.21 重构为 MutableStateFlow + collect)。
+     *
+     * 合并 [retryTrigger] + [filter] 触发 [flatMapLatest] 订阅对应的 observe 流。
+     * [filter] 切换时通过 [flatMapLatest] 自动取消上一个订阅;
+     * [retry] 时通过 [_retryTrigger] 重新触发订阅。
+     *
+     * v0.8.21 修复 B1+M1+M2:
+     * - catch 移入 flatMapLatest 内部,仅终止本次 inner Flow,
+     *   外层仍由 retryTrigger 驱动,支持 retry() 重新触发加载。
+     * - 加 Log.e + friendlyErrorMessage,与 feature/knowledge + feature/cards 一致。
+     * - catch 时保留已有 items,避免数据库偶发异常导致列表瞬间清空
+     *   (与 KnowledgeViewModel catch 保留 knowledgePoints 策略一致)。
+     */
+    private val _uiState = MutableStateFlow<WrongAnswerUiState>(WrongAnswerUiState(isLoading = true))
+    val uiState: StateFlow<WrongAnswerUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            // v0.8.21 修复 B1:catch 必须在 flatMapLatest 内部,仅终止本次 inner Flow,
+            // 外层 Flow 仍由 retryTrigger + filter 驱动,支持 retry() 重新触发加载。
+            // 原实现 catch 在 flatMapLatest 外层,异常触发后整流终止,
+            // retry() 切换 filter 触发的重订阅无法被任何 collector 接收。
+            // 同 feature/knowledge v0.8.17 + feature/cards v0.8.20 修复模式。
+            combine(_retryTrigger, _filter) { _, currentFilter -> currentFilter }
+                .flatMapLatest { currentFilter ->
+                    val flow = when (currentFilter) {
+                        WrongAnswerFilter.UNRESOLVED -> wrongAnswerRepository.observeUnresolved()
+                        WrongAnswerFilter.ALL -> wrongAnswerRepository.observeAll()
+                    }
+                    flow.map { items -> WrongAnswerUiState(items = items.map { it.toUiItem() }) }
+                        // v0.8.21 修复 B1+M1+M2:catch 移入 flatMapLatest 内部,
+                        // 仅终止本次 inner Flow,外层仍由 retryTrigger + filter 驱动。
+                        // 加 Log.e + friendlyErrorMessage,与 feature/knowledge + feature/cards 一致。
+                        // catch 时保留已有 items,避免列表瞬间清空。
+                        .catch { e ->
+                            Log.e(TAG, "loadWrongAnswers failed: filter=$currentFilter", e)
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                error = friendlyErrorMessage(e),
+                            )
+                        }
+                }
+                .collect { _uiState.value = it }
         }
-        .map { items -> WrongAnswerUiState(items = items.map { it.toUiItem() }) }
-        .catch { e ->
-            // v0.8.4 修复：原 emit(emptyList()) 把加载失败伪装为空状态，改为 emit error 态
-            emit(WrongAnswerUiState(error = e.message ?: "加载失败"))
-        }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, WrongAnswerUiState(isLoading = true))
+    }
 
     /** 切换过滤模式 */
     fun setFilter(newFilter: WrongAnswerFilter) {
@@ -108,13 +160,20 @@ class WrongAnswerViewModel @Inject constructor(
         _errorMessage.value = null
     }
 
-    /** v0.8.4 新增：重试加载（重新触发 filter 流订阅） */
+    /**
+     * 重试加载(v0.8.21 重构)。
+     *
+     * 立即设置 isLoading=true 并清空 error,保留 filter 不变,让 UI 立即显示 loading 反馈;
+     * 再增加 [_retryTrigger] 触发数据流重新订阅。
+     *
+     * 原实现(v0.8.4)通过切换 filter 再切回触发重订阅,但 B1 bug 下 catch 已终止整流,
+     * 此 hack 失效。重构后 catch 移入 flatMapLatest 内部,retry() 通过 retryTrigger
+     * 真正生效(同 feature/knowledge v0.8.13 P1-4 模式)。
+     */
     fun retry() {
         _errorMessage.value = null
-        // 通过切换 filter 触发 flatMapLatest 重新订阅
-        val current = _filter.value
-        _filter.value = if (current == WrongAnswerFilter.UNRESOLVED) WrongAnswerFilter.ALL else WrongAnswerFilter.UNRESOLVED
-        _filter.value = current
+        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+        _retryTrigger.value++
     }
 
     /** 将 [WrongAnswerEntity] 转换为 UI 列表项 */

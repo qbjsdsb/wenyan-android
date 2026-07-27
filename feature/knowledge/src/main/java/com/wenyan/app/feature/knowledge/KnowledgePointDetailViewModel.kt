@@ -108,6 +108,12 @@ class KnowledgePointDetailViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            // v0.8.17 修复 B1:catch 必须在 flatMapLatest 内部,仅终止本次 inner Flow,
+            // 外层 Flow 仍由 retryTrigger 驱动,支持 retry() 重新触发加载。
+            // 原实现 catch 在 flatMapLatest 外层,异常触发后整流终止,retry() 永久失效
+            // (同 feature/cards v0.8.20 P1-2 修复模式)。
+            // 同时修复 M4:加 Log.e 输出完整堆栈,生产排查不丢上下文
+            // (对照 feature/cards v0.8.14 P1-7 修复)。
             combine(retryTrigger, pointIdFlow) { _, pointId -> pointId }
                 .flatMapLatest { pointId ->
                     if (pointId.isBlank()) {
@@ -130,16 +136,16 @@ class KnowledgePointDetailViewModel @Inject constructor(
                             }
                         }
                     }
-                }
-                // v0.8.13 P0-3 修复:catch 时保留已有 detail/wrongAnswers,
-                // 避免数据库偶发异常导致详情页内容瞬间清空,用户丢失正在浏览的上下文。
-                // 原 emit KnowledgePointDetailUiState(error=...) 会清空 detail,
-                // 与 KnowledgeViewModel catch 保留 knowledgePoints 策略一致。
-                .catch { e ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = friendlyErrorMessage(e),
-                    )
+                    // v0.8.13 P0-3 修复:catch 时保留已有 detail/wrongAnswers,
+                    // 避免数据库偶发异常导致详情页内容瞬间清空,用户丢失正在浏览的上下文。
+                    // v0.8.17 修复 B1 + M4:catch 移入 flatMapLatest 内部 + 加 Log.e。
+                    .catch { e ->
+                        Log.e(TAG, "loadKnowledgePointDetail failed: pointId=$pointId", e)
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            error = friendlyErrorMessage(e),
+                        )
+                    }
                 }
                 .collect { _uiState.value = it }
         }

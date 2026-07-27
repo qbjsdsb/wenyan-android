@@ -95,6 +95,10 @@ class KnowledgeViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            // v0.8.17 修复 B1:catch 必须在 flatMapLatest 内部,仅终止本次 inner Flow,
+            // 外层 Flow 仍由 _retryTrigger 驱动,支持 retry() 重新触发加载。
+            // 原实现 catch 在 flatMapLatest 外层,异常触发后整流终止,retry() 永久失效
+            // (用户必须杀进程重启 App 才能恢复)。同 feature/cards v0.8.20 P1-2 修复模式。
             _retryTrigger
                 .flatMapLatest {
                     // v0.8.19 P1-UI-1: 搜索词 debounce 300ms 后触发查询
@@ -124,15 +128,19 @@ class KnowledgeViewModel @Inject constructor(
                                 )
                             }
                         }
-                }
-                // v0.8.20 P1-4 修复:catch 时保留已有 knowledgePoints,
-                // 避免数据库偶发异常导致列表瞬间清空,用户丢失正在浏览的上下文。
-                // 原 emit 全新 KnowledgeUiState(error=...) 会清空列表,与 retry() 保留策略不一致。
-                .catch { e ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = friendlyErrorMessage(e),
-                    )
+                        // v0.8.17 修复 B1 + M4:catch 移入 flatMapLatest 内部,
+                        // 仅终止本次 inner Flow,外层仍由 _retryTrigger 驱动。
+                        // 同时加 Log.e 输出完整堆栈,生产排查不丢上下文
+                        // (对照 feature/cards v0.8.14 P1-7 修复)。
+                        // v0.8.20 P1-4:catch 时保留已有 knowledgePoints,
+                        // 避免数据库偶发异常导致列表瞬间清空,用户丢失正在浏览的上下文。
+                        .catch { e ->
+                            android.util.Log.e("KnowledgeViewModel", "loadKnowledgePoints failed", e)
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                error = friendlyErrorMessage(e),
+                            )
+                        }
                 }
                 .collect { _uiState.value = it }
         }
@@ -155,12 +163,19 @@ class KnowledgeViewModel @Inject constructor(
      * 触发 O(n) escapeLikeWildcards + SQLite LIKE 全表扫描性能问题。
      * 50 字符足够覆盖考研关键词(如"鲁迅《呐喊》狂人日记象征手法")。
      *
-     * @param query 搜索关键词(原始输入,无需转义,ViewModel 内部转义 LIKE 通配符)
+     * v0.8.17 修复 M3:原实现只判断 length 截断,不 trim 不清空白,
+     * UI 显示原始值(含尾空格)但搜索用 trim 后值,UI 与搜索语义不一致。
+     * 现统一 trim 后存储:空白 → 空字符串(走全部浏览分支),
+     * 非空白 → trim 后字符串(UI 与搜索一致)。
+     *
+     * @param query 搜索关键词(原始输入,无需转义,ViewModel 内部 trim + 转义 LIKE 通配符)
      */
     fun updateSearchQuery(query: String) {
+        // v0.8.17 修复 M3:统一 trim,纯空白视为空搜索
+        val trimmed = query.trim()
         // v0.8.20 P1-7: 限制最大 50 字符,超出截断
-        val trimmed = if (query.length > MAX_SEARCH_QUERY_LENGTH) query.take(MAX_SEARCH_QUERY_LENGTH) else query
-        savedStateHandle["searchQuery"] = trimmed
+        val bounded = if (trimmed.length > MAX_SEARCH_QUERY_LENGTH) trimmed.take(MAX_SEARCH_QUERY_LENGTH) else trimmed
+        savedStateHandle["searchQuery"] = bounded
     }
 
     /** 清除搜索(便捷方法,等价于 updateSearchQuery("")) */

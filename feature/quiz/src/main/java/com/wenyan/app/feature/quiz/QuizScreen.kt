@@ -40,13 +40,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -88,9 +92,20 @@ fun QuizScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val expandedIds by viewModel.expandedQuestionIds.collectAsStateWithLifecycle()
     val answers by viewModel.answers.collectAsStateWithLifecycle()
+    // v0.8.21 修复 M3:订阅 errorMessage,selfEvaluate 错题记录失败时通过 Snackbar 反馈
+    val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
     )
+
+    // v0.8.21 修复 M3:errorMessage 非 null 时弹 Snackbar,展示后立即 clearError 避免重组重复弹
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearError()
+        }
+    }
 
     ExpressiveScaffold(
         topBar = {
@@ -114,6 +129,7 @@ fun QuizScreen(
                 scrollBehavior = scrollBehavior,
             )
         },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding ->
         Column(
             modifier = Modifier

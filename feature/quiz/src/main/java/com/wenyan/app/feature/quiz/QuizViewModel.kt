@@ -1,9 +1,11 @@
 package com.wenyan.app.feature.quiz
 
+import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wenyan.app.core.common.util.friendlyErrorMessage
 import com.wenyan.app.core.data.repository.ExamQuestionWithSubject
 import com.wenyan.app.core.data.repository.ExamRepository
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
@@ -48,10 +50,49 @@ class QuizViewModel @Inject constructor(
     private val wrongAnswerRepository: WrongAnswerRepository,
 ) : ViewModel() {
 
+    private companion object {
+        private const val TAG = "QuizViewModel"
+
+        /**
+         * 用户答题输入最大长度(v0.8.21 修复 M4 新增)。
+         *
+         * 限制 5000 字符避免:
+         * - StateFlow 持有超大字符串导致内存压力
+         * - SavedStateHandle(Bundle)序列化超大字符串导致 TransactionTooLargeException
+         * - Compose 重组时 Text 渲染超长文本导致 jank
+         * - 错题本记录超长答案导致 wrong_answers 表膨胀
+         *
+         * 5000 字符足够覆盖考研论述题答案(典型 1500-3000 字),
+         * 不限制正常使用,仅拦截粘贴整本教材等异常输入。
+         */
+        private const val MAX_ANSWER_LENGTH = 5000
+
+        /**
+         * 错题本记录的 userAnswer 最大长度(v0.8.21 修复 M5 新增)。
+         *
+         * 500 字符足够展示用户答案的核心内容(错题本目的是定位错点,
+         * 不是完整保留答案),超出部分用 "…" 省略,避免:
+         * - wrong_answers 表存储超长 userAnswer 导致查询变慢
+         * - 错题本 UI 渲染超长文本导致列表卡顿
+         * - 用户在错题本看到"答案如长篇大论"反而难定位错点
+         */
+        private const val MAX_USER_ANSWER_FOR_WRONG = 500
+    }
+
     // NF-L3 修复：selectedYear 持久化到 SavedStateHandle（用 -1 表示 null，避免可空类型序列化问题）
     private val _selectedYear = savedStateHandle.getStateFlow("selectedYear", -1)
     val selectedYear: StateFlow<Int?> = _selectedYear.map { if (it == -1) null else it }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /**
+     * 错误提示(v0.8.21 修复 M3 新增)。
+     *
+     * 用于 selfEvaluate 错题记录失败时反馈用户(原实现静默吞异常,
+     * 与 CardsViewModel 不一致,生产排查困难)。
+     * UI 通过 Snackbar 展示,展示后调用 [clearError] 清空。
+     */
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
     /** 展开状态：记录当前展开答题区的题目ID集合（NF-L3 修复：持久化到 SavedStateHandle） */
     private val _expandedQuestionIds = MutableStateFlow<Set<String>>(
@@ -96,6 +137,12 @@ class QuizViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            // v0.8.21 修复 B2:catch 必须在 flatMapLatest 内部,仅终止本次 inner Flow,
+            // 外层 Flow 仍由 _retryTrigger 驱动,支持 retry() 重新触发加载。
+            // 原实现 catch 在 flatMapLatest 外层,异常触发后整流终止,
+            // retry() 触发的 _retryTrigger++ 无法被任何 collector 接收,
+            // UI 永远停留在 error 态(必须杀进程重启 App 才能恢复)。
+            // 同 feature/knowledge v0.8.17 + feature/cards v0.8.20 修复模式。
             _retryTrigger
                 .flatMapLatest {
                     combine(
@@ -124,9 +171,19 @@ class QuizViewModel @Inject constructor(
                             )
                         }
                     }
-                }
-                .catch { e ->
-                    emit(QuizUiState(error = e.message ?: "加载失败"))
+                    // v0.8.21 修复 B2+M1+M2:catch 移入 flatMapLatest 内部,
+                    // 仅终止本次 inner Flow,外层仍由 _retryTrigger 驱动。
+                    // 加 Log.e + friendlyErrorMessage,与 feature/knowledge + feature/cards 一致。
+                    // catch 时保留已有 availableYears/selectedYear/questions,
+                    // 避免数据库偶发异常导致已加载内容瞬间清空,用户丢失正在浏览的上下文
+                    // (与 KnowledgeViewModel catch 保留 knowledgePoints 策略一致)。
+                    .catch { e ->
+                        Log.e(TAG, "loadQuiz failed", e)
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            error = friendlyErrorMessage(e),
+                        )
+                    }
                 }
                 .collect { _uiState.value = it }
         }
@@ -162,12 +219,20 @@ class QuizViewModel @Inject constructor(
      * 更新答题输入文本(NF-PP5 Wave 3.2)。
      *
      * 仅在未提交时允许编辑。提交后答案锁定,需通过自评判定对错。
+     *
+     * v0.8.21 修复 M4:限制最大长度 [MAX_ANSWER_LENGTH] 字符,避免:
+     * - StateFlow 持有超大字符串导致内存压力
+     * - SavedStateHandle(Bundle)序列化超大字符串导致 TransactionTooLargeException
+     * - 错题本记录超长答案导致 wrong_answers 表膨胀
+     * 超出部分截断,不影响正常使用(考研论述题答案典型 1500-3000 字)。
      */
     fun updateAnswer(questionId: String, text: String) {
+        // v0.8.21 修复 M4:限制最大长度,超出截断
+        val bounded = if (text.length > MAX_ANSWER_LENGTH) text.take(MAX_ANSWER_LENGTH) else text
         _answers.update { current ->
             val existing = current[questionId] ?: QuizAnswerState()
             if (existing.isSubmitted) return@update current  // 已提交,不允许编辑
-            current + (questionId to existing.copy(userAnswer = text))
+            current + (questionId to existing.copy(userAnswer = bounded))
         }
     }
 
@@ -208,6 +273,14 @@ class QuizViewModel @Inject constructor(
      * 用户提交答案后对照参考答案自评。判定为"错"时记录到错题本。
      * 自评是一次性的:已自评后不允许更改(避免重复记录/删除逻辑复杂化)。
      *
+     * v0.8.21 修复 M3+M5:
+     * - **M3**:原 `catch (e: Exception) {}` 静默吞异常,与 CardsViewModel 不一致,
+     *   生产排查困难。现加 Log.w + 设置 [_errorMessage] 反馈用户(原仅靠 Snackbar
+     *   但没有 errorMessage StateFlow,UI 无法感知)。错题记录失败不阻塞主流程
+     *   (自评状态已更新),用户可查看错题本或重试。
+     * - **M5**:超长 userAnswer 持久化到错题本前先省略到 [MAX_USER_ANSWER_FOR_WRONG]
+     *   字符,避免 wrong_answers 表存储超长答案导致查询变慢、UI 列表卡顿。
+     *
      * @param questionId 题目 ID
      * @param isCorrect  用户自评是否正确
      */
@@ -228,20 +301,39 @@ class QuizViewModel @Inject constructor(
                     // 避免传 null 到错题本导致 UI 显示异常,后续可通过 AI 助手补全
                     val correctAnswer = question.answerFramework
                         ?: "（暂无参考答案，可使用 AI 助手生成）"
+                    // v0.8.21 修复 M5:超长 userAnswer 省略到 MAX_USER_ANSWER_FOR_WRONG 字符,
+                    // 避免 wrong_answers 表存储超长答案导致查询变慢、UI 列表卡顿。
+                    // 500 字符足够展示用户答案核心内容(错题本目的是定位错点,
+                    // 不是完整保留答案)。
+                    val userAnswerToRecord = if (answer.userAnswer.length > MAX_USER_ANSWER_FOR_WRONG) {
+                        answer.userAnswer.take(MAX_USER_ANSWER_FOR_WRONG) + "…"
+                    } else {
+                        answer.userAnswer
+                    }
                     wrongAnswerRepository.recordWrongAnswer(
                         pointId = null,
                         examQuestionId = questionId,
-                        userAnswer = answer.userAnswer,
+                        userAnswer = userAnswerToRecord,
                         correctAnswer = correctAnswer,
                         source = WrongAnswerRepository.SOURCE_QUIZ_WRONG,
                     )
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    // 错题记录失败不阻塞主流程(自评状态已更新)
+                    // v0.8.21 修复 M3:加 Log.w + 设置 errorMessage 反馈用户,
+                    // 原 `catch {}` 静默吞异常与 CardsViewModel 不一致,生产排查困难。
+                    // 错题记录失败不阻塞主流程(自评状态已更新),
+                    // 用户可查看错题本或通过 errorMessage Snackbar 感知失败。
+                    Log.w(TAG, "selfEvaluate recordWrongAnswer failed: questionId=$questionId", e)
+                    _errorMessage.value = "错题记录失败：${e.message ?: "未知错误"}"
                 }
             }
         }
+    }
+
+    /** 清除错误提示(v0.8.21 修复 M3 新增,供 UI Snackbar 展示后调用) */
+    fun clearError() {
+        _errorMessage.value = null
     }
 }
 

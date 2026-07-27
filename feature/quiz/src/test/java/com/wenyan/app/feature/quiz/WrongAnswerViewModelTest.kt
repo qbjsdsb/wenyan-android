@@ -10,17 +10,24 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
 /**
- * [WrongAnswerViewModel] 单元测试(NF-PP5 Wave 3.2)。
+ * [WrongAnswerViewModel] 单元测试(NF-PP5 Wave 3.2 + v0.8.21 retry 回归)。
  *
  * 验证:
  * - 默认 filter=UNRESOLVED,uiState 从 observeUnresolved 加载
  * - setFilter(ALL) 切换后,uiState 从 observeAll 加载
  * - markResolved / deleteById 调用仓库对应方法
+ *
+ * v0.8.21 新增(对照 feature/knowledge + feature/cards 修复模式):
+ * - 场景 3:加载失败后 retry() 真正重新加载(回归 B1 修复)
+ * - 场景 4:catch 分支验证错误友好提示(SQLiteException → "本地数据异常,请重启 App")
  *
  * 用 StandardTestDispatcher + advanceUntilIdle 控制 stateIn 协程。
  */
@@ -93,6 +100,73 @@ class WrongAnswerViewModelTest {
         viewModel.deleteById("wa_2")
         advanceUntilIdle()
         assertTrue("deleteById 应调用仓库", "wa_2" in wrongAnswerRepository.deletedIds)
+    }
+
+    /**
+     * 场景 3(v0.8.21 新增):加载失败后 retry() 真正重新加载,验证 B1 修复。
+     *
+     * 原实现 catch 在 flatMapLatest 外层,异常触发后整流终止,retry() 失效。
+     * 现修复后 catch 移入 flatMapLatest 内部,retry() 通过 retryTrigger 重新触发。
+     *
+     * 步骤:
+     * 1. 让 observeUnresolved 抛 RuntimeException
+     * 2. 验证 uiState.error 非 null,isLoading=false
+     * 3. 清除异常(模拟数据库恢复)
+     * 4. 调用 retry()
+     * 5. 验证 uiState.error == null,isLoading=false,items 正常加载
+     */
+    @Test
+    fun `加载失败后 retry 真正重新加载`() = runTest(testDispatcher) {
+        // 1. 注入异常
+        wrongAnswerRepository.unresolvedException = RuntimeException("DB corrupted")
+        // 重新触发订阅(retry 让 init 重新订阅)
+        viewModel.retry()
+        advanceUntilIdle()
+
+        // 2. 验证 error 状态
+        val errorState = viewModel.uiState.value
+        assertFalse("error 态下 isLoading 应为 false", errorState.isLoading)
+        assertNotNull("error 应非 null", errorState.error)
+
+        // 3. 清除异常(数据库恢复)
+        wrongAnswerRepository.unresolvedException = null
+
+        // 4. 调用 retry()
+        viewModel.retry()
+        advanceUntilIdle()
+
+        // 5. 验证恢复正常加载
+        val recoveredState = viewModel.uiState.value
+        assertNull("retry 后 error 应清空", recoveredState.error)
+        assertFalse("retry 后 isLoading 应为 false", recoveredState.isLoading)
+        assertEquals("应加载 2 条未解决错题", 2, recoveredState.items.size)
+    }
+
+    /**
+     * 场景 4(v0.8.21 新增):catch 分支验证错误友好提示(M2 修复)。
+     *
+     * 原实现用 raw `e.message` 展示英文堆栈给用户,
+     * 现改用 [com.wenyan.app.core.common.util.friendlyErrorMessage] 映射为中文友好提示。
+     *
+     * 注:unit test 环境无 Robolectric,SQLiteException 是 stub 无法实例化,
+     * 故用 message 包含 "no such table" 的 RuntimeException 验证兜底映射路径
+     * (friendlyErrorMessage 检测 message.contains("no such table") → "数据库版本异常,请重启 App")。
+     * 这条路径更严格地验证了"不暴露英文堆栈给用户"的设计意图。
+     */
+    @Test
+    fun `catch 分支将异常映射为友好提示`() = runTest(testDispatcher) {
+        wrongAnswerRepository.unresolvedException =
+            RuntimeException("no such table: wrong_answers")
+        viewModel.retry()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNotNull("应有 error", state.error)
+        assertEquals(
+            "异常应映射为友好提示(不暴露英文堆栈)",
+            "数据库版本异常,请重启 App",
+            state.error,
+        )
     }
 
     // ── 辅助方法 ──────────────────────────────────────────────────

@@ -10,6 +10,7 @@ import com.wenyan.app.core.database.entity.WrongAnswerEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 
 /**
@@ -19,14 +20,22 @@ import kotlinx.coroutines.flow.flowOf
  * - [years]:getAvailableYears 返回的年份列表
  * - [questionsByYear]:getExamQuestionsWithSubjectInfo 按年份返回的题目列表
  * - [relatedPoints]:getRelatedKnowledgePoints 返回的知识点列表
+ *
+ * v0.8.21 新增 [yearsException] / [questionsException] 字段,
+ * 供 retry-after-error 回归测试模拟数据流抛异常。
  */
 class FakeExamRepository(
     var years: List<Int> = emptyList(),
     var questionsByYear: Map<Int, List<ExamQuestionWithSubject>> = emptyMap(),
     var relatedPoints: List<KnowledgePointEntity> = emptyList(),
+    /** v0.8.21 新增:非 null 时 getAvailableYears() 抛此异常,用于测试 retry-after-error */
+    var yearsException: Throwable? = null,
+    /** v0.8.21 新增:非 null 时 getExamQuestionsWithSubjectInfo() 抛此异常 */
+    var questionsException: Throwable? = null,
 ) : ExamRepository {
 
     override fun getExamQuestionsWithSubjectInfo(year: Int): Flow<List<ExamQuestionWithSubject>> {
+        questionsException?.let { throw it }
         val list = questionsByYear[year] ?: emptyList()
         return flowOf(list)
     }
@@ -36,7 +45,10 @@ class FakeExamRepository(
         return flowOf(list)
     }
 
-    override fun getAvailableYears(): Flow<List<Int>> = flowOf(years)
+    override fun getAvailableYears(): Flow<List<Int>> {
+        yearsException?.let { throw it }
+        return flowOf(years)
+    }
 
     override fun getRelatedKnowledgePoints(questionId: String): Flow<List<KnowledgePointEntity>> =
         flowOf(relatedPoints)
@@ -53,6 +65,9 @@ class FakeExamRepository(
  * - [recordedWrongAnswers]:记录所有 recordWrongAnswer 调用
  * - [resolvedIds]:记录所有 markResolved 调用的 id
  * - [deletedIds]:记录所有 deleteById 调用的 id
+ *
+ * v0.8.21 新增 [unresolvedException] / [allException] 字段,
+ * 供 retry-after-error 回归测试模拟数据流抛异常。
  */
 class FakeWrongAnswerRepository(
     initialAll: List<WrongAnswerEntity> = emptyList(),
@@ -62,9 +77,18 @@ class FakeWrongAnswerRepository(
     private val _all = MutableStateFlow(initialAll)
     private val _unresolved = MutableStateFlow(initialUnresolved)
 
+    /** v0.8.21 新增:非 null 时 observeUnresolved() 抛此异常,用于测试 retry-after-error */
+    var unresolvedException: Throwable? = null
+
+    /** v0.8.21 新增:非 null 时 observeAll() 抛此异常,用于测试 retry-after-error */
+    var allException: Throwable? = null
+
     val recordedWrongAnswers: MutableList<RecordedWrongAnswer> = mutableListOf()
     val resolvedIds: MutableList<String> = mutableListOf()
     val deletedIds: MutableList<String> = mutableListOf()
+
+    /** v0.8.21 新增:非 null 时 recordWrongAnswer 抛此异常,用于测试 selfEvaluate 错题反馈 */
+    var recordException: Throwable? = null
 
     /** 用于测试切换列表内容(模拟 markResolved 后流重发) */
     fun setAll(newList: List<WrongAnswerEntity>) {
@@ -75,9 +99,17 @@ class FakeWrongAnswerRepository(
         _unresolved.value = newList
     }
 
-    override fun observeAll(): Flow<List<WrongAnswerEntity>> = _all.asStateFlow()
+    override fun observeAll(): Flow<List<WrongAnswerEntity>> {
+        // v0.8.21:exception 非 null 时抛异常,模拟数据库异常
+        // (用 flow { throw } 包装,使异常在 collect 时抛出,与真实 Room Flow 行为一致)
+        allException?.let { return flow { throw it } }
+        return _all.asStateFlow()
+    }
 
-    override fun observeUnresolved(): Flow<List<WrongAnswerEntity>> = _unresolved.asStateFlow()
+    override fun observeUnresolved(): Flow<List<WrongAnswerEntity>> {
+        unresolvedException?.let { return flow { throw it } }
+        return _unresolved.asStateFlow()
+    }
 
     override fun observeByPoint(pointId: String): Flow<List<WrongAnswerEntity>> = flowOf(emptyList())
 
@@ -90,6 +122,8 @@ class FakeWrongAnswerRepository(
         correctAnswer: String?,
         source: String,
     ): String {
+        // v0.8.21:exception 非 null 时抛异常,模拟错题记录失败
+        recordException?.let { throw it }
         recordedWrongAnswers.add(
             RecordedWrongAnswer(pointId, examQuestionId, userAnswer, correctAnswer, source),
         )

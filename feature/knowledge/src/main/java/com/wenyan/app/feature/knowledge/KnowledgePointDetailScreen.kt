@@ -542,10 +542,12 @@ private fun WrongAnswerRow(
         ) {
             // v0.8.20 P1-7 修复:原硬编码 "CARD_AGAIN"/"QUIZ_WRONG" 字符串,
             // 改用 WrongAnswerRepository 常量,与 WrongAnswerScreen.formatSource 一致
+            // v0.8.17 修复 M5:unknown source 不直接暴露英文原始字符串,
+            // fallback 到中文"未知来源",与 friendlyErrorMessage 友好提示原则一致
             val (sourceLabel, sourceVariant) = when (wrong.source) {
                 WrongAnswerRepository.SOURCE_CARD_AGAIN -> "卡片复习" to ChipVariant.SECONDARY
                 WrongAnswerRepository.SOURCE_QUIZ_WRONG -> "真题练习" to ChipVariant.TERTIARY
-                else -> wrong.source to ChipVariant.NEUTRAL
+                else -> "未知来源" to ChipVariant.NEUTRAL
             }
             WenyanInfoChip(text = sourceLabel, variant = sourceVariant)
             // v0.8.20 P2-7 修复:wrongCount <= 0 时不展示(语义不合理,数据异常时不误导用户)

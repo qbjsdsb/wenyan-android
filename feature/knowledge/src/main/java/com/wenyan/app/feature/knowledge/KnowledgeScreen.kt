@@ -81,6 +81,9 @@ fun KnowledgeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    // v0.8.17 修复 M1:订阅独立 selectedCategory StateFlow,error/loading 态下
+    // 也能立即响应分类切换,与 uiState.selectedCategory(仅在 success 分支更新)解耦
+    val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
     )
@@ -115,8 +118,9 @@ fun KnowledgeScreen(
             )
 
             // 分类标签行
+            // v0.8.17 修复 M1:用独立 selectedCategory StateFlow,error/loading 态下也有反馈
             CategoryChips(
-                selectedCategory = uiState.selectedCategory,
+                selectedCategory = selectedCategory,
                 onCategorySelected = viewModel::selectCategory,
             )
 
@@ -153,10 +157,11 @@ fun KnowledgeScreen(
                         // v0.8.19 P1-UI-1: 区分"无搜索结果"和"无数据"两种空态
                         // v0.8.20 P1-3 修复:搜索 + 分类叠加下 0 结果时,提示用户切换分类
                         // (如"鲁迅"在"古代文学"分类下搜不到,但切换到"现当代文学"可找到)
-                        val isFiltered = uiState.selectedCategory != KnowledgeCategory.ALL
+                        // v0.8.17 修复 M1:用独立 selectedCategory StateFlow
+                        val isFiltered = selectedCategory != KnowledgeCategory.ALL
                         val title = when {
                             searchQuery.isNotBlank() && isFiltered ->
-                                "在“${uiState.selectedCategory.label}”中未找到“${searchQuery.trim()}”"
+                                "在“${selectedCategory.label}”中未找到“${searchQuery.trim()}”"
                             searchQuery.isNotBlank() ->
                                 "未找到匹配“${searchQuery.trim()}”的知识点"
                             else -> "暂无知识点，等待种子数据加载"
