@@ -157,7 +157,7 @@ tools/                           # Python 管线脚本
   - **B3 错题本升级为顶级 Tab**：TopLevelDestination.WrongAnswer（ROUTE_WRONG_ANSWER）替换原 Graph + WrongAnswerScreen onBack 可选（顶级模式无返回箭头）+ QuizScreen 移除 Inbox IconButton
   - **B4 移除 feature:graph 模块**：删除 feature/graph/ 整个目录（GraphScreen/GraphViewModel/GraphCanvas/GraphConstants/GraphLayout + 3 测试文件，~5000 行）+ app/build.gradle.kts 移除依赖 + settings.gradle.kts 移除 include
   - **B5 ProGuard 修复 + 文档**：core/data/consumer-rules.pro GraphSkeleton keep 路径修正（.graph. → .seed.）+ AGENTS.md/STATUS.md/SESSION_LOG.md 同步
-- v0.9.0 保留设施（按 ADR-001 0.1 节"保留"清单）：core/database 图谱 DAO/Entity + core/data GraphRepository/Impl + GraphSkeleton + 算法服务（InterferenceWarner/WeakSubgraphDetector/PrerequisiteChecker）— 这些为 FSRS 调度链路消费，非 UI 层
+- v0.9.0 保留设施（按 ADR-001 0.1 节"保留"清单，**已于 v0.9.3 优化 4 全部移除**）：原保留 core/database 图谱 DAO/Entity + core/data GraphRepository/Impl + GraphSkeleton + 算法服务（InterferenceWarner/WeakSubgraphDetector/PrerequisiteChecker），2026-07-28 验证全项目无 FSRS/ViewModel/UI 层调用后删除（28 文件，+1836/-4063 行，净减 2227 行）。详见 [docs/release-receipts/v0.9.3-opt4-graph-removal-receipt.md](docs/release-receipts/v0.9.3-opt4-graph-removal-receipt.md)
 - v0.9.0 设计依据：[docs/design/adr-001-graph-removal.md](docs/design/adr-001-graph-removal.md) + [docs/plans/graph-removal-tree-migration.md](docs/plans/graph-removal-tree-migration.md)
 - v0.9.1 核心改动：关联知识点模块不渲染 Hotfix — SeedDataLoader.computeRelatedIdsByTags（同 subject + 共享 tag → RELATED，按共享数降序取前 5）+ seed 2.12.0→2.13.0 + 8 单测
 - v0.9.4 核心改动：错题本接入 FSRS 间隔重复调度 — 5 层实现（数据层 Migration 7→8 + 10 sched_* 字段 + 索引 / 映射层 WrongAnswerSchedulingMapper / 仓库层 SchedulingRepository.rateWrongAnswer / ViewModel 层 DUE 过滤 + 评分委托 + ClockGuard 注入 / UI 层四档评分按钮 + 调度信息展示）+ TIER_FRAMEWORK 档位 + 10 单测。Follow-up #1 ClockGuard 注入（DUE 过滤与评分调度时间源对齐）+ #2 interval coerceAtLeast(0) 下界保护已修复。agent-pr-review ✅ Approved（0 blocker, 0 must-fix, 1 pre-existing follow-up）
@@ -222,5 +222,5 @@ tools/                           # Python 管线脚本
    - 2.M：Compose 副作用 + Accessibility + M3 Expressive
    - 2.N 剩余：NF-DS7-13 DataStore Key 治理
 8. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
-9. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）
-10. **P4**：架构重构 — getVerifiedWithSubject 职责应在 KnowledgeRepository（详见 SESSION_LOG 第四条）
+9. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）— **已修复**：P1-S-1 修正已在 "Decode keystore" 步骤添加 fail-fast（exit 1 if KEYSTORE_BASE64 empty），见 [.github/workflows/release.yml](.github/workflows/release.yml) L60-65
+10. **P4**：架构重构 — getVerifiedWithSubject 职责应在 KnowledgeRepository — **已完成**：方法已迁移至 [KnowledgeRepository.kt:116](core/data/src/main/java/com/wenyan/app/core/data/repository/KnowledgeRepository.kt#L116)，ReviewRepository 仅保留 doc 引用

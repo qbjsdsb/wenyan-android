@@ -1,7 +1,7 @@
 # consumer-rules.pro：core:database 模块消费者 ProGuard 规则（P1-PG Wave 4 补齐）
 #
-# core:database 模块包含：Room Database（WenyanDatabase）+ 20 个 @Entity +
-# 18 个 @Dao + WenyanTypeConverters。
+# core:database 模块包含：Room Database（WenyanDatabase）+ 19 个 @Entity +
+# 19 个 @Dao + WenyanTypeConverters。
 # Room 编译器生成的代码通过反射访问 Entity / Dao，启用 R8 时必须保留。
 
 # ============ Room @Entity ============
@@ -26,14 +26,15 @@
 
 # ============ Room 编译器生成的类 ============
 # Room 生成的 _Impl 类（WenyanDatabase_Impl / XxxDao_Impl）必须保留。
--keep class * extends androidx.room.RoomDatabase { *; }
+# 注：`-keep class * extends RoomDatabase` 已在 @Database section 声明，不重复。
 -keep class **_Impl { *; }
 
-# ============ 20 个 Entity 类（显式列出，便于排查）============
+# ============ 19 个 Entity 类（显式列出，便于排查）============
 # AiGradingRecordEntity / AnswerTemplateEntity / ApiConfigEntity / AppMetaEntity
 # ChapterEntity / ChatConversationEntity / ChatMessageEntity / DataSourceEntity
-# ExamCodeHistoryEntity / ExamQuestionEntity / GraphEdgeEntity / GraphNodeEntity
+# ExamCodeHistoryEntity / ExamQuestionEntity
 # KnowledgePointEntity / MemoRecordEntity / ReviewLogEntity / StudyProgressEntity
 # SubjectEntity / TemplateFillEntity / WrongAnswerEntity / WritingMaterialEntity
 # WritingPatternEntity
+# 注：v0.9.3 优化 4 已移除 GraphEdgeEntity / GraphNodeEntity（core 层图谱设施无消费者）。
 # 上述 @Entity 规则已通用覆盖，无需单独声明。
