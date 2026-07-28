@@ -5064,3 +5064,95 @@ https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.4
 - staff-engineer-mode 的 Iron Law "ONE PRIMARY SPECIALIST BY DEFAULT" 非常有用：本任务表面是 UI 开发，但提交事件按 Agent Event Policy 强制路由到 agent-pr-review，避免了多 specialist 加载
 - Agent Event Policy 的"stage → inspect → review → receipt → commit"分步流程确保了每一步都有独立的验证机会，避免合并操作掩盖问题
 - Icons.Filled.MenuBook 弃用是 M3 1.5.0-alpha18 的迁移信号，AutoMirrored 版本在 RTL 下自动镜像，是更好的默认选择
+
+---
+
+## 2026-07-28 会话：v0.9.5 Release（PRR + RBR + tag + gh release）
+
+### 任务
+
+延续上一会话的 v0.9.5 开发，本次会话执行 release 流程。用户要求："做好交接工作发布，每一步都要反复检查，不能出现问题"，并指定使用 `trae-remote-official:staff-engineer-mode` plugin。
+
+### 完成
+
+按 staff-engineer-mode Iron Law + Agent Event Policy 完成完整 release 流程：
+
+**1. 加载 SEM specialists（per Agent Event Policy: "Before tags, versions, hosted releases, packages, artifacts, or promotions, read `release-build-reproducibility` and `production-readiness-review`"）**
+- Read `/data/user/plugins/trae-remote-official/staff-engineer-mode/2.1.0/specialists/release-build-reproducibility.md`
+- Read `/data/user/plugins/trae-remote-official/staff-engineer-mode/2.1.0/specialists/production-readiness-review.md`
+
+**2. 本地构建验证**
+- `:app:assembleDebug` BUILD SUCCESSFUL（279 actionable tasks）
+- `:app:assembleRelease` BUILD SUCCESSFUL（468 actionable tasks，41 executed）
+- 全模块 `testDebugUnitTest` BUILD SUCCESSFUL（317 actionable tasks，236 tests 0 failures）
+- Debug APK SHA-256（version bump 前）：`cd558ec6a73f8d0403413376b577a28a8a28a9629cd98bea324f29f531a262fd` / 27,544,629 bytes
+
+**3. PRR（Production Readiness Review）✅ READY TO RELEASE**
+- Scope: External Artifact（pushed tag + hosted GitHub Release + 用户侧 APK 升级）
+- Impact dimensions: External commitment ✅ / Customer-criticality 低 / Data sensitivity 无 / State durability 无 / Blast radius 用户设备
+- Ready matrix 9 domain 全 Pass（Architecture / Ownership / Runtime / Safe change / Compatibility / Rollback / Testing / Code review / Documentation）
+- Blocker B1（CI 账单）→ Exception E1（debug 签名 fallback，用户已接受 v0.8.14-v0.9.4 同模式）
+
+**4. RBR（Release Build Reproducibility）✅ PASS**
+- Pinned inputs: JDK 17.0.2 / Gradle 8.14.4 / AGP 8.6.0 / Kotlin 2.3.10 / KSP 2.3.2 / Compose BOM 2025.12.00 / material3 1.5.0-alpha18 / Hilt 2.57.1 / Room 2.7.0 / compileSdk 35 / minSdk 26 / targetSdk 35
+- Hermeticity: 无本地文件依赖 / JDK+Gradle 由 mise 锁定 / 无凭证依赖（debug 签名公开）
+- Artifact identity: Android APK / debug variant / Signer CN=Android Debug
+
+**5. Version bump（commit `9cdc888`）**
+- `app/build.gradle.kts`: versionCode 29→30, versionName "0.9.4"→"0.9.5"
+- 注释补充 v0.9.5 历史与 PRR/RBR 结果
+- 重新构建验证：`:app:assembleDebug` BUILD SUCCESSFUL
+- **Final Debug APK SHA-256**: `0045a82d1ae318d2d504b73e8bb71bc13ee117d4354bdba60a914e968093eb58`
+- **Final Debug APK size**: 27,522,631 bytes
+
+**6. Stage → inspect → commit（per Agent Event Policy 分步 shell command）**
+- `git add app/build.gradle.kts` → inspect staged diff → commit `9cdc888` → push origin main（3 commits: b2187bb + 90cfb6a + 9cdc888）
+
+**7. Release receipt（commit `79ca50c`，单独 shell command）**
+- 创建 `docs/release-receipts/v0.9.5-release-receipt.md`（PRR + RBR + Release Checks + Post-Release Verification）
+- 创建 `docs/release-receipts/v0.9.5-release-notes.md`（用户面 Release notes，明示 Exception E1 debug 签名）
+- commit `79ca50c` → push origin main
+
+**8. Tag + push（单独 shell command）**
+- 检查无 orphan tag: `git ls-remote --tags origin v0.9.5` 空
+- `git tag v0.9.5` + `git push origin v0.9.5`
+- Tag 指向 commit `79ca50c3d52da7cf98670406ebd2037d90c894af`
+
+**9. GitHub Release + upload APK（单独 shell command）**
+- `gh release create v0.9.5 app/build/outputs/apk/debug/app-debug.apk --title "v0.9.5 关于与教程子路由" --notes-file docs/release-receipts/v0.9.5-release-notes.md`
+- Release URL: https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.5
+- Asset: app-debug.apk, 27,522,631 bytes, state=uploaded
+- Asset download URL: https://github.com/qbjsdsb/wenyan-android/releases/download/v0.9.5/app-debug.apk
+
+**10. Post-Release Verification**
+- `gh release view v0.9.5 --json name,tagName,assets,url` 验证 Release 创建成功
+- Asset state=uploaded, size=27522631（与本地 27,522,631 一致）
+- SHA-256 二次验证：`0045a82d1ae318d2d504b73e8bb71bc13ee117d4354bdba60a914e968093eb58` 一致
+- 更新 receipt Post-Release Verification 全 ✅
+
+**11. 文档同步**
+- `docs/release-receipts/v0.9.5-release-receipt.md` — Post-Release Verification + Release Outcome 表
+- `AGENTS.md` §7 当前状态 + §8 项目阶段总览 + §9 下一步优先级
+- `docs/00-STATUS.md` 当前状态 + 新会话首要任务
+- `docs/SESSION_LOG.md` 本节
+
+### 关键技术决策
+
+- **staff-engineer-mode Agent Event Policy 严格执行**：每个 release 步骤（stage / receipt / tag / release）都在独立的 shell command 中执行，避免合并操作掩盖问题。这是 v0.8.18 release 流程的延续，但本次更显式地分步执行
+- **PRR + RBR 双审查**：per Iron Law "Before tags, versions, hosted releases, packages, artifacts, or promotions, read `release-build-reproducibility` and `production-readiness-review`, show the structured review artifacts to the user, record the receipt in its own shell command, then run the release command in a separate shell command"
+- **Exception E1 延续**：与 v0.8.14-v0.9.4 一致，CI 账单问题导致 Release workflow 无法运行，正式 keystore 不可达，使用 debug 签名 fallback。Compensating control: 本地构建 + gh 上传 + Release notes 明示 + GitHub Release 历史保留所有旧版 APK 可回滚
+- **Rollback target 明示**：v0.9.5 versionCode=30 > v0.9.4 versionCode=29，降级安装需先卸载，Release notes 明示回滚步骤
+- **SHA-256 二次验证**：version bump 前后分别计算 SHA-256，确保最终上传的 APK 与 release commit 一致
+
+### Commit
+
+- `9cdc888` — release(v0.9.5): bump versionCode 29→30 + versionName 0.9.4→0.9.5
+- `79ca50c` — docs(receipt): v0.9.5 release receipt — PRR + RBR + agent-pr-review
+- `v0.9.5` tag → `79ca50c`
+
+### 关键发现
+
+- **Agent Event Policy 的分步 shell command 是反脆弱设计**：每步独立执行 + 独立验证，任何一步失败都能立即定位，避免"合并操作掩盖问题"。本次 release 11 步全绿，无回退
+- **PRR 的 Blocker → Exception 转换有明确边界**：Blocker B1（CI 账单）是客观阻塞，但用户已接受 debug 签名 fallback（v0.8.14-v0.9.4 五次同模式），转换为 Exception E1 + 补偿控制 + Expiry + Refresh trigger，符合 shared risk-acceptance lifecycle
+- **RBR 的 Pinned inputs 表是 reproducibility 的核心**：所有构建输入（JDK / Gradle / AGP / Kotlin / KSP / Compose BOM / material3 / Hilt / Room / compileSdk / minSdk / targetSdk / versionCode / versionName）都有明确锁定来源（mise.toml / libs.versions.toml / build.gradle.kts），任何人都能复现相同 APK
+- **SHA-256 是 artifact identity 的不可变标识**：Debug APK 27,522,631 bytes → SHA-256 `0045a82d...93eb58`，与 GitHub Release asset 一致，任何人下载后都能本地验证完整性
