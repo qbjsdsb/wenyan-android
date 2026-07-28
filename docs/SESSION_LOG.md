@@ -4888,3 +4888,93 @@ Receipt：[docs/release-receipts/v0.9.4-fsrs-wrong-answer-receipt.md](release-re
    - #1 WrongAnswerViewModel 注入 ClockGuard
    - #2 WrongAnswerSchedulingMapper interval 加 coerceAtLeast(0)
 4. **P0 v0.9.4 Release**：本地构建 + gh 上传（CI 账单问题持续，沿用 Exception E1 流程）
+
+---
+
+## 2026-07-28 v0.9.4 Release（staff-engineer-mode 严谨发布 + Follow-up 修复）
+
+### 背景
+
+承接上一会话 v0.9.4 开发完成。本会话先完成 agent-pr-review 提出的 2 个 P1 follow-up 修复，
+然后按 staff-engineer-mode Agent Event Policy 严谨发布 v0.9.4。
+
+### Follow-up 修复（commit c64087b）
+
+**#1 ClockGuard 注入 WrongAnswerViewModel**：
+- 原问题：DUE 过滤用 `System.currentTimeMillis()`，而 SchedulingRepository.rateWrongAnswer
+  用 `ClockGuard.effectiveNowMillis()`。时钟回拨时 DUE 列表与评分调度时间源不一致
+- 修复：提取 ClockGuard 为 interface + ClockGuardImpl 生产实现，@Binds 绑定到 DataModule；
+  ViewModel 注入 ClockGuard，DUE 分支调用 `clockGuard.effectiveNowMillis()`
+- 收益：DUE 过滤与评分调度共用同一 @Singleton ClockGuard 实例，时间源必然对齐
+
+**#2 WrongAnswerSchedulingMapper interval 下界保护**：
+- 原问题：`(schedNextReviewAt - schedLastReviewAt) / DAY_MS` 无下界保护
+- 风险：时钟回拨或数据损坏导致 nextReviewAt < lastReviewAt 时，interval 为负
+- FSRS 算法假设 interval >= 0，负值会导致 stability 计算异常
+- 修复：加 `.coerceAtLeast(0)` 强制下界，interval=0 表示"刚复习过"（FSRS 安全值）
+
+**测试**（10 个新测试，failure-without-change 已验证）：
+- WrongAnswerSchedulingMapperTest（8 个）：正常/边界/防御/极端回拨/无效 state
+- WrongAnswerViewModelTest（2 个）：DUE 用 ClockGuard 时间源 + 回拨后时间源对齐
+- ClockGuardTest/SchedulingRepositoryTest：适配 ClockGuardImpl 重命名
+
+本地验证：assembleDebug + testDebugUnitTest SUCCESSFUL — 403 tests, 0 failures
+
+### 发布决策（per Agent Event Policy）
+
+按 staff-engineer-mode Iron Law，发布前依次完成三项 specialist review：
+
+1. **agent-pr-review**（feature commit 841e2e9 + follow-up c64087b）：✅ Approved — 0 blocker, 0 must-fix, 1 pre-existing follow-up
+2. **Production Readiness Review (PRR)**：✅ Go — 无 blocker，Exception E1（CI 账单 → 本地构建 + gh 上传 + debug 签名）用户已接受（v0.8.14-v0.9.1 一致），rollback target = v0.9.1
+3. **Release Build Reproducibility (RBR)**：✅ Go — pinned inputs（JDK 17.0.2 + Gradle 8.14.4 via mise.toml + AGP 8.6.0 + Kotlin 2.3.10 + KSP 2.3.2 + Compose BOM 2025.12.00）+ reproducible build + traceable promotion（841e2e9 → c64087b → b599f05 → 96f1325 → tag v0.9.4 → GitHub Release），E1 debug 签名已接受
+
+### 发布执行
+
+| 步骤 | 命令/操作 | 结果 |
+|------|-----------|------|
+| 版本号 bump | app/build.gradle.kts versionCode 28→29, versionName "0.9.1"→"0.9.4" | commit b599f05 |
+| 本地构建 | gradle :app:assembleDebug :app:assembleRelease testDebugUnitTest | ✅ BUILD SUCCESSFUL (4m 4s, 403 tests, 0 failures) |
+| APK SHA-256 捕获 | sha256sum app-debug.apk app-release.apk | Debug b48d4f68...3a3364 / Release 02294bc7...62d955 |
+| Receipt 撰写 | docs/release-receipts/v0.9.4-receipt.md | commit 96f1325 |
+| 推送 commits | git push origin main | ✅ b599f05 + 96f1325 pushed (c64087b..96f1325) |
+| 创建 Release + tag | gh release create v0.9.4 --target main ... | ✅ published at 2026-07-28T04:24:29Z |
+| 上传 assets | （gh release create 同时上传） | ✅ app-debug.apk + app-release.apk uploaded |
+
+### 发布后验证（2026-07-28）
+
+| Check | Result |
+|-------|--------|
+| gh release view v0.9.4 | ✅ Published, draft=false, prerelease=false |
+| Published at | 2026-07-28T04:24:29Z |
+| GitHub Release URL | https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.4 |
+| Tag v0.9.4 远程/本地一致 | ✅ 均指向 96f1325 |
+| Asset app-debug.apk | ✅ state=uploaded, 27,489,863 bytes（字节级匹配本地） |
+| Asset app-release.apk | ✅ state=uploaded, 19,169,788 bytes（字节级匹配本地） |
+| Receipt commit 在 tag history | ✅ 96f1325 是 tag target |
+| Version bump commit 在 tag history | ✅ b599f05 是 96f1325 的 parent |
+| Follow-up commit 在 tag history | ✅ c64087b 是 b599f05 的 parent |
+| Feature commit 在 tag history | ✅ 841e2e9 是 c64087b 的 parent |
+
+### APK 校验
+
+| Artifact | Size (bytes) | SHA-256 | Signing |
+|----------|--------------|---------|---------|
+| app-debug.apk | 27,489,863 | `b48d4f6886708f3911ba65e6e76b16484773027256c6673f4f7c0f4f4d3a3364` | debug |
+| app-release.apk | 19,169,788 | `02294bc76b1aa1780b0496e1b92aff8045eb3d456b924f7b38e785553d62d955` | debug (Exception E1) |
+
+### Release URL
+
+https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.4
+
+### 交接给下一会话
+
+1. **v0.9.4 已发布**：用户可下载 app-debug.apk 或 app-release.apk 实机测试
+2. **P0 emulator 实测 v0.9.4**（5 个测试要点）：
+   - **Migration 7→8 升级**：已有错题的 sched_* 字段默认值正确（nextReviewAt=0 触发立即 DUE）
+   - **DUE 过滤模式**：错题本顶部出现过滤切换（全部 / 到期），DUE 列表只显示到期错题
+   - **四档评分按钮**：不会 / 困难 / 良好 / 简单，点击后错题从 DUE 列表消失
+   - **调度信息展示**：每条错题显示下次复习时间 / 复习次数 / 遗忘次数
+   - **ClockGuard 时间源对齐**：评分后错题不会立即重新出现在 DUE 列表（除非真的到期）
+3. **P0 CI 恢复后**：重新用正式 keystore 构建 release APK 并替换 v0.9.4 asset（消除 Exception E1）
+4. **P1 R8 启用**：P1-PG 规则已就绪 + B5.1 GraphSkeleton 路径已修正，emulator 实测无崩溃后切换 isMinifyEnabled=true
+5. **Rollback path**：若 v0.9.4 出现严重问题，uninstall v0.9.4 + install v0.9.1 APK（versionCode 28 < 29，需卸载后安装）
