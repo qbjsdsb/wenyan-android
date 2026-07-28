@@ -1,6 +1,7 @@
 package com.wenyan.app.core.data.repository
 
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
+import com.wenyan.app.core.database.entity.WrongAnswerWithDetails
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -14,18 +15,20 @@ import kotlinx.coroutines.flow.Flow
  * markResolved 后该错题不再出现在 observeUnresolved 中。
  *
  * 设计说明:
- * - 读 API(observe*)直接返回 [WrongAnswerEntity](与 [ChatRepository] /
- *   [ApiConfigRepository] 一致,直接暴露 Entity,不引入 domain model 增加无谓映射)
+ * - 读 API observeAll/observeUnresolved 返回 [WrongAnswerWithDetails](v0.9.2 改造,
+ *   JOIN knowledge_points/exam_questions 获取题目文本,供 UI 渲染题目区)
+ * - observeByPoint/observeByExamQuestion 仍返回 [WrongAnswerEntity](内部按 ID 筛选,
+ *   不需要题目文本,调用方为内部逻辑)
  * - 写 API recordWrongAnswer 接收字段参数(非 Entity),内部判断是新插入还是递增
  * - source 参数用 String + companion const,避免新增 enum 但仍约束取值
  */
 interface WrongAnswerRepository {
 
-    /** 观察所有错题(按 lastWrongAt DESC) */
-    fun observeAll(): Flow<List<WrongAnswerEntity>>
+    /** 观察所有错题(JOIN 关联表获取题目文本,按 lastWrongAt DESC) */
+    fun observeAll(): Flow<List<WrongAnswerWithDetails>>
 
-    /** 观察未解决错题(resolvedAt IS NULL,按 lastWrongAt DESC) */
-    fun observeUnresolved(): Flow<List<WrongAnswerEntity>>
+    /** 观察未解决错题(JOIN 关联表获取题目文本,resolvedAt IS NULL,按 lastWrongAt DESC) */
+    fun observeUnresolved(): Flow<List<WrongAnswerWithDetails>>
 
     /** 观察指定知识点的错题(按 lastWrongAt DESC) */
     fun observeByPoint(pointId: String): Flow<List<WrongAnswerEntity>>

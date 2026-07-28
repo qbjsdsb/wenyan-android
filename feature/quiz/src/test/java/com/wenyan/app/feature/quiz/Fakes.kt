@@ -7,6 +7,7 @@ import com.wenyan.app.core.data.util.SubjectResolution
 import com.wenyan.app.core.database.entity.ExamQuestionEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
+import com.wenyan.app.core.database.entity.WrongAnswerWithDetails
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -70,8 +71,8 @@ class FakeExamRepository(
  * 供 retry-after-error 回归测试模拟数据流抛异常。
  */
 class FakeWrongAnswerRepository(
-    initialAll: List<WrongAnswerEntity> = emptyList(),
-    initialUnresolved: List<WrongAnswerEntity> = emptyList(),
+    initialAll: List<WrongAnswerWithDetails> = emptyList(),
+    initialUnresolved: List<WrongAnswerWithDetails> = emptyList(),
 ) : WrongAnswerRepository {
 
     private val _all = MutableStateFlow(initialAll)
@@ -91,22 +92,22 @@ class FakeWrongAnswerRepository(
     var recordException: Throwable? = null
 
     /** 用于测试切换列表内容(模拟 markResolved 后流重发) */
-    fun setAll(newList: List<WrongAnswerEntity>) {
+    fun setAll(newList: List<WrongAnswerWithDetails>) {
         _all.value = newList
     }
 
-    fun setUnresolved(newList: List<WrongAnswerEntity>) {
+    fun setUnresolved(newList: List<WrongAnswerWithDetails>) {
         _unresolved.value = newList
     }
 
-    override fun observeAll(): Flow<List<WrongAnswerEntity>> {
+    override fun observeAll(): Flow<List<WrongAnswerWithDetails>> {
         // v0.8.21:exception 非 null 时抛异常,模拟数据库异常
         // (用 flow { throw } 包装,使异常在 collect 时抛出,与真实 Room Flow 行为一致)
         allException?.let { return flow { throw it } }
         return _all.asStateFlow()
     }
 
-    override fun observeUnresolved(): Flow<List<WrongAnswerEntity>> {
+    override fun observeUnresolved(): Flow<List<WrongAnswerWithDetails>> {
         unresolvedException?.let { return flow { throw it } }
         return _unresolved.asStateFlow()
     }

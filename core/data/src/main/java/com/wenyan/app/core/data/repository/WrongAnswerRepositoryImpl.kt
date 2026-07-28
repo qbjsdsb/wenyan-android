@@ -2,6 +2,7 @@ package com.wenyan.app.core.data.repository
 
 import com.wenyan.app.core.database.dao.WrongAnswerDao
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
+import com.wenyan.app.core.database.entity.WrongAnswerWithDetails
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 import javax.inject.Inject
@@ -13,6 +14,9 @@ import javax.inject.Singleton
  * 持久化答错题目到 wrong_answers 表。重复答错时递增 wrongCount(不重复插入),
  * markResolved 后该错题不再出现在 observeUnresolved 中。
  *
+ * v0.9.2：observeAll/observeUnresolved 返回 [WrongAnswerWithDetails]（JOIN 关联表
+ * 获取题目文本），供 UI 渲染题目区。
+ *
  * @property wrongAnswerDao 错题 DAO
  */
 @Singleton
@@ -20,10 +24,10 @@ class WrongAnswerRepositoryImpl @Inject constructor(
     private val wrongAnswerDao: WrongAnswerDao,
 ) : WrongAnswerRepository {
 
-    override fun observeAll(): Flow<List<WrongAnswerEntity>> =
+    override fun observeAll(): Flow<List<WrongAnswerWithDetails>> =
         wrongAnswerDao.observeAll()
 
-    override fun observeUnresolved(): Flow<List<WrongAnswerEntity>> =
+    override fun observeUnresolved(): Flow<List<WrongAnswerWithDetails>> =
         wrongAnswerDao.observeUnresolved()
 
     override fun observeByPoint(pointId: String): Flow<List<WrongAnswerEntity>> =

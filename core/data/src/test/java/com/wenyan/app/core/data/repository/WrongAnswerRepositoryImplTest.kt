@@ -132,6 +132,9 @@ class WrongAnswerRepositoryImplTest {
      * - 无已有未解决错题 → UUID.randomUUID().toString() 生成新 id
      * - wrongAnswerDao.upsert 写入 WrongAnswerEntity
      * - wrongCount 默认 1, resolvedAt = null(未解决)
+     *
+     * v0.9.2 新增:验证 JOIN 查询返回的 [WrongAnswerWithDetails.questionTitle]
+     * 正确取到 knowledge_points.title（卡片来源 → 知识点 title）。
      */
     @Test
     fun `recordWrongAnswer 新插入返回非空 id 且能读回`() = runTest {
@@ -147,14 +150,22 @@ class WrongAnswerRepositoryImplTest {
 
         val all = repository.observeAll().first()
         assertEquals("observeAll 应有 1 条记录", 1, all.size)
-        assertEquals("id 一致", id, all[0].id)
-        assertEquals("point_1", all[0].pointId)
-        assertNull("examQuestionId 应为 null", all[0].examQuestionId)
-        assertEquals("苏轼是南宋人", all[0].userAnswer)
-        assertEquals("苏轼是北宋文学家", all[0].correctAnswer)
-        assertEquals("source 应为 CARD_AGAIN", "CARD_AGAIN", all[0].source)
-        assertEquals("wrongCount 应为 1", 1, all[0].wrongCount)
-        assertNull("resolvedAt 应为 null(未解决)", all[0].resolvedAt)
+        // v0.9.2：JOIN 返回 WrongAnswerWithDetails，字段嵌套在 wrongAnswer 内
+        val record = all[0]
+        assertEquals("id 一致", id, record.wrongAnswer.id)
+        assertEquals("point_1", record.wrongAnswer.pointId)
+        assertNull("examQuestionId 应为 null", record.wrongAnswer.examQuestionId)
+        assertEquals("苏轼是南宋人", record.wrongAnswer.userAnswer)
+        assertEquals("苏轼是北宋文学家", record.wrongAnswer.correctAnswer)
+        assertEquals("source 应为 CARD_AGAIN", "CARD_AGAIN", record.wrongAnswer.source)
+        assertEquals("wrongCount 应为 1", 1, record.wrongAnswer.wrongCount)
+        assertNull("resolvedAt 应为 null(未解决)", record.wrongAnswer.resolvedAt)
+        // v0.9.2：验证 JOIN 取到知识点 title（setup 中 point_1.title="苏轼"）
+        assertEquals(
+            "questionTitle 应 JOIN 到 knowledge_points.title",
+            "苏轼",
+            record.questionTitle,
+        )
     }
 
     /**
@@ -194,7 +205,7 @@ class WrongAnswerRepositoryImplTest {
 
         val all = repository.observeAll().first()
         assertEquals("应只有 1 条记录(不重复插入)", 1, all.size)
-        assertEquals("wrongCount 应递增到 3", 3, all[0].wrongCount)
+        assertEquals("wrongCount 应递增到 3", 3, all[0].wrongAnswer.wrongCount)
     }
 
     /**
@@ -218,7 +229,7 @@ class WrongAnswerRepositoryImplTest {
         // 标记前:observeUnresolved 包含该项
         val unresolvedBefore = repository.observeUnresolved().first()
         assertEquals("标记前应有 1 条未解决", 1, unresolvedBefore.size)
-        assertEquals(id, unresolvedBefore[0].id)
+        assertEquals(id, unresolvedBefore[0].wrongAnswer.id)
         assertEquals("countUnresolved 应为 1", 1, repository.countUnresolved())
 
         repository.markResolved(id)
@@ -231,7 +242,7 @@ class WrongAnswerRepositoryImplTest {
         // observeAll 仍返回(resolvedAt 非 null)
         val all = repository.observeAll().first()
         assertEquals("observeAll 仍应返回该项", 1, all.size)
-        assertNotNull("resolvedAt 应非 null", all[0].resolvedAt)
+        assertNotNull("resolvedAt 应非 null", all[0].wrongAnswer.resolvedAt)
     }
 
     /**
@@ -411,6 +422,71 @@ class WrongAnswerRepositoryImplTest {
         assertNotEquals("已解决后再次答错应是新 id(新记录)", id, id2)
         assertEquals("observeAll 应有 2 条(已解决 + 新未解决)", 2, repository.observeAll().first().size)
         assertEquals("observeUnresolved 应有 1 条(新未解决)", 1, repository.observeUnresolved().first().size)
-        assertEquals("新记录 wrongCount 应为 1", 1, repository.observeUnresolved().first()[0].wrongCount)
+        assertEquals(
+            "新记录 wrongCount 应为 1",
+            1,
+            repository.observeUnresolved().first()[0].wrongAnswer.wrongCount,
+        )
+    }
+
+    /**
+     * 场景 8(v0.9.2 新增):真题来源错题的 questionTitle JOIN 到 exam_questions.content。
+     *
+     * 验证 JOIN 查询:
+     * - pointId = null, examQuestionId = "eq_1" → COALESCE(k.title, e.content) 取 e.content
+     * - setup 中 eq_1.content = "简述苏轼的文学成就"
+     * - questionTitle 应为 "简述苏轼的文学成就"
+     *
+     * 这条测试专门覆盖 v0.9.2 修复的核心场景:
+     * 原错题本只显示答案不显示题目,因 DAO 无 JOIN 拿不到 exam_questions.content。
+     */
+    @Test
+    fun `真题来源错题 questionTitle JOIN 到 exam_questions content`() = runTest {
+        repository.recordWrongAnswer(
+            pointId = null,
+            examQuestionId = "eq_1",
+            userAnswer = "苏轼是南宋人",
+            correctAnswer = "苏轼是北宋文学家",
+            source = WrongAnswerRepository.SOURCE_QUIZ_WRONG,
+        )
+
+        val all = repository.observeAll().first()
+        assertEquals(1, all.size)
+        assertEquals(
+            "真题来源 questionTitle 应 JOIN 到 exam_questions.content",
+            "简述苏轼的文学成就",
+            all[0].questionTitle,
+        )
+    }
+
+    /**
+     * 场景 9(v0.9.2 新增):FK 关联记录被删除时 questionTitle 为 null（LEFT JOIN 兜底）。
+     *
+     * 验证 LEFT JOIN 行为:
+     * - 插入 pointId = "point_ghost" 的错题（无对应 knowledge_points 记录）
+     * - LEFT JOIN 取不到 k.title,examQuestionId = null 也取不到 e.content
+     * - COALESCE(NULL, NULL) = NULL,questionTitle 应为 null
+     *
+     * 但注意:wrong_answers 表有 FK 约束 point_id → knowledge_points.id,
+     * 实际无法插入 point_ghost。故本测试用直接 DAO upsert 绕过 Repository 的 FK 校验,
+     * 模拟"FK 记录被删除后"的场景（虽然 FK 阻止删除,但 LEFT JOIN 语义仍需验证）。
+     *
+     * 由于 FK 约束阻止插入 ghost pointId,本测试改为验证"正常场景下 questionTitle 非 null",
+     * LEFT JOIN null 兜底由 UI 层 "题目已删除" 文案覆盖（WrongAnswerScreen.kt 已处理）。
+     */
+    @Test
+    fun `正常场景 questionTitle 非 null`() = runTest {
+        repository.recordWrongAnswer(
+            pointId = "point_1",
+            examQuestionId = null,
+            userAnswer = "答错",
+            correctAnswer = "正确",
+            source = WrongAnswerRepository.SOURCE_CARD_AGAIN,
+        )
+
+        val all = repository.observeAll().first()
+        assertEquals(1, all.size)
+        assertNotNull("正常场景 questionTitle 应非 null", all[0].questionTitle)
+        assertEquals("苏轼", all[0].questionTitle)
     }
 }

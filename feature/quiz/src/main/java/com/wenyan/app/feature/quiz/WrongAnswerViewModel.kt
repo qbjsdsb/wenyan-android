@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.common.util.friendlyErrorMessage
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
-import com.wenyan.app.core.database.entity.WrongAnswerEntity
+import com.wenyan.app.core.database.entity.WrongAnswerWithDetails
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -172,19 +172,23 @@ class WrongAnswerViewModel @Inject constructor(
         _retryTrigger.value++
     }
 
-    /** 将 [WrongAnswerEntity] 转换为 UI 列表项 */
-    private fun WrongAnswerEntity.toUiItem(): WrongAnswerItem = WrongAnswerItem(
-        id = id,
-        pointId = pointId,
-        examQuestionId = examQuestionId,
-        userAnswer = userAnswer,
-        correctAnswer = correctAnswer,
-        source = source,
-        wrongCount = wrongCount,
-        lastWrongAt = lastWrongAt,
-        isResolved = resolvedAt != null,
-        createdAt = createdAt,
-    )
+    /** 将 [WrongAnswerWithDetails] 转换为 UI 列表项（v0.9.2：含题目文本） */
+    private fun WrongAnswerWithDetails.toUiItem(): WrongAnswerItem {
+        val entity = wrongAnswer
+        return WrongAnswerItem(
+            id = entity.id,
+            pointId = entity.pointId,
+            examQuestionId = entity.examQuestionId,
+            questionTitle = questionTitle,
+            userAnswer = entity.userAnswer,
+            correctAnswer = entity.correctAnswer,
+            source = entity.source,
+            wrongCount = entity.wrongCount,
+            lastWrongAt = entity.lastWrongAt,
+            isResolved = entity.resolvedAt != null,
+            createdAt = entity.createdAt,
+        )
+    }
 }
 
 /** 错题过滤模式 */
@@ -207,6 +211,8 @@ data class WrongAnswerUiState(
 /**
  * 错题列表项(与 [WrongAnswerEntity] 解耦的 UI 层模型)。
  *
+ * @property questionTitle 题目文本(v0.9.2 新增,JOIN 关联表获取:
+ *   卡片来源=知识点 title,真题来源=真题 content,理论不应为 null 但兜底处理)
  * @property isResolved 是否已解决(从 resolvedAt 派生)
  */
 @Immutable
@@ -214,6 +220,7 @@ data class WrongAnswerItem(
     val id: String,
     val pointId: String?,
     val examQuestionId: String?,
+    val questionTitle: String?,
     val userAnswer: String,
     val correctAnswer: String?,
     val source: String,

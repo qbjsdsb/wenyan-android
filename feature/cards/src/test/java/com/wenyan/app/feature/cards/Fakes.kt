@@ -14,6 +14,7 @@ import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.database.entity.CardTemplateType
 import com.wenyan.app.core.database.entity.MemoRecordEntity
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
+import com.wenyan.app.core.database.entity.WrongAnswerWithDetails
 import com.wenyan.app.core.fsrs.Rating
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -117,8 +118,8 @@ class FakeSchedulingRepository(
  * - [unresolvedCount]:countUnresolved 返回值
  */
 class FakeWrongAnswerRepository(
-    initialAll: List<WrongAnswerEntity> = emptyList(),
-    initialUnresolved: List<WrongAnswerEntity> = emptyList(),
+    initialAll: List<WrongAnswerWithDetails> = emptyList(),
+    initialUnresolved: List<WrongAnswerWithDetails> = emptyList(),
     var unresolvedCount: Int = 0,
 ) : WrongAnswerRepository {
 
@@ -129,9 +130,9 @@ class FakeWrongAnswerRepository(
     val resolvedIds: MutableList<String> = mutableListOf()
     val deletedIds: MutableList<String> = mutableListOf()
 
-    override fun observeAll(): Flow<List<WrongAnswerEntity>> = _all.asStateFlow()
+    override fun observeAll(): Flow<List<WrongAnswerWithDetails>> = _all.asStateFlow()
 
-    override fun observeUnresolved(): Flow<List<WrongAnswerEntity>> = _unresolved.asStateFlow()
+    override fun observeUnresolved(): Flow<List<WrongAnswerWithDetails>> = _unresolved.asStateFlow()
 
     override fun observeByPoint(pointId: String): Flow<List<WrongAnswerEntity>> = flowOf(emptyList())
 

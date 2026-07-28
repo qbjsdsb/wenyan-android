@@ -255,6 +255,14 @@ private fun WrongAnswerList(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     Text("确定删除此错题吗？此操作不可撤销。")
+                    // v0.9.2：Dialog 也显示题目，多条时用户可确认删哪条
+                    item.questionTitle?.takeIf { it.isNotBlank() }?.let { title ->
+                        Text(
+                            text = "题目：${title.take(60)}${if (title.length > 60) "…" else ""}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                     Text(
                         text = "你的答案：${item.userAnswer.take(60)}${if (item.userAnswer.length > 60) "…" else ""}",
                         style = MaterialTheme.typography.bodySmall,
@@ -286,10 +294,11 @@ private fun WrongAnswerList(
  *
  * 结构:
  * 1. 顶部信息行:来源标签 + 答错次数 + 解决状态
- * 2. 用户答案区
- * 3. 正确答案区(如有)
- * 4. 时间行:最后答错时间 + 首次记录时间
- * 5. 操作行:标记已解决(未解决时) / 删除
+ * 2. 题目区(v0.9.2 新增):知识点 title 或真题 content
+ * 3. 用户答案区
+ * 4. 正确答案区(如有)
+ * 5. 时间行:最后答错时间 + 首次记录时间
+ * 6. 操作行:标记已解决(未解决时) / 删除
  */
 @Composable
 private fun WrongAnswerCard(
@@ -324,7 +333,31 @@ private fun WrongAnswerCard(
                 }
             }
 
-            // 2. 用户答案区
+            // 2. 题目区(v0.9.2 新增):展示关联的题目文本
+            //    卡片来源=知识点 title,真题来源=真题 content
+            //    questionTitle 理论不应为 null（FK 保证关联记录存在），
+            //    但 LEFT JOIN 仍可能返回 null（如 FK 记录被删除），兜底显示"题目已删除"
+            val title = item.questionTitle?.takeIf { it.isNotBlank() }
+            Text(
+                text = "题目：",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = Spacing.sm),
+            )
+            Text(
+                text = title ?: "（题目已删除）",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = if (title != null) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                modifier = Modifier.padding(top = Spacing.xs),
+            )
+
+            // 3. 用户答案区
             Text(
                 text = "你的答案：",
                 style = MaterialTheme.typography.labelMedium,

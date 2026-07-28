@@ -1,6 +1,7 @@
 package com.wenyan.app.feature.quiz
 
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
+import com.wenyan.app.core.database.entity.WrongAnswerWithDetails
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -171,21 +172,31 @@ class WrongAnswerViewModelTest {
 
     // ── 辅助方法 ──────────────────────────────────────────────────
 
+    /**
+     * 构造测试用 [WrongAnswerWithDetails]（v0.9.2：JOIN 后的 POJO，含 questionTitle）。
+     *
+     * @param questionTitle 题目文本（默认 "题目 $id" 模拟 JOIN 到的知识点 title；
+     *   测试可传 null 验证"题目已删除"兜底分支）
+     */
     private fun sampleWrongAnswer(
         id: String,
         isResolved: Boolean,
         source: String = "CARD_AGAIN",
-    ) = WrongAnswerEntity(
-        id = id,
-        pointId = "point_$id",
-        examQuestionId = null,
-        userAnswer = "用户答案 $id",
-        correctAnswer = "正确答案 $id",
-        source = source,
-        wrongCount = 1,
-        lastWrongAt = 1000L,
-        resolvedAt = if (isResolved) 2000L else null,
-        aiExplanation = null,
-        createdAt = 500L,
+        questionTitle: String? = "题目 $id",
+    ) = WrongAnswerWithDetails(
+        wrongAnswer = WrongAnswerEntity(
+            id = id,
+            pointId = "point_$id",
+            examQuestionId = null,
+            userAnswer = "用户答案 $id",
+            correctAnswer = "正确答案 $id",
+            source = source,
+            wrongCount = 1,
+            lastWrongAt = 1000L,
+            resolvedAt = if (isResolved) 2000L else null,
+            aiExplanation = null,
+            createdAt = 500L,
+        ),
+        questionTitle = questionTitle,
     )
 }

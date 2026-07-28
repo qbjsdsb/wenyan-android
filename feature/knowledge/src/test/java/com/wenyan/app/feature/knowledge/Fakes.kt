@@ -8,6 +8,7 @@ import com.wenyan.app.core.database.entity.DataSourceEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
+import com.wenyan.app.core.database.entity.WrongAnswerWithDetails
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -202,10 +203,10 @@ class FakeKnowledgeWrongAnswerRepository(
         _byPoint.value = _byPoint.value + (pointId to wrongAnswers)
     }
 
-    override fun observeAll(): Flow<List<WrongAnswerEntity>> =
+    override fun observeAll(): Flow<List<WrongAnswerWithDetails>> =
         throw UnsupportedOperationException("observeAll not used in knowledge detail tests")
 
-    override fun observeUnresolved(): Flow<List<WrongAnswerEntity>> =
+    override fun observeUnresolved(): Flow<List<WrongAnswerWithDetails>> =
         throw UnsupportedOperationException("observeUnresolved not used in knowledge detail tests")
 
     override fun observeByPoint(pointId: String): Flow<List<WrongAnswerEntity>> =
