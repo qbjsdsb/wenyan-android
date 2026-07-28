@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "version": "2.13.0",
+    "version": "2.13.1",
     "generated_at": "2026-07-24T00:01:38.475972",
     "description": "文研App种子数据（南师大文学考研）- v15 章节树重构（ADR-001 B1.3：每科根章节 + 文学史时段子章节，知识点按 tags/title 匹配到子章节） + v16 关联知识点派生（tags → relatedIds）",
     "source": "Phase 1 资料数字化管线输出",
@@ -87,7 +87,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.160050",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00002",
@@ -282,7 +282,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.160274",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00007",
@@ -329,7 +329,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.160301",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00008",
@@ -365,7 +365,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.160317",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00009",
@@ -411,7 +411,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.160333",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00010",
@@ -447,7 +447,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.160347",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00011",
@@ -483,7 +483,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.160361",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00012",
@@ -514,7 +514,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.160375",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00013",
@@ -562,7 +562,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.160393",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00014",
@@ -667,7 +667,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.165117",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00015",
@@ -710,7 +710,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.165161",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00016",
@@ -772,7 +772,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.165788",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00017",
@@ -825,7 +825,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.166262",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00018",
@@ -928,7 +928,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.166705",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00020",
@@ -984,7 +984,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.167171",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00021",
@@ -1025,7 +1025,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.167200",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00022",
@@ -1057,7 +1057,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.167217",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00023",
@@ -1108,7 +1108,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.167639",
-      "exam_frequency": "LOW"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00024",
@@ -1150,7 +1150,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.167664",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00025",
@@ -1237,7 +1237,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.168324",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00026",
@@ -1290,7 +1290,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.168349",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00027",
@@ -1332,7 +1332,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.168367",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00028",
@@ -1453,7 +1453,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.168414",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00031",
@@ -1500,7 +1500,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.168430",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00032",
@@ -1542,7 +1542,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.168445",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00033",
@@ -1589,7 +1589,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.168459",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00034",
@@ -1636,7 +1636,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.168474",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00035",
@@ -1701,7 +1701,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.168947",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00036",
@@ -1754,7 +1754,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.169007",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00037",
@@ -1807,7 +1807,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.169053",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00038",
@@ -1880,7 +1880,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.169545",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00039",
@@ -1928,7 +1928,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.169574",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00040",
@@ -1975,7 +1975,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.169592",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00041",
@@ -2067,7 +2067,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.170038",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00043",
@@ -2115,7 +2115,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.170062",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00044",
@@ -2167,7 +2167,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.170079",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00045",
@@ -2214,7 +2214,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.170095",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00046",
@@ -2267,7 +2267,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.170112",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00047",
@@ -2333,7 +2333,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.170533",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00048",
@@ -2381,7 +2381,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.170562",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00049",
@@ -2434,7 +2434,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.170581",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00050",
@@ -2477,7 +2477,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.170596",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00051",
@@ -2550,7 +2550,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.170625",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00053",
@@ -2602,7 +2602,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.170641",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00054",
@@ -2644,7 +2644,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.170656",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00055",
@@ -2711,7 +2711,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.170673",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00056",
@@ -2758,7 +2758,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.170688",
-      "exam_frequency": "LOW"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00057",
@@ -2799,7 +2799,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.170702",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00058",
@@ -2846,7 +2846,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.170718",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00059",
@@ -2887,7 +2887,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.170732",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00060",
@@ -2952,7 +2952,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.171161",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00061",
@@ -3004,7 +3004,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.171186",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00062",
@@ -3056,7 +3056,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.171203",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00063",
@@ -3108,7 +3108,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.171219",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00064",
@@ -3178,7 +3178,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.171610",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00065",
@@ -3236,7 +3236,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.172026",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00066",
@@ -3324,7 +3324,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.172066",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00068",
@@ -3371,7 +3371,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.172082",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00069",
@@ -3425,7 +3425,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.172408",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00070",
@@ -3560,7 +3560,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.173168",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00072",
@@ -3607,7 +3607,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.173200",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00073",
@@ -3648,7 +3648,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.173217",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00074",
@@ -3694,7 +3694,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.173233",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00075",
@@ -3753,7 +3753,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.173667",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00076",
@@ -3797,7 +3797,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.174029",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00077",
@@ -3844,7 +3844,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.174053",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00078",
@@ -3891,7 +3891,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.174072",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00079",
@@ -3950,7 +3950,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.174599",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00080",
@@ -4020,7 +4020,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.175193",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00081",
@@ -4061,7 +4061,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.175219",
-      "exam_frequency": "LOW"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00082",
@@ -4204,7 +4204,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.175581",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00085",
@@ -4245,7 +4245,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.175598",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00086",
@@ -4291,7 +4291,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.175613",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00087",
@@ -4327,7 +4327,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.175627",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00088",
@@ -4405,7 +4405,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.175659",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00090",
@@ -4452,7 +4452,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.175673",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00091",
@@ -4504,7 +4504,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.175688",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00092",
@@ -4561,7 +4561,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.175705",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00093",
@@ -4608,7 +4608,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.175720",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00094",
@@ -4655,7 +4655,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.175737",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00095",
@@ -4697,7 +4697,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.175751",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00096",
@@ -4744,7 +4744,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.175766",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00097",
@@ -4810,7 +4810,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.176126",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00098",
@@ -4853,7 +4853,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.176154",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00099",
@@ -5010,7 +5010,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.176251",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00102",
@@ -5059,7 +5059,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.176283",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00103",
@@ -5161,7 +5161,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.176318",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00105",
@@ -5215,7 +5215,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.176334",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00106",
@@ -5377,7 +5377,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.176382",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00109",
@@ -5421,7 +5421,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.176396",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00110",
@@ -5480,7 +5480,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.176415",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00111",
@@ -5613,7 +5613,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.176820",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00113",
@@ -5667,7 +5667,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.176840",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00114",
@@ -5721,7 +5721,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.176857",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00115",
@@ -5932,7 +5932,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.176922",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00119",
@@ -6025,7 +6025,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.176952",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00121",
@@ -6074,7 +6074,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.176969",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00122",
@@ -6118,7 +6118,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.176985",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00123",
@@ -6167,7 +6167,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.177001",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00124",
@@ -6221,7 +6221,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.177017",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00125",
@@ -6324,7 +6324,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.177048",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00127",
@@ -6378,7 +6378,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.177064",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00128",
@@ -6495,7 +6495,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.177361",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00130",
@@ -6657,7 +6657,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.180723",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00133",
@@ -6941,7 +6941,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.181525",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00139",
@@ -6980,7 +6980,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.181543",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00140",
@@ -7034,7 +7034,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.181559",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00141",
@@ -7083,7 +7083,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.181575",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00142",
@@ -7132,7 +7132,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.181591",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00143",
@@ -7181,7 +7181,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.181607",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00144",
@@ -7230,7 +7230,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.181623",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00145",
@@ -7273,7 +7273,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.181638",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00146",
@@ -7322,7 +7322,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.181654",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00147",
@@ -7360,7 +7360,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.181668",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00148",
@@ -7398,7 +7398,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.181682",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00149",
@@ -7458,7 +7458,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182026",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00150",
@@ -7506,7 +7506,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182052",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00151",
@@ -7548,7 +7548,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182068",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00152",
@@ -7590,7 +7590,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182083",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00153",
@@ -7634,7 +7634,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182098",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00154",
@@ -7750,7 +7750,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182145",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00156",
@@ -7838,7 +7838,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182165",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00157",
@@ -7916,7 +7916,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182184",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00158",
@@ -7986,7 +7986,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182509",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00159",
@@ -8035,7 +8035,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182528",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00160",
@@ -8110,7 +8110,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182813",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00161",
@@ -8163,7 +8163,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182834",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00162",
@@ -8265,7 +8265,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182866",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00164",
@@ -8406,7 +8406,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182911",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00167",
@@ -8455,7 +8455,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182926",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00168",
@@ -8499,7 +8499,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182941",
-      "exam_frequency": "LOW"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00169",
@@ -8558,7 +8558,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182958",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00170",
@@ -8617,7 +8617,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182974",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00171",
@@ -8676,7 +8676,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.182990",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00172",
@@ -8724,7 +8724,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183007",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00173",
@@ -8778,7 +8778,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183044",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00174",
@@ -9004,7 +9004,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183230",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00178",
@@ -9122,7 +9122,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183283",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00180",
@@ -9166,7 +9166,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183306",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00181",
@@ -9220,7 +9220,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183348",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00182",
@@ -9348,7 +9348,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183453",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00184",
@@ -9436,7 +9436,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183537",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00186",
@@ -9485,7 +9485,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183576",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00187",
@@ -9533,7 +9533,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183614",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00188",
@@ -9575,7 +9575,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183650",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00189",
@@ -9629,7 +9629,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183690",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00190",
@@ -9677,7 +9677,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183738",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00191",
@@ -9720,7 +9720,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183777",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00192",
@@ -9763,7 +9763,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183815",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00193",
@@ -9811,7 +9811,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183855",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00194",
@@ -9875,7 +9875,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183901",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00195",
@@ -9948,7 +9948,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183949",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00196",
@@ -10011,7 +10011,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.183994",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00197",
@@ -10064,7 +10064,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184034",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00198",
@@ -10117,7 +10117,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184073",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00199",
@@ -10190,7 +10190,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184121",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00200",
@@ -10243,7 +10243,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184162",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00201",
@@ -10296,7 +10296,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184208",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00202",
@@ -10412,7 +10412,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184301",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00204",
@@ -10465,7 +10465,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184351",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00205",
@@ -10581,7 +10581,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184415",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00207",
@@ -10717,7 +10717,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184472",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00209",
@@ -10785,7 +10785,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184500",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00210",
@@ -10848,7 +10848,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184528",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00211",
@@ -10911,7 +10911,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184555",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00212",
@@ -10984,7 +10984,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184607",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00213",
@@ -11057,7 +11057,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184650",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00214",
@@ -11104,7 +11104,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184675",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00215",
@@ -11156,7 +11156,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184699",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00216",
@@ -11208,7 +11208,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184736",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00217",
@@ -11271,7 +11271,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184794",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00218",
@@ -11334,7 +11334,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184850",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00219",
@@ -11382,7 +11382,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.184890",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00220",
@@ -11428,7 +11428,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.185861",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00221",
@@ -11475,7 +11475,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.185901",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00222",
@@ -11517,7 +11517,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.185926",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00223",
@@ -11559,7 +11559,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.185949",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00224",
@@ -11616,7 +11616,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.185974",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00225",
@@ -11679,7 +11679,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186001",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00226",
@@ -11742,7 +11742,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186029",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00227",
@@ -11868,7 +11868,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186083",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00229",
@@ -11931,7 +11931,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186109",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00230",
@@ -11984,7 +11984,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186134",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00231",
@@ -12047,7 +12047,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186160",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00232",
@@ -12095,7 +12095,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186184",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00233",
@@ -12137,7 +12137,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186208",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00234",
@@ -12180,7 +12180,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186234",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00235",
@@ -12254,7 +12254,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186263",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00236",
@@ -12323,7 +12323,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186293",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00237",
@@ -12372,7 +12372,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186331",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00238",
@@ -12431,7 +12431,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186380",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00239",
@@ -12495,7 +12495,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186426",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00240",
@@ -12586,7 +12586,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186486",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00241",
@@ -12619,7 +12619,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186529",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00242",
@@ -12699,7 +12699,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186582",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00243",
@@ -12794,7 +12794,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186637",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00244",
@@ -12907,7 +12907,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186695",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00246",
@@ -12987,7 +12987,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186716",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00247",
@@ -13062,7 +13062,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186734",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00248",
@@ -13106,7 +13106,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.186751",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00249",
@@ -13185,7 +13185,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.187652",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00250",
@@ -13330,7 +13330,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.187706",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00252",
@@ -13392,7 +13392,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.187726",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00253",
@@ -13464,7 +13464,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.187761",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00254",
@@ -13813,7 +13813,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.187940",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00259",
@@ -13859,7 +13859,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.187956",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00260",
@@ -13991,7 +13991,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.187993",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00262",
@@ -14051,7 +14051,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188011",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00263",
@@ -14100,7 +14100,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188027",
-      "exam_frequency": "LOW"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00264",
@@ -14162,7 +14162,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188044",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00265",
@@ -14283,7 +14283,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188079",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00267",
@@ -14345,7 +14345,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188096",
-      "exam_frequency": "LOW"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00268",
@@ -14385,7 +14385,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188111",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00269",
@@ -14430,7 +14430,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188126",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00270",
@@ -14511,7 +14511,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188147",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00271",
@@ -14566,7 +14566,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188164",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00272",
@@ -14615,7 +14615,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188179",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00273",
@@ -14670,7 +14670,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188195",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00274",
@@ -14731,7 +14731,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188212",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00275",
@@ -14791,7 +14791,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188230",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00276",
@@ -14876,7 +14876,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188249",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00277",
@@ -14946,7 +14946,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188272",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00278",
@@ -15002,7 +15002,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188327",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00279",
@@ -15068,7 +15068,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188358",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00280",
@@ -15143,7 +15143,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188380",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00281",
@@ -15230,7 +15230,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188401",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00282",
@@ -15313,7 +15313,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188422",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00283",
@@ -15360,7 +15360,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188439",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00284",
@@ -15416,7 +15416,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188456",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00285",
@@ -15500,7 +15500,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188484",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00287",
@@ -15548,7 +15548,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188499",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00288",
@@ -15589,7 +15589,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188514",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00289",
@@ -15636,7 +15636,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188528",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00290",
@@ -15688,7 +15688,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188544",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00291",
@@ -15842,7 +15842,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188591",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00294",
@@ -15894,7 +15894,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188607",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00295",
@@ -15942,7 +15942,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188622",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00296",
@@ -16000,7 +16000,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188639",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00297",
@@ -16043,7 +16043,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188653",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00298",
@@ -16101,7 +16101,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188669",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00299",
@@ -16144,7 +16144,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188684",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00300",
@@ -16182,7 +16182,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188698",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00301",
@@ -16234,7 +16234,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188714",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00302",
@@ -16277,7 +16277,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188728",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00303",
@@ -16340,7 +16340,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188745",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00304",
@@ -16393,7 +16393,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188761",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00305",
@@ -16452,7 +16452,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188777",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00306",
@@ -16505,7 +16505,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188792",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00307",
@@ -16559,7 +16559,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188808",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00308",
@@ -16607,7 +16607,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188823",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00309",
@@ -16666,7 +16666,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188839",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00310",
@@ -16735,7 +16735,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188861",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00311",
@@ -16826,7 +16826,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188909",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00313",
@@ -16889,7 +16889,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188926",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00314",
@@ -16957,7 +16957,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188943",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00315",
@@ -17000,7 +17000,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188957",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00316",
@@ -17044,7 +17044,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188972",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00317",
@@ -17092,7 +17092,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.188996",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00318",
@@ -17155,7 +17155,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189013",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00319",
@@ -17203,7 +17203,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189028",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00320",
@@ -17246,7 +17246,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189042",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00321",
@@ -17284,7 +17284,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189055",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00322",
@@ -17327,7 +17327,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189070",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00323",
@@ -17380,7 +17380,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189090",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00324",
@@ -17429,7 +17429,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189105",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00325",
@@ -17483,7 +17483,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189121",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00326",
@@ -17537,7 +17537,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189137",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00327",
@@ -17575,7 +17575,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189151",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00328",
@@ -17624,7 +17624,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189166",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00329",
@@ -17673,7 +17673,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189182",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00330",
@@ -17733,7 +17733,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189233",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00331",
@@ -17777,7 +17777,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189249",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00332",
@@ -17836,7 +17836,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189269",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00333",
@@ -17890,7 +17890,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189285",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00334",
@@ -17938,7 +17938,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189300",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00335",
@@ -17987,7 +17987,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189315",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00336",
@@ -18036,7 +18036,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189330",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00337",
@@ -18090,7 +18090,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189349",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00338",
@@ -18133,7 +18133,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189364",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00339",
@@ -18187,7 +18187,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189380",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00340",
@@ -18242,7 +18242,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189396",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00341",
@@ -18297,7 +18297,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189412",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00342",
@@ -18352,7 +18352,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189431",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00343",
@@ -18406,7 +18406,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189452",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00344",
@@ -18460,7 +18460,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189467",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00345",
@@ -18520,7 +18520,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189484",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00346",
@@ -18565,7 +18565,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189499",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00347",
@@ -18659,7 +18659,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189528",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00349",
@@ -18704,7 +18704,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189547",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00350",
@@ -18834,7 +18834,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189603",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00353",
@@ -18976,7 +18976,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189650",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00356",
@@ -19031,7 +19031,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189666",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00357",
@@ -19085,7 +19085,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189686",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00358",
@@ -19135,7 +19135,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189702",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00359",
@@ -19239,7 +19239,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189733",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00361",
@@ -19393,7 +19393,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189786",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00364",
@@ -19451,7 +19451,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189809",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00365",
@@ -19504,7 +19504,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189825",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00366",
@@ -19552,7 +19552,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189840",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00367",
@@ -19605,7 +19605,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189860",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00368",
@@ -19658,7 +19658,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189897",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00369",
@@ -19710,7 +19710,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189942",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00370",
@@ -19763,7 +19763,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.189990",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00371",
@@ -19821,7 +19821,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190044",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00372",
@@ -19879,7 +19879,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190075",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00373",
@@ -19937,7 +19937,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190093",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00374",
@@ -19990,7 +19990,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190110",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00375",
@@ -20038,7 +20038,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190125",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00376",
@@ -20096,7 +20096,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190142",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00377",
@@ -20149,7 +20149,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190158",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00378",
@@ -20202,7 +20202,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190178",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00379",
@@ -20260,7 +20260,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190195",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00380",
@@ -20313,7 +20313,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190212",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00381",
@@ -20366,7 +20366,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190228",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00382",
@@ -20419,7 +20419,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190247",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00383",
@@ -20530,7 +20530,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190279",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00385",
@@ -20583,7 +20583,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190298",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00386",
@@ -20641,7 +20641,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190315",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00387",
@@ -20699,7 +20699,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190331",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00388",
@@ -20757,7 +20757,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190351",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00389",
@@ -20820,7 +20820,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190369",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00390",
@@ -20873,7 +20873,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190385",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00391",
@@ -20931,7 +20931,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190401",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00392",
@@ -21090,7 +21090,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190460",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00395",
@@ -21153,7 +21153,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190477",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00396",
@@ -21201,7 +21201,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190492",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00397",
@@ -21259,7 +21259,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190509",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00398",
@@ -21317,7 +21317,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190524",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00399",
@@ -21380,7 +21380,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190540",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00400",
@@ -21433,7 +21433,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190560",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00401",
@@ -21481,7 +21481,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190575",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00402",
@@ -21524,7 +21524,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190597",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00403",
@@ -21577,7 +21577,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190613",
-      "exam_frequency": "MEDIUM"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00404",
@@ -21635,7 +21635,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190630",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00405",
@@ -21678,7 +21678,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190644",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00406",
@@ -21736,7 +21736,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190661",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00407",
@@ -21789,7 +21789,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190681",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00408",
@@ -21837,7 +21837,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190700",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00409",
@@ -21879,7 +21879,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190714",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00410",
@@ -21942,7 +21942,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190732",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00411",
@@ -21995,7 +21995,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190747",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00412",
@@ -22043,7 +22043,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190765",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00413",
@@ -22096,7 +22096,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190781",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00414",
@@ -22138,7 +22138,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190800",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00415",
@@ -22175,7 +22175,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190816",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00416",
@@ -22223,7 +22223,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190832",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00417",
@@ -22276,7 +22276,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190867",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00418",
@@ -22329,7 +22329,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190922",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00419",
@@ -22419,7 +22419,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190963",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00421",
@@ -22477,7 +22477,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.190984",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00422",
@@ -22530,7 +22530,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.191003",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00423",
@@ -22679,7 +22679,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.191050",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00426",
@@ -22732,7 +22732,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.191065",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00427",
@@ -22828,7 +22828,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.191106",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00429",
@@ -22971,7 +22971,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.191151",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00432",
@@ -23268,7 +23268,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.191266",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00438",
@@ -23453,7 +23453,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.191323",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00442",
@@ -23650,7 +23650,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.191391",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00446",
@@ -24000,7 +24000,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.191894",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00453",
@@ -24096,7 +24096,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.191991",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00455",
@@ -24449,7 +24449,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.192628",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00462",
@@ -24506,7 +24506,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.192649",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00463",
@@ -24568,7 +24568,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.192667",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00464",
@@ -24621,7 +24621,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.192689",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00465",
@@ -24674,7 +24674,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.192706",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00466",
@@ -24736,7 +24736,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.192724",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00467",
@@ -24784,7 +24784,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.192740",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00468",
@@ -24837,7 +24837,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.192756",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00469",
@@ -24894,7 +24894,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.192773",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00470",
@@ -24947,7 +24947,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.192789",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00471",
@@ -25004,7 +25004,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.192806",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00472",
@@ -25057,7 +25057,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.192821",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00473",
@@ -25109,7 +25109,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.192838",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00474",
@@ -25162,7 +25162,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.192854",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00475",
@@ -25339,7 +25339,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.193725",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00478",
@@ -25396,7 +25396,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.193760",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00479",
@@ -25459,7 +25459,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.193783",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00480",
@@ -25565,7 +25565,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.193818",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00482",
@@ -25613,7 +25613,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.193834",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00483",
@@ -25676,7 +25676,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.193852",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00484",
@@ -25729,7 +25729,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.193877",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00485",
@@ -25840,7 +25840,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.193966",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00487",
@@ -25893,7 +25893,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.193985",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00488",
@@ -25951,7 +25951,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.194003",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00489",
@@ -26004,7 +26004,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.194019",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00490",
@@ -26057,7 +26057,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.194036",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00491",
@@ -26216,7 +26216,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.194126",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00494",
@@ -26274,7 +26274,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.194154",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00495",
@@ -26332,7 +26332,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.194176",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00496",
@@ -26390,7 +26390,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.194194",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00497",
@@ -26448,7 +26448,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.194212",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00498",
@@ -26489,7 +26489,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.194226",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00499",
@@ -26582,7 +26582,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.194919",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00500",
@@ -26640,7 +26640,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.194946",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00501",
@@ -26698,7 +26698,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.194966",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00502",
@@ -26756,7 +26756,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.194984",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00503",
@@ -26819,7 +26819,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.195003",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00504",
@@ -26978,7 +26978,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.195053",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00507",
@@ -27031,7 +27031,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.195075",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00508",
@@ -27079,7 +27079,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.195110",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00509",
@@ -27180,7 +27180,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.195147",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00511",
@@ -27291,7 +27291,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.195181",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00513",
@@ -27344,7 +27344,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.195197",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00514",
@@ -27402,7 +27402,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.195214",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00515",
@@ -27543,7 +27543,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.195936",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00517",
@@ -27596,7 +27596,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.195969",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00518",
@@ -27702,7 +27702,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196007",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00520",
@@ -27813,7 +27813,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196043",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00522",
@@ -27924,7 +27924,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196083",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00524",
@@ -28025,7 +28025,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196116",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00526",
@@ -28073,7 +28073,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196132",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00527",
@@ -28116,7 +28116,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196148",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00528",
@@ -28158,7 +28158,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196162",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00529",
@@ -28195,7 +28195,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196177",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00530",
@@ -28322,7 +28322,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196223",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00533",
@@ -28364,7 +28364,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196238",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00534",
@@ -28412,7 +28412,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196254",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00535",
@@ -28465,7 +28465,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196270",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00536",
@@ -28507,7 +28507,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196286",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00537",
@@ -28544,7 +28544,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196301",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00538",
@@ -28602,7 +28602,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196317",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00539",
@@ -28655,7 +28655,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196334",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00540",
@@ -28728,7 +28728,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196355",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00541",
@@ -28776,7 +28776,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196375",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00542",
@@ -28824,7 +28824,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196393",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00543",
@@ -28924,7 +28924,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196425",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00545",
@@ -29026,7 +29026,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196478",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00547",
@@ -29069,7 +29069,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196522",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00548",
@@ -29112,7 +29112,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196570",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00549",
@@ -29149,7 +29149,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196614",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00550",
@@ -29197,7 +29197,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196663",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00551",
@@ -29246,7 +29246,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196713",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00552",
@@ -29336,7 +29336,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196787",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00554",
@@ -29385,7 +29385,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196828",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00555",
@@ -29428,7 +29428,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196869",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00556",
@@ -29482,7 +29482,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196916",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00557",
@@ -29530,7 +29530,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196943",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00558",
@@ -29594,7 +29594,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.196963",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00559",
@@ -29733,7 +29733,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197014",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00562",
@@ -29786,7 +29786,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197031",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00563",
@@ -29882,7 +29882,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197064",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00565",
@@ -29935,7 +29935,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197080",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00566",
@@ -29984,7 +29984,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197098",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00567",
@@ -30038,7 +30038,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197115",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00568",
@@ -30092,7 +30092,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197132",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00569",
@@ -30252,7 +30252,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197184",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00572",
@@ -30305,7 +30305,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197201",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00573",
@@ -30408,7 +30408,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197234",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00575",
@@ -30462,7 +30462,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197270",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00576",
@@ -30547,7 +30547,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197303",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00578",
@@ -30605,7 +30605,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197322",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00579",
@@ -30656,7 +30656,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197338",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00580",
@@ -30704,7 +30704,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197353",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00581",
@@ -30772,7 +30772,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197371",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00582",
@@ -30825,7 +30825,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197397",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00583",
@@ -30879,7 +30879,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197414",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00584",
@@ -30911,7 +30911,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197428",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00585",
@@ -30959,7 +30959,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197444",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00586",
@@ -31023,7 +31023,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197461",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00587",
@@ -31066,7 +31066,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197476",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00588",
@@ -31124,7 +31124,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197492",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00589",
@@ -31177,7 +31177,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197508",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00590",
@@ -31225,7 +31225,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197523",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00591",
@@ -31267,7 +31267,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197537",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00592",
@@ -31352,7 +31352,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197571",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00594",
@@ -31395,7 +31395,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197608",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00595",
@@ -31502,7 +31502,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197668",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00597",
@@ -31604,7 +31604,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197700",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00599",
@@ -31711,7 +31711,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197732",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00601",
@@ -31760,7 +31760,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197747",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00602",
@@ -31809,7 +31809,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197768",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00603",
@@ -31863,7 +31863,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197785",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00604",
@@ -31906,7 +31906,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197800",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00605",
@@ -31959,7 +31959,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197815",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00606",
@@ -32012,7 +32012,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197835",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00607",
@@ -32054,7 +32054,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197850",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00608",
@@ -32096,7 +32096,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197865",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00609",
@@ -32176,7 +32176,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197893",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00611",
@@ -32224,7 +32224,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197914",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00612",
@@ -32267,7 +32267,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197935",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00613",
@@ -32320,7 +32320,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197960",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00614",
@@ -32368,7 +32368,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197975",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00615",
@@ -32421,7 +32421,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.197990",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00616",
@@ -32474,7 +32474,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198005",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00617",
@@ -32539,7 +32539,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198023",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00618",
@@ -32587,7 +32587,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198039",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00619",
@@ -32630,7 +32630,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198053",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00620",
@@ -32677,7 +32677,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198072",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00621",
@@ -32720,7 +32720,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198087",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00622",
@@ -32758,7 +32758,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198104",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00623",
@@ -32812,7 +32812,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198120",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00624",
@@ -32861,7 +32861,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198146",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00625",
@@ -32920,7 +32920,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198182",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00626",
@@ -32973,7 +32973,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198201",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00627",
@@ -33016,7 +33016,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198216",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00628",
@@ -33065,7 +33065,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198237",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00629",
@@ -33113,7 +33113,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198253",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00630",
@@ -33156,7 +33156,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198268",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00631",
@@ -33210,7 +33210,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198284",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00632",
@@ -33258,7 +33258,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198302",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00633",
@@ -33306,7 +33306,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198318",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00634",
@@ -33360,7 +33360,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198335",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00635",
@@ -33408,7 +33408,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198354",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00636",
@@ -33456,7 +33456,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198371",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00637",
@@ -33504,7 +33504,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198391",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00638",
@@ -33563,7 +33563,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198410",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00639",
@@ -33696,7 +33696,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198447",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00641",
@@ -33760,7 +33760,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198469",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00642",
@@ -33953,7 +33953,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198529",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00645",
@@ -34007,7 +34007,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198546",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00646",
@@ -34072,7 +34072,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198565",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00647",
@@ -34132,7 +34132,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198582",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00648",
@@ -34181,7 +34181,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198598",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00649",
@@ -34246,7 +34246,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198619",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00650",
@@ -34376,7 +34376,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198654",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00652",
@@ -34510,7 +34510,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198729",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00654",
@@ -34685,7 +34685,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198839",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00657",
@@ -34740,7 +34740,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198857",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00658",
@@ -34884,7 +34884,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198895",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00660",
@@ -34938,7 +34938,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198911",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00661",
@@ -35009,7 +35009,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198929",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00662",
@@ -35074,7 +35074,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198950",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00663",
@@ -35149,7 +35149,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.198975",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00664",
@@ -35198,7 +35198,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199020",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00665",
@@ -35272,7 +35272,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199075",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00666",
@@ -35342,7 +35342,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199124",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00667",
@@ -35402,7 +35402,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199174",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00668",
@@ -35467,7 +35467,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199229",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00669",
@@ -35522,7 +35522,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199276",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00670",
@@ -35571,7 +35571,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199321",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00671",
@@ -35626,7 +35626,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199364",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00672",
@@ -35691,7 +35691,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199417",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00673",
@@ -35762,7 +35762,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199442",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00674",
@@ -35837,7 +35837,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199513",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00675",
@@ -35902,7 +35902,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199532",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00676",
@@ -35972,7 +35972,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199562",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00677",
@@ -36069,7 +36069,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199588",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00678",
@@ -36155,7 +36155,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199613",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00679",
@@ -36221,7 +36221,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199631",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00680",
@@ -36270,7 +36270,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199647",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00681",
@@ -36399,7 +36399,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199693",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00683",
@@ -36448,7 +36448,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199730",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00684",
@@ -36507,7 +36507,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199761",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00685",
@@ -36566,7 +36566,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199779",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00686",
@@ -36620,7 +36620,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199795",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00687",
@@ -36674,7 +36674,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199811",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00688",
@@ -36777,7 +36777,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199842",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00690",
@@ -36841,7 +36841,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199859",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00691",
@@ -36885,7 +36885,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199874",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00692",
@@ -36929,7 +36929,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199897",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00693",
@@ -36983,7 +36983,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199914",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00694",
@@ -37027,7 +37027,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199928",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00695",
@@ -37081,7 +37081,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199947",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00696",
@@ -37125,7 +37125,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199963",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00697",
@@ -37164,7 +37164,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199977",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00698",
@@ -37218,7 +37218,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.199993",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00699",
@@ -37272,7 +37272,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.200012",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00700",
@@ -37336,7 +37336,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.200036",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00701",
@@ -37655,7 +37655,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.200134",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00707",
@@ -37753,7 +37753,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.200169",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00709",
@@ -38224,7 +38224,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.200342",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00718",
@@ -38361,7 +38361,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.200392",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00721",
@@ -38415,7 +38415,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.200410",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00722",
@@ -38581,7 +38581,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.200512",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00725",
@@ -38684,7 +38684,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.200567",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00727",
@@ -38727,7 +38727,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.200587",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00728",
@@ -38763,7 +38763,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.200602",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00729",
@@ -38945,7 +38945,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.201305",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00732",
@@ -38992,7 +38992,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.201346",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00733",
@@ -39028,7 +39028,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.201371",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00734",
@@ -39217,7 +39217,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.201959",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00738",
@@ -39307,7 +39307,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.201991",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00740",
@@ -39360,7 +39360,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.202008",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00741",
@@ -39397,7 +39397,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.202024",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00742",
@@ -39455,7 +39455,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.202043",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00743",
@@ -39492,7 +39492,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.202059",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00744",
@@ -39571,7 +39571,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.202091",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00746",
@@ -39760,7 +39760,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.202154",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00750",
@@ -40241,7 +40241,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.202403",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00760",
@@ -40718,7 +40718,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.202589",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00770",
@@ -40915,7 +40915,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.202658",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00774",
@@ -41109,7 +41109,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.203425",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00777",
@@ -41473,7 +41473,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.203550",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00784",
@@ -41574,7 +41574,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.203583",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00786",
@@ -42220,7 +42220,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.203878",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00799",
@@ -42305,7 +42305,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.203909",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00801",
@@ -42410,7 +42410,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.203952",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00803",
@@ -42478,7 +42478,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.203972",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00804",
@@ -42531,7 +42531,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.203989",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00805",
@@ -42579,7 +42579,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204005",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00806",
@@ -42665,7 +42665,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204035",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00808",
@@ -42760,7 +42760,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204070",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00810",
@@ -42807,7 +42807,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204086",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00811",
@@ -42850,7 +42850,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204101",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00812",
@@ -42908,7 +42908,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204118",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00813",
@@ -42956,7 +42956,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204133",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00814",
@@ -43014,7 +43014,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204149",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00815",
@@ -43062,7 +43062,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204165",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00816",
@@ -43100,7 +43100,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204184",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00817",
@@ -43274,7 +43274,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204235",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00820",
@@ -43327,7 +43327,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204251",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00821",
@@ -43438,7 +43438,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204288",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00823",
@@ -43543,7 +43543,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204325",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00825",
@@ -43975,7 +43975,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204464",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00833",
@@ -44032,7 +44032,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204481",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00834",
@@ -44080,7 +44080,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204497",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00835",
@@ -44170,7 +44170,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204541",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00837",
@@ -44218,7 +44218,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204558",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00838",
@@ -44266,7 +44266,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204577",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00839",
@@ -44366,7 +44366,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204610",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00841",
@@ -44410,7 +44410,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.204625",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00842",
@@ -44466,7 +44466,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.205206",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00843",
@@ -44565,7 +44565,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.205250",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00845",
@@ -44602,7 +44602,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.205265",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00846",
@@ -44671,7 +44671,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.205336",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00848",
@@ -44752,7 +44752,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.205508",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00850",
@@ -44789,7 +44789,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.205564",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00851",
@@ -44826,7 +44826,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.205603",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00852",
@@ -44863,7 +44863,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.205638",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00853",
@@ -44900,7 +44900,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.205657",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00854",
@@ -45022,7 +45022,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.205705",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00857",
@@ -45059,7 +45059,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.205720",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00858",
@@ -45131,7 +45131,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206379",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00859",
@@ -45188,7 +45188,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206405",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00860",
@@ -45293,7 +45293,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206463",
-      "exam_frequency": "MEDIUM"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00863",
@@ -45330,7 +45330,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206478",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00864",
@@ -45367,7 +45367,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206493",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00865",
@@ -45404,7 +45404,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206508",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00866",
@@ -45441,7 +45441,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206523",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00867",
@@ -45495,7 +45495,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206541",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00868",
@@ -45532,7 +45532,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206556",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00869",
@@ -45703,7 +45703,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206628",
-      "exam_frequency": "MEDIUM"
+      "exam_frequency": "NEVER"
     },
     {
       "id": "kp_00874",
@@ -45740,7 +45740,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206643",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00875",
@@ -45773,7 +45773,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206657",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00876",
@@ -45874,7 +45874,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206689",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00878",
@@ -45922,7 +45922,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206706",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00879",
@@ -45964,7 +45964,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206721",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00880",
@@ -46057,7 +46057,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206757",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00882",
@@ -46137,7 +46137,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206786",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00884",
@@ -46170,7 +46170,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206801",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00885",
@@ -46251,7 +46251,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206832",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00887",
@@ -46288,7 +46288,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206846",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00888",
@@ -46330,7 +46330,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206861",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00889",
@@ -46368,7 +46368,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.206876",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00890",
@@ -46690,7 +46690,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.207004",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00898",
@@ -46853,7 +46853,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.207135",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "LOW"
     },
     {
       "id": "kp_00901",
@@ -46885,7 +46885,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.207205",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00902",
@@ -46938,7 +46938,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.207265",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00903",
@@ -46976,7 +46976,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.207306",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00904",
@@ -47142,7 +47142,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.207401",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "MEDIUM"
     },
     {
       "id": "kp_00907",
@@ -47180,7 +47180,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.207417",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00908",
@@ -47224,7 +47224,7 @@
         "其他"
       ],
       "merged_at": "2026-07-17T03:16:25.207432",
-      "exam_frequency": "NEVER"
+      "exam_frequency": "HIGH"
     },
     {
       "id": "kp_00909",
@@ -47369,7 +47369,7 @@
         "其他"
       ],
       "merged_at": "2026-07-23T00:00:00.000000",
-      "exam_frequency": "LOW"
+      "exam_frequency": "HIGH"
     }
   ],
   "exam_questions": [
