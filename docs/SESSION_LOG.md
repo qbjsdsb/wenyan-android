@@ -4640,3 +4640,57 @@ CardSplitterTest 新增 1 个场景：
    - 真题 Tab TopBar 不再有错题本图标（Inbox 入口已移除）
 4. **CI 账单问题解决后**：重新用正式 keystore 构建 release APK 并替换 v0.8.18/v0.9.0 asset
 5. **R8 启用准备**：P1-PG 规则已就绪 + B5.1 GraphSkeleton 路径已修正，emulator 实测无崩溃后可切换 isMinifyEnabled=true
+
+---
+
+## 2026-07-28 v0.9.0 Release（staff-engineer-mode 严谨发布）
+
+### 发布决策（per Agent Event Policy）
+
+按 staff-engineer-mode Iron Law，发布前依次完成三项 specialist review：
+
+1. **agent-pr-review**（version bump commit e6cb040）：✅ Ready — 机械版本号修改，无 scope creep，assembleDebug + assembleRelease + testDebugUnitTest（403 tests, 0 failures）全绿
+2. **Production Readiness Review (PRR)**：✅ Go — 无 blocker，Exception E1（CI 账单 → 本地构建 + gh 上传 + debug 签名）用户已接受（v0.8.14-v0.8.18 一致），rollback path = uninstall v0.9.0 + install v0.8.18
+3. **Release Build Reproducibility (RBR)**：✅ Go — pinned inputs（JDK 17.0.2 + Gradle 8.14.4 via mise.toml）+ reproducible build + traceable promotion（e6cb040 → b2485ad → tag v0.9.0 → GitHub Release），E1 debug 签名已接受
+
+### 发布执行
+
+| 步骤 | 命令/操作 | 结果 |
+|------|-----------|------|
+| 版本号 bump | app/build.gradle.kts versionCode 26→27, versionName "0.8.18"→"0.9.0" | commit e6cb040 |
+| 本地构建 | :app:assembleDebug + :app:assembleRelease | ✅ BUILD SUCCESSFUL |
+| 本地测试 | testDebugUnitTest | ✅ 403 tests, 0 failures |
+| Receipt 撰写 | docs/release-receipts/v0.9.0-receipt.md | commit b2485ad |
+| gh auth setup | gh auth setup-git | ✅ credential helper 配置 |
+| 推送 commits | git push origin trae/agent-Ajea3B:main | ✅ e6cb040 + b2485ad pushed |
+| 推送 tag | git push origin v0.9.0 | ✅ tag pushed (targetCommitish=main, points to b2485ad) |
+| 创建 Release | gh release create v0.9.0 ... | ✅ published at 2026-07-28T00:13:13Z |
+| 上传 assets | gh release upload v0.9.0 app-debug.apk app-release.apk | ✅ both uploaded |
+
+### 发布后验证（2026-07-28）
+
+| Check | Result |
+|-------|--------|
+| gh release view v0.9.0 | ✅ Published, draft=false, prerelease=false |
+| Tag v0.9.0 远程/本地一致 | ✅ 均指向 b2485ad |
+| Asset app-debug.apk | ✅ state=uploaded, 27,535,475 bytes |
+| Asset app-release.apk | ✅ state=uploaded, 19,200,668 bytes |
+| 本地 debug APK 字节级匹配 | ✅ 27,535,475 bytes = GitHub asset |
+| 本地 release APK 字节级匹配 | ✅ 19,200,668 bytes = GitHub asset |
+| Receipt 修正 commit | 383ccbc（tag 指向 b2485ad 修正 + 字节级 artifact 一致性 + Post-Release Verification 章节） |
+
+### Release URL
+
+https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.0
+
+### 交接给下一会话
+
+1. **v0.9.0 已发布**：用户可下载 app-debug.apk 或 app-release.apk 实机测试
+2. **P0 emulator 实测 v0.9.0**：
+   - 5 Tab 导航（知识点/真题/卡片/错题本/设置）
+   - 章节树数据导入（seed 2.12.0 触发，DB chapters 表有 parent_id IS NOT NULL 子章节）
+   - 关联知识点模块视觉编码（3 关系类型：关联/对比/延伸）
+   - WrongAnswerScreen 顶级模式（无返回箭头）
+   - QuizScreen TopBar 无 Inbox 入口
+3. **P0 CI 恢复后**：重新用正式 keystore 构建 release APK 并替换 v0.9.0 asset（消除 Exception E1）
+4. **P1 R8 启用**：P1-PG 规则已就绪 + B5.1 GraphSkeleton 路径已修正，emulator 实测无崩溃后切换 isMinifyEnabled=true
