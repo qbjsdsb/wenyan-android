@@ -14,8 +14,6 @@ import com.wenyan.app.core.database.dao.ChatMessageDao
 import com.wenyan.app.core.database.dao.DataSourceDao
 import com.wenyan.app.core.database.dao.ExamCodeHistoryDao
 import com.wenyan.app.core.database.dao.ExamQuestionDao
-import com.wenyan.app.core.database.dao.GraphEdgeDao
-import com.wenyan.app.core.database.dao.GraphNodeDao
 import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.dao.MemoRecordDao
 import com.wenyan.app.core.database.dao.ReviewLogDao
@@ -35,8 +33,6 @@ import com.wenyan.app.core.database.entity.ChatMessageEntity
 import com.wenyan.app.core.database.entity.DataSourceEntity
 import com.wenyan.app.core.database.entity.ExamCodeHistoryEntity
 import com.wenyan.app.core.database.entity.ExamQuestionEntity
-import com.wenyan.app.core.database.entity.GraphEdgeEntity
-import com.wenyan.app.core.database.entity.GraphNodeEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.MemoRecordEntity
 import com.wenyan.app.core.database.entity.ReviewLogEntity
@@ -51,7 +47,7 @@ import com.wenyan.app.core.database.entity.WrongAnswerEntity
  * 文研App Room 数据库。
  *
  * - 数据库名：wenyan.db
- * - 版本：6（v0.7.6：删除 exam_questions.sample_essay 列，范文冗余字段清理）
+ * - 版本：7（v0.9.3 优化 4：移除知识图谱 UI 死代码，DROP graph_nodes + graph_edges 表）
  *   - v1→v2：memo_records 补 elapsed_days/scheduled_days/reps 字段
  *   - v2→v3：回填 reps = review_count（修复 v1→v2 未回填导致老卡片被误判为新卡）
  *   - v3→v4：新增 app_meta 表（通用 key-value，存储 last_known_timestamp_ms 等应用级元数据，
@@ -59,8 +55,9 @@ import com.wenyan.app.core.database.entity.WrongAnswerEntity
  *   - v4→v5：合并 schema 变更（NF-PP4 删 memo_records.history / NF-PP6 合并 chat_history +
  *     ai_conversations → chat_conversations + chat_messages / NF-PP5 新增 wrong_answers）
  *   - v5→v6：删除 exam_questions.sample_essay 列（seed v2.9.0 同步删除范文冗余字段）
+ *   - v6→v7：DROP graph_nodes + graph_edges（v0.9.0 删 feature:graph UI 后 core 层图谱设施无消费者）
  *
- * 共 21 张表（无 mentors 表，导师信息改为外链官网）：
+ * 共 19 张表（v7 移除 graph_nodes + graph_edges；无 mentors 表，导师信息改为外链官网）：
  * 1. subjects                科目
  * 2. chapters                章节
  * 3. knowledge_points        知识点（含 Spec 新增字段）
@@ -73,17 +70,16 @@ import com.wenyan.app.core.database.entity.WrongAnswerEntity
  * 10. answer_templates       答题模板
  * 11. template_fills         模板填写记录
  * 12. writing_patterns       写作句式
- * 13. graph_nodes            图谱节点（含 Spec 新增 prerequisites）
- * 14. graph_edges            图谱边（含 Spec 新增 PREREQUISITE 关系）
- * 15. review_logs            复习日志
- * 16. exam_code_history      科目代码变动历史（Spec 新增表）
- * 17. data_sources           资料来源溯源（Spec 新增表）
- * 18. app_meta               应用元数据（NF-B 新增，key-value 存储 last_known_timestamp_ms 等）
- * 19. chat_conversations     AI 对话元数据（NF-PP6 新增，替代 chat_history + ai_conversations）
- * 20. chat_messages          AI 对话消息内容（NF-PP6 新增，FK→chat_conversations CASCADE）
- * 21. wrong_answers          错题本（NF-PP5 新增，Cards AGAIN + Quiz 答错双来源）
+ * 13. review_logs            复习日志
+ * 14. exam_code_history      科目代码变动历史（Spec 新增表）
+ * 15. data_sources           资料来源溯源（Spec 新增表）
+ * 16. app_meta               应用元数据（NF-B 新增，key-value 存储 last_known_timestamp_ms 等）
+ * 17. chat_conversations     AI 对话元数据（NF-PP6 新增，替代 chat_history + ai_conversations）
+ * 18. chat_messages          AI 对话消息内容（NF-PP6 新增，FK→chat_conversations CASCADE）
+ * 19. wrong_answers          错题本（NF-PP5 新增，Cards AGAIN + Quiz 答错双来源）
  *
  * v5 移除的表：chat_history、ai_conversations（死代码表，0 Repository 引用，合并为 chat_conversations + chat_messages）
+ * v7 移除的表：graph_nodes、graph_edges（v0.9.0 删 feature:graph UI 后 core 层图谱设施无消费者）
  *
  * 通过 Hilt 模块（DatabaseModule）提供单例实例与各 DAO。
  */
@@ -101,8 +97,6 @@ import com.wenyan.app.core.database.entity.WrongAnswerEntity
         AnswerTemplateEntity::class,
         TemplateFillEntity::class,
         WritingPatternEntity::class,
-        GraphNodeEntity::class,
-        GraphEdgeEntity::class,
         ReviewLogEntity::class,
         ExamCodeHistoryEntity::class,
         DataSourceEntity::class,
@@ -111,7 +105,7 @@ import com.wenyan.app.core.database.entity.WrongAnswerEntity
         ChatMessageEntity::class,
         WrongAnswerEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 @TypeConverters(WenyanTypeConverters::class)
@@ -129,8 +123,6 @@ abstract class WenyanDatabase : RoomDatabase() {
     abstract fun answerTemplateDao(): AnswerTemplateDao
     abstract fun templateFillDao(): TemplateFillDao
     abstract fun writingPatternDao(): WritingPatternDao
-    abstract fun graphNodeDao(): GraphNodeDao
-    abstract fun graphEdgeDao(): GraphEdgeDao
     abstract fun reviewLogDao(): ReviewLogDao
     abstract fun examCodeHistoryDao(): ExamCodeHistoryDao
     abstract fun dataSourceDao(): DataSourceDao

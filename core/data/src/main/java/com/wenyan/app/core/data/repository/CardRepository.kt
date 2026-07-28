@@ -20,7 +20,7 @@ import javax.inject.Singleton
  *   经 [CardSplitter] 按最小信息原则拆分后转为卡片流。
  *
  * 抽象为接口便于测试替换(Fake 实现),生产环境由 [CardRepositoryImpl] 实现。
- * 与 [SchedulingRepository] / [ExamRepository] / [GraphRepository] 同一约定。
+ * 与 [SchedulingRepository] / [ExamRepository] 同一约定。
  *
  * @see CardRepositoryImpl
  */

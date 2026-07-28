@@ -13,8 +13,6 @@ import com.wenyan.app.core.database.dao.ChatMessageDao
 import com.wenyan.app.core.database.dao.DataSourceDao
 import com.wenyan.app.core.database.dao.ExamCodeHistoryDao
 import com.wenyan.app.core.database.dao.ExamQuestionDao
-import com.wenyan.app.core.database.dao.GraphEdgeDao
-import com.wenyan.app.core.database.dao.GraphNodeDao
 import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.dao.MemoRecordDao
 import com.wenyan.app.core.database.dao.ReviewLogDao
@@ -29,6 +27,7 @@ import com.wenyan.app.core.database.migration.MIGRATION_2_3
 import com.wenyan.app.core.database.migration.MIGRATION_3_4
 import com.wenyan.app.core.database.migration.MIGRATION_4_5
 import com.wenyan.app.core.database.migration.MIGRATION_5_6
+import com.wenyan.app.core.database.migration.MIGRATION_6_7
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -61,6 +60,7 @@ object DatabaseModule {
      * - [MIGRATION_3_4]：新增 app_meta 表（NF-B / P0-E4 修复，存储 last_known_timestamp_ms 供 ClockGuard 用）
      * - [MIGRATION_4_5]：P1 大型任务合并 schema 变更（NF-PP4 删 history / NF-PP6 合并 chat 表 / NF-PP5 新增 wrong_answers）
      * - [MIGRATION_5_6]：v0.7.6 删除 exam_questions.sample_essay 列（范文冗余字段清理）
+     * - [MIGRATION_6_7]：v0.9.3 优化 4 DROP graph_nodes + graph_edges（core 层图谱设施无消费者）
      * - fallbackToDestructiveMigrationOnDowngrade：仅版本号降级时重建表（开发期降级测试用）。
      *   P0-D1 修正：原 fallbackToDestructiveMigration() 在升级时也会清空整个数据库，
      *   v0.2.0 已发布用户有真实 FSRS 复习记录，升级时被静默清空是不可接受的。
@@ -76,7 +76,14 @@ object DatabaseModule {
             WenyanDatabase::class.java,
             WenyanDatabase.DATABASE_NAME,
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+            .addMigrations(
+                MIGRATION_1_2,
+                MIGRATION_2_3,
+                MIGRATION_3_4,
+                MIGRATION_4_5,
+                MIGRATION_5_6,
+                MIGRATION_6_7,
+            )
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }
@@ -130,14 +137,6 @@ object DatabaseModule {
     @Provides
     fun provideWritingPatternDao(database: WenyanDatabase): WritingPatternDao =
         database.writingPatternDao()
-
-    @Provides
-    fun provideGraphNodeDao(database: WenyanDatabase): GraphNodeDao =
-        database.graphNodeDao()
-
-    @Provides
-    fun provideGraphEdgeDao(database: WenyanDatabase): GraphEdgeDao =
-        database.graphEdgeDao()
 
     @Provides
     fun provideReviewLogDao(database: WenyanDatabase): ReviewLogDao =

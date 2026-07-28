@@ -6,8 +6,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 /**
  * 数据库迁移 3 → 4（NF-B / P0-E4 修复：FSRS 时钟回拨防护）。
  *
- * 背景：[com.wenyan.app.core.data.repository.SchedulingRepository] 与
- * [com.wenyan.app.core.data.repository.GraphRepositoryImpl] 用
+ * 背景：[com.wenyan.app.core.data.repository.SchedulingRepository] 用
  * `System.currentTimeMillis()` / `LocalDateTime.now()` 计算卡片到期时间与可提取性 R，
  * 用户改系统时间（手动调时 / 时区切换 / NTP 异常）会导致卡片"永久消失"或"无限到期"。
  *

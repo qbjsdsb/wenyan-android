@@ -42,10 +42,9 @@ interface MemoRecordDao {
     fun observePriorityQueue(): Flow<List<MemoRecordEntity>>
 
     /**
-     * 观察全部记忆记录（阶段3新增，用于图谱批量计算 R 值）。
+     * 观察全部记忆记录（阶段3新增，用于批量计算 R 值）。
      *
-     * 与 [com.wenyan.app.core.database.dao.GraphNodeDao.observeAll] combine 后，
-     * 一次性计算所有节点的可提取性，避免 N+1 查询。
+     * 一次性计算所有知识点的可提取性，避免 N+1 查询。
      *
      * P1-D3 修正：加 ORDER BY next_review_at ASC 保证 Compose 重组时顺序稳定。
      */

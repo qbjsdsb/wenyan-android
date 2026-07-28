@@ -9,8 +9,6 @@ import com.wenyan.app.core.data.repository.ChatRepository
 import com.wenyan.app.core.data.repository.ChatRepositoryImpl
 import com.wenyan.app.core.data.repository.ExamRepository
 import com.wenyan.app.core.data.repository.ExamRepositoryImpl
-import com.wenyan.app.core.data.repository.GraphRepository
-import com.wenyan.app.core.data.repository.GraphRepositoryImpl
 import com.wenyan.app.core.data.repository.LlmConfigProviderImpl
 import com.wenyan.app.core.data.repository.SchedulingRepository
 import com.wenyan.app.core.data.repository.SchedulingRepositoryImpl
@@ -30,9 +28,6 @@ import javax.inject.Singleton
  * - [com.wenyan.app.core.data.repository.ExamRepository]
  * - [com.wenyan.app.core.data.repository.CardRepository]
  *
- * [GraphRepository] 为接口，生产实现 [GraphRepositoryImpl] 通过 @Inject constructor 提供，
- * 此处通过 [@Binds][Binds] 将实现绑定到接口。
- *
  * [LlmConfigProvider] 为接口（core:ai 定义），实现 [LlmConfigProviderImpl] 通过 @Inject constructor 提供，
  * 此处通过 @Binds 绑定。
  *
@@ -43,10 +38,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class DataModule {
-
-    @Binds
-    @Singleton
-    abstract fun bindGraphRepository(impl: GraphRepositoryImpl): GraphRepository
 
     @Binds
     @Singleton

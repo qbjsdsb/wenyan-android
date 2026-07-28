@@ -9,7 +9,7 @@ import javax.inject.Singleton
 /**
  * 时钟守卫（NF-B / P0-E4 修复：FSRS 时钟回拨防护）。
  *
- * 问题：[SchedulingRepository] 与 [GraphRepositoryImpl] 用 `System.currentTimeMillis()`
+ * 问题：[SchedulingRepository] 用 `System.currentTimeMillis()`
  * / `LocalDateTime.now()` 计算 FSRS 到期与可提取性 R，用户改系统时间（手动调时 /
  * 时区切换 / NTP 异常）会导致：
  * - **时钟回拨**：FSRS 认为卡片刚复习过 → 间隔变短 → 卡片"永久消失"（nextReviewAt 在过去）

@@ -15,7 +15,7 @@ import timber.log.Timber
  *
  * v0.8.21：内部 Log.e 改为 Timber.tag(tag).e，统一到 Timber 日志通道。
  * - 显式传入 tag：catchAndLog 是工具函数，若依赖 Timber 自动推断会得到 "FlowExt"
- *   而非调用者类名，丢失可读性。显式 tag 保证日志归属正确（如 "GraphRepositoryImpl"）。
+ *   而非调用者类名，丢失可读性。显式 tag 保证日志归属正确（如 "ReviewRepositoryImpl"）。
  * - Release 构建经 [com.wenyan.app.core.common.util.ReleaseTree] 过滤 V/D/I，
  *   仅记录 WARN/ERROR，降低性能开销。
  *
