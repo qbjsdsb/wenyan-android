@@ -145,12 +145,15 @@ tools/                           # Python 管线脚本
 
 ## 7. 当前状态（2026-07-28）
 
+**✅ v0.9.5 关于与教程子路由（commit `b2187bb`，未发布）** — 设置页"关于"分组新增"关于与教程"入口，注册 ROUTE_ABOUT 子路由（Push/Pop slide + launchSingleTop 防双击压栈），加载 AboutTutorialScreen（7 章深度教程，430 行新文件）。教程覆盖：1) 软件定位与核心理念 2) 功能模块导览（5 个顶级 Tab）3) FSRS-6 间隔重复算法（4 大公式 + 4 状态调度 + 4 档评分 + ClockGuard）4) 三档记忆机制（EXACT 0.95 / FRAMEWORK 0.90 / UNDERSTAND 0.85）5) AI 助手与 RAG 架构（RAG + 苏格拉底三阶段 + 多服务商 + Prompt Injection 防护）6) 使用指南与学习路径（6 步入门 + 三阶段节奏）7) 技术信息与致谢。本地验证：`:app:assembleDebug` BUILD SUCCESSFUL（无警告，Icons.AutoMirrored.Filled.MenuBook 修复弃用）+ 全模块 `testDebugUnitTest` 全绿。agent-pr-review ✅ Ready to merge（0 blocker, 0 must-fix）。
+
 **✅ v0.9.4 错题本接入 FSRS 间隔重复调度（已发布）** — 为 wrong_answers 表添加 10 个 sched_* FSRS 调度字段，复用 FSRS-6 算法 + TIER_FRAMEWORK 档位（R_target=0.90），实现错题的间隔重复复习。5 层实现：数据层（Migration 7→8 + 10 字段 + 索引）+ 映射层（WrongAnswerSchedulingMapper）+ 仓库层（SchedulingRepository.rateWrongAnswer）+ ViewModel 层（DUE 过滤 + 评分委托 + ClockGuard 注入）+ UI 层（四档评分按钮 + 调度信息展示）。Follow-up #1 ClockGuard 注入 + #2 interval coerceAtLeast(0) 已修复。+10 单测。agent-pr-review ✅ Approved（0 blocker, 0 must-fix）。Release v0.9.4 已发布（debug 签名 fallback — Exception E1）。
 
-- 最新 commit：`96f1325` docs(receipt): v0.9.4 release receipt — PRR + RBR + agent-pr-review Approved
+- 最新 commit：`b2187bb` feat(settings): 新增"关于与教程"子路由与 7 章深度教程
 - 最新 Release：**v0.9.4**（2026-07-28 发布，debug 签名 fallback — Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.4
-- 本地验证（2026-07-28）：`:app:assembleDebug` + `:app:assembleRelease` + `testDebugUnitTest` 全绿（403 tests, 0 failures）
-- versionCode / versionName：**29 / "0.9.4"**
+- 本地验证（2026-07-28 v0.9.5 commit）：`:app:assembleDebug` BUILD SUCCESSFUL + 全模块 `testDebugUnitTest` 全绿
+- 本地验证（2026-07-28 v0.9.4 release）：`:app:assembleDebug` + `:app:assembleRelease` + `testDebugUnitTest` 全绿（403 tests, 0 failures）
+- versionCode / versionName：**29 / "0.9.4"**（v0.9.5 待发布，versionCode/versionName 待 bump）
 - v0.9.0 核心改动（5 Batch）：
   - **B1 章节树数据层**：ChapterDao.observeTree（WITH RECURSIVE CTE）+ countNonRootChapters + ChapterRepository/Impl + SeedDataLoader 基于文学时段生成二级章节树（subject → default_chapter → chapter_<tag>），seed 2.11.0→2.12.0
   - **B2 关联知识点模块增强**：RelationshipType 枚举（RELATED/CONTRAST/EXTENSION）+ 视觉编码（图标 + 颜色）+ RelatedPointItem（标题 + 摘要预览 + 考频/难度 chip + 右箭头）+ 3 主题 Preview
@@ -163,6 +166,8 @@ tools/                           # Python 管线脚本
 - v0.9.4 核心改动：错题本接入 FSRS 间隔重复调度 — 5 层实现（数据层 Migration 7→8 + 10 sched_* 字段 + 索引 / 映射层 WrongAnswerSchedulingMapper / 仓库层 SchedulingRepository.rateWrongAnswer / ViewModel 层 DUE 过滤 + 评分委托 + ClockGuard 注入 / UI 层四档评分按钮 + 调度信息展示）+ TIER_FRAMEWORK 档位 + 10 单测。Follow-up #1 ClockGuard 注入（DUE 过滤与评分调度时间源对齐）+ #2 interval coerceAtLeast(0) 下界保护已修复。agent-pr-review ✅ Approved（0 blocker, 0 must-fix, 1 pre-existing follow-up）
 - v0.9.4 设计依据：[docs/design/adr-002-wrong-answer-fsrs.md](docs/design/adr-002-wrong-answer-fsrs.md)（方案 B：wrong_answers 表添加 sched_* 字段，不复用 memo_records 不新建表）
 - v0.9.4 receipt：[docs/release-receipts/v0.9.4-receipt.md](docs/release-receipts/v0.9.4-receipt.md)（含 PRR + RBR + agent-pr-review + Post-Release Verification）
+- v0.9.5 核心改动：设置页"关于与教程"子路由 — ROUTE_ABOUT 常量 + aboutDestination（Push/Pop slide）+ SettingsScreen 入口项 + AboutTutorialScreen（7 章深度教程 430 行：定位/模块/FSRS-6/三档记忆/RAG/使用指南/致谢）+ Icons.AutoMirrored.Filled.MenuBook 弃用修复
+- v0.9.5 receipt：[docs/release-receipts/v0.9.5-about-tutorial-pr-review.md](docs/release-receipts/v0.9.5-about-tutorial-pr-review.md)（agent-pr-review 结构化审查，0 blocker / 0 must-fix）
 - v0.9.4 APK 校验：Debug APK 27,489,863 bytes SHA-256 `b48d4f68...3a3364` / Release APK 19,169,788 bytes SHA-256 `02294bc7...62d955`（debug 签名 Exception E1）
 - v0.9.4 Rollback target：[v0.9.1](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.1)（uninstall v0.9.4 + install v0.9.1，versionCode 28 < 29 需卸载后安装）
 - v0.8.18 核心改动：ic_launcher_foreground.xml v3 印章文（米色印面 + 墨黑"文"字 + 圆角 12dp）+ ic_launcher_monochrome.xml v3（Android 13+ themed icons）+ Logging.kt（Timber 封装）+ 20+ 文件 Log.d/.e → Logging.kt 迁移 + scripts/setup-env.sh（沙箱/云端/CI 通用）+ mise.toml（JDK 17.0.2 + Gradle 8.14.4）+ timber 5.0.1 依赖 + versionCode 25→26 + versionName "0.8.17"→"0.8.18"
@@ -207,20 +212,22 @@ tools/                           # Python 管线脚本
 | v0.9.0 知识图谱移除 + 章节树 + 错题本升级 | ✅ 完成（2026-07-27） | 按 ADR-001 5 Batch 迁移：B1 章节树数据层 + B2 关联知识点模块增强 + B3 错题本升级为顶级 Tab + B4 移除 feature:graph 模块（~5000 行删除）+ B5 ProGuard 修复 + 文档。保留 core 层图谱基础设施（算法服务消费）。403 tests 全绿，待 Release |
 | v0.9.1 关联知识点模块不渲染 Hotfix | ✅ 完成（2026-07-28） | SeedDataLoader.computeRelatedIdsByTags（同 subject + 共享 tag → RELATED）+ seed 2.12.0→2.13.0 + 8 单测。Release v0.9.1 已发布（debug 签名 fallback） |
 | v0.9.4 错题本接入 FSRS 间隔重复调度 | ✅ 完成 + 已发布（2026-07-28） | 5 层实现：数据层 Migration 7→8 + 10 sched_* 字段 + 索引 / 映射层 WrongAnswerSchedulingMapper / 仓库层 SchedulingRepository.rateWrongAnswer / ViewModel 层 DUE 过滤 + 评分委托 + ClockGuard 注入 / UI 层四档评分按钮 + 调度信息展示。TIER_FRAMEWORK 档位。10 单测。Follow-up #1 ClockGuard 注入 + #2 interval coerceAtLeast(0) 已修复。agent-pr-review ✅ Approved（0 blocker, 0 must-fix）。Release v0.9.4 已发布（debug 签名 Exception E1） |
+| v0.9.5 关于与教程子路由 | ✅ 完成（2026-07-28，未发布） | 设置页"关于"分组新增"关于与教程"入口，注册 ROUTE_ABOUT 子路由（Push/Pop slide + launchSingleTop 防双击压栈），加载 AboutTutorialScreen（7 章深度教程 430 行：定位/模块/FSRS-6/三档记忆/RAG/使用指南/致谢）。Icons.AutoMirrored.Filled.MenuBook 弃用修复。本地验证全绿。agent-pr-review ✅ Ready to merge（0 blocker, 0 must-fix） |
 
 ## 9. 下一步优先级
 
-1. **P0**：跑 emulator 实测 v0.9.4 — 验证错题本 DUE 过滤模式 + 四档评分按钮（不会/困难/良好/简单）+ 调度信息展示（下次复习/复习次数/遗忘次数）+ Migration 7→8 升级（已有错题 sched_* 字段默认值正确）+ ClockGuard 时间源对齐（评分后错题不会立即重新出现在 DUE 列表）
-2. **P0**：跑 emulator 实测 v0.9.1（若未测）— 验证关联知识点模块渲染（RelatedPointsSection 应有关联知识点列表）+ 关联知识点点击跳转 + seed 2.13.0 触发重导后 relatedIds 正确填充
-3. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 40+ commit 待 CI 验证（不影响 Release，已通过本地构建 + gh 上传绕过）
-4. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 并替换 v0.9.4 asset（消除 Exception E1）
-5. **P1**：启用 R8（P1-PG 规则已就绪 + B5.1 GraphSkeleton 路径已修正，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
-6. **P2 优化项（非阻塞）**：`app/build.gradle.kts` 第 71 行 release keystore fail-fast 应移到 task 执行阶段（当前在配置阶段抛异常，沙箱跑 debug 任务也触发，需 `unset CI` 绕过）
-7. **P1 Phase 2 剩余维度审计**：
+1. **P0**：跑 emulator 实测 v0.9.5 — 验证设置 → 关于 → 关于与教程入口可见可点击 + Push/Pop slide 动画 + 7 章 GroupedCard 完整渲染 + LazyColumn 滚动流畅 + 返回箭头返回设置页 + 横屏/平板内容居中
+2. **P0**：跑 emulator 实测 v0.9.4 — 验证错题本 DUE 过滤模式 + 四档评分按钮（不会/困难/良好/简单）+ 调度信息展示（下次复习/复习次数/遗忘次数）+ Migration 7→8 升级（已有错题 sched_* 字段默认值正确）+ ClockGuard 时间源对齐（评分后错题不会立即重新出现在 DUE 列表）
+3. **P0**：跑 emulator 实测 v0.9.1（若未测）— 验证关联知识点模块渲染（RelatedPointsSection 应有关联知识点列表）+ 关联知识点点击跳转 + seed 2.13.0 触发重导后 relatedIds 正确填充
+4. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 40+ commit 待 CI 验证（不影响 Release，已通过本地构建 + gh 上传绕过）
+5. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 并替换 v0.9.4 asset（消除 Exception E1）
+6. **P1**：启用 R8（P1-PG 规则已就绪 + B5.1 GraphSkeleton 路径已修正，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
+7. **P2 优化项（非阻塞）**：`app/build.gradle.kts` 第 71 行 release keystore fail-fast 应移到 task 执行阶段（当前在配置阶段抛异常，沙箱跑 debug 任务也触发，需 `unset CI` 绕过）
+8. **P1 Phase 2 剩余维度审计**：
    - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）
    - 2.L：错误处理一致性 + 日志规范（sealed AppError + Timber + Snackbar 统一） — v0.8.18 已完成 Timber 引入，剩 sealed AppError + Snackbar 统一
    - 2.M：Compose 副作用 + Accessibility + M3 Expressive
    - 2.N 剩余：NF-DS7-13 DataStore Key 治理
-8. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
-9. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）— **已修复**：P1-S-1 修正已在 "Decode keystore" 步骤添加 fail-fast（exit 1 if KEYSTORE_BASE64 empty），见 [.github/workflows/release.yml](.github/workflows/release.yml) L60-65
-10. **P4**：架构重构 — getVerifiedWithSubject 职责应在 KnowledgeRepository — **已完成**：方法已迁移至 [KnowledgeRepository.kt:116](core/data/src/main/java/com/wenyan/app/core/data/repository/KnowledgeRepository.kt#L116)，ReviewRepository 仅保留 doc 引用
+9. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+10. **P3**：release.yml "Verify keystore" 步骤隐藏 bug（Line 63-70，KEYSTORE_BASE64 未配置时失败）— **已修复**：P1-S-1 修正已在 "Decode keystore" 步骤添加 fail-fast（exit 1 if KEYSTORE_BASE64 empty），见 [.github/workflows/release.yml](.github/workflows/release.yml) L60-65
+11. **P4**：架构重构 — getVerifiedWithSubject 职责应在 KnowledgeRepository — **已完成**：方法已迁移至 [KnowledgeRepository.kt:116](core/data/src/main/java/com/wenyan/app/core/data/repository/KnowledgeRepository.kt#L116)，ReviewRepository 仅保留 doc 引用

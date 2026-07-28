@@ -5,14 +5,16 @@
 
 ## ✅ 当前状态
 
+**v0.9.5 关于与教程子路由（commit `b2187bb`，未发布）** — 设置页"关于"分组新增"关于与教程"入口，注册 ROUTE_ABOUT 子路由（Push/Pop slide + launchSingleTop 防双击压栈），加载 AboutTutorialScreen（7 章深度教程 430 行：定位/模块/FSRS-6/三档记忆/RAG/使用指南/致谢）。Icons.AutoMirrored.Filled.MenuBook 弃用修复。本地验证全绿。agent-pr-review ✅ Ready to merge（0 blocker, 0 must-fix）。
+
 **v0.9.4 错题本接入 FSRS 间隔重复调度（已发布）** — 为 wrong_answers 表添加 10 个 sched_* FSRS 调度字段，复用 FSRS-6 算法 + TIER_FRAMEWORK 档位（R_target=0.90），实现错题的间隔重复复习。5 层实现：数据层（Migration 7→8 + 10 字段 + 索引）+ 映射层（WrongAnswerSchedulingMapper）+ 仓库层（SchedulingRepository.rateWrongAnswer）+ ViewModel 层（DUE 过滤 + 评分委托 + ClockGuard 注入）+ UI 层（四档评分按钮 + 调度信息展示）。Follow-up #1 ClockGuard 注入 + #2 interval coerceAtLeast(0) 已修复。+10 单测。agent-pr-review ✅ Approved（0 blocker, 0 must-fix）。Release v0.9.4 已发布（debug 签名 fallback — Exception E1）。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `96f1325` docs(receipt): v0.9.4 release receipt — PRR + RBR + agent-pr-review Approved |
+| 最新 commit | `b2187bb` feat(settings): 新增"关于与教程"子路由与 7 章深度教程 |
 | 最新 Release | **v0.9.4**（2026-07-28 发布，debug 签名 fallback — Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.4 |
-| 编译验证 | **:app:assembleDebug + :app:assembleRelease + testDebugUnitTest SUCCESSFUL**（403 tests, 0 failures） |
-| versionCode / versionName | **29 / "0.9.4"** |
+| 编译验证 | **:app:assembleDebug + 全模块 testDebugUnitTest SUCCESSFUL**（v0.9.5 commit，无警告） |
+| versionCode / versionName | **29 / "0.9.4"**（v0.9.5 待发布，versionCode/versionName 待 bump） |
 | 知识点 | **910 个**（entities/relations 数据补全） |
 | 真题 | **485 道**（v0.7.6 已删除 sample_essay 冗余字段） |
 | seed 版本 | **2.13.0**（v0.9.1 relatedIds 派生，触发重新导入） |
@@ -27,26 +29,27 @@
 | 日志门面 | **Logging.kt**（Timber 封装，Debug=Logcat / Release=WARN+ERROR） |
 | 工具链锁定 | **mise.toml**（JDK 17.0.2 + Gradle 8.14.4） |
 | 阻塞 | **CI 账单问题** — 需用户处理，不影响 Release（debug 签名可用） |
-| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-28 v0.9.4 Release） |
+| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-28 v0.9.5 关于与教程子路由） |
 
 ## 🚨 新会话首要任务
 
-**v0.9.4 已发布**（2026-07-28）。最新 Release：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.4
+**v0.9.5 关于与教程子路由已完成**（commit `b2187bb`，未发布）。**v0.9.4 已发布**（2026-07-28）。最新 Release：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.4
 
 下一步优先级（按顺序）：
 
-1. **P0**：emulator 实测 v0.9.4 — 验证错题本 DUE 过滤模式 + 四档评分按钮（不会/困难/良好/简单）+ 调度信息展示（下次复习/复习次数/遗忘次数）+ Migration 7→8 升级（已有错题 sched_* 字段默认值正确）+ ClockGuard 时间源对齐（评分后错题不会立即重新出现在 DUE 列表）
-2. **P0**：emulator 实测 v0.9.1（若未测）— 验证关联知识点模块渲染（RelatedPointsSection 应有关联知识点列表）+ 关联知识点点击跳转 + seed 2.13.0 触发重导后 relatedIds 正确填充
-3. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 40+ commit 待 CI 验证（不影响 Release，已通过本地构建 + gh 上传绕过）
-4. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 并替换 v0.9.4 asset（消除 Exception E1）
-5. **P1**：启用 R8（P1-PG 规则已就绪 + B5.1 GraphSkeleton 路径已修正，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
-6. **P1 Phase 2 剩余维度审计**：
+1. **P0**：emulator 实测 v0.9.5 — 验证设置 → 关于 → 关于与教程入口可见可点击 + Push/Pop slide 动画 + 7 章 GroupedCard 完整渲染 + LazyColumn 滚动流畅 + 返回箭头返回设置页 + 横屏/平板内容居中
+2. **P0**：emulator 实测 v0.9.4 — 验证错题本 DUE 过滤模式 + 四档评分按钮（不会/困难/良好/简单）+ 调度信息展示（下次复习/复习次数/遗忘次数）+ Migration 7→8 升级（已有错题 sched_* 字段默认值正确）+ ClockGuard 时间源对齐（评分后错题不会立即重新出现在 DUE 列表）
+3. **P0**：emulator 实测 v0.9.1（若未测）— 验证关联知识点模块渲染（RelatedPointsSection 应有关联知识点列表）+ 关联知识点点击跳转 + seed 2.13.0 触发重导后 relatedIds 正确填充
+4. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 40+ commit 待 CI 验证（不影响 Release，已通过本地构建 + gh 上传绕过）
+5. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 并替换 v0.9.4 asset（消除 Exception E1）
+6. **P1**：启用 R8（P1-PG 规则已就绪 + B5.1 GraphSkeleton 路径已修正，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
+7. **P1 Phase 2 剩余维度审计**：
    - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）
    - 2.L：错误处理一致性 + 日志规范（sealed AppError + Timber + Snackbar 统一） — v0.8.18 已完成 Timber 引入，剩 sealed AppError + Snackbar 统一
    - 2.M：Compose 副作用 + Accessibility + M3 Expressive
    - 2.N 剩余：NF-DS7-13 DataStore Key 治理
-7. **P2**：CONTRAST/EXTENSION 关联需语义分析，可由 AI 管线（LLM 从 full_content 派生）或手动标注补充
-8. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+8. **P2**：CONTRAST/EXTENSION 关联需语义分析，可由 AI 管线（LLM 从 full_content 派生）或手动标注补充
+9. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
 
 ### v0.8.18 工程化审查（per staff-engineer-mode Iron Law）
 

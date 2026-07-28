@@ -4978,3 +4978,89 @@ https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.4
 3. **P0 CI 恢复后**：重新用正式 keystore 构建 release APK 并替换 v0.9.4 asset（消除 Exception E1）
 4. **P1 R8 启用**：P1-PG 规则已就绪 + B5.1 GraphSkeleton 路径已修正，emulator 实测无崩溃后切换 isMinifyEnabled=true
 5. **Rollback path**：若 v0.9.4 出现严重问题，uninstall v0.9.4 + install v0.9.1 APK（versionCode 28 < 29，需卸载后安装）
+
+---
+
+## 2026-07-28 会话：v0.9.5 关于与教程子路由
+
+### 任务
+
+用户要求在设置页插入"介绍和教程"，需认真仔细覆盖软件方方面面、底层原理等，深入研究反复打磨，做好交接发布，每一步反复检查不出问题。Use plugin: trae-remote-official:staff-engineer-mode。
+
+### 完成
+
+**新增 7 章深度教程**（commit `b2187bb`，4 files +572 lines）：
+
+1. **AboutTutorialScreen.kt（新文件，430 行）**：7 章 GroupedCard 教程
+   - 第 1 章 软件定位与核心理念（南师大 050106 + 三大理念 + 610/801 代码变更）
+   - 第 2 章 功能模块导览（5 个顶级 Tab：知识点/真题/卡片/错题本/AI 助手）
+   - 第 3 章 FSRS-6 间隔重复算法（4 大公式 + 4 状态调度 + 4 档评分 + ClockGuard）
+   - 第 4 章 三档记忆机制（EXACT R=0.95 / FRAMEWORK R=0.90 / UNDERSTAND R=0.85）
+   - 第 5 章 AI 助手与 RAG 架构（RAG + 苏格拉底三阶段 + 解释错题 + 多服务商 + Prompt Injection 防护）
+   - 第 6 章 使用指南与学习路径（6 步入门 + 基础/强化/冲刺三阶段节奏）
+   - 第 7 章 技术信息与致谢（技术栈 + FSRS 开源致谢 + 协议与免责）
+
+2. **SettingsScreen.kt（+9 行）**：在"关于"分组新增"关于与教程"GroupedCardItem 入口（onClick = onNavigateToAbout）
+
+3. **WenyanNavHost.kt（+31 行）**：
+   - 新增 `ROUTE_ABOUT = "about"` 常量
+   - 新增 `aboutDestination(onBack)` 扩展函数（Push/Pop slide transition，覆盖 NavHost 默认 Tab fade）
+   - settingsDestination 新增 `onNavigateToAbout` 参数，导航用 `launchSingleTop = true` 防双击压栈
+
+4. **docs/release-receipts/v0.9.5-about-tutorial-pr-review.md**：agent-pr-review 结构化审查 receipt
+
+### 工程化流程（per staff-engineer-mode Agent Event Policy）
+
+按 Iron Law 路由：本任务为客户端 UI 开发 + 提交事件 → primary specialist `agent-pr-review`（工件：commit 前 diff 审查）。
+
+按 Agent Event Policy 严格分步执行：
+1. ✅ 实现 + 修改 3 文件
+2. ✅ 本地验证：`:app:assembleDebug` BUILD SUCCESSFUL（无警告，Icons.Filled.MenuBook → Icons.AutoMirrored.Filled.MenuBook 弃用修复）+ 全模块 `testDebugUnitTest` 全绿
+3. ✅ Stage in one shell command（git add 3 files）
+4. ✅ Inspect staged diff（git diff --cached --stat + 内容审查）
+5. ✅ Read agent-pr-review specialist（per Load Contract）
+6. ✅ Show review artifact（结构化 PR Review，含 Review Anchors / Intent Match / Failure-mode Pass / Code-quality Dimensions / Findings / Blocker List / Sanity Check）
+7. ✅ Record receipt in its own shell command（docs/release-receipts/v0.9.5-about-tutorial-pr-review.md）
+8. ✅ Commit in another shell command（commit `b2187bb`，无 AI attribution）
+
+### 审查结论
+
+**Verdict**: ✅ Ready to merge（0 blocker, 0 must-fix）
+
+- **Intent match**：完全一致 — 3 文件改动均被意图覆盖，无 scope creep
+- **Failure-mode pass**：所有 8 项检查通过（API 签名编译验证 / 导航模式匹配既有 / 无删除 / 边缘情况覆盖 / 错误处理 N/A）
+- **Behavior verification**：本地验证全绿；纯展示 UI 无业务逻辑，按惯例接受为 unverified behavior
+- **Code-quality dimensions**：设计/功能/复杂度/命名/注释/风格全部 OK，测试 N/A（纯展示）
+- **Public-surface**：`SettingsScreen` 签名变更（+onNavigateToAbout 参数），所有调用方已更新（仅 WenyanNavHost 一处，grep 验证）
+- **Sanity check**：mobile-release-engineering + accessibility-gates 内部 lens 通过
+
+### 关键技术决策
+
+- **路由模式选择**：使用 Push/Pop slide transition（与 aiAssistantDestination / apiConfigDestination 一致），而非 Tab fade（仅顶级 Tab 用）。理由：教程是子页面，需要明确的"进入/退出"语义 + 返回箭头
+- **Icons.AutoMirrored.Filled.MenuBook**：替换弃用的 `Icons.Filled.MenuBook`。AutoMirrored 版本在 RTL 语言下自动镜像，符合 M3 无障碍规范
+- **launchSingleTop = true**：导航到 ROUTE_ABOUT 时防双击重复压栈，与既有子路由（aiassistant / api_config）保持一致
+- **GroupedCardDivider**：在"版本"项与"关于与教程"项之间加分隔线，保持视觉分组清晰
+- **MaxContentWidth.compact**：教程内容在横屏/平板下限制最大宽度居中，与 SettingsScreen 既有模式一致
+
+### 下一步
+
+1. **P0 emulator 实测 v0.9.5**：
+   - 设置 → 关于 → 关于与教程 入口可见且可点击
+   - Push/Pop slide 动画正常
+   - 7 章 GroupedCard 内容完整渲染
+   - LazyColumn 滚动流畅
+   - 返回箭头返回设置页
+   - 横屏/平板下内容居中不撑满
+2. **P0 CI 恢复后**：推送 v0.9.5 commit + 后续 release
+3. **P1 文档 commit**：本次会话只 commit 了功能代码 + receipt，AGENTS.md / SESSION_LOG.md 的更新将在下一个 commit 中完成（本节即该 commit 的内容）
+
+### Commit
+
+- `b2187bb` — feat(settings): 新增"关于与教程"子路由与 7 章深度教程（4 files +572 lines）
+- （即将） — docs(handoff): 更新 AGENTS.md + SESSION_LOG.md v0.9.5 交接
+
+### 关键发现
+
+- staff-engineer-mode 的 Iron Law "ONE PRIMARY SPECIALIST BY DEFAULT" 非常有用：本任务表面是 UI 开发，但提交事件按 Agent Event Policy 强制路由到 agent-pr-review，避免了多 specialist 加载
+- Agent Event Policy 的"stage → inspect → review → receipt → commit"分步流程确保了每一步都有独立的验证机会，避免合并操作掩盖问题
+- Icons.Filled.MenuBook 弃用是 M3 1.5.0-alpha18 的迁移信号，AutoMirrored 版本在 RTL 下自动镜像，是更好的默认选择
