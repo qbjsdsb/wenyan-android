@@ -86,6 +86,8 @@ class FakeSchedulingRepository(
 
     val rateCardCalls: MutableList<Triple<String, Rating, CardTemplateType>> = mutableListOf()
     val previewCalls: MutableList<Pair<String, CardTemplateType>> = mutableListOf()
+    /** v0.9.4 新增:记录 rateWrongAnswer 调用(cards 模块测试不调用,但接口需实现) */
+    val rateWrongAnswerCalls: MutableList<Pair<String, Rating>> = mutableListOf()
 
     override suspend fun rateCard(
         pointId: String,
@@ -103,6 +105,21 @@ class FakeSchedulingRepository(
     ): Map<Rating, IntervalPreview> {
         previewCalls.add(pointId to cardType)
         return previewResults
+    }
+
+    /**
+     * v0.9.4 新增:错题 FSRS 评分调度 Fake 实现。
+     *
+     * cards 模块测试不调用此方法(错题调度由 WrongAnswerViewModel 触发),
+     * 但 SchedulingRepository 接口扩展后必须实现,返回 null 安全兜底。
+     * 若未来 cards 模块需要测试错题调度,可扩展 [rateWrongAnswerResult] 字段。
+     */
+    override suspend fun rateWrongAnswer(
+        wrongAnswerId: String,
+        rating: Rating,
+    ): WrongAnswerEntity? {
+        rateWrongAnswerCalls.add(wrongAnswerId to rating)
+        return null
     }
 }
 
@@ -133,6 +150,15 @@ class FakeWrongAnswerRepository(
     override fun observeAll(): Flow<List<WrongAnswerWithDetails>> = _all.asStateFlow()
 
     override fun observeUnresolved(): Flow<List<WrongAnswerWithDetails>> = _unresolved.asStateFlow()
+
+    /**
+     * v0.9.4 新增:观察待复习错题(FSRS 调度)。
+     *
+     * cards 模块测试不依赖此方法(由 WrongAnswerViewModel 使用),
+     * 但接口扩展后必须实现,返回空流安全兜底。
+     */
+    override fun observeDueWrongAnswers(now: Long): Flow<List<WrongAnswerWithDetails>> =
+        flowOf(emptyList())
 
     override fun observeByPoint(pointId: String): Flow<List<WrongAnswerEntity>> = flowOf(emptyList())
 

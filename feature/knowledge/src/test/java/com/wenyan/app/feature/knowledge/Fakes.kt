@@ -209,6 +209,15 @@ class FakeKnowledgeWrongAnswerRepository(
     override fun observeUnresolved(): Flow<List<WrongAnswerWithDetails>> =
         throw UnsupportedOperationException("observeUnresolved not used in knowledge detail tests")
 
+    /**
+     * v0.9.4 新增:观察待复习错题(FSRS 调度)。
+     *
+     * knowledge 详情页测试不依赖此方法(由 WrongAnswerViewModel 使用),
+     * 但接口扩展后必须实现,抛 UnsupportedOperationException 保持与现有方法一致语义。
+     */
+    override fun observeDueWrongAnswers(now: Long): Flow<List<WrongAnswerWithDetails>> =
+        throw UnsupportedOperationException("observeDueWrongAnswers not used in knowledge detail tests")
+
     override fun observeByPoint(pointId: String): Flow<List<WrongAnswerEntity>> =
         _byPoint.mapStateFlow { it[pointId] ?: emptyList() }
 

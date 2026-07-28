@@ -47,7 +47,7 @@ import com.wenyan.app.core.database.entity.WrongAnswerEntity
  * 文研App Room 数据库。
  *
  * - 数据库名：wenyan.db
- * - 版本：7（v0.9.3 优化 4：移除知识图谱 UI 死代码，DROP graph_nodes + graph_edges 表）
+ * - 版本：8（v0.9.4：错题本接入 FSRS 调度，wrong_answers 添加 10 个 sched_* 字段）
  *   - v1→v2：memo_records 补 elapsed_days/scheduled_days/reps 字段
  *   - v2→v3：回填 reps = review_count（修复 v1→v2 未回填导致老卡片被误判为新卡）
  *   - v3→v4：新增 app_meta 表（通用 key-value，存储 last_known_timestamp_ms 等应用级元数据，
@@ -56,6 +56,7 @@ import com.wenyan.app.core.database.entity.WrongAnswerEntity
  *     ai_conversations → chat_conversations + chat_messages / NF-PP5 新增 wrong_answers）
  *   - v5→v6：删除 exam_questions.sample_essay 列（seed v2.9.0 同步删除范文冗余字段）
  *   - v6→v7：DROP graph_nodes + graph_edges（v0.9.0 删 feature:graph UI 后 core 层图谱设施无消费者）
+ *   - v7→v8：wrong_answers 添加 10 个 sched_* FSRS 调度字段 + sched_next_review_at 索引
  *
  * 共 19 张表（v7 移除 graph_nodes + graph_edges；无 mentors 表，导师信息改为外链官网）：
  * 1. subjects                科目
@@ -105,7 +106,7 @@ import com.wenyan.app.core.database.entity.WrongAnswerEntity
         ChatMessageEntity::class,
         WrongAnswerEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 @TypeConverters(WenyanTypeConverters::class)

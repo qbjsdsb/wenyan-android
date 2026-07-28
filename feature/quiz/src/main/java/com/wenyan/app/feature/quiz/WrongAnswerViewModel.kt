@@ -4,8 +4,10 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.common.util.friendlyErrorMessage
+import com.wenyan.app.core.data.repository.SchedulingRepository
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.database.entity.WrongAnswerWithDetails
+import com.wenyan.app.core.fsrs.Rating
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -24,10 +26,16 @@ import javax.inject.Inject
  * 错题本 ViewModel(NF-PP5 Wave 3.2)。
  *
  * 功能:
- * - 观察 [WrongAnswerRepository.observeUnresolved] / [WrongAnswerRepository.observeAll],
- *   通过 [filter] 切换
+ * - 观察 [WrongAnswerRepository.observeUnresolved] / [WrongAnswerRepository.observeAll] /
+ *   [WrongAnswerRepository.observeDueWrongAnswers],通过 [filter] 切换
  * - [markResolved]:标记错题为已解决(从"未解决"列表移除)
  * - [deleteById]:永久删除错题记录
+ * - [rateWrongAnswer]（v0.9.4 新增）:FSRS 评分调度,更新错题的 sched_* 字段
+ *
+ * v0.9.4 新增:
+ * - [WrongAnswerFilter.DUE] 过滤模式:仅显示 sched_next_review_at <= now 的待复习错题
+ * - [rateWrongAnswer] 方法:调用 [SchedulingRepository.rateWrongAnswer] 进行 FSRS 调度
+ * - [WrongAnswerItem] 增加 sched_* 字段:展示调度状态和下次复习时间
  *
  * v0.8.21 修复 B1+M1+M2(对照 feature/knowledge v0.8.17 修复模式):
  * - **B1**:原 `catch` 在 `flatMapLatest` 外层,异常触发后整流终止,
@@ -43,11 +51,13 @@ import javax.inject.Inject
  *   retry() 立即设置 isLoading=true 让 UI 即时反馈,保留 filter 不清空。
  *
  * @property wrongAnswerRepository 错题仓库
+ * @property schedulingRepository FSRS 调度仓库（v0.9.4 新增,用于错题评分调度）
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class WrongAnswerViewModel @Inject constructor(
     private val wrongAnswerRepository: WrongAnswerRepository,
+    private val schedulingRepository: SchedulingRepository,
 ) : ViewModel() {
 
     /** 当前过滤模式(默认未解决,这是用户最常看的视图) */
@@ -94,6 +104,9 @@ class WrongAnswerViewModel @Inject constructor(
                     val flow = when (currentFilter) {
                         WrongAnswerFilter.UNRESOLVED -> wrongAnswerRepository.observeUnresolved()
                         WrongAnswerFilter.ALL -> wrongAnswerRepository.observeAll()
+                        WrongAnswerFilter.DUE -> wrongAnswerRepository.observeDueWrongAnswers(
+                            System.currentTimeMillis(),
+                        )
                     }
                     flow.map { items -> WrongAnswerUiState(items = items.map { it.toUiItem() }) }
                         // v0.8.21 修复 B1+M1+M2:catch 移入 flatMapLatest 内部,
@@ -157,6 +170,30 @@ class WrongAnswerViewModel @Inject constructor(
     }
 
     /**
+     * FSRS 评分调度（v0.9.4 新增）。
+     *
+     * 调用 [SchedulingRepository.rateWrongAnswer] 更新错题的 sched_* 字段。
+     * 评分后错题的 sched_next_review_at 更新,从 DUE 列表移除（若已不再到期）。
+     *
+     * 失败时设置 errorMessage,不阻塞 UI。
+     *
+     * @param id     错题 ID
+     * @param rating FSRS 评分（AGAIN/HARD/GOOD/EASY）
+     */
+    fun rateWrongAnswer(id: String, rating: Rating) {
+        viewModelScope.launch {
+            try {
+                schedulingRepository.rateWrongAnswer(id, rating)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.e(e, "rateWrongAnswer failed: id=$id, rating=$rating")
+                _errorMessage.value = "评分失败：${e.message ?: "未知错误"}"
+            }
+        }
+    }
+
+    /**
      * 重试加载(v0.8.21 重构)。
      *
      * 立即设置 isLoading=true 并清空 error,保留 filter 不变,让 UI 立即显示 loading 反馈;
@@ -172,7 +209,7 @@ class WrongAnswerViewModel @Inject constructor(
         _retryTrigger.value++
     }
 
-    /** 将 [WrongAnswerWithDetails] 转换为 UI 列表项（v0.9.2：含题目文本） */
+    /** 将 [WrongAnswerWithDetails] 转换为 UI 列表项（v0.9.2：含题目文本；v0.9.4：含调度字段） */
     private fun WrongAnswerWithDetails.toUiItem(): WrongAnswerItem {
         val entity = wrongAnswer
         return WrongAnswerItem(
@@ -187,6 +224,12 @@ class WrongAnswerViewModel @Inject constructor(
             lastWrongAt = entity.lastWrongAt,
             isResolved = entity.resolvedAt != null,
             createdAt = entity.createdAt,
+            // v0.9.4：FSRS 调度字段
+            schedState = entity.schedState,
+            schedNextReviewAt = entity.schedNextReviewAt,
+            schedLastReviewAt = entity.schedLastReviewAt,
+            schedReps = entity.schedReps,
+            schedLapses = entity.schedLapses,
         )
     }
 }
@@ -198,6 +241,9 @@ enum class WrongAnswerFilter {
 
     /** 全部(含已解决) */
     ALL,
+
+    /** 待复习(sched_next_review_at <= now 且 resolvedAt IS NULL)（v0.9.4 新增） */
+    DUE,
 }
 
 /** 错题本 UI 状态 */
@@ -214,6 +260,11 @@ data class WrongAnswerUiState(
  * @property questionTitle 题目文本(v0.9.2 新增,JOIN 关联表获取:
  *   卡片来源=知识点 title,真题来源=真题 content,理论不应为 null 但兜底处理)
  * @property isResolved 是否已解决(从 resolvedAt 派生)
+ * @property schedState FSRS 调度状态（v0.9.4 新增：NEW/LEARNING/REVIEW/RELEARNING）
+ * @property schedNextReviewAt 下次复习时间戳（v0.9.4 新增，0=立即到期）
+ * @property schedLastReviewAt 上次复习时间戳（v0.9.4 新增，0=从未复习）
+ * @property schedReps 总复习次数（v0.9.4 新增）
+ * @property schedLapses 遗忘次数（v0.9.4 新增）
  */
 @Immutable
 data class WrongAnswerItem(
@@ -228,4 +279,10 @@ data class WrongAnswerItem(
     val lastWrongAt: Long,
     val isResolved: Boolean,
     val createdAt: Long,
+    // v0.9.4：FSRS 调度字段
+    val schedState: String = "NEW",
+    val schedNextReviewAt: Long = 0L,
+    val schedLastReviewAt: Long = 0L,
+    val schedReps: Int = 0,
+    val schedLapses: Int = 0,
 )

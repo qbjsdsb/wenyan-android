@@ -97,4 +97,66 @@ interface WrongAnswerDao {
 
     @Query("SELECT COUNT(*) FROM wrong_answers WHERE resolved_at IS NULL")
     suspend fun countUnresolved(): Int
+
+    /**
+     * 观察待复习的未解决错题（v0.9.4 新增）。
+     *
+     * FSRS 调度：sched_next_review_at <= now AND resolved_at IS NULL。
+     * 新建错题 sched_next_review_at=0（立即到期），首次进入即出现在待复习列表。
+     *
+     * JOIN knowledge_points + exam_questions 获取题目文本（同 observeUnresolved）。
+     */
+    @Query(
+        """
+        SELECT w.*, COALESCE(k.title, e.content) AS question_title
+        FROM wrong_answers w
+        LEFT JOIN knowledge_points k ON w.point_id = k.id
+        LEFT JOIN exam_questions e ON w.exam_question_id = e.id
+        WHERE w.resolved_at IS NULL AND w.sched_next_review_at <= :now
+        ORDER BY w.sched_next_review_at ASC
+        """,
+    )
+    fun observeDueWrongAnswers(now: Long): Flow<List<WrongAnswerWithDetails>>
+
+    /**
+     * 按 ID 查询单条错题（v0.9.4 新增，用于 FSRS 调度时读取当前状态）。
+     */
+    @Query("SELECT * FROM wrong_answers WHERE id = :id LIMIT 1")
+    suspend fun getById(id: String): WrongAnswerEntity?
+
+    /**
+     * 更新错题的 FSRS 调度字段（v0.9.4 新增）。
+     *
+     * 由 [com.wenyan.app.core.data.repository.SchedulingRepositoryImpl.rateWrongAnswer] 调用，
+     * FSRS 调度后一次性写入全部 sched_* 字段。
+     */
+    @Query(
+        """
+        UPDATE wrong_answers
+        SET sched_state = :state,
+            sched_stability = :stability,
+            sched_difficulty = :difficulty,
+            sched_last_review_at = :lastReviewAt,
+            sched_next_review_at = :nextReviewAt,
+            sched_review_count = :reviewCount,
+            sched_lapses = :lapses,
+            sched_elapsed_days = :elapsedDays,
+            sched_scheduled_days = :scheduledDays,
+            sched_reps = :reps
+        WHERE id = :id
+        """,
+    )
+    suspend fun updateScheduling(
+        id: String,
+        state: String,
+        stability: Float,
+        difficulty: Float,
+        lastReviewAt: Long,
+        nextReviewAt: Long,
+        reviewCount: Int,
+        lapses: Int,
+        elapsedDays: Int,
+        scheduledDays: Int,
+        reps: Int,
+    )
 }

@@ -2,6 +2,7 @@ package com.wenyan.app.feature.quiz
 
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
 import com.wenyan.app.core.database.entity.WrongAnswerWithDetails
+import com.wenyan.app.core.fsrs.Rating
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -19,7 +20,7 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * [WrongAnswerViewModel] 单元测试(NF-PP5 Wave 3.2 + v0.8.21 retry 回归)。
+ * [WrongAnswerViewModel] 单元测试(NF-PP5 Wave 3.2 + v0.8.21 retry 回归 + v0.9.4 FSRS)。
  *
  * 验证:
  * - 默认 filter=UNRESOLVED,uiState 从 observeUnresolved 加载
@@ -30,6 +31,11 @@ import org.junit.Test
  * - 场景 3:加载失败后 retry() 真正重新加载(回归 B1 修复)
  * - 场景 4:catch 分支验证错误友好提示(SQLiteException → "本地数据异常,请重启 App")
  *
+ * v0.9.4 新增(FSRS 间隔重复调度接入):
+ * - 场景 5:setFilter(DUE) 切换后,uiState 从 observeDueWrongAnswers 加载
+ * - 场景 6:rateWrongAnswer(GOOD) 调用 schedulingRepository 且 UI 错误态为空
+ * - 场景 7:rateWrongAnswer 失败时 errorMessage 非 null,不抛异常到 UI
+ *
  * 用 StandardTestDispatcher + advanceUntilIdle 控制 stateIn 协程。
  */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -38,25 +44,33 @@ class WrongAnswerViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var wrongAnswerRepository: FakeWrongAnswerRepository
+    private lateinit var schedulingRepository: FakeSchedulingRepository
     private lateinit var viewModel: WrongAnswerViewModel
 
     @Before
     fun setup() = runTest(testDispatcher) {
         Dispatchers.setMain(testDispatcher)
 
-        // 预设:未解决 2 条,全部 3 条(含 1 条已解决)
+        // 预设:未解决 2 条,全部 3 条(含 1 条已解决),待复习 1 条
         val unresolved = listOf(
             sampleWrongAnswer("wa_1", isResolved = false),
             sampleWrongAnswer("wa_2", isResolved = false),
         )
         val all = unresolved + sampleWrongAnswer("wa_3", isResolved = true)
+        // v0.9.4:DUE 列表含 1 条待复习错题(sched_next_review_at=0 表示立即到期)
+        val due = listOf(
+            sampleWrongAnswer("wa_due_1", isResolved = false, schedReps = 1, schedNextReviewAt = 0L),
+        )
 
         wrongAnswerRepository = FakeWrongAnswerRepository(
             initialAll = all,
             initialUnresolved = unresolved,
+            initialDue = due,
         )
+        // v0.9.4:ViewModel 现在是 2-arg 构造,需注入 SchedulingRepository
+        schedulingRepository = FakeSchedulingRepository()
 
-        viewModel = WrongAnswerViewModel(wrongAnswerRepository)
+        viewModel = WrongAnswerViewModel(wrongAnswerRepository, schedulingRepository)
         advanceUntilIdle()
     }
 
@@ -170,19 +184,126 @@ class WrongAnswerViewModelTest {
         )
     }
 
+    // ── v0.9.4 新增场景:DUE 过滤 + rateWrongAnswer ─────────────────
+
+    /**
+     * 场景 5(v0.9.4 新增):setFilter(DUE) 切换后,uiState 从 observeDueWrongAnswers 加载。
+     *
+     * 验证 ViewModel 的 DUE 分支正确调用 wrongAnswerRepository.observeDueWrongAnswers(now),
+     * 而非 observeUnresolved / observeAll。
+     *
+     * 步骤:
+     * 1. 默认 filter=UNRESOLVED,验证初始 2 条
+     * 2. setFilter(DUE),advanceUntilIdle
+     * 3. 验证 uiState.items 只有 1 条(setup 预设的 wa_due_1)
+     * 4. 验证 filter.value == DUE
+     */
+    @Test
+    fun `setFilter DUE 切换到待复习错题列表`() = runTest(testDispatcher) {
+        // 1. 默认 UNRESOLVED,2 条
+        assertEquals(WrongAnswerFilter.UNRESOLVED, viewModel.filter.value)
+        assertEquals("默认应加载 2 条未解决错题", 2, viewModel.uiState.value.items.size)
+
+        // 2. 切换 DUE
+        viewModel.setFilter(WrongAnswerFilter.DUE)
+        advanceUntilIdle()
+
+        // 3. 验证 DUE 列表
+        assertEquals("filter 应为 DUE", WrongAnswerFilter.DUE, viewModel.filter.value)
+        val items = viewModel.uiState.value.items
+        assertEquals("DUE 应加载 1 条待复习错题", 1, items.size)
+        assertEquals("应为 wa_due_1", "wa_due_1", items[0].id)
+        // 验证 sched 字段正确映射到 UI 模型
+        assertEquals("schedReps 应为 1", 1, items[0].schedReps)
+    }
+
+    /**
+     * 场景 6(v0.9.4 新增):rateWrongAnswer(GOOD) 调用 schedulingRepository 且不抛异常。
+     *
+     * 验证 ViewModel.rateWrongAnswer 正确委托给 SchedulingRepository.rateWrongAnswer,
+     * 评分成功后 errorMessage 保持 null(无错误反馈)。
+     *
+     * 步骤:
+     * 1. 调用 rateWrongAnswer("wa_due_1", GOOD)
+     * 2. advanceUntilIdle
+     * 3. 验证 schedulingRepository.rateWrongAnswerCalls 含 ("wa_due_1", GOOD)
+     * 4. 验证 errorMessage == null
+     */
+    @Test
+    fun `rateWrongAnswer GOOD 调用 schedulingRepository 且 errorMessage 为空`() = runTest(testDispatcher) {
+        viewModel.rateWrongAnswer("wa_due_1", Rating.GOOD)
+        advanceUntilIdle()
+
+        // 验证调用委托正确
+        assertEquals("应调用 1 次 rateWrongAnswer", 1, schedulingRepository.rateWrongAnswerCalls.size)
+        val (calledId, calledRating) = schedulingRepository.rateWrongAnswerCalls[0]
+        assertEquals("错题 ID 应为 wa_due_1", "wa_due_1", calledId)
+        assertEquals("评分应为 GOOD", Rating.GOOD, calledRating)
+
+        // 评分成功不应设置 errorMessage
+        assertNull("errorMessage 应为 null", viewModel.errorMessage.value)
+    }
+
+    /**
+     * 场景 7(v0.9.4 新增):rateWrongAnswer 失败时 errorMessage 非 null,不抛异常到 UI。
+     *
+     * 验证 ViewModel.rateWrongAnswer 的 try-catch 错误处理:
+     * - SchedulingRepository 抛 RuntimeException → ViewModel 捕获并设置 errorMessage
+     * - 不向上抛异常(避免 crash)
+     * - errorMessage 含"评分失败"前缀,用户可理解
+     *
+     * 步骤:
+     * 1. 注入 RuntimeException 到 schedulingRepository.rateWrongAnswerException
+     * 2. 调用 rateWrongAnswer("wa_due_1", AGAIN)
+     * 3. advanceUntilIdle
+     * 4. 验证 errorMessage 非 null 且含"评分失败"
+     * 5. clearError 后 errorMessage 恢复 null
+     *
+     * 注:FakeSchedulingRepository.rateWrongAnswer 在 add 之前 throw,
+     * 所以 rateWrongAnswerCalls 不会记录这次失败调用(与生产实现行为一致:
+     * SchedulingRepositoryImpl 在 DB 写入失败时也不算成功调用)。
+     */
+    @Test
+    fun `rateWrongAnswer 失败时设置 errorMessage 不抛异常`() = runTest(testDispatcher) {
+        schedulingRepository.rateWrongAnswerException = RuntimeException("DB write failed")
+        viewModel.rateWrongAnswer("wa_due_1", Rating.AGAIN)
+        advanceUntilIdle()
+
+        // 验证错误反馈
+        val error = viewModel.errorMessage.value
+        assertNotNull("errorMessage 应非 null", error)
+        assertTrue(
+            "errorMessage 应含'评分失败'前缀,实际: $error",
+            error!!.contains("评分失败"),
+        )
+
+        // 清除错误
+        viewModel.clearError()
+        assertNull("clearError 后 errorMessage 应为 null", viewModel.errorMessage.value)
+    }
+
     // ── 辅助方法 ──────────────────────────────────────────────────
 
     /**
-     * 构造测试用 [WrongAnswerWithDetails]（v0.9.2：JOIN 后的 POJO，含 questionTitle）。
+     * 构造测试用 [WrongAnswerWithDetails]（v0.9.2：JOIN 后的 POJO，含 questionTitle；
+     * v0.9.4：支持 sched_* 调度字段）。
      *
      * @param questionTitle 题目文本（默认 "题目 $id" 模拟 JOIN 到的知识点 title；
      *   测试可传 null 验证"题目已删除"兜底分支）
+     * @param schedReps FSRS 总复习次数（默认 0=新建错题，>0=已调度）
+     * @param schedNextReviewAt 下次复习时间戳（默认 0=立即到期，新建错题出现在 DUE 列表）
+     * @param schedState FSRS 调度状态（默认 "NEW"）
+     * @param schedLapses FSRS 遗忘次数（默认 0）
      */
     private fun sampleWrongAnswer(
         id: String,
         isResolved: Boolean,
         source: String = "CARD_AGAIN",
         questionTitle: String? = "题目 $id",
+        schedReps: Int = 0,
+        schedNextReviewAt: Long = 0L,
+        schedState: String = "NEW",
+        schedLapses: Int = 0,
     ) = WrongAnswerWithDetails(
         wrongAnswer = WrongAnswerEntity(
             id = id,
@@ -196,6 +317,11 @@ class WrongAnswerViewModelTest {
             resolvedAt = if (isResolved) 2000L else null,
             aiExplanation = null,
             createdAt = 500L,
+            // v0.9.4:FSRS 调度字段
+            schedState = schedState,
+            schedReps = schedReps,
+            schedNextReviewAt = schedNextReviewAt,
+            schedLapses = schedLapses,
         ),
         questionTitle = questionTitle,
     )

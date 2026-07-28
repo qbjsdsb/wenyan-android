@@ -28,6 +28,7 @@ import com.wenyan.app.core.database.migration.MIGRATION_3_4
 import com.wenyan.app.core.database.migration.MIGRATION_4_5
 import com.wenyan.app.core.database.migration.MIGRATION_5_6
 import com.wenyan.app.core.database.migration.MIGRATION_6_7
+import com.wenyan.app.core.database.migration.MIGRATION_7_8
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -61,6 +62,7 @@ object DatabaseModule {
      * - [MIGRATION_4_5]：P1 大型任务合并 schema 变更（NF-PP4 删 history / NF-PP6 合并 chat 表 / NF-PP5 新增 wrong_answers）
      * - [MIGRATION_5_6]：v0.7.6 删除 exam_questions.sample_essay 列（范文冗余字段清理）
      * - [MIGRATION_6_7]：v0.9.3 优化 4 DROP graph_nodes + graph_edges（core 层图谱设施无消费者）
+     * - [MIGRATION_7_8]：v0.9.4 wrong_answers 添加 10 个 sched_* FSRS 调度字段 + 索引
      * - fallbackToDestructiveMigrationOnDowngrade：仅版本号降级时重建表（开发期降级测试用）。
      *   P0-D1 修正：原 fallbackToDestructiveMigration() 在升级时也会清空整个数据库，
      *   v0.2.0 已发布用户有真实 FSRS 复习记录，升级时被静默清空是不可接受的。
@@ -83,6 +85,7 @@ object DatabaseModule {
                 MIGRATION_4_5,
                 MIGRATION_5_6,
                 MIGRATION_6_7,
+                MIGRATION_7_8,
             )
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()

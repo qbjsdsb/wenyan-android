@@ -30,6 +30,9 @@ class WrongAnswerRepositoryImpl @Inject constructor(
     override fun observeUnresolved(): Flow<List<WrongAnswerWithDetails>> =
         wrongAnswerDao.observeUnresolved()
 
+    override fun observeDueWrongAnswers(now: Long): Flow<List<WrongAnswerWithDetails>> =
+        wrongAnswerDao.observeDueWrongAnswers(now)
+
     override fun observeByPoint(pointId: String): Flow<List<WrongAnswerEntity>> =
         wrongAnswerDao.observeByPoint(pointId)
 

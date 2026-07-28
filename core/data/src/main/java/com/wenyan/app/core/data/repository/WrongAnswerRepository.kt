@@ -30,6 +30,16 @@ interface WrongAnswerRepository {
     /** 观察未解决错题(JOIN 关联表获取题目文本,resolvedAt IS NULL,按 lastWrongAt DESC) */
     fun observeUnresolved(): Flow<List<WrongAnswerWithDetails>>
 
+    /**
+     * 观察待复习的未解决错题（v0.9.4 新增）。
+     *
+     * FSRS 调度：sched_next_review_at <= now AND resolved_at IS NULL。
+     * 新建错题 sched_next_review_at=0（立即到期），首次进入即出现。
+     *
+     * @param now 当前时间戳（由调用方传入，便于测试控制时间）
+     */
+    fun observeDueWrongAnswers(now: Long): Flow<List<WrongAnswerWithDetails>>
+
     /** 观察指定知识点的错题(按 lastWrongAt DESC) */
     fun observeByPoint(pointId: String): Flow<List<WrongAnswerEntity>>
 

@@ -2,12 +2,15 @@ package com.wenyan.app.core.data.repository
 
 import androidx.room.withTransaction
 import com.wenyan.app.core.data.mapper.MemoRecordMapper
+import com.wenyan.app.core.data.mapper.WrongAnswerSchedulingMapper
 import com.wenyan.app.core.database.WenyanDatabase
 import com.wenyan.app.core.database.dao.MemoRecordDao
 import com.wenyan.app.core.database.dao.ReviewLogDao
+import com.wenyan.app.core.database.dao.WrongAnswerDao
 import com.wenyan.app.core.database.entity.CardTemplateType
 import com.wenyan.app.core.database.entity.MemoRecordEntity
 import com.wenyan.app.core.database.entity.ReviewLogEntity
+import com.wenyan.app.core.database.entity.WrongAnswerEntity
 import com.wenyan.app.core.fsrs.FsrsWrapper
 import com.wenyan.app.core.fsrs.MemoryTier
 import com.wenyan.app.core.fsrs.Rating
@@ -98,6 +101,27 @@ interface SchedulingRepository {
         pointId: String,
         cardType: CardTemplateType,
     ): Map<Rating, IntervalPreview>
+
+    /**
+     * 错题评分调度：根据用户评分更新错题的 FSRS 调度状态（v0.9.4 新增）。
+     *
+     * 与 [rateCard] 类似，但操作对象是 wrong_answers 表的 sched_* 字段，
+     * 而非 memo_records 表。使用 TIER_FRAMEWORK 档位（R_target=0.90）。
+     *
+     * 流程：
+     * 1. 读取 WrongAnswerEntity（含 sched_* 字段）
+     * 2. 转 FlashCard（用 [WrongAnswerSchedulingMapper]）
+     * 3. 构造 FsrsWrapper（TIER_FRAMEWORK，enableFuzz=true）
+     * 4. schedule() → 转回 sched_* 字段 → updateScheduling 写回 DB
+     *
+     * @param wrongAnswerId 错题 ID
+     * @param rating        用户评分（AGAIN/HARD/GOOD/EASY）
+     * @return 更新后的 WrongAnswerEntity（sched_* 字段已更新），或 null（错题不存在）
+     */
+    suspend fun rateWrongAnswer(
+        wrongAnswerId: String,
+        rating: Rating,
+    ): WrongAnswerEntity?
 }
 
 /**
@@ -123,6 +147,7 @@ class SchedulingRepositoryImpl @Inject constructor(
     private val memoRecordDao: MemoRecordDao,
     private val reviewLogDao: ReviewLogDao,
     private val clockGuard: ClockGuard,
+    private val wrongAnswerDao: WrongAnswerDao,
 ) : SchedulingRepository {
     /**
      * 评分调度：根据用户评分更新知识点的 FSRS 调度状态。
@@ -344,5 +369,73 @@ class SchedulingRepositoryImpl @Inject constructor(
             reps = 0,
             inPriorityQueue = 0,
         )
+    }
+
+    /**
+     * 错题评分调度：根据用户评分更新错题的 FSRS 调度状态（v0.9.4 新增）。
+     *
+     * 使用 TIER_FRAMEWORK 档位（R_target=0.90，maxInterval=365，enableFuzz=true），
+     * 与名词解释/作品作者等卡片同档，适合错题的中等精度复习需求。
+     *
+     * 流程：
+     * 1. 读取 WrongAnswerEntity（不存在返回 null）
+     * 2. sched_* 字段 → FlashCard（[WrongAnswerSchedulingMapper.toFlashCard]）
+     * 3. 构造 FsrsWrapper（TIER_FRAMEWORK）+ schedule()
+     * 4. FlashCard → sched_* 字段（[WrongAnswerSchedulingMapper.toSchedulingUpdate]）
+     * 5. [WrongAnswerDao.updateScheduling] 写回 DB（仅更新 sched_* 字段，不影响 wrongCount 等）
+     *
+     * 不写 review_logs：错题调度日志暂不入 review_logs 表（避免与知识点复习日志混淆，
+     * 后续可扩展独立的 wrong_answer_review_logs 表）。
+     *
+     * NF-B 修复：用 [ClockGuard.effectiveNowMillis] 替代 LocalDateTime.now()，
+     * 检测时钟回拨避免 FSRS 误判。
+     */
+    override suspend fun rateWrongAnswer(
+        wrongAnswerId: String,
+        rating: Rating,
+    ): WrongAnswerEntity? {
+        if (wrongAnswerId.isBlank()) return null
+
+        // 1. 读取错题（含 sched_* 字段）
+        val existing = wrongAnswerDao.getById(wrongAnswerId) ?: return null
+
+        // 2. 构造 FsrsWrapper（TIER_FRAMEWORK，与名词解释同档）
+        val config = TIER_CONFIGS.getValue(MemoryTier.TIER_FRAMEWORK)
+        val wrapper = FsrsWrapper(
+            requestRetention = config.targetRetention,
+            maximumInterval = config.maxInterval,
+            enableFuzz = true,
+            stabilityGrowthFactor = config.stabilityGrowthFactor,
+            easyBonus = config.easyBonus,
+            againPenalty = config.againPenalty,
+        )
+
+        // 3. sched_* → FlashCard → FSRS 调度
+        val nowMillis = clockGuard.effectiveNowMillis()
+        val now = LocalDateTime.ofInstant(
+            Instant.ofEpochMilli(nowMillis),
+            ZoneId.systemDefault(),
+        )
+        val flashCardBefore = WrongAnswerSchedulingMapper.toFlashCard(existing)
+        val flashCardAfter = wrapper.schedule(flashCardBefore, rating, now)
+
+        // 4. FlashCard → sched_* 更新参数 → 写回 DB
+        val update = WrongAnswerSchedulingMapper.toSchedulingUpdate(flashCardAfter)
+        wrongAnswerDao.updateScheduling(
+            id = wrongAnswerId,
+            state = update.state,
+            stability = update.stability,
+            difficulty = update.difficulty,
+            lastReviewAt = update.lastReviewAt,
+            nextReviewAt = update.nextReviewAt,
+            reviewCount = update.reviewCount,
+            lapses = update.lapses,
+            elapsedDays = update.elapsedDays,
+            scheduledDays = update.scheduledDays,
+            reps = update.reps,
+        )
+
+        // 5. 返回更新后的 Entity（重新读取，确保 sched_* 字段一致）
+        return wrongAnswerDao.getById(wrongAnswerId)
     }
 }
