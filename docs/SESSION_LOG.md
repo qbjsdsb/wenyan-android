@@ -4694,3 +4694,108 @@ https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.0
    - QuizScreen TopBar 无 Inbox 入口
 3. **P0 CI 恢复后**：重新用正式 keystore 构建 release APK 并替换 v0.9.0 asset（消除 Exception E1）
 4. **P1 R8 启用**：P1-PG 规则已就绪 + B5.1 GraphSkeleton 路径已修正，emulator 实测无崩溃后切换 isMinifyEnabled=true
+
+---
+
+## Session 2026-07-28: v0.9.1 关联知识点模块不渲染 Hotfix
+
+### 背景
+
+用户报告 v0.9.0 发布后"关联知识点模块找不见"。使用 staff-engineer-mode 插件进行系统化调查。
+
+### 根因调查
+
+**数据流追踪**（SeedDataLoader → KnowledgeRepository → UI）：
+
+1. `SeedDataLoader.importToDatabase` 步骤3 硬编码 `relatedIds = null`（[SeedDataLoader.kt:308](core/data/src/main/java/com/wenyan/app/core/data/seed/SeedDataLoader.kt#L308)）
+2. `KnowledgeRepository.observeKnowledgePointDetail` L83: `relatedIds.orEmpty()` → 空列表
+3. L86-88: `allIds.isEmpty()` → true → 短路返回 detail（relatedPoints 保持默认空列表）
+4. `RelatedPointsSection` L470: `hasRelated = false`，L474: `!hasRelated && !hasContrast && !hasExtension` → `return` 不渲染
+
+**结论**：B2 增强了 UI 但数据层未接通，relatedIds 永远为 null。
+
+### 修复
+
+新增 `SeedDataLoader.computeRelatedIdsByTags`（[SeedDataLoader.kt:818-887](core/data/src/main/java/com/wenyan/app/core/data/seed/SeedDataLoader.kt#L818-L887)）：
+
+- 同 subject + 共享 ≥1 tag → RELATED 关联
+- 按共享 tag 数降序（共享越多越关联），id 升序稳定排序，取前 5
+- 无 tags / 无共享 tag 的 KP 保持 null（UI 不渲染该区块）
+- O(n²) 每 subject 内，n_max=460（中国古代文学），约 21 万次比较，启动期可接受
+
+### 测试
+
++8 `computeRelatedIdsByTags_*` 单测（[SeedDataLoaderTest.kt:284-379](core/data/src/test/java/com/wenyan/app/core/data/seed/SeedDataLoaderTest.kt#L284-L379)）：
+- 同 subject 共享 tag 产生关联
+- 不同 subject 即使共享 tag 也无关联
+- 同 subject 无共享 tag 无关联
+- tags=null 无关联
+- 共享 tag 数多的排前面
+- 最多返回 5 个关联
+- 自身不在关联列表中
+- 空列表返回空 map
+
+### 数据迁移
+
+seed 版本 2.12.0 → 2.13.0 触发存量用户重新导入。`isUpgrade = true` 保留 MemoRecord（FSRS 学习进度），仅 @Upsert 更新 relatedIds。
+
+### staff-engineer-mode 审查
+
+| Specialist | Verdict | Notes |
+|------------|---------|-------|
+| agent-pr-review | ✅ Ready to merge | 无 blocker，3 anchors，8 fail-without-change 测试 |
+| production-readiness-review | ✅ Go | External artifact，E1 accepted，无 blocker |
+| release-build-reproducibility | ✅ Go | Pinned inputs (JDK 17.0.2 + Gradle 8.14.4)，reproducible build，E1 debug signing |
+
+### Commits
+
+| Commit | Content |
+|--------|---------|
+| `a5ce9eb` | fix(v0.9.1): SeedDataLoader 派生 relatedIds + 8 测试 + seed 2.13.0 |
+| `ed25132` | release(v0.9.1): versionCode 27→28 + versionName 0.9.0→0.9.1 |
+| `2f84cd9` | docs(v0.9.1): release receipt — PRR + RBR + agent-pr-review evidence |
+
+### 本地验证
+
+| Check | Result |
+|-------|--------|
+| `:app:assembleDebug` | ✅ BUILD SUCCESSFUL |
+| `:app:assembleRelease` | ✅ BUILD SUCCESSFUL |
+| `testDebugUnitTest`（全模块） | ✅ BUILD SUCCESSFUL |
+
+### 发布
+
+| Step | Command | Result |
+|------|---------|--------|
+| Push fix commit | git push origin trae/agent-Ajea3B | ✅ a5ce9eb pushed |
+| Merge to main | git checkout main && git merge --ff-only | ✅ fast-forward to 2f84cd9 |
+| Push main | git push origin main | ✅ 874d604..2f84cd9 |
+| Create tag | git tag v0.9.1 2f84cd9 | ✅ |
+| Push tag | git push origin v0.9.1 | ✅ new tag |
+| 创建 Release | gh release create v0.9.1 ... | ✅ published at 2026-07-28T00:47:58Z |
+| 上传 assets | app-debug.apk + app-release.apk | ✅ both uploaded |
+
+### 发布后验证（2026-07-28）
+
+| Check | Result |
+|-------|--------|
+| gh release view v0.9.1 | ✅ Published, draft=false, prerelease=false |
+| Tag v0.9.1 远程/本地一致 | ✅ 均指向 2f84cd9 |
+| Asset app-debug.apk | ✅ state=uploaded, 28,752,464 bytes |
+| Asset app-release.apk | ✅ state=uploaded, 19,200,844 bytes |
+| 本地 debug APK 字节级匹配 | ✅ 28,752,464 bytes = GitHub asset |
+| 本地 release APK 字节级匹配 | ✅ 19,200,844 bytes = GitHub asset |
+
+### Release URL
+
+https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.1
+
+### 交接给下一会话
+
+1. **v0.9.1 已发布**：修复关联知识点模块不渲染 bug，用户可下载 APK 实机测试
+2. **P0 emulator 实测 v0.9.1**：
+   - 知识点详情页 RelatedPointsSection 是否渲染（应有关联知识点列表）
+   - 关联知识点点击跳转是否正常
+   - seed 2.13.0 触发重导后 relatedIds 是否正确填充
+3. **P0 CI 恢复后**：重新用正式 keystore 构建 release APK 并替换 v0.9.1 asset（消除 Exception E1）
+4. **P2 后续优化**：CONTRAST/EXTENSION 关联需语义分析，可由 AI 管线（LLM 从 full_content 派生）或手动标注补充
