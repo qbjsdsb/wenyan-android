@@ -14,6 +14,7 @@ import com.wenyan.app.feature.knowledge.KnowledgePointDetailScreen
 import com.wenyan.app.feature.knowledge.KnowledgeScreen
 import com.wenyan.app.feature.quiz.QuizScreen
 import com.wenyan.app.feature.quiz.WrongAnswerScreen
+import com.wenyan.app.feature.settings.AboutTutorialScreen
 import com.wenyan.app.feature.settings.SettingsScreen
 
 /**
@@ -30,6 +31,7 @@ import com.wenyan.app.feature.settings.SettingsScreen
  * - aiassistant：AI 助手（v0.6 起从顶级 Tab 降为子路由，Push/Pop slide）
  * - knowledge_detail/{pointId}：知识点详情（Spec C1.27 多教材对照 + C7.2 来源溯源）
  * - api_config：API 配置（Spec C5.7a 设计文档 3.6.4 多服务商配置）
+ * - about：关于与教程（v0.9.5 新增，7 章深度教程：定位/模块/FSRS-6/三档记忆/RAG/使用指南/致谢）
  *
  * v0.9.0 变更：
  * - 移除 graph 顶级 Tab（feature:graph 模块整体删除，知识点关联改走树结构）
@@ -126,6 +128,12 @@ fun WenyanNavHost(
                     launchSingleTop = true
                 }
             },
+            onNavigateToAbout = {
+                // v0.9.5：教程子路由，Push/Pop slide + launchSingleTop 防双击重复压栈
+                navController.navigate(ROUTE_ABOUT) {
+                    launchSingleTop = true
+                }
+            },
         )
         aiAssistantDestination(
             onBack = { navController.popBackStack() },
@@ -137,6 +145,9 @@ fun WenyanNavHost(
             },
         )
         apiConfigDestination(
+            onBack = { navController.popBackStack() },
+        )
+        aboutDestination(
             onBack = { navController.popBackStack() },
         )
         knowledgeDetailDestination(
@@ -203,13 +214,32 @@ private fun NavGraphBuilder.wrongAnswerDestination() {
 }
 
 // v0.6：Settings 从子路由提升为顶级 Tab，用 NavHost 默认 Tab fade（无 Push/Pop slide）
+// v0.9.5：新增 onNavigateToAbout，进入"关于与教程"子路由
 private fun NavGraphBuilder.settingsDestination(
     onNavigateToApiConfig: () -> Unit,
+    onNavigateToAbout: () -> Unit,
 ) {
     composable(TopLevelDestination.ROUTE_SETTINGS) {
         SettingsScreen(
             onNavigateToApiConfig = onNavigateToApiConfig,
+            onNavigateToAbout = onNavigateToAbout,
         )
+    }
+}
+
+// v0.9.5：关于与教程子路由（7 章深度教程）
+// 子路由用 Push/Pop slide transition（覆盖 NavHost 默认的 Tab fade）
+private fun NavGraphBuilder.aboutDestination(
+    onBack: () -> Unit,
+) {
+    composable(
+        route = ROUTE_ABOUT,
+        enterTransition = { WenyanMotion.PushEnterTransition },
+        exitTransition = { WenyanMotion.PushExitTransition },
+        popEnterTransition = { WenyanMotion.PopEnterTransition },
+        popExitTransition = { WenyanMotion.PopExitTransition },
+    ) {
+        AboutTutorialScreen(onBack = onBack)
     }
 }
 
@@ -271,3 +301,4 @@ private fun NavGraphBuilder.knowledgeDetailDestination(
 private const val ROUTE_API_CONFIG = "api_config"
 private const val ROUTE_AI_ASSISTANT = "aiassistant"
 private const val ROUTE_KNOWLEDGE_DETAIL = "knowledge_detail"
+private const val ROUTE_ABOUT = "about"

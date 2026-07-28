@@ -78,6 +78,7 @@ private val SeedColors = listOf(
 @Composable
 fun SettingsScreen(
     onNavigateToApiConfig: () -> Unit,
+    onNavigateToAbout: () -> Unit,
     viewModel: ThemeViewModel = hiltViewModel(),
 ) {
     val themeConfig by viewModel.themeConfig.collectAsStateWithLifecycle()
@@ -295,6 +296,14 @@ fun SettingsScreen(
                         title = "版本",
                         // P1-M2 修正：原硬编码 "v0.1.0" 与实际版本脱节，改读 BuildConfig.VERSION_NAME
                         subtitle = "v${BuildConfig.VERSION_NAME}",
+                    )
+                    GroupedCardDivider()
+                    // v0.9.5 新增：教程入口（per staff-engineer-mode 客户端 UI 开发流程）
+                    // 7 章深度教程：定位 / 模块 / FSRS-6 / 三档记忆 / RAG / 使用指南 / 致谢
+                    GroupedCardItem(
+                        title = "关于与教程",
+                        subtitle = "软件介绍与使用指南",
+                        onClick = onNavigateToAbout,
                     )
                 }
             }
