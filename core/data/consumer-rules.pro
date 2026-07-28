@@ -19,8 +19,10 @@
 
 # ============ Graph Skeleton ============
 # GraphSkeleton 预置图结构（data class，可能被反射读取）
--keep class com.wenyan.app.core.data.graph.GraphSkeleton { *; }
--keep class com.wenyan.app.core.data.graph.GraphSkeleton$* { *; }
+# 注：line 18 的 -keep class com.wenyan.app.core.data.seed.** 已覆盖此类，
+# 此处显式声明作为重要类的文档标记（B5.1 修正路径：原误写为 .graph.GraphSkeleton）
+-keep class com.wenyan.app.core.data.seed.GraphSkeleton { *; }
+-keep class com.wenyan.app.core.data.seed.GraphSkeleton$* { *; }
 
 # ============ Repository 实现 ============
 # 仓库实现类通过 Hilt @Inject constructor 注入，Hilt 规则已在 app/proguard-rules.pro 覆盖。

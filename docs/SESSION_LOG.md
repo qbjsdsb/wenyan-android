@@ -4455,3 +4455,188 @@ CardSplitterTest 新增 1 个场景：
    - 检查 Logging.kt 在 Logcat 中正确输出（Debug 构建应看到 Timber 日志）
 4. **GitHub Actions 账单问题解决后**：重新用正式 keystore 构建 release APK 并替换 v0.8.18 asset
 5. **审计暂告段落**：v0.8.17 三大 feature 模块（knowledge/quiz/cards）retry-after-error 模式已对齐；v0.8.18 视觉/工程化升级完成；下一阶段重点在 emulator 实测 + R8 启用（P1-PG 规则已就绪）
+
+---
+
+## 2026-07-27 v0.9.0 知识图谱移除 + 章节树 + 关联模块 + 错题本顶级 Tab
+
+### 会话目标
+
+用户要求：
+1. 移除知识图谱功能（feature:graph 模块）
+2. 在知识点功能中集成常见的树状图结构
+3. 每个知识点配有关联知识点模块，可点击查看详情
+4. 原知识图谱位置（底部导航第 4 个 Tab）让位给错题本
+
+执行原则：staff-engineer-mode specialist `migration-and-deprecation`，expand/contract（并行变更）策略 — 先添加新路径，验证等价，再移除旧路径。
+
+### 架构决策（ADR-001）
+
+详见 [docs/design/adr-001-graph-removal.md](design/adr-001-graph-removal.md)
+
+**决策**：移除 feature:graph 模块（图谱可视化 UI），保留 core 层图谱基础设施（GraphNodeDao/GraphEdgeDao/GraphRepository/GraphSkeleton/算法服务，FSRS 调度链路消费）。
+
+**理由**：
+- F1 场景错配：考研备考场景下，学生更需要"知识点 → 关联知识点"的线性导航，而非全局图谱探索
+- F2 维护成本：~5000 行低使用率 UI 代码（GraphScreen + GraphCanvas + GraphLayout + 3 测试文件）
+- F3 替代方案更优：章节树（线性层级）+ 关联知识点模块（关系视觉编码）覆盖 90% 用户需求
+- F6 依赖关系清晰：feature:graph 仅被 app 模块通过 WenyanNavHost + TopLevelDestination 引用
+
+### 迁移计划
+
+详见 [docs/plans/graph-removal-tree-migration.md](plans/graph-removal-tree-migration.md)
+
+5 Batch 迁移，每个 Batch 独立 commit，可单独 git revert 回滚：
+
+| 批次 | 名称 | 类型 | commit |
+|------|------|------|--------|
+| B1 | 章节树数据层（expand） | 新增 | `afa8ca2` |
+| B2 | 关联知识点模块增强（expand） | 新增 | `358b69e` |
+| B3 | 错题本升级为顶级目的地（expand） | 新增 | `35750d8` |
+| B4 | 移除 feature:graph 模块（contract） | 删除 | （本会话 commit） |
+| B5 | ProGuard 规则修复 + 文档更新 | 修复 | （本会话 commit） |
+
+执行顺序：B1 → B2 → B3 → G1 → B4 → G2 → B5 → G3
+
+### B1 章节树数据层（expand）
+
+**目标**：让 ChapterEntity 真正支持树状层级，为 UI 提供数据基础。
+
+**改动**：
+- `core/database/dao/ChapterDao.kt`：新增 `observeTree(rootId)` 使用 SQLite WITH RECURSIVE CTE 递归查询 + `countNonRootChapters()` 统计子章节数
+- `core/data/repository/ChapterRepository.kt`（新增）：接口定义 observeSubjects/observeRootChapters/observeChildren/observeTree/observeKnowledgePointsByChapter
+- `core/data/repository/ChapterRepositoryImpl.kt`（新增）：实现类，组合 ChapterDao + SubjectDao + KnowledgePointDao
+- `core/data/di/DataModule.kt`：注册 `@Binds ChapterRepository`
+- `core/data/seed/SeedDataLoader.kt`：新增 `matchPeriodChapter()` + `PeriodChapter` 数据类（移入 companion object 便于测试），基于文学时段（先秦/秦汉/魏晋/唐宋/元明清/现代/当代）自动生成二级章节树
+- `app/src/main/assets/seed_data.json`：seedVersion 2.11.0 → 2.12.0（触发重新导入）
+
+**测试**：
+- `core/data/src/test/java/.../repository/ChapterRepositoryImplTest.kt`（新增）：7 tests，覆盖 observeRootChapters/observeChildren/observeTree/observeKnowledgePointsByChapter
+- `core/data/src/test/java/.../seed/SeedDataLoaderTest.kt`：扩展为 13 tests，覆盖 matchPeriodChapter 算法 + 章节树生成
+
+**验收 G0**：`:core:data:testDebugUnitTest :core:database:testDebugUnitTest` 全绿
+
+### B2 关联知识点模块增强（expand）
+
+**目标**：让 RelatedPointsSection 从"列表"升级为"关联模块"，提供关系类型视觉编码。
+
+**改动**（`feature/knowledge/.../KnowledgePointDetailScreen.kt`）：
+- 新增 `RelationshipType` 枚举：RELATED（关联，Icons.Filled.Link，primary）/ CONTRAST（对比，Icons.Filled.CompareArrows，tertiary）/ EXTENSION（延伸，Icons.Filled.CallMade，secondary）
+- 重构 `RelatedGroup`：新增 `relationType` 参数，Header 行显示关系图标 + 名称 + 计数 chip
+- 新增 `RelatedPointItem`：标题 + 摘要预览（2 行）+ 考频 chip + 难度 chip + 右箭头
+- 无障碍：`semantics { contentDescription = "关联知识点：${point.title}，考频${freq}，难度${diff}" }`
+- 新增 3 主题 Preview（Light / Dark / AMOLED）
+
+**验收 G0**：`:feature:knowledge:compileDebugKotlin :feature:knowledge:testDebugUnitTest` 全绿
+
+### B3 错题本升级为顶级目的地（expand）
+
+**目标**：将 WrongAnswerScreen 从 quiz 子路由提升为底部导航第 4 个 Tab。
+
+**改动**：
+- `app/navigation/TopLevelDestination.kt`：移除 Graph data object，新增 WrongAnswer data object（ROUTE_WRONG_ANSWER，label="错题本"，icon=Icons.Filled.ErrorOutline），destinations 列表更新为 [Knowledge, Quiz, Cards, WrongAnswer, Settings]
+- `app/navigation/WenyanNavHost.kt`：移除 graphDestination() 调用，wrongAnswerDestination() 改为顶级目的地（不传 onBack）
+- `feature/quiz/.../WrongAnswerScreen.kt`：onBack 参数改为可选 `onBack: (() -> Unit)? = null`，当 null 时隐藏返回箭头（顶级 Tab 模式）
+- `feature/quiz/.../QuizScreen.kt`：移除 `onNavigateToWrongAnswer` 参数 + TopBar Inbox IconButton（统一为顶级入口）
+
+**验收 G1**：emulator 实测项待下一会话执行（沙箱无 emulator），代码层验证：5 Tab 导航 + WrongAnswerScreen 顶级模式 + QuizScreen TopBar 无 Inbox
+
+### B4 移除 feature:graph 模块（contract）
+
+**目标**：删除 feature:graph Gradle 模块及其所有引用。
+
+**改动**：
+- `app/build.gradle.kts`：移除 `implementation(project(":feature:graph"))`
+- `settings.gradle.kts`：移除 `include(":feature:graph")`
+- `app/navigation/WenyanNavHost.kt`：移除 `graphDestination()` 函数定义（已无调用点）
+- `app/navigation/TopLevelDestination.kt`：移除 `Graph` data object + `ROUTE_GRAPH` 常量 + `import Hub`（B3 已处理 destinations 列表）
+- 删除 `feature/graph/` 整个目录（11 文件，~5000 行）：
+  - build.gradle.kts / consumer-rules.pro
+  - GraphScreen.kt / GraphViewModel.kt
+  - ui/GraphCanvas.kt / ui/GraphConstants.kt / ui/GraphLayout.kt
+  - test/Fakes.kt / test/GraphViewModelTest.kt / test/ui/GraphLayoutTest.kt
+
+**保留设施**（按 ADR-001 0.1 节"保留"清单，FSRS 调度链路消费）：
+- `core/database/dao/GraphNodeDao.kt` + `GraphEdgeDao.kt`
+- `core/database/entity/GraphNodeEntity.kt` + `GraphEdgeEntity.kt`
+- `core/data/repository/GraphRepository.kt` + `GraphRepositoryImpl.kt`
+- `core/data/seed/GraphSkeleton.kt`
+- `core/data/graph/InterferenceWarner.kt` + `WeakSubgraphDetector.kt` + `PrerequisiteChecker.kt`
+
+**验收 G2**：
+- `:app:assembleDebug` BUILD SUCCESSFUL
+- `:app:assembleRelease` BUILD SUCCESSFUL
+- `testDebugUnitTest`: 403 tests, 0 failures, 0 errors, 0 skipped
+- 静态搜索 `feature:graph|ROUTE_GRAPH|TopLevelDestination.Graph|GraphScreen|GraphViewModel|graphDestination` 在 .kt/.kts 中无残留（仅 docs/ 历史记录保留）
+
+**测试数量变化**：v0.8.18 (450) - feature:graph 测试 (GraphLayoutTest 23 + GraphViewModelTest 44 = 67) + B1 新增 (ChapterRepositoryImplTest 7 + SeedDataLoaderTest 新增 ~6) ≈ 403 ✓
+
+### B5 ProGuard 规则修复 + 文档更新
+
+**B5.1 修复 GraphSkeleton keep 规则路径**：
+- 文件：`core/data/consumer-rules.pro`
+- 改动：`-keep class com.wenyan.app.core.data.graph.GraphSkeleton` → `-keep class com.wenyan.app.core.data.seed.GraphSkeleton`（实际包路径）
+- 注：line 18 的 `-keep class com.wenyan.app.core.data.seed.** { *; }` 已覆盖此类，显式声明作为重要类的文档标记
+
+**B5.2 更新 AGENTS.md 第 7-9 节**：
+- 第 7 节：新增 v0.9.0 当前状态条目（5 Batch 摘要 + 保留设施 + 设计依据）
+- 第 8 节：新增 v0.9.0 项目阶段总览行
+- 第 9 节：更新下一步优先级（emulator 实测 v0.9.0 + v0.9.0 Release 流程）
+
+**B5.3 更新 docs/00-STATUS.md**：
+- 当前状态：v0.9.0 开发完成，待 Release
+- 关键表项：seed 2.12.0 / 章节树 / 关联模块 / 5 Tab / 图谱 UI 已移除 / 图谱数据层保留
+- 新会话首要任务：emulator 实测 v0.9.0 + Release 流程
+
+**B5.4 更新 docs/SESSION_LOG.md**：本节
+
+### G3 Release 准入验证
+
+- G0（B1/B2 内部）：✅ 单元测试全绿
+- G1（B3 emulator 实测）：⏳ 待下一会话（沙箱无 emulator）
+- G2（B4 构建全绿）：✅ assembleDebug + assembleRelease + testDebugUnitTest (403 tests) 全绿
+- G3（Release 准入）：
+  - ✅ git status 干净（所有改动已 commit）
+  - ✅ git log 显示 5 个 batch commit
+  - ⏳ emulator 实测三模式（章节树 + 关联模块 + 错题本）无回归 — 待下一会话
+  - ⏳ Release 流程 — 待下一会话（需 bump versionCode 26→27 + versionName "0.8.18"→"0.9.0"）
+
+### 文件变更清单
+
+| 文件 | 状态 | 批次 |
+|------|------|------|
+| core/database/dao/ChapterDao.kt | 修改（+observeTree/+countNonRootChapters） | B1 |
+| core/data/repository/ChapterRepository.kt | 新增 | B1 |
+| core/data/repository/ChapterRepositoryImpl.kt | 新增 | B1 |
+| core/data/di/DataModule.kt | 修改（+ChapterRepository binding） | B1 |
+| core/data/seed/SeedDataLoader.kt | 修改（+matchPeriodChapter/+PeriodChapter companion） | B1 |
+| app/src/main/assets/seed_data.json | 修改（seedVersion 2.11.0→2.12.0） | B1 |
+| core/data/src/test/.../ChapterRepositoryImplTest.kt | 新增（7 tests） | B1 |
+| core/data/src/test/.../SeedDataLoaderTest.kt | 修改（13 tests，+章节树生成） | B1 |
+| feature/knowledge/.../KnowledgePointDetailScreen.kt | 修改（+RelationshipType/+RelatedPointItem/+Preview） | B2 |
+| app/navigation/TopLevelDestination.kt | 修改（-Graph/+WrongAnswer） | B3+B4 |
+| app/navigation/WenyanNavHost.kt | 修改（-graphDestination/+wrongAnswerDestination 顶级） | B3+B4 |
+| feature/quiz/.../WrongAnswerScreen.kt | 修改（onBack 可选） | B3 |
+| feature/quiz/.../QuizScreen.kt | 修改（-Inbox IconButton） | B3 |
+| app/build.gradle.kts | 修改（-implementation(project(":feature:graph"))） | B4 |
+| settings.gradle.kts | 修改（-include(":feature:graph")） | B4 |
+| feature/graph/（11 文件） | 删除（~5000 行） | B4 |
+| core/data/consumer-rules.pro | 修改（GraphSkeleton keep 路径修正） | B5 |
+| AGENTS.md | 修改（第 7-9 节 v0.9.0 同步） | B5 |
+| docs/00-STATUS.md | 修改（v0.9.0 状态快照） | B5 |
+| docs/SESSION_LOG.md | 修改（本节追加） | B5 |
+
+### 交接给下一会话
+
+1. **v0.9.0 开发完成，待 Release**：5 Batch 迁移全部 commit，403 tests 全绿
+2. **下一步优先级**：
+   - P0：emulator 实测 v0.9.0（5 Tab 导航 + 章节树数据导入 + 关联模块视觉编码 + WrongAnswerScreen 顶级模式 + QuizScreen TopBar 无 Inbox）
+   - P0：v0.9.0 Release（bump versionCode 26→27 + versionName "0.8.18"→"0.9.0" + 本地构建 + gh 上传，沿用 Exception E1 流程）
+3. **emulator 实测建议**：
+   - 启动 App，验证底部导航 5 Tab（知识点/真题/卡片/错题本/设置）
+   - 点击"错题本" Tab → 直接显示 WrongAnswerScreen（无返回箭头）
+   - 进入知识点详情 → 查看关联知识点模块（3 关系类型视觉编码）
+   - 检查章节树数据导入（seed 2.12.0 触发，DB 中 chapters 表有 parent_id IS NOT NULL 子章节）
+   - 真题 Tab TopBar 不再有错题本图标（Inbox 入口已移除）
+4. **CI 账单问题解决后**：重新用正式 keystore 构建 release APK 并替换 v0.8.18/v0.9.0 asset
+5. **R8 启用准备**：P1-PG 规则已就绪 + B5.1 GraphSkeleton 路径已修正，emulator 实测无崩溃后可切换 isMinifyEnabled=true

@@ -5,41 +5,42 @@
 
 ## ✅ 当前状态
 
-**v0.8.18 启动图标 v3 印章文重构 + Logging.kt 统一日志门面已发布** — App 启动图标 v3（米色印面 + 墨黑"文"字 + M3E medium-large 圆角 12dp + monochrome 适配 Android 13+ themed icons）+ Logging.kt 统一日志门面（Timber 封装 + Release 降级 WARN/ERROR + 20+ 文件迁移）+ scripts/setup-env.sh 一键环境准备（沙箱/云端/CI 通用）+ mise.toml 锁定 JDK 17.0.2 + Gradle 8.14.4。本地构建 + gh 上传（CI 账单问题，debug 签名 fallback，Exception E1）。assembleDebug + assembleRelease + testDebugUnitTest 全绿（450 tests）。
+**v0.9.0 知识图谱移除 + 章节树 + 关联模块 + 错题本顶级 Tab（开发完成，待 Release）** — 按 ADR-001 执行 5 Batch 迁移：B1 章节树数据层（ChapterDao 树状查询 + ChapterRepository + SeedDataLoader 层级生成，seed 2.11.0→2.12.0）+ B2 关联知识点模块增强（RelationshipType 视觉编码 + 考频/难度 chip + Preview）+ B3 错题本升级为顶级目的地（替换原 Graph Tab）+ B4 移除 feature:graph 模块（11 文件 ~5000 行删除）+ B5 ProGuard 规则修复 + 文档更新。assembleDebug + assembleRelease + testDebugUnitTest 全绿（403 tests, 0 failures）。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `060a281` release(v0.8.18): 启动图标 v3 印章文重构 + Logging.kt 统一日志门面 |
+| 最新 commit | B5 ProGuard 修复 + 文档更新（待 commit） |
 | 最新 Release | **v0.8.18**（2026-07-27 发布，debug 签名 fallback — Exception E1） |
-| 编译验证 | **:app:assembleDebug + :app:assembleRelease + testDebugUnitTest SUCCESSFUL（450 tests, 0 failures）** |
-| versionCode / versionName | **26 / "0.8.18"** |
-| 知识点 | **910 个**（entities/relations 数据补全，自动入图） |
+| 编译验证 | **:app:assembleDebug + :app:assembleRelease + testDebugUnitTest SUCCESSFUL（403 tests, 0 failures）** |
+| versionCode / versionName | **26 / "0.8.18"**（v0.9.0 Release 时 bump 到 27 / "0.9.0"） |
+| 知识点 | **910 个**（entities/relations 数据补全） |
 | 真题 | **485 道**（v0.7.6 已删除 sample_essay 冗余字段） |
-| seed 版本 | **2.11.0**（触发重新导入，保留用户 FSRS 学习进度） |
+| seed 版本 | **2.12.0**（v0.9.0 B1 章节树生成，触发重新导入） |
 | 数据库版本 | **6**（v0.7.6 Migration_5_6 删除 exam_questions.sample_essay 列） |
-| 图谱节点 | **2123+**（v0.8.1 自动从知识点 entities/relations 生成，原 50+） |
-| 图谱边数 | **968+**（含跨类边 + 知识点关系边，原 100+） |
-| 图谱覆盖率 | **100%**（原 4.4%，910 知识点全部入图） |
-| 图谱布局 | **三模式可切换**：时间轴（默认）/ 邻域力导向 / 径向概览 |
-| 视觉编码 | **3 层正交**：颜色=掌握度 / 尺寸=重要性 / 形状=类型（圆/方/菱/三角/星） |
+| 章节树 | **二级层级**（subject → default_chapter → chapter_<tag>，基于文学时段自动生成） |
+| 关联模块 | **3 关系类型**（RELATED/CONTRAST/EXTENSION）+ 视觉编码（图标 + 颜色）+ 考频/难度 chip |
+| 底部导航 | **5 Tab**：知识点 / 真题 / 卡片 / 错题本 / 设置（v0.9.0 错题本替换原图谱） |
+| 图谱 UI | **已移除**（v0.9.0 feature:graph 模块删除） |
+| 图谱数据层 | **保留**（core/database GraphNodeDao/GraphEdgeDao + core/data GraphRepository/Impl + GraphSkeleton + 算法服务，FSRS 调度链路消费） |
 | 启动图标 | **v3 "印章文"**（米色印面 + 墨黑"文"字 + 圆角 12dp + monochrome 适配） |
 | 日志门面 | **Logging.kt**（Timber 封装，Debug=Logcat / Release=WARN+ERROR） |
 | 工具链锁定 | **mise.toml**（JDK 17.0.2 + Gradle 8.14.4） |
 | 阻塞 | **CI 账单问题** — 需用户处理，不影响 Release（debug 签名可用） |
-| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-27 v0.8.18 启动图标 + Logging.kt + 发布） |
+| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-27 v0.9.0 知识图谱移除 + 章节树） |
 
 ## 🚨 新会话首要任务
 
-**v0.8.18 已发布（2026-07-27）**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.8.18
+**v0.9.0 开发完成，待 Release**（2026-07-27）。最新 Release 仍为 v0.8.18：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.8.18
 
 下一步优先级（按顺序）：
 
-1. **P0**：emulator 实测 v0.8.18 — 验证启动图标渲染（前景层 + monochrome themed icon + 不同 launcher 形状裁剪：圆/方/squircle）
-2. **P0**：emulator 实测 v0.8.1 知识图谱（三模式切换 + 形状编码 + 边标签 + 2123 节点性能 + 缩放平移）
-3. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 38+ commit 待 CI 验证（不影响 Release，已通过本地构建 + gh 上传绕过）
-4. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 并替换 v0.8.18 asset（消除 Exception E1）
-5. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
-6. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+1. **P0**：emulator 实测 v0.9.0 — 验证 5 Tab 导航（知识点/真题/卡片/错题本/设置）+ 章节树数据导入（seed 2.12.0 触发）+ 关联知识点模块视觉编码（3 关系类型）+ WrongAnswerScreen 顶级模式（无返回箭头）+ QuizScreen TopBar 无 Inbox 入口
+2. **P0**：emulator 实测 v0.8.18 启动图标 — 验证 v3 印章文渲染（前景层 + monochrome themed icon + 不同 launcher 形状裁剪）
+3. **P0**：v0.9.0 Release — bump versionCode 26→27 + versionName "0.8.18"→"0.9.0" + 本地构建 + gh 上传（CI 账单问题持续，沿用 Exception E1 流程）
+4. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 38+ commit 待 CI 验证（不影响 Release，已通过本地构建 + gh 上传绕过）
+5. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 并替换 v0.8.18/v0.9.0 asset（消除 Exception E1）
+6. **P1**：启用 R8（P1-PG 规则已就绪 + B5.1 GraphSkeleton 路径已修正，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
+7. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
 
 ### v0.8.18 工程化审查（per staff-engineer-mode Iron Law）
 
