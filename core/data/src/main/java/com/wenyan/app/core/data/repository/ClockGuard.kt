@@ -7,7 +7,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * 时钟守卫（NF-B / P0-E4 修复：FSRS 时钟回拨防护）。
+ * 时钟守卫接口（v0.9.5 follow-up #1 提取接口,便于 ViewModel 层注入与测试替换）。
  *
  * 问题：[SchedulingRepository] 用 `System.currentTimeMillis()`
  * / `LocalDateTime.now()` 计算 FSRS 到期与可提取性 R，用户改系统时间（手动调时 /
@@ -25,27 +25,18 @@ import javax.inject.Singleton
  *    - upsert lastKnown = current（更新已知最大时间）
  *    - 返回 current
  *
- * 容差 [TOLERANCE_MS] = 60 秒：NTP 同步正常波动 < 1 分钟，超出视为异常回拨。
+ * v0.9.5 follow-up #1: 提取为接口,使 [WrongAnswerViewModel] 可注入 ClockGuard
+ * (DUE 过滤时间源与 [SchedulingRepository.rateWrongAnswer] 对齐),且测试可用
+ * FakeClockGuard 替换,无需依赖 Room AppMetaDao。
  *
- * 不变性：
- * - lastKnown 单调不减（仅在 current > lastKnown - TOLERANCE 时更新为 current）
- * - 时钟前移时 lastKnown 跟进，下次回拨到此前移前的时刻会被检测为回拨（保守）
- *
- * 不实现 SystemClock.elapsedRealtime() 方案的理由：
- * - elapsedRealtime 不受系统时间调整影响，但**重启后归零**，无法跨重启持久化
- * - 跨重启的 FSRS 调度需要绝对时间（nextReviewAt 存的是 millis），用 elapsedRealtime
- *   需额外记录 boot 时间映射，复杂度高于 lastKnown 方案
- *
- * @property appMetaDao 应用元数据 DAO（读写 last_known_timestamp_ms）
+ * @see ClockGuardImpl 生产实现
  */
-@Singleton
-class ClockGuard @Inject constructor(
-    private val appMetaDao: AppMetaDao,
-) {
+interface ClockGuard {
+
     /**
      * 返回当前有效时间戳（millis）。
      *
-     * 检测时钟回拨：若 current < lastKnown - [TOLERANCE_MS]，返回 lastKnown + 1 并更新 DB；
+     * 检测时钟回拨：若 current < lastKnown - TOLERANCE_MS，返回 lastKnown + 1 并更新 DB；
      * 否则更新 lastKnown = current 并返回 current。
      *
      * P1-AUDIT-2 修正：回拨期间返回 `lastKnown + 1`（而非固定 `lastKnown`）并更新 DB。
@@ -58,13 +49,26 @@ class ClockGuard @Inject constructor(
      *
      * @return 单调不减的有效时间戳（回拨期间每次调用递增 1ms）
      */
-    suspend fun effectiveNowMillis(): Long {
+    suspend fun effectiveNowMillis(): Long
+}
+
+/**
+ * [ClockGuard] 生产实现（v0.9.5 follow-up #1 从原 ClockGuard 类重命名）。
+ *
+ * @property appMetaDao 应用元数据 DAO（读写 last_known_timestamp_ms）
+ */
+@Singleton
+class ClockGuardImpl @Inject constructor(
+    private val appMetaDao: AppMetaDao,
+) : ClockGuard {
+
+    override suspend fun effectiveNowMillis(): Long {
         val current = System.currentTimeMillis()
         val lastKnown = appMetaDao.getByKey(KEY_LAST_KNOWN_TS)?.longValue
         return if (lastKnown != null && current < lastKnown - TOLERANCE_MS) {
             // P1-AUDIT-2 修正：lastKnown + 1 确保单调递增,避免回拨期间 elapsedDays = 0
             val effective = lastKnown + 1
-            // v0.8.21: Log.w → Timber.w（tag 自动推断为 "ClockGuard"）
+            // v0.8.21: Log.w → Timber.w（tag 自动推断为 "ClockGuardImpl"）
             Timber.w(
                 "Clock rollback detected: current=$current, lastKnown=$lastKnown " +
                     "(rollback=${lastKnown - current}ms > tolerance=$TOLERANCE_MS ms), " +

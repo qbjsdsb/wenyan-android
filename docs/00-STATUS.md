@@ -5,20 +5,21 @@
 
 ## ✅ 当前状态
 
-**v0.9.1 关联知识点模块不渲染 Hotfix（已发布）** — 修复 v0.9.0 B2 关联模块 UI 不渲染 bug：根因为 SeedDataLoader 硬编码 relatedIds=null，导致 KnowledgeRepository 短路返回空列表、RelatedPointsSection 永远不渲染。新增 computeRelatedIdsByTags（同 subject + 共享 tag → RELATED，按共享数降序取前 5），seed 2.12.0→2.13.0 触发重导（MemoRecord FSRS 进度保留），+8 单测。assembleDebug + assembleRelease + testDebugUnitTest 全绿。
+**v0.9.4 错题本接入 FSRS 间隔重复调度（开发完成，待 Release）** — 为 wrong_answers 表添加 10 个 sched_* FSRS 调度字段，复用 FSRS-6 算法 + TIER_FRAMEWORK 档位（R_target=0.90），实现错题的间隔重复复习。5 层实现：数据层（Migration 7→8 + 10 字段 + 索引）+ 映射层（WrongAnswerSchedulingMapper）+ 仓库层（SchedulingRepository.rateWrongAnswer）+ ViewModel 层（DUE 过滤 + 评分委托）+ UI 层（四档评分按钮 + 调度信息展示）。+8 单测。agent-pr-review ✅ Approved（0 blocker，2 follow-up）。
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `2f84cd9` docs(v0.9.1): release receipt — PRR + RBR + agent-pr-review evidence |
+| 最新 commit | `841e2e9` feat(v0.9.4): 错题本接入 FSRS 间隔重复调度 |
 | 最新 Release | **v0.9.1**（2026-07-28 发布，debug 签名 fallback — Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.1 |
 | 编译验证 | **:app:assembleDebug + :app:assembleRelease + testDebugUnitTest SUCCESSFUL** |
-| versionCode / versionName | **28 / "0.9.1"** |
+| versionCode / versionName | **28 / "0.9.1"**（v0.9.4 未 bump，待 Release 时 bump） |
 | 知识点 | **910 个**（entities/relations 数据补全） |
 | 真题 | **485 道**（v0.7.6 已删除 sample_essay 冗余字段） |
 | seed 版本 | **2.13.0**（v0.9.1 relatedIds 派生，触发重新导入） |
-| 数据库版本 | **6**（v0.7.6 Migration_5_6 删除 exam_questions.sample_essay 列） |
+| 数据库版本 | **8**（v0.9.4 Migration_7_8 wrong_answers 添加 10 个 sched_* FSRS 调度字段 + 索引） |
 | 章节树 | **二级层级**（subject → default_chapter → chapter_<tag>，基于文学时段自动生成） |
 | 关联模块 | **3 关系类型**（RELATED/CONTRAST/EXTENSION）+ 视觉编码 + **v0.9.1: relatedIds 基于 tags 派生**（同 subject + 共享 tag，按共享数降序取前 5） |
+| 错题本 FSRS | **v0.9.4 新增**：DUE 过滤模式 + 四档评分（不会/困难/良好/简单）+ 调度信息展示（下次复习/复习次数/遗忘次数）+ TIER_FRAMEWORK 档位 |
 | 底部导航 | **5 Tab**：知识点 / 真题 / 卡片 / 错题本 / 设置（v0.9.0 错题本替换原图谱） |
 | 图谱 UI | **已移除**（v0.9.0 feature:graph 模块删除） |
 | 图谱数据层 | **保留**（core/database GraphNodeDao/GraphEdgeDao + core/data GraphRepository/Impl + GraphSkeleton + 算法服务，FSRS 调度链路消费） |
@@ -26,21 +27,24 @@
 | 日志门面 | **Logging.kt**（Timber 封装，Debug=Logcat / Release=WARN+ERROR） |
 | 工具链锁定 | **mise.toml**（JDK 17.0.2 + Gradle 8.14.4） |
 | 阻塞 | **CI 账单问题** — 需用户处理，不影响 Release（debug 签名可用） |
-| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-28 v0.9.1 关联知识点模块不渲染 Hotfix） |
+| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-28 v0.9.4 错题本接入 FSRS 调度） |
 
 ## 🚨 新会话首要任务
 
-**v0.9.1 已发布**（2026-07-28）。最新 Release：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.1
+**v0.9.4 开发完成**（2026-07-28），待 Release。最新 Release：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.1
 
 下一步优先级（按顺序）：
 
-1. **P0**：emulator 实测 v0.9.1 — 验证关联知识点模块渲染（RelatedPointsSection 应有关联知识点列表）+ 关联知识点点击跳转 + seed 2.13.0 触发重导后 relatedIds 正确填充
-2. **P0**：emulator 实测 v0.9.0（若未测）— 5 Tab 导航 + 章节树 + WrongAnswerScreen 顶级模式 + QuizScreen 无 Inbox
-3. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 40+ commit 待 CI 验证（不影响 Release，已通过本地构建 + gh 上传绕过）
-4. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 并替换 v0.9.1 asset（消除 Exception E1）
-5. **P1**：启用 R8（P1-PG 规则已就绪 + B5.1 GraphSkeleton 路径已修正，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
-6. **P2**：CONTRAST/EXTENSION 关联需语义分析，可由 AI 管线（LLM 从 full_content 派生）或手动标注补充
-7. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
+1. **P0**：emulator 实测 v0.9.4 — 验证错题本 DUE 过滤模式 + 四档评分按钮（不会/困难/良好/简单）+ 调度信息展示（下次复习/复习次数/遗忘次数）+ Migration 7→8 升级（已有错题 sched_* 字段默认值正确）
+2. **P0**：emulator 实测 v0.9.1（若未测）— 验证关联知识点模块渲染（RelatedPointsSection 应有关联知识点列表）+ 关联知识点点击跳转 + seed 2.13.0 触发重导后 relatedIds 正确填充
+3. **P0**：v0.9.4 Release — 本地构建 + gh 上传（CI 账单问题持续，沿用 Exception E1 流程）；需先 bump versionCode 28→29 + versionName "0.9.1"→"0.9.4"
+4. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 40+ commit 待 CI 验证（不影响 Release，已通过本地构建 + gh 上传绕过）
+5. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 并替换 v0.9.1 asset（消除 Exception E1）
+6. **P1 follow-up**：v0.9.4 follow-up #1 — WrongAnswerViewModel 注入 ClockGuard（DUE 过滤当前用 System.currentTimeMillis()，时钟回拨时与评分调度时间源不一致）
+7. **P1 follow-up**：v0.9.4 follow-up #2 — WrongAnswerSchedulingMapper interval 计算加 coerceAtLeast(0) 下界保护
+8. **P1**：启用 R8（P1-PG 规则已就绪 + B5.1 GraphSkeleton 路径已修正，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
+9. **P2**：CONTRAST/EXTENSION 关联需语义分析，可由 AI 管线（LLM 从 full_content 派生）或手动标注补充
+10. **P2**：OCR 完成后跑知识提取管线 → 生成完整 seed_data.json（替换 stage2-sample）
 
 ### v0.8.18 工程化审查（per staff-engineer-mode Iron Law）
 

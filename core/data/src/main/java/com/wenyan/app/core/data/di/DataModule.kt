@@ -7,6 +7,8 @@ import com.wenyan.app.core.data.repository.ChapterRepository
 import com.wenyan.app.core.data.repository.ChapterRepositoryImpl
 import com.wenyan.app.core.data.repository.ChatRepository
 import com.wenyan.app.core.data.repository.ChatRepositoryImpl
+import com.wenyan.app.core.data.repository.ClockGuard
+import com.wenyan.app.core.data.repository.ClockGuardImpl
 import com.wenyan.app.core.data.repository.ExamRepository
 import com.wenyan.app.core.data.repository.ExamRepositoryImpl
 import com.wenyan.app.core.data.repository.LlmConfigProviderImpl
@@ -65,11 +67,22 @@ abstract class DataModule {
     abstract fun bindWrongAnswerRepository(impl: WrongAnswerRepositoryImpl): WrongAnswerRepository
 
     /**
+     * 绑定 [ClockGuard] 到 [ClockGuardImpl]（v0.9.5 follow-up #1 提取接口）。
+     *
+     * ClockGuardImpl 通过 @Inject constructor 注入 AppMetaDao,
+     * DAO 由 DatabaseModule 提供。提取接口使 ViewModel 层可注入 ClockGuard
+     * 且测试可用 FakeClockGuard 替换,无需依赖 Room。
+     */
+    @Binds
+    @Singleton
+    abstract fun bindClockGuard(impl: ClockGuardImpl): ClockGuard
+
+    /**
      * 绑定 [SchedulingRepository] 到 [SchedulingRepositoryImpl](NF-PP5 Wave 3.2 提取接口)。
      *
      * SchedulingRepositoryImpl 通过 @Inject constructor 注入 WenyanDatabase +
-     * MemoRecordDao + ReviewLogDao + ClockGuard,DAO 由 DatabaseModule 提供,
-     * ClockGuard 由本模块 @Provides 提供,ClockGuard 由 DatabaseModule 提供 AppMetaDao。
+     * MemoRecordDao + ReviewLogDao + ClockGuard + WrongAnswerDao,DAO 由 DatabaseModule 提供,
+     * ClockGuard 由本模块 @Binds 绑定（ClockGuardImpl → ClockGuard 接口）。
      */
     @Binds
     @Singleton

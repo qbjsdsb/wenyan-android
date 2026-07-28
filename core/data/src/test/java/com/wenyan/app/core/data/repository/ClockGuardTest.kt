@@ -9,7 +9,7 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * [ClockGuard] 单元测试。
+ * [ClockGuardImpl] 单元测试。
  *
  * 覆盖：
  * - 首次启动（lastKnown=null）→ 返回 current，写入 lastKnown
@@ -19,16 +19,18 @@ import org.junit.Test
  * - P1-AUDIT-2 修复：回拨期间多次调用返回值严格单调递增
  *
  * 通过预填 DB（lastKnown 设为未来时间）模拟回拨场景，无需 mock System.currentTimeMillis()。
+ *
+ * v0.9.5 follow-up #1: ClockGuard 提取为接口,测试改为验证 [ClockGuardImpl] 生产实现。
  */
 class ClockGuardTest {
 
     private lateinit var dao: FakeAppMetaDao
-    private lateinit var clockGuard: ClockGuard
+    private lateinit var clockGuard: ClockGuardImpl
 
     @Before
     fun setup() {
         dao = FakeAppMetaDao()
-        clockGuard = ClockGuard(dao)
+        clockGuard = ClockGuardImpl(dao)
     }
 
     @Test

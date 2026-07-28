@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.common.util.friendlyErrorMessage
+import com.wenyan.app.core.data.repository.ClockGuard
 import com.wenyan.app.core.data.repository.SchedulingRepository
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.database.entity.WrongAnswerWithDetails
@@ -52,12 +53,14 @@ import javax.inject.Inject
  *
  * @property wrongAnswerRepository 错题仓库
  * @property schedulingRepository FSRS 调度仓库（v0.9.4 新增,用于错题评分调度）
+ * @property clockGuard 时钟守卫（v0.9.5 follow-up #1 新增,DUE 过滤时间源与评分调度对齐）
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class WrongAnswerViewModel @Inject constructor(
     private val wrongAnswerRepository: WrongAnswerRepository,
     private val schedulingRepository: SchedulingRepository,
+    private val clockGuard: ClockGuard,
 ) : ViewModel() {
 
     /** 当前过滤模式(默认未解决,这是用户最常看的视图) */
@@ -104,8 +107,12 @@ class WrongAnswerViewModel @Inject constructor(
                     val flow = when (currentFilter) {
                         WrongAnswerFilter.UNRESOLVED -> wrongAnswerRepository.observeUnresolved()
                         WrongAnswerFilter.ALL -> wrongAnswerRepository.observeAll()
+                        // v0.9.5 follow-up #1: 用 ClockGuard.effectiveNowMillis() 替代
+                        // System.currentTimeMillis(),与 SchedulingRepository.rateWrongAnswer
+                        // 时间源对齐。时钟回拨时两者用同一 lastKnown,避免 DUE 列表与
+                        // 评分调度的 now 不一致导致错题评分后立即又出现在 DUE 列表。
                         WrongAnswerFilter.DUE -> wrongAnswerRepository.observeDueWrongAnswers(
-                            System.currentTimeMillis(),
+                            clockGuard.effectiveNowMillis(),
                         )
                     }
                     flow.map { items -> WrongAnswerUiState(items = items.map { it.toUiItem() }) }

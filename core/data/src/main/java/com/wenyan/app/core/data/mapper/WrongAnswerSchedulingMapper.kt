@@ -57,8 +57,14 @@ object WrongAnswerSchedulingMapper {
             dueDate = dueDate,
             stability = wrongAnswer.schedStability,
             difficulty = wrongAnswer.schedDifficulty,
+            // v0.9.5 follow-up #2: coerceAtLeast(0) 防御负 interval。
+            // 正常情况下 schedNextReviewAt >= schedLastReviewAt,但时钟回拨或
+            // 数据损坏可能导致 nextReviewAt < lastReviewAt → 负 interval。
+            // FSRS 算法假设 interval >= 0,负值会导致 stability 计算异常。
             interval = if (wrongAnswer.schedLastReviewAt > 0) {
-                ((wrongAnswer.schedNextReviewAt - wrongAnswer.schedLastReviewAt) / DAY_MS).toInt()
+                ((wrongAnswer.schedNextReviewAt - wrongAnswer.schedLastReviewAt) / DAY_MS)
+                    .toInt()
+                    .coerceAtLeast(0)
             } else 0,
             reviewCount = wrongAnswer.schedReviewCount,
             lastReview = lastReview,

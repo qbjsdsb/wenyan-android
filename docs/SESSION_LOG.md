@@ -4799,3 +4799,92 @@ https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.1
    - seed 2.13.0 触发重导后 relatedIds 是否正确填充
 3. **P0 CI 恢复后**：重新用正式 keystore 构建 release APK 并替换 v0.9.1 asset（消除 Exception E1）
 4. **P2 后续优化**：CONTRAST/EXTENSION 关联需语义分析，可由 AI 管线（LLM 从 full_content 派生）或手动标注补充
+
+---
+
+## 2026-07-28 v0.9.4 错题本接入 FSRS 间隔重复调度
+
+### 背景
+
+用户使用 staff-engineer-mode 插件要求"反复优化，反复检查，反复调查研究"。经深度调研发现错题本原仅展示列表+手动"标记解决"，无间隔重复调度，用户可能遗忘错题、重复犯错。决定接入 FSRS-6 算法实现错题的间隔重复复习。
+
+### 设计决策（ADR-002）
+
+**方案 B**：在 wrong_answers 表添加 10 个 `sched_*` FSRS 调度字段（而非复用 memo_records 或新建表）
+
+**原因**：
+- memo_records PK 是 point_id FK→knowledge_points，真题来源错题无 pointId 会破坏 FK
+- 新建表对 1:1 关系过度规范化
+- 复用 FSRS-6 算法 + TIER_FRAMEWORK 档位（R_target=0.90），与名词解释/作品作者等卡片同档
+
+**rateWrongAnswer 不写 review_logs**：避免与知识点复习日志混淆，后续可扩展独立的 `wrong_answer_review_logs` 表
+
+### 5 层实现
+
+| 层 | 文件 | 内容 |
+|----|------|------|
+| 数据层 | [WrongAnswerEntity.kt](core/database/src/main/java/com/wenyan/app/core/database/entity/WrongAnswerEntity.kt) | 10 个 sched_* 字段（state/stability/difficulty/last_review_at/next_review_at/review_count/lapses/elapsed_days/scheduled_days/reps） |
+| 迁移 | [Migration_7_8.kt](core/database/src/main/java/com/wenyan/app/core/database/migration/Migration_7_8.kt) | 10 ALTER TABLE ADD COLUMN（全部有 defaultValue）+ sched_next_review_at 索引 |
+| 映射层 | [WrongAnswerSchedulingMapper.kt](core/data/src/main/java/com/wenyan/app/core/data/mapper/WrongAnswerSchedulingMapper.kt) | WrongAnswerEntity sched_* ↔ FlashCard 双向转换（模式同 MemoRecordMapper） |
+| 仓库层 | [SchedulingRepository.kt:393-440](core/data/src/main/java/com/wenyan/app/core/data/repository/SchedulingRepository.kt) | rateWrongAnswer：TIER_FRAMEWORK + ClockGuard + FsrsWrapper.schedule |
+| ViewModel | [WrongAnswerViewModel.kt](feature/quiz/src/main/java/com/wenyan/app/feature/quiz/WrongAnswerViewModel.kt) | DUE 过滤模式 + rateWrongAnswer 委托 + WrongAnswerItem 增加 sched_* 字段 |
+| UI | [WrongAnswerScreen.kt](feature/quiz/src/main/java/com/wenyan/app/feature/quiz/WrongAnswerScreen.kt) | DUE chip + 四档评分按钮（不会/困难/良好/简单，颜色编码）+ 调度信息展示（下次复习/复习次数/遗忘次数，遗忘>0 用 error 色高亮） |
+
+### 测试（+8 单测）
+
+**SchedulingRepositoryTest**（5 个，in-memory Room 真实事务验证）：
+- 场景 4：rateWrongAnswer(GOOD) → REVIEW，sched_reps=1，stability>0
+- 场景 5：rateWrongAnswer(AGAIN) 新卡 → LEARNING，lapses=0
+- 场景 6：空白 id 返回 null
+- 场景 7：不存在 id 返回 null
+- 场景 8：rateWrongAnswer 不影响 wrongCount/resolvedAt 等非调度字段（关键数据安全测试）
+
+**WrongAnswerViewModelTest**（3 个）：
+- 场景 5：setFilter(DUE) 切换到待复习错题列表
+- 场景 6：rateWrongAnswer(GOOD) 调用 schedulingRepository 且 errorMessage 为空
+- 场景 7：rateWrongAnswer 失败时设置 errorMessage 不抛异常
+
+### staff-engineer-mode agent-pr-review
+
+| 维度 | 结果 |
+|------|------|
+| Verdict | ✅ APPROVED FOR COMMIT |
+| Blockers | 0 |
+| Must-fix | 0 |
+| Follow-up | 2 |
+| Accepted | 1 |
+
+**Follow-up #1**（P1）：WrongAnswerViewModel.kt:108 用 `System.currentTimeMillis()` 做 DUE 过滤，而 SchedulingRepository.rateWrongAnswer 用 `ClockGuard.effectiveNowMillis()`。时钟回拨时 DUE 列表与评分调度时间源不一致。DUE 仅 UI 过滤，影响有限。需注入 ClockGuard 到 ViewModel。
+
+**Follow-up #2**（P1）：WrongAnswerSchedulingMapper.kt:60-62 `(nextReviewAt - lastReviewAt) / DAY_MS` 无下界保护。正常流程不会负，且与 MemoRecordMapper 同模式。建议加 `coerceAtLeast(0)` 防御。
+
+**Accepted #3**：rateWrongAnswer 不写 review_logs（文档化设计决策）。
+
+Receipt：[docs/release-receipts/v0.9.4-fsrs-wrong-answer-receipt.md](release-receipts/v0.9.4-fsrs-wrong-answer-receipt.md)
+
+### Commits
+
+| Commit | Content |
+|--------|---------|
+| `841e2e9` | feat(v0.9.4): 错题本接入 FSRS 间隔重复调度（17 文件，+3112/-39，8 新测试） |
+
+### 本地验证
+
+| Check | Result |
+|-------|--------|
+| `:app:assembleDebug` | ✅ BUILD SUCCESSFUL |
+| `:app:assembleRelease` | ✅ BUILD SUCCESSFUL |
+| `testDebugUnitTest`（全模块） | ✅ BUILD SUCCESSFUL |
+
+### 交接给下一会话
+
+1. **v0.9.4 开发完成**：错题本接入 FSRS 调度，待 Release（需 bump versionCode 28→29 + versionName "0.9.1"→"0.9.4"）
+2. **P0 emulator 实测 v0.9.4**：
+   - 错题本 DUE 过滤模式是否显示待复习错题
+   - 四档评分按钮（不会/困难/良好/简单）是否正常调度
+   - 调度信息展示（下次复习/复习次数/遗忘次数）是否正确
+   - Migration 7→8 升级（已有错题 sched_* 字段默认值正确）
+3. **P1 follow-up**：
+   - #1 WrongAnswerViewModel 注入 ClockGuard
+   - #2 WrongAnswerSchedulingMapper interval 加 coerceAtLeast(0)
+4. **P0 v0.9.4 Release**：本地构建 + gh 上传（CI 账单问题持续，沿用 Exception E1 流程）

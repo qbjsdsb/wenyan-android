@@ -1,5 +1,6 @@
 package com.wenyan.app.feature.quiz
 
+import com.wenyan.app.core.data.repository.ClockGuard
 import com.wenyan.app.core.data.repository.ExamQuestionWithSubject
 import com.wenyan.app.core.data.repository.ExamRepository
 import com.wenyan.app.core.data.repository.IntervalPreview
@@ -101,6 +102,9 @@ class FakeWrongAnswerRepository(
     val resolvedIds: MutableList<String> = mutableListOf()
     val deletedIds: MutableList<String> = mutableListOf()
 
+    /** v0.9.5 follow-up #1: 记录 observeDueWrongAnswers 最后一次调用的 now 参数,验证 ClockGuard 注入 */
+    var lastDueNowParam: Long? = null
+
     /** v0.8.21 新增:非 null 时 recordWrongAnswer 抛此异常,用于测试 selfEvaluate 错题反馈 */
     var recordException: Throwable? = null
 
@@ -136,9 +140,12 @@ class FakeWrongAnswerRepository(
      * 测试中忽略 now 参数,直接返回 [_due] StateFlow,由测试通过 [setDue] 控制内容。
      * 真实实现按 sched_next_review_at <= now 过滤,测试不需要验证 SQL 语义
      * (DAO 层 SQL 由 SchedulingRepositoryTest 用 in-memory Room 验证)。
+     *
+     * v0.9.5 follow-up #1: 记录 now 参数到 [lastDueNowParam],供测试验证 ClockGuard 注入。
      */
     override fun observeDueWrongAnswers(now: Long): Flow<List<WrongAnswerWithDetails>> {
         dueException?.let { return flow { throw it } }
+        lastDueNowParam = now
         return _due.asStateFlow()
     }
 
@@ -302,3 +309,20 @@ val TEST_SUBJECT_RESOLUTION = SubjectResolution(
     isVerified = true,
     warningMessage = null,
 )
+
+/**
+ * [ClockGuard] 的 Fake 实现（v0.9.5 follow-up #1 新增）。
+ *
+ * 直接返回固定的 [nowMillis],不依赖 Room AppMetaDao,供 [WrongAnswerViewModelTest]
+ * 注入到 [WrongAnswerViewModel] 的 DUE 过滤分支。
+ *
+ * 默认 nowMillis=0L 表示"立即到期",所有 sched_next_review_at <= 0 的错题都会出现在 DUE 列表。
+ * 测试可通过修改 [nowMillis] 模拟时钟回拨场景（验证 DUE 过滤与评分调度时间源对齐）。
+ *
+ * @param nowMillis effectiveNowMillis() 返回的固定时间戳（默认 0L = 立即到期）
+ */
+class FakeClockGuard(
+    var nowMillis: Long = 0L,
+) : ClockGuard {
+    override suspend fun effectiveNowMillis(): Long = nowMillis
+}

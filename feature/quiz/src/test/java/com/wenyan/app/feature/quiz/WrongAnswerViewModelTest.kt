@@ -45,6 +45,7 @@ class WrongAnswerViewModelTest {
 
     private lateinit var wrongAnswerRepository: FakeWrongAnswerRepository
     private lateinit var schedulingRepository: FakeSchedulingRepository
+    private lateinit var clockGuard: FakeClockGuard
     private lateinit var viewModel: WrongAnswerViewModel
 
     @Before
@@ -69,8 +70,11 @@ class WrongAnswerViewModelTest {
         )
         // v0.9.4:ViewModel 现在是 2-arg 构造,需注入 SchedulingRepository
         schedulingRepository = FakeSchedulingRepository()
+        // v0.9.5 follow-up #1: ViewModel 注入 ClockGuard,DUE 过滤时间源与评分调度对齐
+        // 默认 nowMillis=0L 表示"立即到期",所有 sched_next_review_at <= 0 的错题出现在 DUE 列表
+        clockGuard = FakeClockGuard(nowMillis = 0L)
 
-        viewModel = WrongAnswerViewModel(wrongAnswerRepository, schedulingRepository)
+        viewModel = WrongAnswerViewModel(wrongAnswerRepository, schedulingRepository, clockGuard)
         advanceUntilIdle()
     }
 
@@ -280,6 +284,78 @@ class WrongAnswerViewModelTest {
         // 清除错误
         viewModel.clearError()
         assertNull("clearError 后 errorMessage 应为 null", viewModel.errorMessage.value)
+    }
+
+    // ── v0.9.5 follow-up #1 新增:ClockGuard 注入验证 ───────────────
+
+    /**
+     * 场景 8(v0.9.5 follow-up #1 新增):DUE 过滤使用 ClockGuard.effectiveNowMillis() 而非 System.currentTimeMillis()。
+     *
+     * 验证 ViewModel 的 DUE 分支调用 clockGuard.effectiveNowMillis() 并将返回值传给
+     * wrongAnswerRepository.observeDueWrongAnswers(now)。
+     *
+     * 步骤:
+     * 1. 设置 FakeClockGuard.nowMillis = 12345L
+     * 2. setFilter(DUE)
+     * 3. advanceUntilIdle
+     * 4. 验证 wrongAnswerRepository.lastDueNowParam == 12345L
+     *
+     * 这确保时钟回拨时 DUE 过滤与评分调度用同一时间源(ClockGuard),
+     * 不会因 System.currentTimeMillis() 与 ClockGuard 不一致导致错题评分后立即又出现在 DUE 列表。
+     */
+    @Test
+    fun `DUE 过滤使用 ClockGuard 时间源而非 System currentTimeMillis`() = runTest(testDispatcher) {
+        // 1. 设置特定时间戳
+        clockGuard.nowMillis = 12_345L
+
+        // 2. 切换 DUE
+        viewModel.setFilter(WrongAnswerFilter.DUE)
+        advanceUntilIdle()
+
+        // 3. 验证 observeDueWrongAnswers 收到的是 ClockGuard 的值,而非 System.currentTimeMillis()
+        assertEquals(
+            "DUE 过滤应使用 ClockGuard.effectiveNowMillis() 的返回值",
+            12_345L,
+            wrongAnswerRepository.lastDueNowParam,
+        )
+    }
+
+    /**
+     * 场景 9(v0.9.5 follow-up #1 新增):时钟回拨后 DUE 过滤与评分调度时间源一致。
+     *
+     * 模拟时钟回拨场景:
+     * 1. 设置 ClockGuard 返回未来时间(模拟回拨后的 effectiveNowMillis)
+     * 2. DUE 过滤使用该时间
+     * 3. 评分调度也使用同一时间(SchedulingRepository.rateWrongAnswer 内部调 ClockGuard)
+     *
+     * 此测试验证时间源对齐的不变性:只要 ViewModel 和 SchedulingRepository
+     * 注入同一个 ClockGuard 实例,回拨期间两者时间源必然一致。
+     */
+    @Test
+    fun `时钟回拨后 DUE 过滤时间源与评分调度对齐`() = runTest(testDispatcher) {
+        // 模拟时钟回拨:ClockGuard 返回 lastKnown+1(未来时间)
+        val effectiveTime = 9_999_999_999L
+        clockGuard.nowMillis = effectiveTime
+
+        viewModel.setFilter(WrongAnswerFilter.DUE)
+        advanceUntilIdle()
+
+        // DUE 过滤使用了 ClockGuard 的时间
+        assertEquals(effectiveTime, wrongAnswerRepository.lastDueNowParam)
+
+        // 评分调度:ViewModel.rateWrongAnswer 委托给 SchedulingRepository,
+        // SchedulingRepository 内部也调 ClockGuard.effectiveNowMillis()。
+        // 单元测试中 FakeSchedulingRepository 不调 ClockGuard,但生产实现会调。
+        // 此处仅验证 DUE 过滤端的时间源正确,评分端由 SchedulingRepositoryTest 验证。
+        viewModel.rateWrongAnswer("wa_due_1", Rating.GOOD)
+        advanceUntilIdle()
+
+        // DUE 过滤时间源不变(ClockGuard 注入的不变性)
+        assertEquals(
+            "评分后 DUE 过滤时间源应保持 ClockGuard 的值",
+            effectiveTime,
+            wrongAnswerRepository.lastDueNowParam,
+        )
     }
 
     // ── 辅助方法 ──────────────────────────────────────────────────

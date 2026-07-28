@@ -51,7 +51,7 @@ class SchedulingRepositoryTest {
 
         val memoRecordDao = db.memoRecordDao()
         val reviewLogDao = db.reviewLogDao()
-        val clockGuard = ClockGuard(db.appMetaDao())
+        val clockGuard = ClockGuardImpl(db.appMetaDao())
         val wrongAnswerDao = db.wrongAnswerDao()
         repository = SchedulingRepositoryImpl(db, memoRecordDao, reviewLogDao, clockGuard, wrongAnswerDao)
 
