@@ -264,4 +264,117 @@ class SeedDataLoaderTest {
             }
         }
     }
+
+    // ── v0.9.1 computeRelatedIdsByTags 测试 ──────────────────────
+
+    /** 构造测试用 KnowledgePointSeed（仅填必要字段） */
+    private fun kpSeed(
+        id: String,
+        subject: String = "中国古代文学",
+        tags: List<String>? = listOf("default"),
+        title: String = "测试知识点 $id",
+    ) = KnowledgePointSeed(
+        id = id,
+        title = title,
+        coreConclusion = "结论",
+        subject = subject,
+        tags = tags,
+    )
+
+    @Test
+    fun `computeRelatedIdsByTags 同 subject 共享 1 个 tag 产生关联`() {
+        val seeds = listOf(
+            kpSeed("kp_1", tags = listOf("诗经", "先秦")),
+            kpSeed("kp_2", tags = listOf("诗经", "风雅颂")),
+            kpSeed("kp_3", tags = listOf("楚辞", "先秦")),
+        )
+        val result = SeedDataLoader.computeRelatedIdsByTags(seeds)
+
+        // kp_1 与 kp_2 共享"诗经"，与 kp_3 共享"先秦"
+        assertTrue("kp_1 应有关联", result.containsKey("kp_1"))
+        assertTrue("kp_1 应关联到 kp_2", result["kp_1"]!!.contains("kp_2"))
+        assertTrue("kp_1 应关联到 kp_3", result["kp_1"]!!.contains("kp_3"))
+    }
+
+    @Test
+    fun `computeRelatedIdsByTags 不同 subject 即使共享 tag 也无关联`() {
+        val seeds = listOf(
+            kpSeed("kp_1", subject = "中国古代文学", tags = listOf("现实主义")),
+            kpSeed("kp_2", subject = "外国文学", tags = listOf("现实主义")),
+        )
+        val result = SeedDataLoader.computeRelatedIdsByTags(seeds)
+
+        // 跨科目不派生关联
+        assertTrue("kp_1 不应有关联", !result.containsKey("kp_1"))
+        assertTrue("kp_2 不应有关联", !result.containsKey("kp_2"))
+    }
+
+    @Test
+    fun `computeRelatedIdsByTags 同 subject 无共享 tag 无关联`() {
+        val seeds = listOf(
+            kpSeed("kp_1", tags = listOf("诗经")),
+            kpSeed("kp_2", tags = listOf("楚辞")),
+        )
+        val result = SeedDataLoader.computeRelatedIdsByTags(seeds)
+
+        assertTrue("kp_1 不应有关联", !result.containsKey("kp_1"))
+        assertTrue("kp_2 不应有关联", !result.containsKey("kp_2"))
+    }
+
+    @Test
+    fun `computeRelatedIdsByTags tags 为 null 无关联`() {
+        val seeds = listOf(
+            kpSeed("kp_1", tags = null),
+            kpSeed("kp_2", tags = listOf("诗经")),
+        )
+        val result = SeedDataLoader.computeRelatedIdsByTags(seeds)
+
+        assertTrue("kp_1 (tags=null) 不应有关联", !result.containsKey("kp_1"))
+    }
+
+    @Test
+    fun `computeRelatedIdsByTags 共享 tag 数多的排前面`() {
+        val seeds = listOf(
+            kpSeed("kp_main", tags = listOf("A", "B", "C")),
+            kpSeed("kp_share3", tags = listOf("A", "B", "C")), // 共享 3 个
+            kpSeed("kp_share1", tags = listOf("A")),           // 共享 1 个
+            kpSeed("kp_share2", tags = listOf("A", "B")),      // 共享 2 个
+        )
+        val result = SeedDataLoader.computeRelatedIdsByTags(seeds)
+        val related = result["kp_main"]!!
+
+        assertEquals("kp_main 应有 3 个关联", 3, related.size)
+        assertEquals("第一个应为共享 3 个的 kp_share3", "kp_share3", related[0])
+        assertEquals("第二个应为共享 2 个的 kp_share2", "kp_share2", related[1])
+        assertEquals("第三个应为共享 1 个的 kp_share1", "kp_share1", related[2])
+    }
+
+    @Test
+    fun `computeRelatedIdsByTags 最多返回 5 个关联`() {
+        // 构造 7 个 KP，全部共享 tag "A"，main 应只取前 5 个
+        val seeds = (1..7).map { kpSeed("kp_$it", tags = listOf("A")) } +
+            kpSeed("kp_main", tags = listOf("A"))
+        val result = SeedDataLoader.computeRelatedIdsByTags(seeds)
+        val related = result["kp_main"]!!
+
+        assertEquals("最多 5 个关联", 5, related.size)
+    }
+
+    @Test
+    fun `computeRelatedIdsByTags 自身不在关联列表中`() {
+        val seeds = listOf(
+            kpSeed("kp_1", tags = listOf("A")),
+            kpSeed("kp_2", tags = listOf("A")),
+        )
+        val result = SeedDataLoader.computeRelatedIdsByTags(seeds)
+
+        assertTrue("kp_1 不应关联到自己", !result["kp_1"]!!.contains("kp_1"))
+        assertTrue("kp_2 不应关联到自己", !result["kp_2"]!!.contains("kp_2"))
+    }
+
+    @Test
+    fun `computeRelatedIdsByTags 空列表返回空 map`() {
+        val result = SeedDataLoader.computeRelatedIdsByTags(emptyList())
+        assertTrue("空列表应返回空 map", result.isEmpty())
+    }
 }

@@ -281,6 +281,14 @@ class SeedDataLoader @Inject constructor(
 
         // 步骤3：导入知识点（按 subject + tags/title 匹配到时段子章节，未匹配留根章节）
         // 注意：若知识点 subject 不在 subjects 列表中，跳过该知识点（避免外键约束失败）
+
+        // v0.9.1 修复：基于 tags 派生知识点间关联关系（relatedIds）。
+        // 根因：B2 增强了关联模块 UI，但此处原硬编码 relatedIds=null，导致
+        // KnowledgeRepository.observeKnowledgePointDetail 短路返回空列表，
+        // UI RelatedPointsSection 永远不渲染（用户报告"关联知识点模块找不见"）。
+        // 派生规则：同 subject + 共享 ≥1 tag → RELATED，按共享 tag 数降序取前 5。
+        val relatedIdsMap = computeRelatedIdsByTags(seedData.knowledgePoints)
+
         val knowledgePointEntities = seedData.knowledgePoints.mapNotNull { seed ->
             val rootChapterId = subjectNameToChapterId[seed.subject]
                 ?: return@mapNotNull null
@@ -300,7 +308,7 @@ class SeedDataLoader @Inject constructor(
                 coreConclusion = seed.coreConclusion,
                 fullContent = seed.fullContent.ifBlank { seed.coreConclusion },
                 multiPerspectives = seed.multiPerspectives?.toPerspectiveMap(),
-                relatedIds = null,
+                relatedIds = relatedIdsMap[seed.id],
                 contrastIds = null,
                 extensionIds = null,
                 examRecords = null,
@@ -697,6 +705,9 @@ class SeedDataLoader @Inject constructor(
         /** seed_data.json metadata.version 为空时的默认版本（视为首次安装） */
         private const val DEFAULT_SEED_VERSION = "v1"
 
+        /** 每个知识点最多关联的知识点数（v0.9.1：避免 UI 列表过长，取共享 tag 最多的前 5 个） */
+        private const val MAX_RELATED_POINTS = 5
+
         /** 科目排序顺序（按考研重要性排列：古代→现当代→外国→理论） */
         private val SUBJECT_ORDER = mapOf(
             "ancient" to 1,
@@ -803,6 +814,78 @@ class SeedDataLoader @Inject constructor(
                 }
             }
             return null
+        }
+
+        /**
+         * 基于 tags 派生知识点间关联关系（v0.9.1 修复：关联知识点模块不可见）。
+         *
+         * 根因：B2 增强了关联模块 UI（RelationshipType 视觉编码 + RelatedPointItem 信息密度），
+         * 但 [importToDatabase] 步骤3 原硬编码 `relatedIds = null`，导致
+         * [com.wenyan.app.core.data.repository.KnowledgeRepository.observeKnowledgePointDetail]
+         * 短路返回空列表，UI RelatedPointsSection 永远不渲染。
+         *
+         * 派生规则：
+         * - 同 subject + 共享 ≥1 tag → RELATED（关联）
+         * - 按共享 tag 数降序（共享越多越关联），id 升序（稳定排序），取前 [MAX_RELATED_POINTS] 个
+         * - 无 tags 或无共享 tag 的 KP，不出现在结果中（relatedIds 保持 null，UI 不渲染该区块）
+         *
+         * 不派生 CONTRAST/EXTENSION：
+         * - CONTRAST 需要语义分析（如"现实主义" vs "浪漫主义"），tags 重叠反而表示关联而非对比
+         * - EXTENSION 需要跨科目知识图谱，当前 seed 数据无此信息
+         * - 未来可由 AI 管线（LLM 从 full_content 派生）或手动标注补充
+         *
+         * 放在 companion object 中以便单元测试直接调用（与 [matchPeriodChapter] 模式一致）。
+         *
+         * 复杂度：O(n²) 每个 subject 内，n_max=460（中国古代文学），约 21 万次比较，可接受。
+         *
+         * @param seeds 种子知识点列表
+         * @return KP id → relatedIds 映射（仅包含有关联的 KP）
+         */
+        internal fun computeRelatedIdsByTags(
+            seeds: List<KnowledgePointSeed>,
+        ): Map<String, List<String>> {
+            val bySubject = seeds.groupBy { it.subject }
+            val result = mutableMapOf<String, List<String>>()
+
+            for ((_, subjectSeeds) in bySubject) {
+                // 构建 tag → [KP ids] 倒排索引
+                val tagIndex = mutableMapOf<String, MutableList<String>>()
+                for (seed in subjectSeeds) {
+                    for (tag in seed.tags.orEmpty()) {
+                        tagIndex.getOrPut(tag) { mutableListOf() }.add(seed.id)
+                    }
+                }
+
+                // 对每个 KP，统计与其他 KP 的共享 tag 数
+                for (seed in subjectSeeds) {
+                    val myTags = seed.tags.orEmpty()
+                    if (myTags.isEmpty()) continue
+
+                    val sharedCounts = mutableMapOf<String, Int>()
+                    for (tag in myTags) {
+                        for (otherId in tagIndex[tag].orEmpty()) {
+                            if (otherId != seed.id) {
+                                sharedCounts[otherId] = (sharedCounts[otherId] ?: 0) + 1
+                            }
+                        }
+                    }
+
+                    // 按共享 tag 数降序，id 升序（稳定排序），取前 N
+                    val related = sharedCounts.entries
+                        .sortedWith(
+                            compareByDescending<Map.Entry<String, Int>> { it.value }
+                                .thenBy { it.key },
+                        )
+                        .take(MAX_RELATED_POINTS)
+                        .map { it.key }
+
+                    if (related.isNotEmpty()) {
+                        result[seed.id] = related
+                    }
+                }
+            }
+
+            return result
         }
     }
 }

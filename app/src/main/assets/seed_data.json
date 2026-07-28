@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "version": "2.12.0",
+    "version": "2.13.0",
     "generated_at": "2026-07-24T00:01:38.475972",
-    "description": "文研App种子数据（南师大文学考研）- v15 章节树重构（ADR-001 B1.3：每科根章节 + 文学史时段子章节，知识点按 tags/title 匹配到子章节）",
+    "description": "文研App种子数据（南师大文学考研）- v15 章节树重构（ADR-001 B1.3：每科根章节 + 文学史时段子章节，知识点按 tags/title 匹配到子章节） + v16 关联知识点派生（tags → relatedIds）",
     "source": "Phase 1 资料数字化管线输出",
     "fixes": [
       "subjects使用全称",
@@ -26,7 +26,8 @@
       "v2.9.0 删除所有 910 知识点的 multi_perspectives 字段（source 全为\"其他\"，零信息量冗余字段）",
       "v2.9.0 删除所有 485 真题的 sample_essay 字段（范文冗余，answer_framework 答题框架已足够；总字符 216133）",
       "v2.10.0 知识图谱自动建图：解析 910 知识点的 entities（3336 条去重 2123 个）+ relations（968 条），自动生成图谱节点和边，覆盖率从 4.4%（40 硬编码）→ 100%",
-      "v2.11.0 知识图谱考频接通：SeedDataLoader 解析 KnowledgePointSeed.exam_frequency 字段（原硬编码 NEVER 导致 8 LOW+3 MEDIUM 考频丢失），图谱节点 metadata 写入 examFrequency（取关联知识点最高频）+ sourceKpCount（关联知识点数，用于节点尺寸编码）"
+      "v2.11.0 知识图谱考频接通：SeedDataLoader 解析 KnowledgePointSeed.exam_frequency 字段（原硬编码 NEVER 导致 8 LOW+3 MEDIUM 考频丢失），图谱节点 metadata 写入 examFrequency（取关联知识点最高频）+ sourceKpCount（关联知识点数，用于节点尺寸编码）",
+      "v2.13.0 关联知识点模块修复：SeedDataLoader 新增 computeRelatedIdsByTags 方法，基于同 subject + 共享 tag 派生知识点间 RELATED 关联（按共享 tag 数降序取前 5），填充 KnowledgePointEntity.relatedIds（原硬编码 null 导致 B2 关联模块 UI 永远不渲染）"
     ]
   },
   "subjects": [
