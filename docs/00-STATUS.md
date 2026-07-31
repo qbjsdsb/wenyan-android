@@ -5,7 +5,7 @@
 
 ## ✅ 当前状态
 
-**v0.9.13 沉浸式底部导航栏（已发布 2026-07-31T19:17:49Z）** — 响应用户需求"小白条是沉浸的吗" + "你改进" + "整体审查一下，没啥问题就发布吧，然后做好交接工作"。将底部导航栏改造为沉浸式：COMPACT 模式 Box 叠加布局 + NavigationBar 透明背景 + BottomGradientScrim 120dp 渐变遮罩 + ExpressiveScaffold 新增 `contentWindowInsets` 参数。KI 修复：keystore fail-fast 移到执行阶段 + 仓库顺序官方优先 + CI 移除 assembleRelease。对 **935 知识点 + 134 论述题** 进行全面内容审计：0 个内容问题（字段完整/ID唯一/subject合法/argumentPath 全有 thesis+≥3论点/722 条 evidence 全有 source/学者教材署名对齐袁行霈/钱理群/朱维之/童庆炳四教材）。新增 6 个 Python 审计脚本到 `tools/essay_fill/`（audit_all_content/check_gaps_structure/check_scores/deep_audit/inspect_structure/sample_essays）。修复 EssayDetailScreen subtitle score=0 时显示"0分"问题。版本号对齐 versionCode 34→35 + versionName "0.9.9"→"0.9.10"。本地验证：`:app:assembleDebug` + `:app:assembleRelease` + `:core:data:testDebugUnitTest :feature:knowledge:testDebugUnitTest --rerun-tasks` 全绿（0 failures）。**agent-pr-review ✅ READY TO MERGE + PRR ✅ READY TO RELEASE + RBR ✅ PASS**（per staff-engineer-mode Agent Event Policy）。Release v0.9.10 已发布（debug 签名 fallback — Exception E1）。Debug APK 27,879,675 bytes SHA-256 `f7f5626a1e9e0e0f81bd703c1573c9028277069ec6f099707a682f61e96b39cf` / Release APK 19,442,336 bytes SHA-256 `daf80e585eb9e7144731ccc457647dfc8602702e6ca3e2e6909c1b3f7d4a3b21`。Receipt：[docs/release-receipts/v0.9.10-release-receipt.md](release-receipts/v0.9.10-release-receipt.md)。**待 emulator 实测**：①seed 2.16.0 触发重导后 935 知识点正确导入 ②25 个新增知识点可浏览/搜索 ③score=0 论述题 subtitle 不显示"0分" ④论述题详情页 11 区块结构正常渲染。
+**v0.9.14 修复底栏遮盖 + 软件内更新（已发布 2026-07-31）** — 响应用户反馈"底栏遮盖了可以点击的地方，更新为什么不能软件内更新，还要去浏览器，而且下的是debug版本，而且只能卸载重装，为什么有这么多问题"。修复 v0.9.13 沉浸式导航栏导致的底栏遮盖可点击区域问题：COMPACT 布局改用 Box + 显式 padding（80dp 导航栏高度 + 系统手势区），不再依赖 Scaffold contentWindowInsets 消费策略。实现软件内 APK 下载+安装：UpdateViewModel 新增 OkHttp 流式下载 + FileProvider 安装 + 2 种新 UI 状态（Downloading/DownloadComplete），UpdateCheckScreen 新增进度条和安装按钮。AndroidManifest 新增 REQUEST_INSTALL_PACKAGES + FileProvider。新增 file_paths.xml。OkHttp 依赖。本地验证：`:app:assembleDebug` SUCCESSFUL + `testDebugUnitTest` SUCCESSFUL（317 tasks, 0 failures）。**已知限制**：所有 Release APK 仍使用 debug 签名 fallback（Exception E1 CI 账单问题），软件内更新下载的 APK 仍为 debug 签名，需卸载后安装。CI 恢复后可生成正式签名 APK 实现无缝更新。
 
 **v2.16.0 知识点补充（论述题 knowledgeGaps 完整化，已 commit c951b2e）** — 响应用户需求"可以的，你帮我补充一下知识点，然后整体严谨检查一下，一定要仔细严谨，不要出问题，包括我的考研要学习的内容"。补充论述题 knowledgeGaps 字段明确建议的 25 个核心知识点（kp_00911-kp_00935），对齐袁行霈/钱理群/朱维之/童庆炳四教材，并清理 eq_0100 OCR 错误条目。学科分布：古代4（王勃/江淹/唐传奇/清初才子佳人小说）/现当代8（戴望舒/穆时英/萧红/路遥/钱钟书围城/陈忠实/宋晓贤/陆蠡）/外国6（乔伊斯/伍尔夫/劳伦斯/王尔德/简·奥斯汀/陀思妥耶夫斯基罪与罚）/文论7（列宁论托尔斯泰/刘勰文心雕龙/姚斯接受美学/布洛心理距离/康德美学/罗兰·巴特/莱辛拉奥孔）。新增 `tools/essay_fill/fill_missing_knowledge_points.py`（542 行生成脚本）。seed_data.json 2.15.0→2.16.0，知识点库 910→935 完整化。严谨检查：85 个 knowledgeGaps 关键词全部匹配到知识点（0 真正缺失），OCR 错误条目已清理，新增知识点结构规范（study_text 平均 622 字符），关联派生模拟 16/134 论述题关联新增知识点。本地验证：`:app:assembleDebug` SUCCESSFUL + `:core:data:testDebugUnitTest` SeedDataLoaderTest 21 tests 0 failures（--rerun-tasks 强制重跑）。**agent-pr-review ✅ READY TO MERGE**（0 blocker, 0 must-fix, 1 follow-up）。Receipt：[docs/release-receipts/v2.16.0-knowledge-supplement-pr-review.md](release-receipts/v2.16.0-knowledge-supplement-pr-review.md)。
 
@@ -19,10 +19,10 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **f01de04** chore(version): bump to v0.9.13 (versionCode 38) — 沉浸式底部导航栏（2026-07-31） |
-| 最新 Release | **v0.9.13**（2026-07-31T19:17:49Z 发布，debug 签名 fallback — Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.13 |
-| 编译验证 | **:app:assembleDebug + testDebugUnitTest SUCCESSFUL**（v0.9.13，480 tests 0 failures） |
-| versionCode / versionName | **38 / "0.9.13"** |
+| 最新 commit | **171c9a6** fix: 修复底栏遮盖内容 + 实现软件内 APK 下载安装（v0.9.14）（2026-07-31） |
+| 最新 Release | **v0.9.14**（2026-07-31 发布，debug 签名 fallback — Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.14 |
+| 编译验证 | **:app:assembleDebug + testDebugUnitTest SUCCESSFUL**（v0.9.14，317 tasks 0 failures） |
+| versionCode / versionName | **39 / "0.9.14"** |
 | 知识点 | **935 个**（v2.16.0 补充 25 个核心知识点 kp_00911-kp_00935） |
 | 真题 | **485 道**（v0.7.6 已删除 sample_essay 冗余字段） |
 | 论述题 | **134 道 ESSAY 题**（v0.9.9 全覆盖填充 angle+notes，v0.9.10 全面审计 0 问题） |
@@ -40,18 +40,16 @@
 | 日志门面 | **Logging.kt**（Timber 封装，Debug=Logcat / Release=WARN+ERROR） |
 | 工具链锁定 | **mise.toml**（JDK 17.0.2 + Gradle 8.14.4） |
 | 阻塞 | **CI 账单问题** — 需用户处理，不影响 Release（debug 签名可用） |
-| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-31 v0.9.11-v0.9.13 检查更新功能 + 沉浸式底部导航栏） |
+| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-31 v0.9.14 修复底栏遮盖 + 软件内更新） |
 
 ## 🚨 新会话首要任务
 
-**v0.9.13 已发布**（2026-07-31T19:17:49Z，debug 签名 fallback — Exception E1）。本地构建全绿：`:app:assembleDebug` + `testDebugUnitTest`（480 tests 0 failures）。沉浸式底部导航栏已实现 + 检查更新功能已修复 + CI 修复（keystore fail-fast 移到执行阶段）。935 知识点 + 134 论述题全面审计 0 内容问题。
+**v0.9.14 已发布**（2026-07-31，debug 签名 fallback — Exception E1）。本地构建全绿：`:app:assembleDebug` + `testDebugUnitTest`（317 tasks 0 failures）。修复底栏遮盖 + 实现软件内 APK 下载+安装。
 
 下一步优先级（按顺序）：
 
-1. **P0**：emulator 实测 v0.9.13 — 验证沉浸式导航栏：①底部导航栏透明背景，内容延伸至屏幕底部 ②底部渐变遮罩平滑过渡 ③IME 弹出时内容不被遮挡 ④各 Tab 页面正常显示 ⑤MEDIUM/EXPANDED 模式不受影响
-2. **P0**：emulator 实测 v0.9.10 — 验证：①seed 2.16.0 触发重导后 935 知识点正确导入 ②25 个新增知识点（kp_00911-kp_00935）可浏览/搜索 ③score=0 论述题 subtitle 不显示"0分" ④论述题详情页 11 区块结构正常渲染（含 AI 审题助手）
-3. **P0**：等待 GitHub Actions 账单问题解决 — 43+ commit 待 CI 验证（不影响 Release，已通过本地构建 + gh 上传绕过）
-4. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 并替换 v0.9.4-v0.9.13 asset（消除 Exception E1）
+1. **P0**：emulator 实测 v0.9.14 — 验证：①底部导航栏不遮挡可点击区域 ②软件内更新下载进度条显示正常 ③下载完成后自动弹出安装界面 ④各 Tab 页面正常显示
+2. **P0**：**解决 GitHub Actions 账单问题** — 这是所有问题的根源。配置 `KEYSTORE_BASE64` / `KEYSTORE_PASSWORD` / `KEY_ALIAS` / `KEY_PASSWORD` 四个 Secrets 后，Release APK 将被正式签名，实现：①软件内更新无缝安装（无需卸载重装）②所有旧版本 APK 可替换为正式签名版本
 5. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
 6. **P1 Phase 2 剩余维度审计**：
    - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）
