@@ -5734,3 +5734,79 @@ WenyanNavItem("wrong_answer", "错题本", Icons.Default.ErrorOutline),
 3. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 替换 v0.9.4-v0.9.13 asset（消除 Exception E1）
 4. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
 5. **P1 Phase 2 剩余维度审计**：strings.xml 完整性 + dimens.xml + sealed AppError + Snackbar 统一 + Accessibility
+
+## 2026-07-31 用户反馈修复：底栏遮盖 + 软件内更新（v0.9.14）
+
+**响应用户反馈"底栏遮盖了可以点击的地方，更新为什么不能软件内更新，还要去浏览器，而且下的是debug版本，而且只能卸载重装"**
+
+### 1. 底栏遮盖可点击区域（修复）
+
+**原因**：v0.9.13 沉浸式导航栏改造中，`ExpressiveScaffold` 的 `contentWindowInsets` 用于控制底部间距。但 `Scaffold` 在无 `bottomBar` 时，contentWindowInsets 的底部 insets 未被正确消费，导致内容实际延伸到导航栏下方，按钮被遮挡。
+
+**修复**：COMPACT 模式布局重构，不再依赖 Scaffold 的 contentWindowInsets 消费策略：
+- 用 `Box` + `Modifier.padding` 显式添加底部间距（80dp 导航栏高度 + 系统手势区）
+- 内容区独立 Box：`surfaceContainer` 背景 + `padding(top = 状态栏, bottom = 80dp + 手势区)`
+- 渐变遮罩 + 导航栏独立叠加在 Box 上层
+- 移除 `ExpressiveScaffold` 的 `contentWindowInsets` 传参，回到默认行为
+
+### 2. 更新跳转浏览器而非软件内（修复）
+
+**改动**：4 个层面实现软件内 APK 下载+安装：
+
+| 层面 | 文件 | 改动 |
+|------|------|------|
+| 依赖 | `feature/settings/build.gradle.kts` | 新增 `libs.okhttp` + `libs.okhttp.logging.interceptor` |
+| 权限 | `AndroidManifest.xml` | 新增 `REQUEST_INSTALL_PACKAGES` 权限 |
+| FileProvider | `AndroidManifest.xml` + 新增 `file_paths.xml` | 注册 `FileProvider`，`cache-path` 共享 APK 文件 |
+| ViewModel | `UpdateViewModel.kt` | 新增 `downloadAndInstallApk()`（OkHttp 流式下载→cache/apk/→FileProvider→系统安装 Intent），新增 `Downloading`/`DownloadComplete` 状态，`UpdateUiState` 从 5 状态扩展为 7 状态 |
+| UI | `UpdateCheckScreen.kt` | 新增 `DownloadingContent`（进度条 + 百分比）+ `DownloadCompleteContent`（安装按钮）替代原"在浏览器中下载"按钮，保留浏览器下载为备用按钮 |
+
+**下载流程**：
+1. 用户点击"软件内更新" → `downloadAndInstallApk()`
+2. OkHttp 流式下载到 `context.cacheDir/apk/wenyan-update.apk`
+3. 实时更新进度（0-100%），UI 显示 `LinearProgressIndicator`
+4. 下载完成 → `FileProvider` 生成 content URI → `Intent.ACTION_VIEW` 启动系统安装器
+5. ViewModel `onCleared()` 时清理缓存目录
+
+### 3. Debug 版本 + 需卸载重装（说明）
+
+**根因**：CI 账单问题（Exception E1），所有 GitHub Release APK 使用 debug 签名 fallback。
+
+**当前限制**：
+- 软件内更新下载的 APK 来自 GitHub Releases，仍为 debug 签名
+- 不同签名 APK 覆盖安装会失败，用户仍需卸载后安装
+- 当 CI 恢复（配置 `KEYSTORE_BASE64` 等 Secrets）后，Release APK 将被正式签名，软件内更新即可无缝安装
+
+**辅助措施**：
+- 更新页面新增构建类型标签（"Debug 构建（仅开发测试）" / "Release 构建"），帮助用户理解版本差异
+
+### 涉及文件
+
+| 文件 | 操作 | 行数 |
+|------|------|------|
+| `core/designsystem/.../WenyanAdaptiveNavigation.kt` | 修改 | +31/-21 |
+| `feature/settings/.../UpdateViewModel.kt` | 修改 | +175/-8 |
+| `feature/settings/.../UpdateCheckScreen.kt` | 修改 | +150/-13 |
+| `app/src/main/AndroidManifest.xml` | 修改 | +13 |
+| `app/src/main/res/xml/file_paths.xml` | 新增 | +9 |
+| `feature/settings/build.gradle.kts` | 修改 | +4/-1 |
+| `app/build.gradle.kts` | 修改 | +11/-1 |
+| `docs/SESSION_LOG.md` | 修改 | +59 |
+
+### 本地验证
+
+- `:app:assembleDebug` BUILD SUCCESSFUL
+- 全模块 `testDebugUnitTest` BUILD SUCCESSFUL
+
+### 已知限制
+
+- **Exception E1**（CI 账单问题）：所有 Release APK 使用 debug 签名 fallback。软件内更新下载的 APK 仍为 debug 签名，需卸载后安装。CI 恢复后需：
+  1. 配置 `KEYSTORE_BASE64` / `KEYSTORE_PASSWORD` / `KEY_ALIAS` / `KEY_PASSWORD` 四个 GitHub Secrets
+  2. 用正式 keystore 重新构建 release APK 并替换 v0.9.4-v0.9.14 asset
+  3. 此后软件内更新即可无缝安装（无需卸载）
+
+### 下一步
+
+1. **P0**：emulator 实测 v0.9.14 — 验证底栏不遮挡 + 软件内更新下载+安装流程
+2. **P0**：CI 账单解决后，配置 Secrets 重新构建正式签名 APK 替换所有 Release asset
+3. **P0**：继续之前的 emulator 实测待办（v0.9.13/v0.9.10 等）
