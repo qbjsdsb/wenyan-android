@@ -25,7 +25,10 @@ android {
         // v0.9.9=34（论述题 AI 审题助手 Phase 3：EssayDetailViewModel 接入 SocraticTutor 三阶段引导（ANALYZE/SUGGEST/SHOW_SAMPLE）+ 自评错题回写（AGAIN→SOURCE_ESSAY_PRACTICE+FSRS调度）+ SocraticTutor 接口提取（便于测试替换）+ FakeSocraticTutor/FakeSchedulingRepository + 10 新测试（AI引导/防重入/clearAiGuides/自评AGAIN/GOOD/异常）+ SOURCE_ESSAY_PRACTICE 常量新增 + WrongAnswerScreen/KnowledgePointDetailScreen UI 标签 + Icons.AutoMirrored.Filled.Send 弃用修复。471 tests 全绿）
         // v0.9.10=35（知识点库完整化 + 全面内容审计：seed 2.15.0→2.16.0 补充论述题 knowledgeGaps 标注缺失的 25 个核心知识点（古代4/现当代8/外国6/文论7，对齐袁行霈/钱理群/朱维之/童庆炳四教材），910→935 知识点。全面审计 935 知识点 + 134 论述题：0 个内容问题（字段完整/ID唯一/subject合法/argumentPath 全有 thesis+≥3论点/722 条 evidence 全有 source）。修复 EssayDetailScreen subtitle score=0 时显示"0分"问题。469 tests 全绿）
         // v0.9.11=36（检查更新功能：设置页"检查更新"入口 + UpdateRepository 5 层架构 + UpdateCheckScreen M3 风格各状态组件 + 导航注册 + Hilt 绑定。480 tests 全绿）
-        versionCode = 36
+        // v0.9.12=37（修复检查更新 NetworkOnMainThreadException + 新增 api.github.com
+        //   访问失败时降级到 github.com 重定向备用方案 + 超时 10s→8s 提速。
+        //   本地验证：assembleDebug + testDebugUnitTest 全绿）
+        versionCode = 37
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.7：知识卡片功能完善 + 界面审查修复（响应用户反馈"功能还是不够完善"）。
         //   数据一致性修复（B1/B2/B3）：
@@ -83,7 +86,7 @@ android {
         //     - Icons.AutoMirrored.Filled.Send 弃用修复（原 Icons.Filled.Send）
         //     - SocraticTutorTest/AiAssistantViewModelTest 接口提取后实例化修正
         //   本地验证：:app:assembleDebug + 全模块 testDebugUnitTest 全绿（471 tests, 0 failures）
-        versionName = "0.9.11"
+        versionName = "0.9.12"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

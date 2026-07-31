@@ -1,5 +1,7 @@
 package com.wenyan.app.core.data.repository
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.net.HttpURLConnection
@@ -49,13 +51,17 @@ class UpdateRepositoryImpl @Inject constructor() : UpdateRepository {
 
     private companion object {
         private const val TAG = "UpdateRepository"
+        /** GitHub API（首选）— 国内可能访问不稳定，有备用方案 */
         private const val GITHUB_API_URL =
             "https://api.github.com/repos/qbjsdsb/wenyan-android/releases/latest"
+        /** GitHub Releases 页面（备用）— 国内通常可访问，通过重定向获取版本号 */
         private const val GITHUB_RELEASES_URL =
             "https://github.com/qbjsdsb/wenyan-android/releases/latest"
+        private const val GITHUB_DOWNLOAD_BASE =
+            "https://github.com/qbjsdsb/wenyan-android/releases/tag"
         /** 请求超时（毫秒） */
-        private const val CONNECT_TIMEOUT = 10_000
-        private const val READ_TIMEOUT = 10_000
+        private const val CONNECT_TIMEOUT = 8_000
+        private const val READ_TIMEOUT = 8_000
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -76,22 +82,31 @@ class UpdateRepositoryImpl @Inject constructor() : UpdateRepository {
     )
 
     override suspend fun checkForUpdate(currentVersion: String): UpdateCheckResult {
+        val current = currentVersion.removePrefix("v")
         return try {
-            val release = fetchLatestRelease()
-            val latestTag = release.tag_name.removePrefix("v")
-            val current = currentVersion.removePrefix("v")
+            // 优先尝试 GitHub API
+            val release = withContext(Dispatchers.IO) {
+                try {
+                    fetchLatestReleaseFromApi()
+                } catch (e: Exception) {
+                    // API 失败（国内可能无法访问 api.github.com），
+                    // 降级到 github.com Releases 页面，通过重定向获取版本号
+                    fetchLatestTagFromFallback()
+                }
+            }
 
+            val latestTag = release.tag_name.removePrefix("v")
             val comparison = compareVersions(latestTag, current)
+
             when {
                 comparison > 0 -> {
-                    // 找 APK 下载链接，找不到则用 releases 页面
                     val apkAsset = release.assets.firstOrNull { asset ->
                         asset.name.endsWith(".apk", ignoreCase = true) &&
                             asset.content_type == "application/vnd.android.package-archive"
                     }
                     val downloadUrl = apkAsset?.browser_download_url
                         .takeIf { !it.isNullOrBlank() }
-                        ?: release.html_url.ifBlank { GITHUB_RELEASES_URL }
+                        ?: "$GITHUB_DOWNLOAD_BASE/${release.tag_name}"
 
                     UpdateCheckResult.UpdateAvailable(
                         latestVersion = release.tag_name,
@@ -129,17 +144,17 @@ class UpdateRepositoryImpl @Inject constructor() : UpdateRepository {
     }
 
     /**
-     * 调用 GitHub Releases API 获取最新 release 信息。
+     * 通过 GitHub API 获取最新 release 信息。
+     *
+     * @throws Exception API 请求或解析失败
      */
     @Throws(Exception::class)
-    private fun fetchLatestRelease(): GitHubRelease {
+    private fun fetchLatestReleaseFromApi(): GitHubRelease {
         val url = URL(GITHUB_API_URL)
         val connection = url.openConnection() as HttpURLConnection
         connection.connectTimeout = CONNECT_TIMEOUT
         connection.readTimeout = READ_TIMEOUT
-        // GitHub API 需要 User-Agent
         connection.setRequestProperty("User-Agent", "Wenyan-Android-App")
-        // 接受 JSON 响应
         connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
 
         return try {
@@ -149,6 +164,57 @@ class UpdateRepositoryImpl @Inject constructor() : UpdateRepository {
             }
             val body = connection.inputStream.bufferedReader().readText()
             json.decodeFromString<GitHubRelease>(body)
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    /**
+     * 备用方案：通过 GitHub Releases 页面重定向获取最新版本号。
+     *
+     * 国内网络环境下 `api.github.com` 可能不可达，但 `github.com` 通常可访问。
+     * 访问 `/releases/latest` 会 302 重定向到 `/releases/tag/vX.Y.Z`，
+     * 从重定向 URL 中提取版本号。
+     *
+     * @throws Exception 请求或解析失败
+     */
+    @Throws(Exception::class)
+    private fun fetchLatestTagFromFallback(): GitHubRelease {
+        val url = URL(GITHUB_RELEASES_URL)
+        val connection = url.openConnection() as HttpURLConnection
+        connection.connectTimeout = CONNECT_TIMEOUT
+        connection.readTimeout = READ_TIMEOUT
+        connection.setRequestProperty("User-Agent", "Wenyan-Android-App")
+        // 不自动跟进重定向，手动读取 Location 头
+        connection.instanceFollowRedirects = false
+
+        return try {
+            val responseCode = connection.responseCode
+            if (responseCode != HttpURLConnection.HTTP_MOVED_TEMP &&
+                responseCode != HttpURLConnection.HTTP_MOVED_PERM &&
+                responseCode != HttpURLConnection.HTTP_OK
+            ) {
+                throw RuntimeException("HTTP $responseCode")
+            }
+
+            // 从 Location 头提取版本号
+            val location = connection.getHeaderField("Location") ?: ""
+            val tagName = if (location.isNotBlank()) {
+                location.substringAfterLast("/")
+            } else {
+                throw RuntimeException("无法获取最新版本信息")
+            }
+
+            if (tagName.isBlank()) {
+                throw RuntimeException("无法获取最新版本信息")
+            }
+
+            GitHubRelease(
+                tag_name = tagName,
+                body = null,
+                html_url = "$GITHUB_DOWNLOAD_BASE/$tagName",
+                assets = emptyList(),
+            )
         } finally {
             connection.disconnect()
         }
