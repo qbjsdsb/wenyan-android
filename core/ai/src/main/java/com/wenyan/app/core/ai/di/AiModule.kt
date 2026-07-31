@@ -3,6 +3,8 @@ package com.wenyan.app.core.ai.di
 import com.wenyan.app.core.ai.AiService
 import com.wenyan.app.core.ai.AiServiceImpl
 import com.wenyan.app.core.ai.BuildConfig
+import com.wenyan.app.core.ai.SocraticTutor
+import com.wenyan.app.core.ai.SocraticTutorImpl
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -39,6 +41,16 @@ abstract class AiModule {
     @Binds
     @Singleton
     abstract fun bindAiService(impl: AiServiceImpl): AiService
+
+    /**
+     * 绑定 [SocraticTutor] 接口到 [SocraticTutorImpl]（v0.9.9 Phase 3 提取接口）。
+     *
+     * 消费方（[EssayDetailViewModel] / [AiAssistantViewModel]）依赖接口，
+     * 单测可注入 FakeSocraticTutor 不依赖真实 LLM API。
+     */
+    @Binds
+    @Singleton
+    abstract fun bindSocraticTutor(impl: SocraticTutorImpl): SocraticTutor
 
     companion object {
 

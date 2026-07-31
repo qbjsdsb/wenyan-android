@@ -12,7 +12,7 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * [SocraticTutor] 单元测试。
+ * [SocraticTutorImpl] 单元测试（v0.9.9 Phase 3 接口提取后改名）。
  *
  * 验证：
  * - validateUserAnswer 过短/离题/正常
@@ -24,7 +24,7 @@ class SocraticTutorTest {
 
     private lateinit var ragEngine: RagEngine
     private lateinit var aiService: FakeAiService
-    private lateinit var tutor: SocraticTutor
+    private lateinit var tutor: SocraticTutorImpl
 
     @Before
     fun setup() {
@@ -36,7 +36,7 @@ class SocraticTutorTest {
 
         // AiService 用 Fake 实现
         aiService = FakeAiService()
-        tutor = SocraticTutor(ragEngine, aiService)
+        tutor = SocraticTutorImpl(ragEngine, aiService)
     }
 
     @Test
@@ -77,7 +77,7 @@ class SocraticTutorTest {
         // 用空搜索结果的 DAO 构造 RagEngine
         val emptyDao = FakeKnowledgePointDao(searchResults = emptyList())
         val emptyRagEngine = RagEngine(emptyDao)
-        val emptyTutor = SocraticTutor(emptyRagEngine, aiService)
+        val emptyTutor = SocraticTutorImpl(emptyRagEngine, aiService)
 
         val longAnswer = "这是一段足够长的答案，包含足够的中文字符，用于测试RAG无结果时的降级处理逻辑。" +
             "这段答案的长度超过了五十字，确保通过长度验证。"

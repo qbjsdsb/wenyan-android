@@ -2,6 +2,7 @@ package com.wenyan.app.feature.aiassistant
 
 import com.wenyan.app.core.ai.RagEngine
 import com.wenyan.app.core.ai.SocraticTutor
+import com.wenyan.app.core.ai.SocraticTutorImpl
 import com.wenyan.app.core.ai.recall.AntiRoteMemorization
 import com.wenyan.app.core.ai.recall.QuestionType
 import com.wenyan.app.core.ai.recall.RecallChecker
@@ -55,7 +56,7 @@ class AiAssistantViewModelTest {
         aiService = FakeAiService()
         val dao = FakeKnowledgePointDao(listOf(sampleEntity()))
         ragEngine = RagEngine(dao)
-        socraticTutor = SocraticTutor(ragEngine, aiService)
+        socraticTutor = SocraticTutorImpl(ragEngine, aiService)
         recallChecker = RecallChecker(aiService)
         antiRoteMemorization = AntiRoteMemorization(FakeReviewLogDao(emptyList()))
         // NF-PP6: 默认无历史,init 的 loadOrInitCurrent 返回 null,不影响现有测试
@@ -120,7 +121,7 @@ class AiAssistantViewModelTest {
         val emptyRagEngine = RagEngine(emptyDao)
         val vm = AiAssistantViewModel(
             aiService = aiService,
-            socraticTutor = SocraticTutor(emptyRagEngine, aiService),
+            socraticTutor = SocraticTutorImpl(emptyRagEngine, aiService),
             ragEngine = emptyRagEngine,
             recallChecker = recallChecker,
             antiRoteMemorization = antiRoteMemorization,

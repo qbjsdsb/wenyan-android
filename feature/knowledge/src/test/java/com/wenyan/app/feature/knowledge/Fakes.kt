@@ -1,20 +1,31 @@
 package com.wenyan.app.feature.knowledge
 
+import com.wenyan.app.core.ai.AnswerValidation
+import com.wenyan.app.core.ai.SocraticGuide
+import com.wenyan.app.core.ai.SocraticTutor
+import com.wenyan.app.core.ai.WrongAnswerExplanation
 import com.wenyan.app.core.data.repository.ChapterRepository
+import com.wenyan.app.core.data.repository.IntervalPreview
 import com.wenyan.app.core.data.repository.KnowledgeRepository
+import com.wenyan.app.core.data.repository.SchedulingRepository
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.database.dao.DataSourceDao
 import com.wenyan.app.core.database.dao.ExamQuestionDao
 import com.wenyan.app.core.database.dao.KnowledgePointDao
+import com.wenyan.app.core.database.entity.CardTemplateType
 import com.wenyan.app.core.database.entity.DataSourceEntity
 import com.wenyan.app.core.database.entity.ExamQuestionEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
+import com.wenyan.app.core.database.entity.MemoRecordEntity
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
 import com.wenyan.app.core.database.entity.WrongAnswerWithDetails
+import com.wenyan.app.core.fsrs.Rating
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 /**
@@ -191,6 +202,10 @@ class FakeDataSourceDao(
  * - [initialByPoint]:observeByPoint 初始数据
  * - [resolvedIds]:记录所有 markResolved 调用的 id(供断言)
  * - [markResolvedThrowable]:非 null 时 markResolved 抛异常(测异常分支)
+ *
+ * v0.9.9 Phase 3 新增 [recordWrongAnswer] 真实实现(原抛 UnsupportedOperationException),
+ * 供论述题 AI 审题助手自评 AGAIN 错题回写测试用。通过 [recordedWrongAnswers] 列表
+ * 记录所有调用参数,返回递增 ID "wa_1" / "wa_2" …,供 ViewModel 断言 lastWrongAnswerId。
  */
 class FakeKnowledgeWrongAnswerRepository(
     initialByPoint: Map<String, List<WrongAnswerEntity>> = emptyMap(),
@@ -200,6 +215,12 @@ class FakeKnowledgeWrongAnswerRepository(
     private val _byPoint = MutableStateFlow(initialByPoint)
 
     val resolvedIds: MutableList<String> = mutableListOf()
+
+    /** v0.9.9 Phase 3:记录所有 recordWrongAnswer 调用参数(供断言) */
+    val recordedWrongAnswers: MutableList<RecordedWrongAnswerCall> = mutableListOf()
+
+    /** v0.9.9 Phase 3:非 null 时 recordWrongAnswer 抛此异常(测 ViewModel 异常处理) */
+    var recordThrowable: Throwable? = null
 
     /** 设置某知识点的错题列表 */
     fun setWrongAnswersForPoint(pointId: String, wrongAnswers: List<WrongAnswerEntity>) {
@@ -227,13 +248,26 @@ class FakeKnowledgeWrongAnswerRepository(
     override fun observeByExamQuestion(examQuestionId: String): Flow<List<WrongAnswerEntity>> =
         throw UnsupportedOperationException("observeByExamQuestion not used in knowledge tests")
 
+    /**
+     * v0.9.9 Phase 3:记录一次答错(论述题自评 AGAIN 时调用)。
+     *
+     * 异常注入:[recordThrowable] 非 null 时抛出,测 ViewModel 异常处理
+     * (ViewModel 应 Timber.e + selfRating 仍设置,不崩溃)。
+     * 返回值:递增 ID "wa_1" / "wa_2" …,供 ViewModel 写入 lastWrongAnswerId。
+     */
     override suspend fun recordWrongAnswer(
         pointId: String?,
         examQuestionId: String?,
         userAnswer: String,
         correctAnswer: String?,
         source: String,
-    ): String = throw UnsupportedOperationException("recordWrongAnswer not used in knowledge tests")
+    ): String {
+        recordThrowable?.let { throw it }
+        recordedWrongAnswers.add(
+            RecordedWrongAnswerCall(pointId, examQuestionId, userAnswer, correctAnswer, source),
+        )
+        return "wa_${recordedWrongAnswers.size}"
+    }
 
     override suspend fun markResolved(id: String) {
         markResolvedThrowable?.let { throw it }
@@ -247,6 +281,17 @@ class FakeKnowledgeWrongAnswerRepository(
     override suspend fun countUnresolved(): Int =
         throw UnsupportedOperationException("countUnresolved not used in knowledge detail tests")
 }
+
+/**
+ * 记录一次 recordWrongAnswer 调用参数(v0.9.9 Phase 3 新增,供断言用)。
+ */
+data class RecordedWrongAnswerCall(
+    val pointId: String?,
+    val examQuestionId: String?,
+    val userAnswer: String,
+    val correctAnswer: String?,
+    val source: String,
+)
 
 /**
  * 构造测试用 [KnowledgeRepository](真实实例 + Fake DAOs)。
@@ -392,4 +437,157 @@ class FakeExamQuestionDao(
 
     override suspend fun countBySubject(subjectId: String): Int =
         _essays.value.count { it.subjectId == subjectId }
+}
+
+/**
+ * [SchedulingRepository] 的 Fake 实现(feature/knowledge 测试用,v0.9.9 Phase 3 新增)。
+ *
+ * 专门为 [EssayDetailViewModelTest] 的论述题自评 AGAIN 错题回写 + FSRS 调度测试设计:
+ * - [rateWrongAnswerResult]:rateWrongAnswer 返回的 WrongAnswerEntity(默认非 null)
+ * - [rateWrongAnswerException]:非 null 时 rateWrongAnswer 抛异常(测 ViewModel 异常处理)
+ * - [rateWrongAnswerCalls]:记录所有 rateWrongAnswer 调用参数(id + rating),供断言
+ *
+ * 与 feature/quiz 的 FakeSchedulingRepository 区别:
+ * - feature/quiz 版本服务于错题本列表页(WrongAnswerViewModel)
+ * - 本版本服务于论述题详情页(EssayDetailViewModel.rateSelf)
+ * - 两者结构一致,独立维护避免跨模块测试耦合
+ *
+ * rateCard / previewIntervals 在论述题测试中不会被调用(论述题不涉及知识点卡片评分),
+ * 但仍需实现以满足接口契约,默认返回安全值(null/emptyMap)。
+ */
+class FakeSchedulingRepository(
+    var rateWrongAnswerResult: WrongAnswerEntity? = WrongAnswerEntity(
+        id = "fake_wa",
+        pointId = null,
+        examQuestionId = "fake_eq",
+        userAnswer = "fake answer",
+        correctAnswer = null,
+        source = "QUIZ_WRONG",
+        wrongCount = 1,
+        lastWrongAt = 1000L,
+        resolvedAt = null,
+        aiExplanation = null,
+        createdAt = 500L,
+        // FSRS 调度字段(模拟 AGAIN 评分后的初始状态)
+        schedState = "LEARNING",
+        schedStability = 0f,
+        schedDifficulty = 5f,
+        schedLastReviewAt = 1000L,
+        schedNextReviewAt = 2000L,
+        schedReviewCount = 0,
+        schedLapses = 0,
+        schedElapsedDays = 0,
+        schedScheduledDays = 0,
+        schedReps = 0,
+    ),
+    var rateWrongAnswerException: Throwable? = null,
+) : SchedulingRepository {
+
+    val rateWrongAnswerCalls: MutableList<Pair<String, Rating>> = mutableListOf()
+
+    /** 论述题测试不涉及知识点卡片评分,返回 null */
+    override suspend fun rateCard(
+        pointId: String,
+        rating: Rating,
+        cardType: CardTemplateType,
+    ): MemoRecordEntity? = null
+
+    /** 论述题测试不涉及预览,返回空 Map */
+    override suspend fun previewIntervals(
+        pointId: String,
+        cardType: CardTemplateType,
+    ): Map<Rating, IntervalPreview> = emptyMap()
+
+    /**
+     * 错题 FSRS 评分调度 Fake 实现。
+     *
+     * 异常注入:[rateWrongAnswerException] 非 null 时抛出,测试 ViewModel 错误处理
+     * (ViewModel 应 Timber.e + selfRating 仍设置,不崩溃)。
+     * 调用记录:[rateWrongAnswerCalls] 记录所有调用,断言 ViewModel 是否正确传递 wrongAnswerId + Rating.AGAIN。
+     * 返回值:[rateWrongAnswerResult] 默认非 null,测试可自定义。
+     */
+    override suspend fun rateWrongAnswer(
+        wrongAnswerId: String,
+        rating: Rating,
+    ): WrongAnswerEntity? {
+        rateWrongAnswerException?.let { throw it }
+        rateWrongAnswerCalls.add(wrongAnswerId to rating)
+        return rateWrongAnswerResult
+    }
+}
+
+/**
+ * [SocraticTutor] 的 Fake 实现(feature/knowledge 测试用,v0.9.9 Phase 3 新增)。
+ *
+ * 专门为 [EssayDetailViewModelTest] 的 AI 三阶段引导测试设计:
+ * - [guideEssayAnswerFlow]:guideEssayAnswer 返回的 Flow(默认 emit 3 个阶段 SocraticGuide)
+ * - [guideEssayAnswerException]:非 null 时 guideEssayAnswer 抛异常(测 ViewModel 错误处理)
+ * - [guideEssayAnswerCalls]:记录所有 guideEssayAnswer 调用参数(question + userAnswer),供断言
+ * - [validateUserAnswerResult]:validateUserAnswer 返回值(默认有效)
+ *
+ * 默认 [guideEssayAnswerFlow] emit 三阶段(ANALYZE/SUGGEST/SHOW_SAMPLE),
+ * 与生产 [SocraticTutorImpl] 正常路径一致,测试可直接断言 aiGuides 列表。
+ *
+ * explainWrongAnswer 在论述题测试中不会被调用(论述题用 guideEssayAnswer 而非 explainWrongAnswer),
+ * 但仍需实现以满足接口契约,默认返回空 Flow。
+ */
+class FakeSocraticTutor(
+    var guideEssayAnswerFlow: Flow<SocraticGuide> = flowOf(
+        SocraticGuide(
+            stage = com.wenyan.app.core.ai.SocraticStage.ANALYZE,
+            content = "分析：答案论证较薄弱，建议补充时代背景。",
+            isSampleEssay = false,
+            contentSource = "AI_GENERATED",
+        ),
+        SocraticGuide(
+            stage = com.wenyan.app.core.ai.SocraticStage.SUGGEST,
+            content = "建议：从题材、手法、立场三维度展开。",
+            isSampleEssay = false,
+            contentSource = "AI_GENERATED",
+        ),
+        SocraticGuide(
+            stage = com.wenyan.app.core.ai.SocraticStage.SHOW_SAMPLE,
+            content = "范文：五位女作家各有特色…",
+            isSampleEssay = true,
+            contentSource = "AI_GENERATED",
+        ),
+    ),
+    var guideEssayAnswerException: Throwable? = null,
+    var validateUserAnswerResult: AnswerValidation = AnswerValidation(
+        isValid = true,
+        issue = null,
+        suggestion = null,
+    ),
+) : SocraticTutor {
+
+    /** 记录所有 guideEssayAnswer 调用参数(question + userAnswer),供断言 */
+    val guideEssayAnswerCalls: MutableList<Pair<String, String>> = mutableListOf()
+
+    /**
+     * 苏格拉底式引导 Fake 实现。
+     *
+     * 异常注入:[guideEssayAnswerException] 非 null 时抛出,
+     * 测试 ViewModel 的 aiGuideError 展示 + 重试按钮。
+     * 调用记录:[guideEssayAnswerCalls] 记录调用参数,断言 ViewModel 正确传递题目与用户答案。
+     * 返回值:[guideEssayAnswerFlow] 默认 emit 3 阶段,测试可自定义(如空 Flow / 单阶段 / 错误中途)。
+     */
+    override fun guideEssayAnswer(question: String, userAnswer: String): Flow<SocraticGuide> {
+        guideEssayAnswerCalls.add(question to userAnswer)
+        val exception = guideEssayAnswerException
+        return if (exception != null) {
+            flow { throw exception }
+        } else {
+            guideEssayAnswerFlow
+        }
+    }
+
+    /** 论述题测试不涉及 explainWrongAnswer,返回空 Flow */
+    override fun explainWrongAnswer(
+        question: String,
+        userAnswer: String,
+        correctAnswer: String,
+    ): Flow<WrongAnswerExplanation> = flowOf()
+
+    override fun validateUserAnswer(userAnswer: String): AnswerValidation =
+        validateUserAnswerResult
 }

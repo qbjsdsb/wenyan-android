@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -17,11 +19,25 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.SentimentDissatisfied
+import androidx.compose.material.icons.filled.SentimentNeutral
+import androidx.compose.material.icons.filled.SentimentVerySatisfied
+import androidx.compose.material.icons.filled.Start
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
@@ -36,6 +52,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wenyan.app.core.ai.SocraticGuide
+import com.wenyan.app.core.ai.SocraticStage
 import com.wenyan.app.core.designsystem.component.ChipVariant
 import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ErrorState
@@ -206,6 +224,19 @@ fun EssayDetailScreen(
                                             onNavigateToKnowledgeDetail = onNavigateToKnowledgeDetail,
                                         )
                                     }
+
+                                    // 11. AI 审题助手区（v0.9.9 Phase 3 新增）
+                                    // 答题区 + 三阶段引导 + 自评错题回写
+                                    EssayAiGuideSection(
+                                        uiState = uiState,
+                                        onStartAnswering = viewModel::startAnswering,
+                                        onCancelAnswering = viewModel::cancelAnswering,
+                                        onUpdateUserAnswer = viewModel::updateUserAnswer,
+                                        onSubmitAnswer = viewModel::submitAnswerAndGuide,
+                                        onRetryAiGuide = viewModel::retryAiGuide,
+                                        onClearAiGuides = viewModel::clearAiGuides,
+                                        onRateSelf = viewModel::rateSelf,
+                                    )
                                 }
                             }
                         }
@@ -598,6 +629,479 @@ private fun EssayRelatedPointsSection(
     }
 }
 
+// ── 11. AI 审题助手区（v0.9.9 Phase 3） ───────────────────
+
+/**
+ * AI 审题助手区（v0.9.9 Phase 3 新增）。
+ *
+ * 区块结构（按 isAnswering 状态切换）：
+ * - 未答题：[EssayAnswerEntry] —— "开始练习"入口按钮
+ * - 答题中：[EssayAnswerInputSection]（答题 TextField + 提交/取消）
+ *          + [EssayAiGuideStagesSection]（三阶段引导，有结果/加载中/错误时显示）
+ *          + [EssaySelfRatingSection]（引导完成后自评，AGAIN 写错题本）
+ *
+ * 子区块均做优雅降级：
+ * - AI 引导为空且无加载/错误 → 不渲染引导区
+ * - 自评仅在引导有结果且无加载/错误时显示
+ */
+@Composable
+private fun EssayAiGuideSection(
+    uiState: EssayDetailUiState,
+    onStartAnswering: () -> Unit,
+    onCancelAnswering: () -> Unit,
+    onUpdateUserAnswer: (String) -> Unit,
+    onSubmitAnswer: () -> Unit,
+    onRetryAiGuide: () -> Unit,
+    onClearAiGuides: () -> Unit,
+    onRateSelf: (EssaySelfRating) -> Unit,
+) {
+    GroupedCard(title = "AI 审题助手") {
+        Column(
+            modifier = Modifier.padding(
+                start = Spacing.lg,
+                end = Spacing.lg,
+                top = Spacing.md,
+                bottom = Spacing.md,
+            ),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            if (!uiState.isAnswering) {
+                // 入口：开始练习
+                EssayAnswerEntry(onStartAnswering = onStartAnswering)
+            } else {
+                // 答题区
+                EssayAnswerInputSection(
+                    userAnswer = uiState.userAnswer,
+                    isAiGuiding = uiState.isAiGuiding,
+                    onUpdateUserAnswer = onUpdateUserAnswer,
+                    onSubmitAnswer = onSubmitAnswer,
+                    onCancelAnswering = onCancelAnswering,
+                )
+
+                // AI 引导区：有结果 / 加载中 / 错误 时显示
+                if (uiState.aiGuides.isNotEmpty() || uiState.isAiGuiding || uiState.aiGuideError != null) {
+                    EssayAiGuideStagesSection(
+                        guides = uiState.aiGuides,
+                        isAiGuiding = uiState.isAiGuiding,
+                        error = uiState.aiGuideError,
+                        onRetry = onRetryAiGuide,
+                        onClear = onClearAiGuides,
+                    )
+                }
+
+                // 自评区：引导有结果且无加载/错误时显示
+                if (uiState.aiGuides.isNotEmpty() && !uiState.isAiGuiding && uiState.aiGuideError == null) {
+                    EssaySelfRatingSection(
+                        selfRating = uiState.selfRating,
+                        lastWrongAnswerId = uiState.lastWrongAnswerId,
+                        onRateSelf = onRateSelf,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 答题入口（未答题时显示）。
+ *
+ * 展示"开始练习"按钮 + 简短说明，点击后进入答题模式（[EssayAnswerInputSection]）。
+ */
+@Composable
+private fun EssayAnswerEntry(onStartAnswering: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        Text(
+            text = "提交你的答案，AI 将从论证漏洞、改进建议、参考范文三个阶段引导你完善答题思路。",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        FilledTonalButton(
+            onClick = onStartAnswering,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(
+                imageVector = Icons.Default.Start,
+                contentDescription = null,
+                modifier = Modifier.size(ButtonDefaults.IconSize),
+            )
+            Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
+            Text(text = "开始练习")
+        }
+    }
+}
+
+/**
+ * 答题输入区。
+ *
+ * - [OutlinedTextField] 多行输入，5000 字上限（[EssayDetailViewModel.MAX_USER_ANSWER_LENGTH]）
+ * - 字数计数器（接近上限时变色提醒）
+ * - 提交按钮（[Icons.Default.Send]）：空答案或 AI 引导中禁用
+ * - 取消按钮（[Icons.Default.Cancel]）：退出答题模式，清空答案与引导
+ */
+@Composable
+private fun EssayAnswerInputSection(
+    userAnswer: String,
+    isAiGuiding: Boolean,
+    onUpdateUserAnswer: (String) -> Unit,
+    onSubmitAnswer: () -> Unit,
+    onCancelAnswering: () -> Unit,
+) {
+    val canSubmit = userAnswer.isNotBlank() && !isAiGuiding
+    val charCount = userAnswer.length
+    val maxLen = EssayDetailViewModel.MAX_USER_ANSWER_LENGTH
+    // 接近上限（90%）时用 error 色提醒
+    val countColor = if (charCount >= maxLen * 0.9) {
+        MaterialTheme.colorScheme.error
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        OutlinedTextField(
+            value = userAnswer,
+            onValueChange = onUpdateUserAnswer,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 200.dp),
+            label = { Text("你的答案") },
+            placeholder = { Text("在此输入你的论述…") },
+            enabled = !isAiGuiding,
+            supportingText = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    Text(
+                        text = "$charCount / $maxLen",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = countColor,
+                    )
+                }
+            },
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            OutlinedButton(
+                onClick = onCancelAnswering,
+                enabled = !isAiGuiding,
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Cancel,
+                    contentDescription = null,
+                    modifier = Modifier.size(ButtonDefaults.IconSize),
+                )
+                Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
+                Text(text = "取消")
+            }
+            Button(
+                onClick = onSubmitAnswer,
+                enabled = canSubmit,
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Send,
+                    contentDescription = null,
+                    modifier = Modifier.size(ButtonDefaults.IconSize),
+                )
+                Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
+                Text(text = "提交并引导")
+            }
+        }
+    }
+}
+
+/**
+ * AI 三阶段引导展示区。
+ *
+ * 按顺序渲染 [SocraticGuide] 列表，每阶段一个卡片：
+ * - [SocraticStage.ANALYZE]：分析论证漏洞
+ * - [SocraticStage.SUGGEST]：改进建议
+ * - [SocraticStage.SHOW_SAMPLE]：参考范文（标注"范文，非标准答案"）
+ *
+ * 状态：
+ * - [isAiGuiding] → 底部显示 Loading 指示器
+ * - [error] != null → 显示错误信息 + 重试按钮
+ * - 有结果 → 显示"清空"按钮（保留答案，仅清空引导结果）
+ */
+@Composable
+private fun EssayAiGuideStagesSection(
+    guides: List<SocraticGuide>,
+    isAiGuiding: Boolean,
+    error: String?,
+    onRetry: () -> Unit,
+    onClear: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        // 各阶段引导内容
+        guides.forEach { guide ->
+            EssayGuideStageCard(guide = guide)
+        }
+
+        // 加载中指示器
+        if (isAiGuiding) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                WenyanLoadingIndicator()
+                Spacer(modifier = Modifier.size(Spacing.sm))
+                Text(
+                    text = "AI 正在生成引导…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        // 错误信息 + 重试
+        error?.let { msg ->
+            TonalCardLow(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(Spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CloudOff,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Text(
+                            text = "引导失败：$msg",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    FilledTonalButton(
+                        onClick = onRetry,
+                        enabled = !isAiGuiding,
+                    ) {
+                        Text(text = "重试")
+                    }
+                }
+            }
+        }
+
+        // 清空按钮（有结果且非加载中时显示）
+        if (guides.isNotEmpty() && !isAiGuiding) {
+            OutlinedButton(
+                onClick = onClear,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = "清空引导结果")
+            }
+        }
+    }
+}
+
+/**
+ * 单个引导阶段卡片。
+ *
+ * 阶段标题映射：
+ * - ANALYZE → "① 分析论证漏洞"
+ * - SUGGEST → "② 改进建议"
+ * - SHOW_SAMPLE → "③ 参考范文"（额外标注"范文，非标准答案"）
+ */
+@Composable
+private fun EssayGuideStageCard(guide: SocraticGuide) {
+    val (stageLabel, isSample) = when (guide.stage) {
+        SocraticStage.ANALYZE -> "① 分析论证漏洞" to false
+        SocraticStage.SUGGEST -> "② 改进建议" to false
+        SocraticStage.SHOW_SAMPLE -> "③ 参考范文" to true
+    }
+
+    TonalCardLow(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp),
+                )
+                Text(
+                    text = stageLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            if (isSample) {
+                Text(
+                    text = "范文，非标准答案",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
+            }
+            Text(
+                text = guide.content,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
+}
+
+/**
+ * 自评区（引导完成后显示）。
+ *
+ * 三档评分（对齐 FSRS Rating，无 HARD）：
+ * - [EssaySelfRating.AGAIN]：不会 / 答得不好 → 写入错题本 + FSRS 调度
+ * - [EssaySelfRating.GOOD]：尚可
+ * - [EssaySelfRating.EASY]：轻松
+ *
+ * 评分后展示选中状态 + 简短确认。
+ * AGAIN 且 [lastWrongAnswerId] 非空 → "已记录到错题本"。
+ */
+@Composable
+private fun EssaySelfRatingSection(
+    selfRating: EssaySelfRating?,
+    lastWrongAnswerId: String?,
+    onRateSelf: (EssaySelfRating) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        Text(
+            text = "自评",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            SelfRatingButton(
+                label = "不会",
+                icon = Icons.Default.SentimentDissatisfied,
+                isSelected = selfRating == EssaySelfRating.AGAIN,
+                onClick = { onRateSelf(EssaySelfRating.AGAIN) },
+                modifier = Modifier.weight(1f),
+            )
+            SelfRatingButton(
+                label = "尚可",
+                icon = Icons.Default.SentimentNeutral,
+                isSelected = selfRating == EssaySelfRating.GOOD,
+                onClick = { onRateSelf(EssaySelfRating.GOOD) },
+                modifier = Modifier.weight(1f),
+            )
+            SelfRatingButton(
+                label = "轻松",
+                icon = Icons.Default.SentimentVerySatisfied,
+                isSelected = selfRating == EssaySelfRating.EASY,
+                onClick = { onRateSelf(EssaySelfRating.EASY) },
+                modifier = Modifier.weight(1f),
+            )
+        }
+
+        // 评分后确认信息
+        selfRating?.let { rating ->
+            val confirmText = when (rating) {
+                EssaySelfRating.AGAIN -> {
+                    if (lastWrongAnswerId != null) {
+                        "已记录到错题本，将按 FSRS 间隔重复调度复习。"
+                    } else {
+                        "已自评。错题记录未成功，可稍后重试或手动加入错题本。"
+                    }
+                }
+                EssaySelfRating.GOOD -> "已自评：尚可。建议回顾 AI 改进建议加深理解。"
+                EssaySelfRating.EASY -> "已自评：轻松。答题思路已掌握。"
+            }
+            val confirmColor = if (rating == EssaySelfRating.AGAIN && lastWrongAnswerId == null) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = confirmColor,
+                    modifier = Modifier.size(18.dp),
+                )
+                Text(
+                    text = confirmText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = confirmColor,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 自评档位按钮。
+ *
+ * 选中时用 [FilledTonalButton]（M3 次级强调），未选中用 [OutlinedButton]。
+ */
+@Composable
+private fun SelfRatingButton(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (isSelected) {
+        FilledTonalButton(
+            onClick = onClick,
+            modifier = modifier,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(ButtonDefaults.IconSize),
+            )
+            Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
+            Text(text = label)
+        }
+    } else {
+        OutlinedButton(
+            onClick = onClick,
+            modifier = modifier,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(ButtonDefaults.IconSize),
+            )
+            Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
+            Text(text = label)
+        }
+    }
+}
+
 // ── 通用组件 ───────────────────────────────────────────────
 
 @Composable
@@ -635,6 +1139,78 @@ private fun EssayDetailLightPreview() {
             ) {
                 EssayHeaderSection(year = 2008, score = 30, examPaperCode = "604")
                 EssayContentSection(content = "试述冰心，丁玲，萧红，张爱玲，王安忆五位女作家创作的异同，并梳理她们在不同时期的创作演变。")
+            }
+        }
+    }
+}
+
+/**
+ * AI 审题助手入口态 Preview（未答题，显示"开始练习"按钮）。
+ */
+@Preview(name = "Essay AI Guide - Entry", showBackground = true)
+@Composable
+private fun EssayAiGuideEntryPreview() {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT, dynamicColor = false)) {
+        androidx.compose.material3.Surface {
+            Column(modifier = Modifier.padding(Spacing.lg)) {
+                EssayAiGuideSection(
+                    uiState = EssayDetailUiState(isAnswering = false),
+                    onStartAnswering = {},
+                    onCancelAnswering = {},
+                    onUpdateUserAnswer = {},
+                    onSubmitAnswer = {},
+                    onRetryAiGuide = {},
+                    onClearAiGuides = {},
+                    onRateSelf = {},
+                )
+            }
+        }
+    }
+}
+
+/**
+ * AI 审题助手三阶段引导完成态 Preview（含自评区）。
+ */
+@Preview(name = "Essay AI Guide - Stages", showBackground = true)
+@Composable
+private fun EssayAiGuideStagesPreview() {
+    val sampleGuides = listOf(
+        SocraticGuide(
+            stage = SocraticStage.ANALYZE,
+            content = "你的答案涵盖了五位作家，但缺乏纵向演变梳理。建议补充不同时期的创作转向，如丁玲从《莎菲女士的日记》到延安时期的转变。",
+            isSampleEssay = false,
+            contentSource = "AI_GENERATED",
+        ),
+        SocraticGuide(
+            stage = SocraticStage.SUGGEST,
+            content = "可从时代背景、女性意识、叙事风格三个维度比较异同，再按时间线梳理演变脉络。",
+            isSampleEssay = false,
+            contentSource = "AI_GENERATED",
+        ),
+        SocraticGuide(
+            stage = SocraticStage.SHOW_SAMPLE,
+            content = "五位女作家的创作各具特色又相互映照。冰心的'爱的哲学'奠定温情基调，丁玲以女性觉醒切入革命叙事，萧红用底层视角拓展苦难书写，张爱玲在都市语境中解构浪漫，王安忆则在宏大叙事与日常细节间寻找平衡…",
+            isSampleEssay = true,
+            contentSource = "AI_GENERATED",
+        ),
+    )
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT, dynamicColor = false)) {
+        androidx.compose.material3.Surface {
+            Column(modifier = Modifier.padding(Spacing.lg)) {
+                EssayAiGuideSection(
+                    uiState = EssayDetailUiState(
+                        isAnswering = true,
+                        userAnswer = "冰心、丁玲、萧红、张爱玲、王安忆五位女作家各有特色…",
+                        aiGuides = sampleGuides,
+                    ),
+                    onStartAnswering = {},
+                    onCancelAnswering = {},
+                    onUpdateUserAnswer = {},
+                    onSubmitAnswer = {},
+                    onRetryAiGuide = {},
+                    onClearAiGuides = {},
+                    onRateSelf = {},
+                )
             }
         }
     }

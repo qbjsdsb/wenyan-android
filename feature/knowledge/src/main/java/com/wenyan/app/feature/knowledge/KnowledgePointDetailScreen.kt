@@ -798,6 +798,7 @@ private fun WrongAnswerRow(
             val (sourceLabel, sourceVariant) = when (wrong.source) {
                 WrongAnswerRepository.SOURCE_CARD_AGAIN -> "卡片复习" to ChipVariant.SECONDARY
                 WrongAnswerRepository.SOURCE_QUIZ_WRONG -> "真题练习" to ChipVariant.TERTIARY
+                WrongAnswerRepository.SOURCE_ESSAY_PRACTICE -> "论述题自评" to ChipVariant.PRIMARY
                 else -> "未知来源" to ChipVariant.NEUTRAL
             }
             WenyanInfoChip(text = sourceLabel, variant = sourceVariant)

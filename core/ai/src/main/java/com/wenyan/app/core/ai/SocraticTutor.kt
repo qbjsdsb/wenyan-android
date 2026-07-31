@@ -7,7 +7,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * 苏格拉底式 AI 导师。
+ * 苏格拉底式 AI 导师接口（v0.9.9 Phase 3 提取，便于 ViewModel 测试替换）。
  *
  * Spec 第 344-388 行要求（增强设计文档 3.6 节 AI 助手，而非替代）：
  * - 苏格拉底式引导：不直接给答案，引导用户自己找到答案
@@ -15,16 +15,57 @@ import javax.inject.Singleton
  * - RAG 架构：基于用户资料库 + 权威教材库检索，引用可溯源
  * - 用户答案过短或离题时不强行分析论证漏洞
  *
+ * 生产实现见 [SocraticTutorImpl]；测试用 Fake 见各 feature 测试包。
+ * 提取接口动机：[EssayDetailViewModel] / [AiAssistantViewModel] 注入此接口，
+ * 单测可用 FakeSocraticTutor 替换，不依赖真实 LLM API（与 SchedulingRepository 模式一致）。
+ */
+interface SocraticTutor {
+
+    /**
+     * 苏格拉底式引导论述题作答（Spec 第 358-364 行）。
+     *
+     * @param question 论述题题目
+     * @param userAnswer 用户已提交的答案
+     * @return 按阶段流式输出的苏格拉底引导内容
+     */
+    fun guideEssayAnswer(question: String, userAnswer: String): Flow<SocraticGuide>
+
+    /**
+     * "解释我的答案"机制（Spec 第 366-370 行）。
+     *
+     * @param question 题目
+     * @param userAnswer 用户的错误答案
+     * @param correctAnswer 正确答案
+     * @return 流式输出的错误分析
+     */
+    fun explainWrongAnswer(
+        question: String,
+        userAnswer: String,
+        correctAnswer: String,
+    ): Flow<WrongAnswerExplanation>
+
+    /**
+     * 验证用户答案是否有效（Spec 第 378-382 行）。
+     *
+     * @param userAnswer 用户答案
+     * @return 验证结果
+     */
+    fun validateUserAnswer(userAnswer: String): AnswerValidation
+}
+
+/**
+ * 苏格拉底式 AI 导师生产实现（v0.9.9 Phase 3 从 concrete class 重构为 Impl）。
+ *
  * 实现要点（阶段4）：
  * - 私有方法通过 [aiService].chat() 调用 LLM API
  * - [PromptTemplates] 统一管理所有 prompt
  * - RAG 无结果时降级为通用引导
  */
 @Singleton
-class SocraticTutor @Inject constructor(
+class SocraticTutorImpl @Inject constructor(
     private val ragEngine: RagEngine,
     private val aiService: AiService,
-) {
+) : SocraticTutor {
 
     /**
      * 苏格拉底式引导论述题作答（Spec 第 358-364 行）。
@@ -49,7 +90,7 @@ class SocraticTutor @Inject constructor(
      * @param userAnswer 用户已提交的答案
      * @return 按阶段流式输出的苏格拉底引导内容
      */
-    fun guideEssayAnswer(question: String, userAnswer: String): Flow<SocraticGuide> = flow {
+    override fun guideEssayAnswer(question: String, userAnswer: String): Flow<SocraticGuide> = flow {
         // 先验证用户答案是否有效
         val validation = validateUserAnswer(userAnswer)
         if (!validation.isValid) {
@@ -153,7 +194,7 @@ class SocraticTutor @Inject constructor(
      * @param correctAnswer 正确答案
      * @return 流式输出的错误分析
      */
-    fun explainWrongAnswer(
+    override fun explainWrongAnswer(
         question: String,
         userAnswer: String,
         correctAnswer: String,
@@ -200,7 +241,7 @@ class SocraticTutor @Inject constructor(
      * @param userAnswer 用户答案
      * @return 验证结果
      */
-    fun validateUserAnswer(userAnswer: String): AnswerValidation {
+    override fun validateUserAnswer(userAnswer: String): AnswerValidation {
         val trimmed = userAnswer.trim()
 
         // 答案过短（<50字）

@@ -7,9 +7,10 @@ import kotlinx.coroutines.flow.Flow
 /**
  * 错题本仓库接口(NF-PP5 Wave 2.4)。
  *
- * 记录用户答错的题目,支持两个来源:
+ * 记录用户答错的题目,支持三个来源:
  * - [SOURCE_CARD_AGAIN]:卡片复习答 CardsViewModel.rateCard(AGAIN) 时记录
  * - [SOURCE_QUIZ_WRONG]:真题练习 QuizViewModel.submitAnswer() 判定错误时记录
+ * - [SOURCE_ESSAY_PRACTICE]:论述题自评答不好 EssayDetailViewModel.rateSelf(AGAIN) 时记录（v0.9.9 Phase 3 新增）
  *
  * 同一知识点/真题的未解决错题,重复答错时递增 wrongCount(不重复插入),
  * markResolved 后该错题不再出现在 observeUnresolved 中。
@@ -60,7 +61,7 @@ interface WrongAnswerRepository {
      * @param examQuestionId 关联真题 ID(真题来源非空)
      * @param userAnswer     用户错误答案
      * @param correctAnswer  正确答案(可为空,待 AI 批改填入)
-     * @param source         来源:[SOURCE_CARD_AGAIN] 或 [SOURCE_QUIZ_WRONG]
+     * @param source         来源:[SOURCE_CARD_AGAIN] / [SOURCE_QUIZ_WRONG] / [SOURCE_ESSAY_PRACTICE]
      * @return 错题记录 ID(新插入或已有)
      */
     suspend fun recordWrongAnswer(
@@ -98,5 +99,8 @@ interface WrongAnswerRepository {
 
         /** 来源:真题练习答错 */
         const val SOURCE_QUIZ_WRONG = "QUIZ_WRONG"
+
+        /** 来源:论述题自评答不好（v0.9.9 Phase 3 新增） */
+        const val SOURCE_ESSAY_PRACTICE = "ESSAY_PRACTICE"
     }
 }

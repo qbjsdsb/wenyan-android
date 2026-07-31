@@ -22,7 +22,8 @@ android {
         // v0.9.6=31（关于与教程精简重构 + 代码卫生审计：AboutTutorialScreen 7 章→5 节可折叠 + 4 项代码卫生修复。PRR ✅ READY TO RELEASE，RBR ✅ PASS）
         // v0.9.7=32（知识卡片功能完善 + 界面审查修复：B1 sibling去重FSRS调度漏洞 + B2 Leech误报(RELEARNING状态) + B3 无pointId卡日志 + M2 sibling卡打散 + M4 翻转滚动重置 + M5 完成态撤销 + M9 无效cardType日志 + M11 预览闪烁 + M10 @Preview + 2 测试。PRR ✅ READY TO RELEASE，RBR ✅ PASS）
         // v0.9.8=33（论述题板块：知识点详情页"相关论述题"区块 + 论述题详情页 10 区块结构（题目/审题/论证/框架/依据/交叉验证/参考链接/知识盲点/关联知识点）+ JSON 解析优雅降级 + 双向导航 + seed 2.13.1→2.14.0 + 3 道示例题 angle/notes 完整填充 + 131 道派生 relatedPointIds + 47 新测试（Repository/ViewModel/Models）。452 tests 全绿）
-        versionCode = 33
+        // v0.9.9=34（论述题 AI 审题助手 Phase 3：EssayDetailViewModel 接入 SocraticTutor 三阶段引导（ANALYZE/SUGGEST/SHOW_SAMPLE）+ 自评错题回写（AGAIN→SOURCE_ESSAY_PRACTICE+FSRS调度）+ SocraticTutor 接口提取（便于测试替换）+ FakeSocraticTutor/FakeSchedulingRepository + 10 新测试（AI引导/防重入/clearAiGuides/自评AGAIN/GOOD/异常）+ SOURCE_ESSAY_PRACTICE 常量新增 + WrongAnswerScreen/KnowledgePointDetailScreen UI 标签 + Icons.AutoMirrored.Filled.Send 弃用修复。471 tests 全绿）
+        versionCode = 34
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.7：知识卡片功能完善 + 界面审查修复（响应用户反馈"功能还是不够完善"）。
         //   数据一致性修复（B1/B2/B3）：
@@ -62,7 +63,25 @@ android {
         //     - EssayDetailViewModelTest: 新建（15 测试，含 JSON 优雅降级/关联知识点聚合/retry）
         //     - EssayDetailModelsTest: 新建（16 测试，覆盖 parseEssayAngle/parseEssayNotes 全分支）
         //   本地验证：:app:assembleDebug + 全模块 testDebugUnitTest 全绿（452 tests, 0 failures）
-        versionName = "0.9.8"
+        // v0.9.9：论述题 AI 审题助手 Phase 3（响应用户需求"进入 phase3，严谨仔细，反复检查"）
+        //   Phase 3.1-3.3 数据/逻辑/UI 层：
+        //     - EssayDetailViewModel 接入 SocraticTutor（三阶段引导 ANALYZE/SUGGEST/SHOW_SAMPLE）
+        //     - 自评错题回写（AGAIN → recordWrongAnswer + rateWrongAnswer FSRS 调度）
+        //     - SocraticTutor 接口提取（SocraticTutorImpl 生产实现，便于测试替换）
+        //     - EssayAiGuideSection UI（答题入口/答题输入/三阶段引导卡片/自评三档按钮）
+        //   Phase 3.4 测试（+10）：
+        //     - FakeSocraticTutor + FakeSchedulingRepository 新增
+        //     - startAnswering/cancelAnswering/updateUserAnswer 截断
+        //     - submitAnswerAndGuide 空答案保护/正常三阶段/异常/防重入
+        //     - clearAiGuides 清空引导保留答案
+        //     - rateSelf AGAIN 写错题本+FSRS调度 / GOOD 不写 / 异常仍设置 selfRating
+        //   Phase 3.5 静态审查修复（4 项）：
+        //     - SOURCE_ESSAY_PRACTICE 常量新增（原误用 SOURCE_QUIZ_WRONG，语义不精确）
+        //     - WrongAnswerScreen/KnowledgePointDetailScreen UI 标签新增"论述题自评"
+        //     - Icons.AutoMirrored.Filled.Send 弃用修复（原 Icons.Filled.Send）
+        //     - SocraticTutorTest/AiAssistantViewModelTest 接口提取后实例化修正
+        //   本地验证：:app:assembleDebug + 全模块 testDebugUnitTest 全绿（471 tests, 0 failures）
+        versionName = "0.9.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

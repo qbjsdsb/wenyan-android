@@ -728,6 +728,7 @@ private fun WrongAnswerRatingButton(
 private fun formatSource(source: String): String = when (source) {
     WrongAnswerRepository.SOURCE_CARD_AGAIN -> "卡片复习"
     WrongAnswerRepository.SOURCE_QUIZ_WRONG -> "真题练习"
+    WrongAnswerRepository.SOURCE_ESSAY_PRACTICE -> "论述题自评"
     else -> source
 }
 

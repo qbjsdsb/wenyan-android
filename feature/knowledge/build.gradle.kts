@@ -40,6 +40,10 @@ dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:data"))
+    // v0.9.9 Phase 3：论述题 AI 审题助手（SocraticTutor）
+    implementation(project(":core:ai"))
+    // v0.9.9 Phase 3：错题回写 + FSRS 调度（Rating 枚举）
+    implementation(project(":core:fsrs"))
 
     // Compose
     implementation(platform(libs.androidx.compose.bom))
