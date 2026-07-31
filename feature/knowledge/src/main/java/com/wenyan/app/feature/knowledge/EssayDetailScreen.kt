@@ -73,6 +73,9 @@ import androidx.compose.ui.tooling.preview.Preview
  *
  * 优雅降级：angle/notes 为 null（131/134 道未填充）→ 隐藏对应区块，
  * 仅显示题目信息 + 正文 + 答题框架 + 关联知识点。
+ *
+ * 参考链接用 [LocalUriHandler] 打开系统默认浏览器（CustomTabsIntent 需额外依赖，
+ * LocalUriHandler 已满足需求且与 Compose 生态一致）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -5337,10 +5337,63 @@ WenyanNavItem("wrong_answer", "错题本", Icons.Default.ErrorOutline),
 ### 交接
 
 - **00-STATUS.md**：当前状态快照 + 新会话首要任务已更新为 v0.9.8
-- **docs/design/essay-module-design.md**：完整设计方案（含 Phase 2/3 规划：论述题列表页 + 题型筛选 + AI 审题助手集成）
+- **docs/design/essay-module-design.md**：完整设计方案（含 Phase 3 规划：AI 审题助手集成）
 - **docs/research/essay-deep-research.md**：795 行深度调研报告 + 44 可点击来源
 - **下一步**：
-  1. emulator 实测 v0.9.8（P0）：验证知识点详情页"相关论述题"区块 + 论述题详情页 10 区块 + 优雅降级 + 双向导航
-  2. Phase 2（P1）：独立论述题列表页（按年份/科目/题型筛选）+ 入口（知识点 Tab 顶部或真题 Tab 子页）
-  3. Phase 3（P2）：AI 审题助手集成（苏格拉底三阶段引导 + 知识盲点检测 + 范文对比）
-  4. 数据扩充：当前仅 3 道完整 angle/notes，后续可用 LLM 管线批量填充（基于 full_content + 关联知识点自动生成）
+  1. emulator 实测 v0.9.8（P0）：验证 Phase 2 列表页 + Phase 1 详情页 + 优雅降级 + 双向导航
+  2. Phase 3（P2）：AI 审题助手集成（苏格拉底三阶段引导 + 知识盲点检测 + 范文对比）
+  3. 数据扩充：当前仅 3 道完整 angle/notes，后续可用 LLM 管线批量填充（基于 full_content + 关联知识点自动生成）
+
+---
+
+## 2026-07-31 v0.9.8 论述题板块 Phase 2 — 列表页 + 入口卡片（本次会话）
+
+**目标**：完成论述题板块 Phase 2 — 独立论述题列表页 + 知识点 Tab 入口卡片，实现"知识点 Tab → 论述题列表 → 论述题详情"完整浏览路径。
+
+### 实现
+
+#### Phase 2 列表页 + 入口（本次会话）
+
+| 文件 | 改动 |
+|------|------|
+| `feature/knowledge/.../EssayListViewModel.kt`（新建） | 论述题列表 ViewModel：combine 5 源（observeAllEssays + observeSubjects + selectedYear + selectedSubjectId + onlyWithAngle）内存筛选 + retryTrigger 重试机制（与 KnowledgePointDetailViewModel 一致）+ availableYears 从全量数据提取（不受筛选影响）+ EssayListItem UI 精简模型（id/year/subjectName/score/contentPreview/hasAngle/hasNotes/relatedPointCount） |
+| `feature/knowledge/.../EssayListScreen.kt`（新建） | 论述题列表页 UI：WenyanLargeTopAppBar（副标题显示 "筛选数 / 总数"）+ EssayFilterBar（年份 FilterChip 行 + 科目 FilterChip 行 + "仅显示有审题思路" FilterChip）+ Crossfade 状态切换（loading/error/empty/list）+ EssayList LazyColumn（年份+分值 chip + 80 字内容预览 + hasAngle/hasNotes 指示）+ ErrorState 含 retry 按钮 |
+| `feature/knowledge/.../KnowledgeScreen.kt` | 知识点列表顶部新增 `EssayEntryCard`（TonalCard + MenuBook 图标 + 标题"论述题练习" + 副标题"真题论述题 · 审题思路 + 依据 + 交叉验证 + 知识点串联"），作为论述题板块主入口（知识点 Tab → 论述题列表）；KnowledgeList LazyColumn 新增 item(key="essay_entry") |
+| `app/.../WenyanNavHost.kt` | 新增 `ROUTE_ESSAY_LIST` 子路由常量 + `essayListDestination` composable（Push/Pop slide）+ `knowledgeDestination` 增加 `onNavigateToEssays` 参数；EssayListScreen → EssayDetailScreen 导航接通（与 Phase 1 ROUTE_ESSAY_DETAIL 形成完整链路） |
+| `feature/knowledge/src/test/.../Fakes.kt` | 新增 `FakeChapterRepository`：stub `observeSubjects`（科目名映射测试），其他方法抛 UnsupportedOperationException；支持论述题列表页科目筛选 chip 测试。**修复**：补充 `import com.wenyan.app.core.data.repository.ChapterRepository`（原漏 import 导致编译失败） |
+
+### 测试（+18 → 累计 469）
+
+| 测试类 | 测试数 | 覆盖点 |
+|--------|--------|--------|
+| `EssayListViewModelTest`（新建） | 18 | 初始加载 / 科目名映射（未知 subjectId 回退"未知科目"）/ 年份筛选 / 科目筛选 / 审题思路筛选 / 三维组合筛选 / availableYears 提取（倒序）/ clearFilters / retry 重新订阅 / 内容预览 80 字截断 / hasAngle/hasNotes 标记 / relatedPointCount |
+
+### 编译修复
+
+| 问题 | 修复 |
+|------|------|
+| `Fakes.kt:280` Unresolved reference 'ChapterRepository' | 补充 `import com.wenyan.app.core.data.repository.ChapterRepository`（FakeChapterRepository 实现接口需 import） |
+| `EssayListViewModelTest.kt:69` Argument type mismatch: FakeChapterRepository → ChapterRepository | 同上 import 修复后自动解决（FakeChapterRepository 正确实现 ChapterRepository 接口，upcast 成功） |
+
+### 本地验证
+
+| 验证项 | 命令 | 结果 |
+|--------|------|------|
+| Debug 构建 | `gradle :app:assembleDebug --no-daemon --offline` | BUILD SUCCESSFUL |
+| 单元测试 | `gradle testDebugUnitTest --no-daemon --offline` | BUILD SUCCESSFUL（469 tests, 0 failures, 0 errors, 0 skipped） |
+
+### 设计要点
+
+1. **三维筛选内存完成**：134 题规模 < 5ms，与 observeRelatedEssays 策略一致，避免 SQL LIKE 误匹配 JSON 子串
+2. **retryTrigger 重试机制**：combine + .catch 是终端操作（catch 后内层流终止），需通过 retryTrigger 驱动 flatMapLatest 重建内层流才能恢复（与 KnowledgePointDetailViewModel / EssayDetailViewModel 一致）
+3. **availableYears 从全量数据提取**：不受当前筛选影响，确保切换筛选后年份选项不变（如筛选 2020 年后仍可切回 2019 年）
+4. **EssayEntryCard 双入口设计**：知识点 Tab 顶部入口（浏览全部论述题）+ 知识点详情页底部"相关论述题"区块（从特定知识点跳转关联论述题），形成完整浏览路径
+5. **状态独立 StateFlow**：selectedYear/selectedSubjectId/onlyWithAngle 独立于 uiState，error/loading 态下也可切换筛选（与 KnowledgeViewModel.selectedCategory 解耦策略一致）
+
+### 交接
+
+- **00-STATUS.md**：v0.9.8 描述已追加 Phase 2 + 测试数 452→469 + 新会话首要任务已更新
+- **下一步**：
+  1. emulator 实测 v0.9.8（P0）：Phase 2 列表页（入口卡片 + 三维筛选 + 状态切换）+ Phase 1 详情页（10 区块 + 优雅降级 + 双向导航）
+  2. Phase 3（P2）：AI 审题助手集成（苏格拉底三阶段引导 + 知识盲点检测 + 范文对比）
+  3. 数据扩充：当前仅 3 道完整 angle/notes，后续可用 LLM 管线批量填充

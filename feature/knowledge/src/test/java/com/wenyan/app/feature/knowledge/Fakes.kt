@@ -1,5 +1,6 @@
 package com.wenyan.app.feature.knowledge
 
+import com.wenyan.app.core.data.repository.ChapterRepository
 import com.wenyan.app.core.data.repository.KnowledgeRepository
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.database.dao.DataSourceDao
@@ -266,6 +267,44 @@ fun buildKnowledgeRepository(
     dataSourceDao = dataSourceDao,
     examQuestionDao = examQuestionDao,
 )
+
+/**
+ * [ChapterRepository] 的 Fake 实现（v0.9.8 Phase 2 论述题列表新增）。
+ *
+ * 仅 stub [EssayListViewModel] 调用的 [observeSubjects]（科目名映射），
+ * 其他方法抛 [UnsupportedOperationException]。
+ *
+ * 通过 [subjects] 可控注入科目列表,支持论述题列表页的科目筛选 chip 测试。
+ */
+class FakeChapterRepository(
+    initialSubjects: List<com.wenyan.app.core.database.entity.SubjectEntity> = emptyList(),
+) : ChapterRepository {
+
+    private val _subjects = MutableStateFlow(initialSubjects)
+
+    /** 当前科目列表快照(测试可读写) */
+    var subjects: List<com.wenyan.app.core.database.entity.SubjectEntity>
+        get() = _subjects.value
+        set(value) { _subjects.value = value }
+
+    override fun observeSubjects(): Flow<List<com.wenyan.app.core.database.entity.SubjectEntity>> =
+        _subjects.asStateFlow()
+
+    override fun observeRootChapters(subjectId: String): Flow<List<com.wenyan.app.core.database.entity.ChapterEntity>> =
+        throw UnsupportedOperationException("observeRootChapters not used in essay list tests")
+
+    override fun observeChildren(parentId: String): Flow<List<com.wenyan.app.core.database.entity.ChapterEntity>> =
+        throw UnsupportedOperationException("observeChildren not used in essay list tests")
+
+    override fun observeTree(rootId: String): Flow<List<com.wenyan.app.core.database.entity.ChapterEntity>> =
+        throw UnsupportedOperationException("observeTree not used in essay list tests")
+
+    override fun observeKnowledgePointsByChapter(chapterId: String): Flow<List<KnowledgePointEntity>> =
+        throw UnsupportedOperationException("observeKnowledgePointsByChapter not used in essay list tests")
+
+    override suspend fun countNonRootChapters(): Int =
+        throw UnsupportedOperationException("countNonRootChapters not used in essay list tests")
+}
 
 /**
  * MutableStateFlow 映射辅助(避免每个方法重复 .map { })。

@@ -11,6 +11,7 @@ import com.wenyan.app.feature.aiassistant.AiAssistantScreen
 import com.wenyan.app.feature.aiassistant.ApiConfigScreen
 import com.wenyan.app.feature.cards.CardsScreen
 import com.wenyan.app.feature.knowledge.EssayDetailScreen
+import com.wenyan.app.feature.knowledge.EssayListScreen
 import com.wenyan.app.feature.knowledge.KnowledgePointDetailScreen
 import com.wenyan.app.feature.knowledge.KnowledgeScreen
 import com.wenyan.app.feature.quiz.QuizScreen
@@ -74,6 +75,12 @@ fun WenyanNavHost(
                     popUpTo("$ROUTE_KNOWLEDGE_DETAIL/{pointId}") {
                         inclusive = true
                     }
+                    launchSingleTop = true
+                }
+            },
+            onNavigateToEssays = {
+                // v0.9.8 Phase 2：知识点 Tab → 论述题列表，Push/Pop slide + launchSingleTop
+                navController.navigate(ROUTE_ESSAY_LIST) {
                     launchSingleTop = true
                 }
             },
@@ -182,6 +189,15 @@ fun WenyanNavHost(
                 }
             },
         )
+        essayListDestination(
+            onBack = { navController.popBackStack() },
+            onNavigateToEssayDetail = { essayId ->
+                // v0.9.8 Phase 2：论述题列表 → 论述题详情，Push/Pop slide + launchSingleTop
+                navController.navigate("$ROUTE_ESSAY_DETAIL/$essayId") {
+                    launchSingleTop = true
+                }
+            },
+        )
     }
 }
 
@@ -189,11 +205,13 @@ fun WenyanNavHost(
 private fun NavGraphBuilder.knowledgeDestination(
     onNavigateToAiAssistant: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
+    onNavigateToEssays: () -> Unit,
 ) {
     composable(TopLevelDestination.ROUTE_KNOWLEDGE) {
         KnowledgeScreen(
             onNavigateToAiAssistant = onNavigateToAiAssistant,
             onNavigateToDetail = onNavigateToDetail,
+            onNavigateToEssays = onNavigateToEssays,
         )
     }
 }
@@ -338,9 +356,30 @@ private fun NavGraphBuilder.essayDetailDestination(
     }
 }
 
+// v0.9.8 Phase 2：论述题列表子路由（入口：知识点列表页顶部"论述题练习"卡片）
+// 子路由用 Push/Pop slide transition（覆盖 NavHost 默认的 Tab fade）
+private fun NavGraphBuilder.essayListDestination(
+    onBack: () -> Unit,
+    onNavigateToEssayDetail: (String) -> Unit,
+) {
+    composable(
+        route = ROUTE_ESSAY_LIST,
+        enterTransition = { WenyanMotion.PushEnterTransition },
+        exitTransition = { WenyanMotion.PushExitTransition },
+        popEnterTransition = { WenyanMotion.PopEnterTransition },
+        popExitTransition = { WenyanMotion.PopExitTransition },
+    ) {
+        EssayListScreen(
+            onBack = onBack,
+            onNavigateToEssayDetail = onNavigateToEssayDetail,
+        )
+    }
+}
+
 // 子路由常量
 private const val ROUTE_API_CONFIG = "api_config"
 private const val ROUTE_AI_ASSISTANT = "aiassistant"
 private const val ROUTE_KNOWLEDGE_DETAIL = "knowledge_detail"
 private const val ROUTE_ABOUT = "about"
 private const val ROUTE_ESSAY_DETAIL = "essay_detail"
+private const val ROUTE_ESSAY_LIST = "essay_list"

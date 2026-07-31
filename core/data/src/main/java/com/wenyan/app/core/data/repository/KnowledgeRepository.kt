@@ -190,6 +190,18 @@ class KnowledgeRepository @Inject constructor(
             .catchAndLog(TAG, "observeRelatedEssays pointId=$pointId") { emptyList() }
 
     /**
+     * 观察所有论述题（v0.9.8 Phase 2 新增，供论述题列表页使用）。
+     *
+     * 返回全部 ESSAY 题按年份倒序，调用方在内存中按年份/科目/是否有审题思路筛选。
+     * 与 [observeRelatedEssays] 共享同一 DAO 流，无需重复查询。
+     *
+     * @return 所有论述题列表（按年份倒序、试卷代码 ASC）
+     */
+    fun observeAllEssays(): Flow<List<ExamQuestionEntity>> =
+        examQuestionDao.observeAllEssays()
+            .catchAndLog(TAG, "observeAllEssays") { emptyList() }
+
+    /**
      * 观察单个论述题（v0.9.8 新增，供论述题详情页使用）。
      *
      * @param examQuestionId 真题 ID（如 eq_0038）

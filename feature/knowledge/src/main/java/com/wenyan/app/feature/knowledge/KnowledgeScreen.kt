@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -24,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Inbox
@@ -45,7 +48,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.designsystem.component.ChipVariant
@@ -77,6 +82,7 @@ import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 fun KnowledgeScreen(
     onNavigateToAiAssistant: () -> Unit = {},
     onNavigateToDetail: (String) -> Unit = {},
+    onNavigateToEssays: () -> Unit = {},
     viewModel: KnowledgeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -183,6 +189,7 @@ fun KnowledgeScreen(
                         KnowledgeList(
                             items = uiState.knowledgePoints,
                             onNavigateToDetail = onNavigateToDetail,
+                            onNavigateToEssays = onNavigateToEssays,
                             contentPadding = PaddingValues(Spacing.lg),
                         )
                     }
@@ -271,6 +278,7 @@ private fun CategoryChips(
 private fun KnowledgeList(
     items: List<KnowledgePointItem>,
     onNavigateToDetail: (String) -> Unit,
+    onNavigateToEssays: () -> Unit,
     contentPadding: PaddingValues,
 ) {
     // v0.8.15 Stage 1: 横屏/平板下限制内容最大宽度并居中，避免知识点卡片行宽过宽阅读疲劳。
@@ -283,11 +291,69 @@ private fun KnowledgeList(
             contentPadding = contentPadding,
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
+            // v0.9.8 Phase 2：论述题入口卡片（知识点串联器入口）
+            item(key = "essay_entry", contentType = "essayEntry") {
+                EssayEntryCard(onClick = onNavigateToEssays)
+            }
             items(items = items, key = { it.id }, contentType = { "knowledgeItem" }) { item ->
                 KnowledgePointCard(
                     item = item,
                     onClick = { onNavigateToDetail(item.id) },
                     modifier = Modifier.animateItem(),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 论述题入口卡片（v0.9.8 Phase 2 新增）。
+ *
+ * 放在知识点列表顶部，作为"论述题板块"的主入口（知识点 Tab → 论述题列表）。
+ * 与知识点详情页底部的"相关论述题"区块形成双入口：
+ * - 本卡片：从知识点 Tab 浏览全部论述题（列表 + 筛选）
+ * - 详情页区块：从某个知识点跳转到关联论述题（知识点串联器）
+ *
+ * 设计：TonalCard + 图标 + 标题 + 副标题，点击进入论述题列表页。
+ */
+@Composable
+private fun EssayEntryCard(
+    onClick: () -> Unit,
+) {
+    TonalCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {}
+            .clickable(role = Role.Button, onClick = onClick),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.lg),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(40.dp),
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                Text(
+                    text = "论述题练习",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = "真题论述题 · 审题思路 + 依据 + 交叉验证 + 知识点串联",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
