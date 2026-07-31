@@ -8,7 +8,9 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 
 /**
  * 文研底部导航栏项数据。
@@ -47,7 +49,8 @@ fun WenyanNavigationBar(
 ) {
     NavigationBar(
         modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        containerColor = Color.Transparent,
+        tonalElevation = 0.dp,
     ) {
         items.forEach { item ->
             val selected = item.route == currentRoute

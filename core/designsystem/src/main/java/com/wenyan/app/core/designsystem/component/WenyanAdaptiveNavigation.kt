@@ -1,11 +1,26 @@
 package com.wenyan.app.core.designsystem.component
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowWidthSizeClass
 
 /**
@@ -38,20 +53,39 @@ fun WenyanAdaptiveNavigation(
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
     when (windowSizeClass.windowWidthSizeClass) {
         WindowWidthSizeClass.COMPACT -> {
-            // 手机：底部 NavigationBar（现有行为）
-            ExpressiveScaffold(
-                modifier = modifier.fillMaxSize(),
-                bottomBar = {
-                    if (showNavigation) {
-                        WenyanNavigationBar(
-                            items = items,
-                            currentRoute = currentRoute,
-                            onNavigate = onNavigate,
-                        )
+            // 手机：沉浸式底部导航栏（v0.11 沉浸式改造）
+            // 使用 Box 叠加布局：内容全屏延伸至底部，NavigationBar 透明叠加在内容之上。
+            // 底部渐变遮罩让内容在导航栏区域平滑过渡到背景色，避免被截断感。
+            Box(modifier = modifier.fillMaxSize()) {
+                val density = LocalDensity.current
+                val topInset = WindowInsets.statusBars.only(WindowInsetsSides.Top).getTop(density)
+                val bottomInset = WindowInsets.ime.getBottom(density)
+                ExpressiveScaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    // 只保留状态栏顶部 + IME 底部间距，不消费底部导航栏 insets，
+                    // 让内容延伸到导航栏后面，实现沉浸效果。
+                    // 使用 WindowInsets(top, bottom) 构造避免 + 操作符（部分 Compose 版本不可用）。
+                    contentWindowInsets = WindowInsets(top = topInset, bottom = bottomInset),
+                ) { padding ->
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        content(padding)
+                        // 底部渐变遮罩（带对齐，作用在父 Box 内）
+                        if (showNavigation) {
+                            Box(Modifier.align(Alignment.BottomCenter)) {
+                                BottomGradientScrim()
+                            }
+                        }
                     }
-                },
-            ) { padding ->
-                content(padding)
+                }
+                // 底部导航栏叠加层：透明背景，浮在内容之上
+                if (showNavigation) {
+                    WenyanNavigationBar(
+                        items = items,
+                        currentRoute = currentRoute,
+                        onNavigate = onNavigate,
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                    )
+                }
             }
         }
 
@@ -111,4 +145,30 @@ private fun AdaptiveRailScaffold(
             content(padding)
         }
     }
+}
+
+/**
+ * 底部渐变遮罩层（沉浸式导航栏专用）。
+ *
+ * 从透明渐变到 [MaterialTheme.colorScheme.surfaceContainer]，
+ * 让内容在导航栏区域平滑过渡，避免被导航栏截断的突兀感。
+ * 高度 120dp 覆盖导航栏 + 手势条区域。
+ */
+@Composable
+private fun BottomGradientScrim() {
+    val surfaceContainer = MaterialTheme.colorScheme.surfaceContainer
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        surfaceContainer.copy(alpha = 0.85f),
+                        surfaceContainer,
+                    ),
+                ),
+            ),
+    )
 }
