@@ -5476,3 +5476,75 @@ WenyanNavItem("wrong_answer", "错题本", Icons.Default.ErrorOutline),
 1. emulator 实测（P0）：验证 134 道论述题在论述题列表页 + 详情页正确渲染（10 区块结构 + JSON 解析 + 关联知识点跳转）
 2. 后续可基于 knowledgeGaps 清单补充缺失的知识点（王勃/江淹/高适/岑参/陶渊明/孔尚任等）
 3. Release v0.9.9（论述题全覆盖填充版）待定，需先 emulator 实测确认无渲染问题
+
+---
+
+## 2026-07-31 会话：v2.16.0 知识点补充（论述题 knowledgeGaps 完整化）
+
+### 用户需求
+
+> 可以的，你帮我补充一下知识点，然后整体严谨检查一下，一定要仔细严谨，不要出问题，包括我的考研要学习的内容
+
+承接上一会话 v0.9.9 论述题全覆盖填充，本次补充论述题 knowledgeGaps 字段明确建议的 25 个核心知识点，完善考研复习内容。
+
+### 完成工作
+
+**1. 现状调查**
+- 分析 910 个已有知识点 + 134 道论述题 knowledgeGaps 字段
+- 去重后识别 85 个 knowledgeGaps 关键词，其中 25 个未在知识点库中
+- 发现 1 个 OCR 错误条目（eq_0100 knowledgeGaps `{"author":"原题OCR",...}`，OCR 损坏标注非知识点）
+
+**2. 补充方案（25 个知识点，对齐四教材）**
+
+| 学科 | 数量 | 知识点 |
+|------|------|--------|
+| 中国古代文学 | 4 | 王勃/江淹/唐传奇/清初才子佳人小说 |
+| 中国现当代文学 | 8 | 戴望舒/穆时英/萧红/路遥/钱钟书围城/陈忠实/宋晓贤/陆蠡 |
+| 外国文学 | 6 | 乔伊斯/伍尔夫/劳伦斯/王尔德/简·奥斯汀/陀思妥耶夫斯基罪与罚 |
+| 文学理论 | 7 | 列宁论托尔斯泰/刘勰文心雕龙/姚斯接受美学/布洛心理距离/康德美学/罗兰·巴特/莱辛拉奥孔 |
+
+学术依据：袁行霈《中国文学史》/ 钱理群《中国现代文学三十年》/ 朱维之《外国文学史》/ 童庆炳《文学理论教程》
+
+**3. 脚本实现**
+- 新增 `tools/essay_fill/fill_missing_knowledge_points.py`（542 行）
+- 生成 kp_00911-kp_00935 共 25 个标准化知识点（含 id/title/summary/core_conclusion/study_text/subject/tags/difficulty/entities/textbook_sources/exam_frequency + 兼容字段 conflict_flag/full_content/relations/source_count/merged_at）
+- 清理 eq_0100 knowledgeGaps OCR 错误条目
+- seed_data.json metadata.version 2.15.0 → 2.16.0
+
+**4. 严谨检查（Python 验证）**
+
+| 检查项 | 结果 |
+|--------|------|
+| 知识点总数 | 910 → 935 ✓ |
+| knowledgeGaps 真正缺失数 | 0（85 个关键词全部匹配到知识点）✓ |
+| OCR 错误条目 | 0（eq_0100 已清理）✓ |
+| 新增知识点结构规范 | 25/25 字段完整，study_text 平均 622 字符 ✓ |
+| 关联派生模拟 | 16/134 论述题关联新增知识点，9 个通过 knowledgeGaps 标注补充 ✓ |
+| JSON 解析配置 | ignoreUnknownKeys=true，未知字段安全 ✓ |
+
+**5. 本地构建验证**
+
+| 验证项 | 命令 | 结果 |
+|--------|------|------|
+| Debug 构建 | `gradle :app:assembleDebug`（unset CI 绕过 keystore fail-fast） | BUILD SUCCESSFUL (18s) |
+| SeedDataLoader 测试 | `gradle :core:data:testDebugUnitTest --tests SeedDataLoaderTest --rerun-tasks` | 21 tests, 0 failures, 0 errors |
+| 全模块测试 | `gradle testDebugUnitTest` | BUILD SUCCESSFUL（UP-TO-DATE） |
+
+**6. SEM Agent Event Policy 提交**
+
+- agent-pr-review specialist review：✅ READY TO MERGE（0 blocker, 0 must-fix, 1 follow-up）
+- Review anchors：seed_data.json:2 (version) / seed_data.json:47375 (kp_00911) / eq_0100 (OCR 清理) / fill_missing_knowledge_points.py:33 (NEW_POINTS)
+- Failure-mode pass：7 项全 ✅
+- Behavior verification：SeedDataLoaderTest 21 tests 0 failures（--rerun-tasks 强制重跑）
+- Receipt：`docs/release-receipts/v2.16.0-knowledge-supplement-pr-review.md`
+
+### 提交
+
+- commit `c951b2e` feat(seed): 补充论述题 knowledgeGaps 标注缺失的 25 个核心知识点
+- 3 files changed, 1699 insertions(+), 4 deletions(-)
+
+### 下一步
+
+1. emulator 实测 v2.16.0：验证 seed 2.16.0 触发重导后 935 知识点正确导入 + 25 个新增知识点可浏览/搜索
+2. 后续可考虑增强关联派生算法（语义匹配），让更多新增知识点被论述题直接关联
+3. Release v0.9.10（知识点补充版）待定，需先 emulator 实测确认无渲染问题
