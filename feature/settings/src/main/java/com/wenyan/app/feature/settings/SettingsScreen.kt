@@ -79,6 +79,7 @@ private val SeedColors = listOf(
 fun SettingsScreen(
     onNavigateToApiConfig: () -> Unit,
     onNavigateToAbout: () -> Unit,
+    onNavigateToUpdateCheck: () -> Unit,
     viewModel: ThemeViewModel = hiltViewModel(),
 ) {
     val themeConfig by viewModel.themeConfig.collectAsStateWithLifecycle()
@@ -296,6 +297,13 @@ fun SettingsScreen(
                         title = "版本",
                         // P1-M2 修正：原硬编码 "v0.1.0" 与实际版本脱节，改读 BuildConfig.VERSION_NAME
                         subtitle = "v${BuildConfig.VERSION_NAME}",
+                    )
+                    GroupedCardDivider()
+                    // v0.9.11 新增：检查更新入口
+                    GroupedCardItem(
+                        title = "检查更新",
+                        subtitle = "查看是否有新版本可用",
+                        onClick = onNavigateToUpdateCheck,
                     )
                     GroupedCardDivider()
                     // v0.9.5 新增：教程入口（v0.9.6 精简重构：5 节简洁版）

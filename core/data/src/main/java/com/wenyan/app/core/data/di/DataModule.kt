@@ -14,6 +14,8 @@ import com.wenyan.app.core.data.repository.ExamRepositoryImpl
 import com.wenyan.app.core.data.repository.LlmConfigProviderImpl
 import com.wenyan.app.core.data.repository.SchedulingRepository
 import com.wenyan.app.core.data.repository.SchedulingRepositoryImpl
+import com.wenyan.app.core.data.repository.UpdateRepository
+import com.wenyan.app.core.data.repository.UpdateRepositoryImpl
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.data.repository.WrongAnswerRepositoryImpl
 import dagger.Binds
@@ -117,4 +119,14 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindChapterRepository(impl: ChapterRepositoryImpl): ChapterRepository
+
+    /**
+     * 绑定 [UpdateRepository] 到 [UpdateRepositoryImpl]（v0.9.11 检查更新功能）。
+     *
+     * UpdateRepositoryImpl 通过 @Inject constructor 注入（无参），
+     * 使用 JDK 内置 HttpURLConnection 调用 GitHub Releases API。
+     */
+    @Binds
+    @Singleton
+    abstract fun bindUpdateRepository(impl: UpdateRepositoryImpl): UpdateRepository
 }

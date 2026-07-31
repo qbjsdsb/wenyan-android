@@ -18,6 +18,7 @@ import com.wenyan.app.feature.quiz.QuizScreen
 import com.wenyan.app.feature.quiz.WrongAnswerScreen
 import com.wenyan.app.feature.settings.AboutTutorialScreen
 import com.wenyan.app.feature.settings.SettingsScreen
+import com.wenyan.app.feature.settings.UpdateCheckScreen
 
 /**
  * 文研App 主导航图。
@@ -142,6 +143,12 @@ fun WenyanNavHost(
                     launchSingleTop = true
                 }
             },
+            onNavigateToUpdateCheck = {
+                // v0.9.11：检查更新子路由，Push/Pop slide + launchSingleTop 防双击重复压栈
+                navController.navigate(ROUTE_UPDATE_CHECK) {
+                    launchSingleTop = true
+                }
+            },
         )
         aiAssistantDestination(
             onBack = { navController.popBackStack() },
@@ -156,6 +163,9 @@ fun WenyanNavHost(
             onBack = { navController.popBackStack() },
         )
         aboutDestination(
+            onBack = { navController.popBackStack() },
+        )
+        updateCheckDestination(
             onBack = { navController.popBackStack() },
         )
         knowledgeDetailDestination(
@@ -252,14 +262,17 @@ private fun NavGraphBuilder.wrongAnswerDestination() {
 
 // v0.6：Settings 从子路由提升为顶级 Tab，用 NavHost 默认 Tab fade（无 Push/Pop slide）
 // v0.9.5：新增 onNavigateToAbout，进入"关于与教程"子路由
+// v0.9.11：新增 onNavigateToUpdateCheck，进入"检查更新"子路由
 private fun NavGraphBuilder.settingsDestination(
     onNavigateToApiConfig: () -> Unit,
     onNavigateToAbout: () -> Unit,
+    onNavigateToUpdateCheck: () -> Unit,
 ) {
     composable(TopLevelDestination.ROUTE_SETTINGS) {
         SettingsScreen(
             onNavigateToApiConfig = onNavigateToApiConfig,
             onNavigateToAbout = onNavigateToAbout,
+            onNavigateToUpdateCheck = onNavigateToUpdateCheck,
         )
     }
 }
@@ -277,6 +290,22 @@ private fun NavGraphBuilder.aboutDestination(
         popExitTransition = { WenyanMotion.PopExitTransition },
     ) {
         AboutTutorialScreen(onBack = onBack)
+    }
+}
+
+// v0.9.11：检查更新子路由
+// 子路由用 Push/Pop slide transition（覆盖 NavHost 默认的 Tab fade）
+private fun NavGraphBuilder.updateCheckDestination(
+    onBack: () -> Unit,
+) {
+    composable(
+        route = ROUTE_UPDATE_CHECK,
+        enterTransition = { WenyanMotion.PushEnterTransition },
+        exitTransition = { WenyanMotion.PushExitTransition },
+        popEnterTransition = { WenyanMotion.PopEnterTransition },
+        popExitTransition = { WenyanMotion.PopExitTransition },
+    ) {
+        UpdateCheckScreen(onBack = onBack)
     }
 }
 
@@ -383,3 +412,5 @@ private const val ROUTE_KNOWLEDGE_DETAIL = "knowledge_detail"
 private const val ROUTE_ABOUT = "about"
 private const val ROUTE_ESSAY_DETAIL = "essay_detail"
 private const val ROUTE_ESSAY_LIST = "essay_list"
+// v0.9.11：检查更新子路由
+private const val ROUTE_UPDATE_CHECK = "update_check"
