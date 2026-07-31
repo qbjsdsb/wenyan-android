@@ -111,7 +111,9 @@ fun EssayDetailScreen(
         topBar = {
             WenyanLargeTopAppBar(
                 title = "论述题详情",
-                subtitle = uiState.essay?.let { e -> "${e.year}年 · ${e.score}分" },
+                subtitle = uiState.essay?.let { e ->
+                    if (e.score > 0) "${e.year}年 · ${e.score}分" else "${e.year}年"
+                },
                 onBack = onBack,
                 scrollBehavior = scrollBehavior,
             )
