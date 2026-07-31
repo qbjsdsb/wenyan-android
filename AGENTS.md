@@ -247,10 +247,10 @@ tools/                           # Python 管线脚本
 3. **P0**：跑 emulator 实测 v0.9.7 — 验证知识卡片功能：sibling 卡打散 + 翻转重置滚动 + 完成态"撤销最后一张" + Leech 警告 + 3 个 @Preview
 4. **P0**：跑 emulator 实测 v0.9.6 — 验证设置 → 关于 → 关于与教程入口 + 5 节结构渲染（HeroCard / QuickStart / Modules / Principles 可折叠 / About）+ ExpandableInfoItem 展开/收起 + 竖屏友好
 5. **P0**：跑 emulator 实测 v0.9.4 — 验证错题本 DUE 过滤模式 + 四档评分按钮 + 调度信息展示 + Migration 7→8 升级 + ClockGuard 时间源对齐
-6. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 40+ commit 待 CI 验证（不影响 Release，已通过本地构建 + gh 上传绕过）
-7. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 并替换 v0.9.4 + v0.9.5 + v0.9.6 + v0.9.7 + v0.9.9 asset（消除 Exception E1）
+6. **P0**：CI 已修复（2026-07-31）— keystore fail-fast 从配置阶段移到执行阶段，`testDebugUnitTest` / `assembleDebug` 可正常在 CI 运行。push 到 main 后自动触发 CI 验证。
+7. **P0**：GitHub Secrets 配置后，重新用正式 keystore 构建 release APK 并替换 v0.9.4 + v0.9.5 + v0.9.6 + v0.9.7 + v0.9.9 asset（消除 Exception E1）。需设置 `KEYSTORE_BASE64` / `KEYSTORE_PASSWORD` / `KEY_ALIAS` / `KEY_PASSWORD` 四个 Secrets。
 8. **P1**：启用 R8（P1-PG 规则已就绪 + B5.1 GraphSkeleton 路径已修正，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
-9. **P2 优化项（非阻塞）**：`app/build.gradle.kts` 第 71 行 release keystore fail-fast 应移到 task 执行阶段（当前在配置阶段抛异常，沙箱跑 debug 任务也触发，需 `unset CI` 绕过）
+9. **P2 优化项（非阻塞）**：`app/build.gradle.kts` release keystore fail-fast 已修复（2026-07-31）：CI 检查从配置阶段移到执行阶段（`assembleRelease.doFirst`），`testDebugUnitTest` / `assembleDebug` 在 CI 中不再被阻断。`android.yml` 已移除 `assembleRelease` 步骤（release 构建由 `release.yml` 独立处理）。
 10. **P1 Phase 2 剩余维度审计**：
    - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）
    - 2.L：错误处理一致性 + 日志规范（sealed AppError + Timber + Snackbar 统一） — v0.8.18 已完成 Timber 引入，剩 sealed AppError + Snackbar 统一

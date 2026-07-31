@@ -124,18 +124,30 @@ android {
                 "proguard-rules.pro"
             )
             // P1-S-1 修正：CI 环境不允许 fallback 到 debug 签名。
-            // 本地开发（CI 未设置）允许 fallback，方便开发者无 keystore 时验证 release 编译。
-            // CI 环境（CI=true）必须配置正式 keystore，否则 throw GradleException 中止构建。
+            //
+            // 注意：CI 检查放在执行阶段（assembleRelease.doFirst），而非配置阶段。
+            // 配置阶段抛异常会导致所有任务（包括 testDebugUnitTest）在 CI 中失败。
+            // 这里统一 fallback 到 debug 签名，让配置阶段顺利通过。
+            // 执行阶段如果检测到 CI 且无 keystore 再中止。
             val releaseConfig = signingConfigs.getByName("release")
             signingConfig = if (releaseConfig.storeFile != null) {
                 releaseConfig
-            } else if (System.getenv("CI") == "true") {
+            } else {
+                signingConfigs.getByName("debug")
+            }
+        }
+    }
+
+    // P1-S-1b 修正：执行阶段检查 CI 环境 keystore 配置。
+    // 仅在真正运行 assembleRelease 时检查，不影响 testDebugUnitTest / assembleDebug。
+    tasks.matching { it.name == "assembleRelease" }.configureEach {
+        doFirst {
+            val releaseConfig = signingConfigs.getByName("release")
+            if (releaseConfig.storeFile == null && System.getenv("CI") == "true") {
                 throw GradleException(
                     "Release 签名未配置：CI 环境必须设置 KEYSTORE_PATH / KEYSTORE_PASSWORD / " +
                         "KEY_ALIAS / KEY_PASSWORD 环境变量。debug 签名不允许用于 CI Release 构建。",
                 )
-            } else {
-                signingConfigs.getByName("debug")
             }
         }
     }
