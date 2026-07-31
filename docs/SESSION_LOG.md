@@ -5639,3 +5639,98 @@ WenyanNavItem("wrong_answer", "错题本", Icons.Default.ErrorOutline),
 1. emulator 实测 v0.9.10：验证上述 4 项待办
 2. CI 账单问题解决后，重新用正式 keystore 构建 release APK 替换 v0.9.10 asset（消除 Exception E1）
 3. 后续可考虑增强关联派生算法（语义匹配），让更多新增知识点被论述题直接关联
+
+---
+
+## 2026-07-31 v0.9.11-v0.9.13 检查更新功能 + 沉浸式底部导航栏
+
+**响应用户需求**："检查更新是为什么失败" + "小白条是沉浸的吗" + "你改进，严谨仔细反复检查" + "整体审查一下，没啥问题就发布吧，然后做好交接工作"
+
+### 1. v0.9.11 检查更新功能（commit f8bb03d + 328652c）
+
+**响应用户反馈"检查更新失败"** — 修复 NetworkOnMainThreadException + 实现完整检查更新功能。
+
+**5 层架构实现**：
+- **数据层**：`UpdateRepository`（GitHub API 调用，OkHttp + JSON 解析）
+- **仓库层**：`UpdateRepositoryImpl`（Hilt 注入，超时 10s→8s 提速）
+- **ViewModel 层**：`UpdateCheckViewModel`（3 状态：Checking/Available/UpToDate/Error）
+- **UI 层**：`UpdateCheckScreen`（M3 风格各状态组件：CircleLoading → NewVersionCard → UpToDateCard → ErrorCard）
+- **导航层**：Route 注册 + SettingsScreen 入口项"检查更新"
+
+**国内网络降级方案**（commit 781369f）：
+- 首选 `api.github.com` 访问 GitHub API
+- 失败时降级到 `github.com` 重定向备用方案（`/releases/latest` 重定向取 tag）
+- 超时 10s→8s 提速，减少等待感
+
+**测试**：480 tests, 0 failures
+
+### 2. v0.9.13 沉浸式底部导航栏（commit f01de04）
+
+**响应用户需求"小白条（导航栏）要实现沉浸"** — 将底部导航栏改造为沉浸式，内容全屏延伸至导航栏下方。
+
+**4 文件修改**：
+
+| 文件 | 改动 |
+|------|------|
+| `WenyanAdaptiveNavigation.kt` | COMPACT 模式重写为 Box 叠加布局：ExpressiveScaffold（仅消费状态栏+IME insets）+ 内容 + BottomGradientScrim（120dp 渐变遮罩）+ WenyanNavigationBar（透明叠加在底部） |
+| `WenyanNavigationBar.kt` | `containerColor = Color.Transparent` + `tonalElevation = 0.dp` 移除表面色调 |
+| `ExpressiveScaffold.kt` | 新增 `contentWindowInsets` 参数，默认 `ScaffoldDefaults.contentWindowInsets`，可传自定义 insets 实现沉浸效果 |
+| `gradle/libs.versions.toml` + `core/designsystem/build.gradle.kts` | 添加 `androidx.compose.foundation` 依赖（WindowInsets 构造所需） |
+
+**技术细节**：
+- `WindowInsets(top = topInset, bottom = bottomInset)` 构造避免 `+` 操作符（部分 Compose 版本不可用）
+- `BottomGradientScrim`：透明 → surfaceContainer(0.85) → surfaceContainer 三段渐变，120dp 高度覆盖导航栏 + 手势条区域
+- MEDIUM/EXPANDED 模式（WideNavigationRail）不受影响，保持原有布局
+
+**本地验证**：`:app:assembleDebug` BUILD SUCCESSFUL + `testDebugUnitTest` 480 tests 0 failures
+
+### 3. CI 修复（commit 42fb16f + 6a9e9b2）
+
+| 修复 | 说明 |
+|------|------|
+| keystore fail-fast 移到执行阶段 | `assembleRelease.doFirst` 检查 KEYSTORE_BASE64 是否为空，配置阶段不再阻塞 `testDebugUnitTest` / `assembleDebug` |
+| 仓库顺序官方优先 | CI runner（美/欧）从 Aliyun 解析 plugin marker artifact 失败，改为 gradlePluginPortal / mavenCentral / google 优先，Aliyun 作 fallback |
+| CI 移除 assembleRelease | release 构建由 `release.yml` 独立处理，`android.yml` 不再包含 release 步骤 |
+
+### 4. Release 发布
+
+| 版本 | tag | versionCode | 改动范围 |
+|------|-----|-------------|----------|
+| v0.9.11 | `v0.9.11` | 36 | 检查更新功能（UpdateRepository + UpdateCheckScreen + 导航注册） |
+| v0.9.12 | `v0.9.12` | 37 | NetworkOnMainThreadException 修复 + 国内网络降级方案 |
+| v0.9.13 | `v0.9.13` | 38 | 沉浸式底部导航栏（5 文件修改） |
+
+**v0.9.13 Release 信息**：
+- 创建时间：2026-07-31T19:17:49Z
+- APK 上传：2026-07-31T19:20:59Z — app-debug.apk（27,928,831 bytes）
+- SHA-256：`8347522e3a653cdf605b7cd581f663d36b8f6df225f0def3022ecd45aab00fed`
+- 签名：debug 签名 fallback（Exception E1 — CI 账单问题）
+- Release URL：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.13
+
+### 5. 已知限制
+
+- **Exception E1**：CI 账单问题，所有 release APK 使用 debug 签名 fallback（v0.9.4-v0.9.13）。CI 恢复后需用正式 keystore 重新构建并替换 asset。
+- **emulator 实测待办**：v0.9.13 沉浸式导航栏需在 emulator 验证：
+  1. 底部导航栏透明背景，内容延伸至屏幕底部
+  2. 底部渐变遮罩平滑过渡，无截断感
+  3. IME 弹出时内容不被导航栏遮挡
+  4. 各 Tab 页面内容正常显示（无被导航栏遮挡的部分）
+  5. MEDIUM/EXPANDED 模式（WideNavigationRail）不受影响
+
+### 6. 交接清单
+
+- [x] 代码审查通过（480 tests 0 failures）
+- [x] git tag 已推送（v0.9.11 / v0.9.12 / v0.9.13）
+- [x] GitHub Release 已创建（含 Release Notes）
+- [x] APK 已上传到 Release asset
+- [x] STATUS.md 已更新到 v0.9.13
+- [x] SESSION_LOG.md 已更新
+- [x] 已知限制已记录（Exception E1 + emulator 实测待办）
+
+### 下一步
+
+1. **P0**：emulator 实测 v0.9.13 — 验证沉浸式导航栏 5 项（见上）
+2. **P0**：emulator 实测 v0.9.10 — 验证 935 知识点 + 134 论述题全面审计结果
+3. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 替换 v0.9.4-v0.9.13 asset（消除 Exception E1）
+4. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
+5. **P1 Phase 2 剩余维度审计**：strings.xml 完整性 + dimens.xml + sealed AppError + Snackbar 统一 + Accessibility
