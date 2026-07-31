@@ -1,66 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 启动图标 monochrome 层 v3（Android 13+ themed icon）。
+<!-- 启动图标 monochrome 层 v4（Android 13+ themed icon）。
      系统会根据用户壁纸/主题自动着色此矢量图。
-     使用白色（#FFFFFF），系统会替换为主题色。
-     与 ic_launcher_foreground v3 的 path 完全一致：
-     印章方框(圆角12dp) + 点 + 横 + 撇 + 捺（5 path）。
-     themed icon 模式下系统着色后，印章轮廓 + "文"字笔画保留识别度。 -->
+     与 ic_launcher_foreground v4 的 path 完全一致：
+     书页 + "文"字负空间（单 path + evenOdd fillType）。
+     themed icon 模式下系统着色后，书页轮廓 + "文"字负空间保留识别度。
+     参见 docs/design/icon-redesign.md -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- 印章方框 -->
     <path
         android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
         android:pathData="
-            M30,28
-            l48,0
-            q12,0 12,12
-            l0,32
-            q0,12 -12,12
-            l-48,0
-            q-12,0 -12,-12
-            l0,-32
-            q0,-12 12,-12
-            z" />
-
-    <!-- "文"字点画 -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="
-            M54,32.5
-            a2.5,2.5 0 1,0 0.01,0
-            z" />
-
-    <!-- "文"字横画 -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="
-            M40,42
-            l28,0
-            l0,4
-            l-28,0
-            z" />
-
-    <!-- "文"字撇画 -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="
-            M52,40
-            l4,0
-            l-12,28
-            l-2,0
-            z" />
-
-    <!-- "文"字捺画 -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="
-            M56,40
-            l-4,0
-            l11,28
-            l3.5,0
-            z" />
+            M28,36
+            L52,44
+            L56,44
+            L80,36
+            L80,72
+            L56,80
+            L52,80
+            L28,72
+            Z
+            M40,50
+            L68,50
+            L68,54
+            L58,54
+            L66,66
+            L58,66
+            L54,58
+            L50,66
+            L42,66
+            L50,54
+            L40,54
+            Z" />
 </vector>

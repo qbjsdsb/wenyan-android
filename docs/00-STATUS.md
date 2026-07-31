@@ -1,11 +1,11 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-07-31（v0.9.15）
+> 最后更新：2026-07-31（启动图标 v4 设计重构）
 
 ## ✅ 当前状态
 
-**v0.9.15 修复子页面底部大块色块（已发布 2026-07-31）** — 响应用户反馈"为什么底部还是一团糟，点进一个页面大面积的色块，能不能做好"。修复 `WenyanAdaptiveNavigation` COMPACT 布局在子页面（`showNavigation=false`）时底部暴露 80dp+ `surfaceContainer` 色块的问题：改为全屏内容模式，不强制背景色和底部 padding，由子页面各自的 `ExpressiveScaffold` 处理背景和系统 insets。主 Tab 栏（`showNavigation=true`）保持沉浸式布局不变（surfaceContainer 背景 + 底部 padding + 渐变遮罩 + 透明导航栏）。本地验证：`:app:assembleDebug` SUCCESSFUL + `testDebugUnitTest` SUCCESSFUL（317 tasks, 0 failures）。
+**v4 启动图标设计重构（书+文负空间，待发布）** — 响应用户需求"把这个app的图标重新设计一下"。用户选择方案 B（书+文负空间），经精修后实施。从 v3 "印章文"（5 个独立矩形 path）改为 v4 "展开的书 + 文负空间"（单 path + evenOdd fillType 镂空）。设计语言：Google Play Books（书形）+ Google Docs（字母负空间）混合。精修要点：去 serif 平底收笔 + "文"字垂直居中于书页。Safe Zone 检查全部通过。本地验证：`:app:assembleDebug` BUILD SUCCESSFUL + 测试全绿。**待 emulator 实测**：验证新图标启动屏/桌面/通知栏显示效果。
 
 **v0.9.14 修复底栏遮盖 + 软件内更新（已发布 2026-07-31）** — 响应用户反馈"底栏遮盖了可以点击的地方，更新为什么不能软件内更新，还要去浏览器，而且下的是debug版本，而且只能卸载重装，为什么有这么多问题"。修复 v0.9.13 沉浸式导航栏导致的底栏遮盖可点击区域问题：COMPACT 布局改用 Box + 显式 padding（80dp 导航栏高度 + 系统手势区），不再依赖 Scaffold contentWindowInsets 消费策略。实现软件内 APK 下载+安装：UpdateViewModel 新增 OkHttp 流式下载 + FileProvider 安装 + 2 种新 UI 状态（Downloading/DownloadComplete），UpdateCheckScreen 新增进度条和安装按钮。AndroidManifest 新增 REQUEST_INSTALL_PACKAGES + FileProvider。新增 file_paths.xml。OkHttp 依赖。**重要更正**：CI Release workflow 运行正常，keystore 已配置，本次 Release 为正式签名 APK（19.5 MB），可直接覆盖安装旧版，无需卸载。本地验证：`:app:assembleDebug` SUCCESSFUL + `testDebugUnitTest` SUCCESSFUL（317 tasks, 0 failures）。
 
@@ -21,7 +21,7 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **当前待提交** fix: 修复子页面底部大块色块（v0.9.15）（2026-07-31） |
+| 最新 commit | **本会话** feat(icon): 启动图标 v4 设计重构 — 书+文负空间（2026-07-31） |
 | 最新 Release | **v0.9.15**（2026-07-31 发布，正式签名，可直接覆盖安装）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.15 |
 | 编译验证 | **:app:assembleDebug + testDebugUnitTest SUCCESSFUL**（v0.9.15，317 tasks 0 failures） |
 | versionCode / versionName | **40 / "0.9.15"** |
@@ -38,21 +38,24 @@
 | 底部导航 | **5 Tab**：知识点 / 真题 / 卡片 / 错题本 / 设置（v0.9.0 错题本替换原图谱） |
 | 图谱 UI | **已移除**（v0.9.0 feature:graph 模块删除） |
 | 图谱数据层 | **已移除**（v0.9.3 优化 4 全部移除，详见 [docs/release-receipts/v0.9.3-opt4-graph-removal-receipt.md](release-receipts/v0.9.3-opt4-graph-removal-receipt.md)） |
-| 启动图标 | **v3 "印章文"**（米色印面 + 墨黑"文"字 + 圆角 12dp + monochrome 适配） |
+| 启动图标 | **v4 "书+文负空间"**（展开的书 + "文"字镂空 negative space，单 path + evenOdd fillType，书形占 safe zone 70%+） |
 | 日志门面 | **Logging.kt**（Timber 封装，Debug=Logcat / Release=WARN+ERROR） |
 | 工具链锁定 | **mise.toml**（JDK 17.0.2 + Gradle 8.14.4） |
 | 阻塞 | **无** — CI Release workflow 正常运行，keystore 已配置 |
-| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-31 v0.9.14 修复底栏遮盖 + 软件内更新） |
+| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-31 启动图标 v4 设计重构 — 书+文负空间） |
 
 ## 🚨 新会话首要任务
+
+**启动图标 v4 设计重构（书+文负空间，已实施，待 push）** — 响应用户需求"把这个app的图标重新设计一下"。用户选择方案 B（书+文负空间），经精修后实施。从 v3 "印章文"（5 个独立矩形 path）改为 v4 "展开的书 + 文负空间"（单 path + evenOdd fillType 镂空）。设计语言：Google Play Books（书形）+ Google Docs（字母负空间）混合。精修要点：去 serif 平底收笔 + "文"字垂直居中于书页。Safe Zone 检查全部通过。本地验证：`:app:assembleDebug` BUILD SUCCESSFUL（279 tasks）+ `testDebugUnitTest`（317 tasks, 0 failures）。**待 emulator 实测**：验证新图标启动屏/桌面/通知栏显示效果。
 
 **v0.9.14 已发布**（2026-07-31，debug 签名 fallback — Exception E1）。本地构建全绿：`:app:assembleDebug` + `testDebugUnitTest`（317 tasks 0 failures）。修复底栏遮盖 + 实现软件内 APK 下载+安装。
 
 下一步优先级（按顺序）：
 
-1. **P0**：emulator 实测 v0.9.14 — 验证：①底部导航栏不遮挡可点击区域 ②软件内更新下载进度条显示正常 ③下载完成后自动弹出安装界面 ④各 Tab 页面正常显示
-2. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
-6. **P1 Phase 2 剩余维度审计**：
+1. **P0**：emulator 实测启动图标 v4 — 验证：①启动屏图标显示正确（书+文负空间）②桌面图标（方形+圆形遮罩）③最近任务栏小尺寸图标清晰 ④Android 13+ themed icon 模式下"文"字负空间保留
+2. **P0**：emulator 实测 v0.9.14 — 验证：①底部导航栏不遮挡可点击区域 ②软件内更新下载进度条显示正常 ③下载完成后自动弹出安装界面 ④各 Tab 页面正常显示
+3. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
+4. **P1 Phase 2 剩余维度审计**：
    - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）
    - 2.L：错误处理一致性 + 日志规范（sealed AppError + Timber + Snackbar 统一） — v0.8.18 已完成 Timber 引入，剩 sealed AppError + Snackbar 统一
    - 2.M：Compose 副作用 + Accessibility + M3 Expressive

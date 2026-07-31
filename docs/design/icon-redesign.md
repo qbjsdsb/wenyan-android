@@ -1,20 +1,21 @@
 # 文研 App 启动图标重设计
 
-> 日期：2026-07-16
-> 状态：设计已确认，待实施
+> 日期：2026-07-16（初版）→ 2026-07-31（精修实施）
+> 状态：✅ 已实施（v4 书+文负空间，已替换 ic_launcher_foreground/monochrome）
 > 触发：用户反馈现有"文"字几何拼块图标过于生硬，要求重做以符合 Android 设计规范、流畅大方、有谷歌产品气质
 
 ## 1. 现状
 
 | 文件 | 内容 |
-|------|------|
-| `app/src/main/res/drawable/ic_launcher_foreground.xml` | 米色"文"字（5 个矩形拼块 path），过于方块化 |
-| `app/src/main/res/drawable/ic_launcher_background.xml` | 纯色 #2C2C2C 墨黑矩形 |
-| `app/src/main/res/drawable/ic_launcher_monochrome.xml` | 白色"文"字（与 foreground 同 path），供 Android 13+ themed icon |
-| `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` | adaptive-icon 聚合（background + foreground + monochrome） |
-| `app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml` | 同上（圆形遮罩） |
+| `app/src/main/res/drawable/ic_launcher_foreground.xml` | **v4** 书页 + "文"字负空间（单 path + evenOdd fillType），米色 `#F5F1E8` |
+| `app/src/main/res/drawable/ic_launcher_background.xml` | 纯色 #2C2C2C 墨黑矩形（不变） |
+| `app/src/main/res/drawable/ic_launcher_monochrome.xml` | **v4** 同 foreground path，白色 `#FFFFFF`，供 Android 13+ themed icon |
+| `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` | adaptive-icon 聚合（background + foreground + monochrome，不变） |
+| `app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml` | 同上（圆形遮罩，不变） |
+| `docs/design/icon-redesign.md` | 本设计文档（已更新） |
+| `.tmp-preview/icon-preview.html` | 方案 B 精修版预览（含新旧对比、safe zone 检查、多尺寸模拟） |
 
-**结构完整**（adaptive + monochrome 三层），**问题在前景图形**：现有"文"字由 5 个独立矩形拼接，笔画转折生硬、字形失衡，小尺寸下识别度低。
+**v3 印章文 → v4 书+文负空间**：从"印章+文字"改为"书+文字负空间"，书形占 safe zone 70%+，单 path + evenOdd 实现镂空，更简洁、更有辨识度、更符合 Google 产品气质。
 
 ## 2. 设计目标
 
@@ -56,38 +57,54 @@
 
 ```
 书页轮廓（外环，顺时针）：
-M28,36           起点：左上角
-L52,44           左页面右上（书脊左侧顶点）
-L56,44           书脊右侧顶点
-L80,36           右页面右上角
-L80,72           右页面右下角
-L56,80           书脊右侧底点
-L52,80           书脊左侧底点
-L28,72           左页面左下角
+M28,36           书页左上角
+L52,44           左书脊顶部
+L56,44           右书脊顶部
+L80,36           书页右上角
+L80,72           书页右下角
+L56,80           右书脊底部
+L52,80           左书脊底部
+L28,72           书页左下角
 Z                闭合
 
 "文"字镂空（内环，逆时针，evenOdd 规则镂空）：
-M40,52           横画左端
-L68,52           横画右端
-L68,56           横画右下
-L58,56           横画中部下（撇捺交叉点上方）
-L66,68           捺画右下
-L62,70           捺画收笔
-L54,60           撇捺交叉点
-L46,70           撺画收笔
-L42,68           撺画右下
-L50,56           横画中部下（撇捺交叉点上方）
-L40,56           横画左下
+M40,50           横画左端
+L68,50           横画右端
+L68,54           横画右下
+L58,54           横画下边（捺起点）
+L66,66           捺画右下（外缘）
+L58,66           捺画底部（平底收笔）
+L54,58           撇捺交叉点
+L50,66           撇画右下（外缘）
+L42,66           撇画底部（平底收笔）
+L50,54           撇画上边（横画下边）
+L40,54           横画左下
 Z                闭合
 ```
 
 **完整 path（外环 + 内环组合）**：
 ```
 M28,36 L52,44 L56,44 L80,36 L80,72 L56,80 L52,80 L28,72 Z 
-M40,52 L68,52 L68,56 L58,56 L66,68 L62,70 L54,60 L46,70 L42,68 L50,56 L40,56 Z
+M40,50 L68,50 L68,54 L58,54 L66,66 L58,66 L54,58 L50,66 L42,66 L50,54 L40,54 Z
 ```
 
 `android:fillType="evenOdd"` 让内环镂空，呈现"文"字负空间。
+
+**v3 初版 → v4 精修对照**：
+
+| 坐标点 | 初版（有 serif） | 精修版（平底居中） | 说明 |
+|--------|-----------------|-------------------|------|
+| `横左上` | `M40,52` | `M40,50` | 上移 2dp 居中 |
+| `横右上` | `L68,52` | `L68,50` | 上移 2dp |
+| `横右下` | `L68,56` | `L68,54` | 上移 2dp |
+| `捺起点` | `L58,56` | `L58,54` | 上移 2dp |
+| `捺外缘` | `L66,68` | `L66,66` | 上移 2dp |
+| `捺底部` | `L62,70`（serif） | `L58,66`（平底） | 去 serif |
+| `交叉点` | `L54,60` | `L54,58` | 上移 2dp |
+| `撇外缘` | `L46,70` | `L50,66` | 上移 2dp，微调 |
+| `撇底部` | `L42,68`（serif） | `L42,66`（平底） | 去 serif |
+| `撇起点` | `L50,56` | `L50,54` | 上移 2dp |
+| `横左下` | `L40,56` | `L40,54` | 上移 2dp |
 
 #### 背景 path（纯色矩形，不变）
 
@@ -107,29 +124,28 @@ fillColor = `@color/wenyan_launcher_background`（#2C2C2C）
 - **小尺寸**（最近任务 / 通知栏）：书的轮廓主导，"文"字退化为书页纹理
 - **Themed icon**（Android 13+ 用户启用主题图标）：系统用壁纸色着色，书的轮廓 + "文"字负空间保留识别度
 
-## 4. 实施步骤
+## 4. 实施记录
 
 ### 4.1 文件改动
 
-| 文件 | 改动 |
-|------|------|
-| `app/src/main/res/drawable/ic_launcher_foreground.xml` | 替换 path 为"书 + 文字镂空"，加 `android:fillType="evenOdd"` |
-| `app/src/main/res/drawable/ic_launcher_monochrome.xml` | 同步替换 path（与 foreground 一致） |
-| `app/src/main/res/drawable/ic_launcher_background.xml` | 不变（已是纯色矩形） |
-| `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` | 不变 |
-| `app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml` | 不变 |
-| `app/src/main/res/values/colors.xml` | 不变（#2C2C2C / #F5F1E8 已定义） |
+| 文件 | 改动 | 状态 |
+|------|------|------|
+| `app/src/main/res/drawable/ic_launcher_foreground.xml` | 替换为"书 + 文负空间"单 path + `android:fillType="evenOdd"`，精修后坐标 | ✅ 已实施 |
+| `app/src/main/res/drawable/ic_launcher_monochrome.xml` | 同步替换 path（与 foreground 一致） | ✅ 已实施 |
+| `app/src/main/res/drawable/ic_launcher_background.xml` | 不变（已是纯色矩形） | ✅ 无需改动 |
+| `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` | 不变 | ✅ 无需改动 |
+| `app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml` | 不变 | ✅ 无需改动 |
+| `app/src/main/res/values/colors.xml` | 不变（#2C2C2C / #F5F1E8 已定义） | ✅ 无需改动 |
+| `docs/design/icon-redesign.md` | 更新 path 坐标、状态、精修对照表 | ✅ 已更新 |
 
-### 4.2 验证
+### 4.2 验证记录
 
-1. **编译验证**：`CI=false gradle assembleDebug` BUILD SUCCESSFUL
-2. **测试回归**：`CI=false gradle testDebugUnitTest` 220 tests 0 failures（图标改动不影响测试）
-3. **视觉验证**（需 emulator，沙箱无法执行）：
-   - 启动屏图标显示正确
-   - 桌面图标显示正确（方形 + 圆形遮罩）
-   - 最近任务栏小尺寸图标清晰
-   - Android 13+ themed icon 模式下"文"字负空间保留
-   - 深色模式下图标不变（adaptive icon 不跟随系统主题，只有 themed icon 模式才变色）
+| 验证项 | 结果 |
+|--------|------|
+| `assembleDebug` | ✅ PASS（279 tasks, 0 failures） |
+| `testDebugUnitTest` | ✅ PASS（317 tasks, 0 failures） |
+| 视觉验证（圆形遮罩） | 需 emulator，沙箱无法执行 |
+| Themed icon 兼容性 | 需 emulator，沙箱无法执行 |
 
 ## 5. 风险与缓解
 

@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 启动图标前景 v3（2026-07-27 精修）：
-     "印章文" 标准结构 —— 谷歌味道 + 精致 + 克制
-     v2 → v3 修正：
-     1. 补全"文"字顶部"点"画（v2 缺失导致形似"大"字）
-     2. 撇捺从横画上方交叉点起笔（标准"文"字结构，非横画下沿分叉）
-     3. 笔画粗细变化：撇收笔出锋(2dp)、捺收笔顿笔(3.5dp)，模拟毛笔韵律
-     4. 印章圆角 8dp → 12dp（Material 3 Expressive medium-large shape）
-     5. 撇捺以 x=54 对称（v2 起点偏右）
+<!-- 启动图标前景 v4（2026-07-31 设计重构）：
+     方案 B：展开的书 + "文"字负空间
+     v3（印章文）→ v4（书+文负空间）核心改动：
+     1. 从"印章+文字"改为"书+文字负空间"——书形占 safe zone 70%+
+     2. 单 path + evenOdd fillType 实现镂空，不再用 5 个独立 path
+     3. "文"字简化为 3 笔（横、撇、捺），去掉"点"画
+     4. 笔画平底收笔（无 serif），小尺寸更清晰
+     5. "文"字垂直居中于书页（y=50-66，书中心 y=58）
      设计参考：
-     - Google Workspace "卡片+字母" 构图（Docs/Drive/Keep）
-     - Material 3 Expressive shape morphing（圆角 12dp 属 medium-large）
-     - 中文印章阴文传统（米色印面 + 墨黑文字）
-     颜色：米色 #F5F1E8 + 墨黑 #2C2C2C
+     - Google Play Books（书形）+ Google Docs（字母负空间）混合
+     - Material 3 adaptive icon 规范（safe zone 72x72）
+     - 中文阴文传统（墨黑底 + 米色书页 + 镂空文字）
+     颜色：米色 #F5F1E8（前景）+ 墨黑 #2C2C2C（背景层）
      参见 docs/design/icon-redesign.md -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -19,62 +19,34 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- 印章方框（圆角矩形，圆角 12dp，M3E medium-large shape） -->
+    <!-- 书页 + "文"字负空间（单一 path，evenOdd 镂空）
+         外环：展开的书页俯视图（顺时针）
+         书页左上 → 左书脊 → 右书脊 → 书页右上 → 书页右下 → 右书脊底 → 左书脊底 → 书页左下
+         内环："文"字轮廓（逆时针，evenOdd 规则自动镂空）
+         横画 y=50-54，撇捺 y=54-66，平底收笔 -->
     <path
         android:fillColor="#F5F1E8"
+        android:fillType="evenOdd"
         android:pathData="
-            M30,28
-            l48,0
-            q12,0 12,12
-            l0,32
-            q0,12 -12,12
-            l-48,0
-            q-12,0 -12,-12
-            l0,-32
-            q0,-12 12,-12
-            z" />
-
-    <!-- "文"字点画（顶部圆点，r=2.5dp，圆心 54,35） -->
-    <path
-        android:fillColor="#2C2C2C"
-        android:pathData="
-            M54,32.5
-            a2.5,2.5 0 1,0 0.01,0
-            z" />
-
-    <!-- "文"字横画（矩形，y=42-46，宽 4dp） -->
-    <path
-        android:fillColor="#2C2C2C"
-        android:pathData="
-            M40,42
-            l28,0
-            l0,4
-            l-28,0
-            z" />
-
-    <!-- "文"字撇画（梯形，从横画上方交叉点向左下，上宽 4dp 下宽 2dp 出锋）
-         起点：横画中间上方 (52,40)-(56,40)
-         终点：左下 (42,68)-(44,68)
-         path 描绘：上边水平 → 左下斜边 → 底边水平 → 右下斜边 → 闭合 -->
-    <path
-        android:fillColor="#2C2C2C"
-        android:pathData="
-            M52,40
-            l4,0
-            l-12,28
-            l-2,0
-            z" />
-
-    <!-- "文"字捺画（梯形，从横画上方交叉点向右下，上宽 4dp 下宽 3.5dp 顿笔）
-         起点：横画中间上方 (52,40)-(56,40)（与撇共享起点）
-         终点：右下 (63,68)-(66.5,68)
-         path 描绘：上边水平 → 右下斜边 → 底边水平 → 左下斜边 → 闭合 -->
-    <path
-        android:fillColor="#2C2C2C"
-        android:pathData="
-            M56,40
-            l-4,0
-            l11,28
-            l3.5,0
-            z" />
+            M28,36
+            L52,44
+            L56,44
+            L80,36
+            L80,72
+            L56,80
+            L52,80
+            L28,72
+            Z
+            M40,50
+            L68,50
+            L68,54
+            L58,54
+            L66,66
+            L58,66
+            L54,58
+            L50,66
+            L42,66
+            L50,54
+            L40,54
+            Z" />
 </vector>

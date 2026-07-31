@@ -5829,3 +5829,60 @@ WenyanNavItem("wrong_answer", "错题本", Icons.Default.ErrorOutline),
 1. **P0**：emulator 实测 v0.9.14 — 验证底栏不遮挡 + 软件内更新下载+安装流程
 2. **P0**：CI 账单解决后，配置 Secrets 重新构建正式签名 APK 替换所有 Release asset
 3. **P0**：继续之前的 emulator 实测待办（v0.9.13/v0.9.10 等）
+
+---
+
+## 2026-07-31 启动图标 v4 设计重构（书+文负空间）
+
+**响应用户需求"需要你把这个app的图标重新设计一下"** — 用户选择方案 B（书+文负空间），经精修后实施。
+
+### 设计方案
+
+**核心图形**：展开的书（前景米色 #F5F1E8）+ "文"字负空间（evenOdd 镂空，露出背景墨黑 #2C2C2C）
+
+**设计语言**：Google Play Books（书形）+ Google Docs（字母负空间）混合，书形占 safe zone 70%+，一眼可辨。
+
+**精修过程**（反复打磨 3 轮）：
+1. **初版**：有 serif（顿笔），"文"字偏下
+2. **精修**：去 serif 平底收笔 + "文"字上移 2dp 垂直居中于书页
+3. **验证**：Safe Zone 检查（全部在 72x72 安全区内 ✓）、多尺寸模拟（108dp/72dp/48dp/24dp ✓）
+
+### 精修 path
+
+```
+M28,36 L52,44 L56,44 L80,36 L80,72 L56,80 L52,80 L28,72 Z 
+M40,50 L68,50 L68,54 L58,54 L66,66 L58,66 L54,58 L50,66 L42,66 L50,54 L40,54 Z
+```
+
+### 涉及文件
+
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `app/src/main/res/drawable/ic_launcher_foreground.xml` | 重写 | v3 印章文(5 path) → v4 书+文负空间(单 path + evenOdd) |
+| `app/src/main/res/drawable/ic_launcher_monochrome.xml` | 重写 | 同步 foreground path，fillColor=#FFFFFF |
+| `app/src/main/res/drawable/ic_launcher_background.xml` | 不变 | 纯色 #2C2C2C 墨黑矩形 |
+| `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` | 不变 | adaptive-icon 聚合 |
+| `app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml` | 不变 | 圆形遮罩 |
+| `docs/design/icon-redesign.md` | 更新 | path 坐标、状态、精修对照表 |
+| `.tmp-preview/icon-preview.html` | 更新 | 方案 B 精修版预览 |
+
+### 设计验证
+
+- ✅ Safe Zone：书页 x=28-80 (safe zone 18-90)，"文"字 x=40-68, y=50-66
+- ✅ 多尺寸：108dp 可辨书形，72dp 可见"文"字，48dp / 24dp 书形主导
+- ✅ 圆形遮罩：模拟 ic_launcher_round，内容完整不裁剪
+- ✅ Monochrome：Android 13+ themed icon 兼容
+- ✅ 设计语言：类比 Google Play Books + Docs 混合
+
+### 本地验证
+
+- `:app:assembleDebug` BUILD SUCCESSFUL（279 tasks, 0 failures）
+- 全模块 `testDebugUnitTest` BUILD SUCCESSFUL（UP-TO-DATE，图标改动不影响测试）
+
+### 交接说明
+
+- 图标设计文档：[docs/design/icon-redesign.md](docs/design/icon-redesign.md)
+- 精修预览 HTML：`.tmp-preview/icon-preview.html`（含新旧对比、safe zone 检查、多尺寸模拟、Google 风格对比）
+- 图标改动仅涉及 2 个 XML 文件（foreground + monochrome），不涉代码逻辑
+- 视觉验证（emulator 实测）需在有屏幕环境执行：安装后检查启动屏/桌面/最近任务栏/通知栏图标显示
+- Android 13+ 用户可在设置 → 壁纸和样式 → 主题图标切换验证 themed icon 效果
