@@ -3,8 +3,10 @@ package com.wenyan.app.core.data.repository
 import androidx.compose.runtime.Immutable
 import com.wenyan.app.core.data.util.catchAndLog
 import com.wenyan.app.core.database.dao.DataSourceDao
+import com.wenyan.app.core.database.dao.ExamQuestionDao
 import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.entity.DataSourceEntity
+import com.wenyan.app.core.database.entity.ExamQuestionEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import kotlinx.coroutines.flow.Flow
@@ -43,6 +45,7 @@ import javax.inject.Singleton
 class KnowledgeRepository @Inject constructor(
     private val knowledgePointDao: KnowledgePointDao,
     private val dataSourceDao: DataSourceDao,
+    private val examQuestionDao: ExamQuestionDao,
 ) {
 
     private companion object {
@@ -162,6 +165,53 @@ class KnowledgeRepository @Inject constructor(
         input.replace("\\", "\\\\")
             .replace("%", "\\%")
             .replace("_", "\\_")
+
+    // ── 论述题板块（v0.9.8 新增，对应 docs/design/essay-module-design.md） ─────
+
+    /**
+     * 观察与某知识点关联的论述题（v0.9.8 新增）。
+     *
+     * 实现：先查全部 ESSAY 题（[ExamQuestionDao.observeAllEssays]，134 题），
+     * 在内存中按 `relatedPointIds.contains(pointId)` 过滤。
+     *
+     * 内存过滤而非 SQL LIKE 的原因（与 [ExamQuestionDao.observeAllEssays] 注释一致）：
+     * - SQL LIKE 对 JSON 数组无原生支持，"kp_1" 会误匹配 "kp_10/kp_100" 子串
+     * - 内存过滤精确匹配 List<String> contains
+     * - 134 题规模下内存过滤 < 5ms，无性能差异
+     *
+     * @param pointId 知识点 ID
+     * @return 关联该知识点的论述题列表（按年份倒序），无关联时返回空列表
+     */
+    fun observeRelatedEssays(pointId: String): Flow<List<ExamQuestionEntity>> =
+        examQuestionDao.observeAllEssays()
+            .mapLatest { allEssays ->
+                allEssays.filter { it.relatedPointIds?.contains(pointId) == true }
+            }
+            .catchAndLog(TAG, "observeRelatedEssays pointId=$pointId") { emptyList() }
+
+    /**
+     * 观察单个论述题（v0.9.8 新增，供论述题详情页使用）。
+     *
+     * @param examQuestionId 真题 ID（如 eq_0038）
+     * @return 论述题实体，不存在时返回 null
+     */
+    fun observeEssayById(examQuestionId: String): Flow<ExamQuestionEntity?> =
+        examQuestionDao.observeById(examQuestionId)
+            .catchAndLog(TAG, "observeEssayById id=$examQuestionId") { null }
+
+    /**
+     * 批量查询知识点（v0.9.8 新增，供论述题详情页"关联知识点"区块使用）。
+     *
+     * @param pointIds 知识点 ID 列表（来自 `ExamQuestionEntity.relatedPointIds` + 依据 JSON 的 linkedKnowledgePointId）
+     * @return 知识点实体列表（顺序与入参一致，不存在的 ID 被过滤）
+     */
+    suspend fun getKnowledgePointsByIds(pointIds: List<String>): List<KnowledgePointEntity> {
+        if (pointIds.isEmpty()) return emptyList()
+        // 去重后一次查询，保留入参顺序（与 observeKnowledgePointDetail 的内存分组策略一致）
+        val uniqueIds = pointIds.distinct()
+        val pointsById = knowledgePointDao.getByIds(uniqueIds).associateBy { it.id }
+        return uniqueIds.mapNotNull { pointsById[it] }
+    }
 }
 
 /**

@@ -341,9 +341,21 @@ class SeedDataLoader @Inject constructor(
 
         // 步骤5：导入真题（按 subject 字段映射到 subjectId）
         // 注意：若真题 subject 不在 subjects 列表中，跳过该真题（避免外键约束失败）
+        //
+        // v0.9.8 论述题板块：派生 related_point_ids（参考 computeRelatedIdsByTags 模式），
+        // seed 中已手工标注的（如示例题 eq_0038/eq_0182/eq_0254）优先使用 seed 值，
+        // 其余论述题由 computeExamQuestionRelatedPoints 派生。
+        // angle/notes 字段透传（seed 中填充的示例题保留，未填充的为 null）。
+        val essayRelatedPointsMap = computeExamQuestionRelatedPoints(
+            essays = seedData.examQuestions.filter { it.questionType == "ESSAY" },
+            knowledgePoints = seedData.knowledgePoints,
+        )
         val examQuestionEntities = seedData.examQuestions.mapNotNull { seed ->
             val subjectId = subjectNameToId[seed.subject]
                 ?: return@mapNotNull null
+            // 优先用 seed 中手工标注的 relatedPointIds；否则用派生的（仅论述题有派生）
+            val relatedPointIds = seed.relatedPointIds
+                ?: essayRelatedPointsMap[seed.id]
             ExamQuestionEntity(
                 id = seed.id,
                 year = seed.year,
@@ -351,10 +363,10 @@ class SeedDataLoader @Inject constructor(
                 questionType = seed.questionType,
                 content = seed.content,
                 score = seed.score,
-                angle = null,
-                relatedPointIds = null,
+                angle = seed.angle,
+                relatedPointIds = relatedPointIds,
                 answerFramework = seed.answerFramework,
-                notes = null,
+                notes = seed.notes,
                 createdAt = now,
                 examPaperCode = seed.examPaperCode,
                 answerStatus = if (seed.answerFramework != null) "HAS_ANSWER" else "NO_ANSWER",
@@ -573,6 +585,83 @@ class SeedDataLoader @Inject constructor(
                     if (related.isNotEmpty()) {
                         result[seed.id] = related
                     }
+                }
+            }
+
+            return result
+        }
+
+        /**
+         * 派生论述题→知识点关联（v0.9.8 新增，对应设计文档 3.5 节）。
+         *
+         * 算法：对每道论述题，扫描所有同科目知识点的 `title + tags`，
+         * 若知识点标题或任一 tag 在论述题 `content + answerFramework` 中出现 → 建立关联，
+         * 按匹配数降序取前 [MAX_RELATED_POINTS]（5）个。
+         *
+         * 与 [computeRelatedIdsByTags] 的区别：
+         * - 知识点→知识点关联：基于共享 tag 计数（双向对称）
+         * - 论述题→知识点关联：基于知识点 title/tags 在题目文本中出现（单向）
+         *
+         * 已在 seed_data.json 中手工标注 `related_point_ids` 的题目（如示例题）不会被覆盖
+         * （调用方在导入时优先使用 seed 值，仅 seed 为 null 时才用本函数派生结果）。
+         *
+         * 复杂度：O(E × K × T) 其中 E=134 论述题，K=910 知识点，T=平均 tag 数 ~5，
+         * 约 60 万次字符串 contains 操作，可接受（< 100ms）。
+         *
+         * 放在 companion object 中以便单元测试直接调用（与 [computeRelatedIdsByTags] 一致）。
+         *
+         * @param essays 论述题种子列表（仅 ESSAY 类型，调用方负责过滤）
+         * @param knowledgePoints 全部知识点种子列表
+         * @return examQuestionId → relatedKnowledgePointIds 映射（仅包含有关联的论述题）
+         */
+        internal fun computeExamQuestionRelatedPoints(
+            essays: List<ExamQuestionSeed>,
+            knowledgePoints: List<KnowledgePointSeed>,
+        ): Map<String, List<String>> {
+            val result = mutableMapOf<String, List<String>>()
+            // 按科目分组知识点，缩小扫描范围（论述题科目 = 知识点科目才关联）
+            val kpsBySubject = knowledgePoints.groupBy { it.subject }
+
+            for (essay in essays) {
+                val subjectKps = kpsBySubject[essay.subject].orEmpty()
+                if (subjectKps.isEmpty()) continue
+
+                // 题目文本（content + answerFramework）合并扫描，转小写避免大小写问题（中文无影响，英文作家名如 Lu Xun 可能）
+                val essayText = (essay.content + " " + (essay.answerFramework.orEmpty())).lowercase()
+
+                // 对每个知识点统计匹配数（title 出现算 2 分，tag 出现算 1 分，title 优先级更高）
+                val scored = mutableListOf<Pair<String, Int>>()
+                for (kp in subjectKps) {
+                    var score = 0
+                    // title 匹配（权重 2）：如 "鲁迅《狂人日记》" 出现 "鲁迅" 即匹配
+                    val title = kp.title.trim()
+                    if (title.isNotEmpty() && title.length >= 2 && essayText.contains(title.lowercase())) {
+                        score += 2
+                    }
+                    // tag 匹配（权重 1）：如 "鲁迅" tag 出现
+                    for (tag in kp.tags.orEmpty()) {
+                        val trimmedTag = tag.trim()
+                        // 过滤过短 tag（如单字 "水"），避免误匹配
+                        if (trimmedTag.length >= 2 && essayText.contains(trimmedTag.lowercase())) {
+                            score += 1
+                        }
+                    }
+                    if (score > 0) {
+                        scored.add(kp.id to score)
+                    }
+                }
+
+                // 按分数降序 + id 升序（稳定排序），取前 MAX_RELATED_POINTS
+                val related = scored
+                    .sortedWith(
+                        compareByDescending<Pair<String, Int>> { it.second }
+                            .thenBy { it.first },
+                    )
+                    .take(MAX_RELATED_POINTS)
+                    .map { it.first }
+
+                if (related.isNotEmpty()) {
+                    result[essay.id] = related
                 }
             }
 
@@ -802,6 +891,50 @@ data class ExamQuestionSeed(
     val examPaperCode: String? = null,
     @SerialName("answer_framework")
     val answerFramework: String? = null,
+    /**
+     * 答题思路 JSON（v0.9.8 新增，对应 docs/design/essay-module-design.md 3.3 节）。
+     *
+     * 仅论述题（ESSAY）填充，结构：
+     * ```json
+     * {
+     *   "questionType": "比较型",
+     *   "coreKeywords": [...],
+     *   "limitKeywords": [...],
+     *   "task": "...",
+     *   "breakthroughAngles": [...],
+     *   "angleRationale": "...",
+     *   "argumentPath": { "thesis": "...", "points": [...], "conclusion": "..." }
+     * }
+     * ```
+     *
+     * 其他题型或未填充的论述题为 null，UI 优雅降级（隐藏思路区块）。
+     */
+    val angle: String? = null,
+    /**
+     * 依据与交叉验证 JSON（v0.9.8 新增，对应 docs/design/essay-module-design.md 3.4 节）。
+     *
+     * 仅论述题（ESSAY）填充，结构：
+     * ```json
+     * {
+     *   "evidences": [{ "type": "WORK_TEXT|SCHOLAR_OPINION|TEXTBOOK_CONSENSUS", ... }],
+     *   "crossValidation": { "textbookComparison": "...", "scholarComparison": "..." },
+     *   "referenceLinks": [{ "label": "...", "url": "..." }],
+     *   "knowledgeGaps": [{ "author": "...", "note": "..." }]
+     * }
+     * ```
+     *
+     * 关键约束：依据必须真实，不能 AI 编造（详见设计文档 5.3 节）。
+     * 其他题型或未填充的论述题为 null，UI 优雅降级（隐藏依据区块）。
+     */
+    val notes: String? = null,
+    /**
+     * 关联知识点 ID 列表（v0.9.8 新增）。
+     *
+     * seed_data.json 中可手工标注（如示例题 eq_0038/eq_0182/eq_0254），
+     * 其余题目由 [SeedDataLoader.computeExamQuestionRelatedPoints] 派生填充。
+     */
+    @SerialName("related_point_ids")
+    val relatedPointIds: List<String>? = null,
 )
 
 /** 写作素材种子数据（对应 WritingMaterialEntity） */
