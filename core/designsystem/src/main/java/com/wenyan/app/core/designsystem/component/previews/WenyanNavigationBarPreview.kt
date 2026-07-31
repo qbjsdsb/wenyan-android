@@ -1,10 +1,10 @@
 package com.wenyan.app.core.designsystem.component.previews
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.LibraryBooks
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Style
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -15,12 +15,13 @@ import com.wenyan.app.core.designsystem.theme.ColorMode
 import com.wenyan.app.core.designsystem.theme.ThemeConfig
 import com.wenyan.app.core.designsystem.theme.WenyanTheme
 
+// v0.9.0 底部 Tab：知识点/真题/卡片/错题本/设置（图谱已移除，AI 改子路由）
 private val sampleItems = listOf(
     WenyanNavItem("knowledge", "知识点", Icons.Default.LibraryBooks),
     WenyanNavItem("quiz", "真题", Icons.Default.BarChart),
     WenyanNavItem("cards", "卡片", Icons.Default.Style),
-    WenyanNavItem("graph", "图谱", Icons.Default.AccountBox),
-    WenyanNavItem("aiassistant", "AI", Icons.Default.Chat),
+    WenyanNavItem("wrong_answer", "错题本", Icons.Default.ErrorOutline),
+    WenyanNavItem("settings", "设置", Icons.Default.Settings),
 )
 
 @Preview(name = "Light - Knowledge selected", showBackground = true)

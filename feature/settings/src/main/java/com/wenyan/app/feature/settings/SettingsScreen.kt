@@ -298,8 +298,8 @@ fun SettingsScreen(
                         subtitle = "v${BuildConfig.VERSION_NAME}",
                     )
                     GroupedCardDivider()
-                    // v0.9.5 新增：教程入口（per staff-engineer-mode 客户端 UI 开发流程）
-                    // 7 章深度教程：定位 / 模块 / FSRS-6 / 三档记忆 / RAG / 使用指南 / 致谢
+                    // v0.9.5 新增：教程入口（v0.9.6 精简重构：5 节简洁版）
+                    // 欢迎卡 / 快速上手 / 功能模块 / 学习原理（可折叠） / 关于
                     GroupedCardItem(
                         title = "关于与教程",
                         subtitle = "软件介绍与使用指南",

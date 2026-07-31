@@ -143,19 +143,37 @@ tools/                           # Python 管线脚本
 - commit message 说清"为什么改"，不只是"改了什么"
 - 用户偏好：中文交流、严谨验证、反复检查、有趣的教学风格、M3 谷歌味道 UI
 
-## 7. 当前状态（2026-07-28）
+## 7. 当前状态（2026-07-31）
+
+**✅ v0.9.6 关于与教程精简重构 + 代码卫生审计（已发布）** — 响应用户反馈"关于与教程界面做的太复杂了，排版也很难看，内容也太多了，竖屏的时候更是非常糟糕"，重构 AboutTutorialScreen.kt：7 章 430 行 → 5 节 ~384 行。新结构：1) HeroCard（欢迎卡：定位 + 三大理念）2) SectionQuickStart（快速上手：3 步入门）3) SectionModules（功能模块：5 个 Tab 简介）4) SectionPrinciples（学习原理：FSRS + 三档记忆，用 ExpandableInfoItem + AnimatedVisibility 可折叠）5) SectionAbout（关于：技术栈 + 致谢 + 免责声明）。默认视图简洁，深度原理按需展开。竖屏友好：MaxContentWidth.compact 限宽 + LazyColumn spacedBy(Spacing.xl)。同时修复 4 项代码卫生问题：CardsScreen.kt 弃用图标、FriendlyErrorMessage.kt 冗余 !!、CardsViewModel.kt 2 处 !!（改局部变量 currentError）、导航 Preview 移除已删除 graph 模块引用。本地验证：`:app:assembleDebug` + `:app:assembleRelease` + 全模块 `testDebugUnitTest` 全绿（403 tests, 0 failures）。**PRR ✅ READY TO RELEASE + RBR ✅ PASS**（per staff-engineer-mode Agent Event Policy）。Release v0.9.6 已发布（debug 签名 fallback — Exception E1）。Debug APK SHA-256 `36237a66d911d06cf21e45aba9b3c5394db7cbaf22a101417aea12ff712ff100` / 27,522,631 bytes / Release APK SHA-256 `8661d97bba625d837aa535df32ae6ab644906e12866b332d4a1144fb5b8d356c` / 19,169,788 bytes。
 
 **✅ v0.9.5 关于与教程子路由（已发布）** — 设置页"关于"分组新增"关于与教程"入口，注册 ROUTE_ABOUT 子路由（Push/Pop slide + launchSingleTop 防双击压栈），加载 AboutTutorialScreen（7 章深度教程，430 行新文件）。教程覆盖：1) 软件定位与核心理念 2) 功能模块导览（5 个顶级 Tab）3) FSRS-6 间隔重复算法（4 大公式 + 4 状态调度 + 4 档评分 + ClockGuard）4) 三档记忆机制（EXACT 0.95 / FRAMEWORK 0.90 / UNDERSTAND 0.85）5) AI 助手与 RAG 架构（RAG + 苏格拉底三阶段 + 多服务商 + Prompt Injection 防护）6) 使用指南与学习路径（6 步入门 + 三阶段节奏）7) 技术信息与致谢。本地验证：`:app:assembleDebug` + `:app:assembleRelease` + 全模块 `testDebugUnitTest` 全绿（236 tests, 0 failures）。agent-pr-review ✅ Ready to merge（0 blocker, 0 must-fix）。**PRR ✅ READY TO RELEASE + RBR ✅ PASS**（per staff-engineer-mode Agent Event Policy）。Release v0.9.5 已发布（debug 签名 fallback — Exception E1）。Debug APK SHA-256 `0045a82d1ae318d2d504b73e8bb71bc13ee117d4354bdba60a914e968093eb58` / 27,522,631 bytes。
 
 **✅ v0.9.4 错题本接入 FSRS 间隔重复调度（已发布）** — 为 wrong_answers 表添加 10 个 sched_* FSRS 调度字段，复用 FSRS-6 算法 + TIER_FRAMEWORK 档位（R_target=0.90），实现错题的间隔重复复习。5 层实现：数据层（Migration 7→8 + 10 字段 + 索引）+ 映射层（WrongAnswerSchedulingMapper）+ 仓库层（SchedulingRepository.rateWrongAnswer）+ ViewModel 层（DUE 过滤 + 评分委托 + ClockGuard 注入）+ UI 层（四档评分按钮 + 调度信息展示）。Follow-up #1 ClockGuard 注入 + #2 interval coerceAtLeast(0) 已修复。+10 单测。agent-pr-review ✅ Approved（0 blocker, 0 must-fix）。Release v0.9.4 已发布（debug 签名 fallback — Exception E1）。
 
-- 最新 commit：`79ca50c` docs(receipt): v0.9.5 release receipt — PRR + RBR + agent-pr-review
-- 最新 Release：**v0.9.5**（2026-07-28 发布，debug 签名 fallback — Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.5
-- 本地验证（2026-07-28 v0.9.5 release）：`:app:assembleDebug` + `:app:assembleRelease` + 全模块 `testDebugUnitTest` 全绿（236 tests, 0 failures）
-- versionCode / versionName：**30 / "0.9.5"**
-- v0.9.5 APK 校验：Debug APK 27,522,631 bytes SHA-256 `0045a82d1ae318d2d504b73e8bb71bc13ee117d4354bdba60a914e968093eb58`（debug 签名 Exception E1）
-- v0.9.5 Rollback target：[v0.9.4](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.4)（uninstall v0.9.5 + install v0.9.4，versionCode 29 < 30 需卸载后安装）
-- v0.9.5 receipt：[docs/release-receipts/v0.9.5-release-receipt.md](docs/release-receipts/v0.9.5-release-receipt.md)（含 PRR + RBR + agent-pr-review + Post-Release Verification）
+- 最新 commit：（待 commit 后填入）
+- 最新 Release：**v0.9.6**（2026-07-31 发布，debug 签名 fallback — Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.6
+- 本地验证（2026-07-31 v0.9.6 release）：`:app:assembleDebug` + `:app:assembleRelease` + 全模块 `testDebugUnitTest` 全绿（403 tests, 0 failures）
+- versionCode / versionName：**31 / "0.9.6"**
+- v0.9.6 APK 校验：Debug APK 27,522,631 bytes SHA-256 `36237a66d911d06cf21e45aba9b3c5394db7cbaf22a101417aea12ff712ff100`（debug 签名 Exception E1）/ Release APK 19,169,788 bytes SHA-256 `8661d97bba625d837aa535df32ae6ab644906e12866b332d4a1144fb5b8d356c`
+- v0.9.6 Rollback target：[v0.9.5](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.5)（uninstall v0.9.6 + install v0.9.5，versionCode 30 < 31 需卸载后安装）
+- v0.9.6 receipt：[docs/release-receipts/v0.9.6-release-receipt.md](docs/release-receipts/v0.9.6-release-receipt.md)（含 PRR + RBR + agent-pr-review）
+- v0.9.6 核心改动：
+  - **AboutTutorialScreen.kt 精简重构**：7 章 430 行 → 5 节 ~384 行
+    - HeroCard（欢迎卡：定位 + 三大理念，TonalCard + PrincipleRow）
+    - SectionQuickStart（快速上手：3 步 GroupedCardItem）
+    - SectionModules（功能模块：5 个 Tab GroupedCardItem）
+    - SectionPrinciples（学习原理：FSRS + 三档记忆，ExpandableInfoItem + AnimatedVisibility 可折叠）
+    - SectionAbout（关于：技术栈 + 致谢 + 免责声明）
+    - 默认视图简洁，深度原理按需展开（rememberSaveable 持久化展开状态）
+    - 竖屏友好：MaxContentWidth.compact 限宽 + LazyColumn spacedBy(Spacing.xl)
+  - **代码卫生审计修复（4 项）**：
+    - CardsScreen.kt: Icons.Filled.MenuBook → Icons.AutoMirrored.Filled.MenuBook（v0.9.5 漏修）
+    - FriendlyErrorMessage.kt: e.message!!.contains → e.message?.contains == true（去冗余 !!）
+    - CardsViewModel.kt: 2 处 _errorMessage.value!!.startsWith → 局部变量 currentError（去 !!）
+    - 导航 Preview：移除已删除的 graph 模块引用，更新为错题本 Tab
+- v0.9.5 核心改动：设置页"关于与教程"子路由 — ROUTE_ABOUT 常量 + aboutDestination（Push/Pop slide）+ SettingsScreen 入口项 + AboutTutorialScreen（7 章深度教程 430 行：定位/模块/FSRS-6/三档记忆/RAG/使用指南/致谢）+ Icons.AutoMirrored.Filled.MenuBook 弃用修复
+- v0.9.5 receipt：[docs/release-receipts/v0.9.5-about-tutorial-pr-review.md](docs/release-receipts/v0.9.5-about-tutorial-pr-review.md)（agent-pr-review 结构化审查，0 blocker / 0 must-fix）
 - v0.9.0 核心改动（5 Batch）：
   - **B1 章节树数据层**：ChapterDao.observeTree（WITH RECURSIVE CTE）+ countNonRootChapters + ChapterRepository/Impl + SeedDataLoader 基于文学时段生成二级章节树（subject → default_chapter → chapter_<tag>），seed 2.11.0→2.12.0
   - **B2 关联知识点模块增强**：RelationshipType 枚举（RELATED/CONTRAST/EXTENSION）+ 视觉编码（图标 + 颜色）+ RelatedPointItem（标题 + 摘要预览 + 考频/难度 chip + 右箭头）+ 3 主题 Preview
@@ -215,14 +233,15 @@ tools/                           # Python 管线脚本
 | v0.9.1 关联知识点模块不渲染 Hotfix | ✅ 完成（2026-07-28） | SeedDataLoader.computeRelatedIdsByTags（同 subject + 共享 tag → RELATED）+ seed 2.12.0→2.13.0 + 8 单测。Release v0.9.1 已发布（debug 签名 fallback） |
 | v0.9.4 错题本接入 FSRS 间隔重复调度 | ✅ 完成 + 已发布（2026-07-28） | 5 层实现：数据层 Migration 7→8 + 10 sched_* 字段 + 索引 / 映射层 WrongAnswerSchedulingMapper / 仓库层 SchedulingRepository.rateWrongAnswer / ViewModel 层 DUE 过滤 + 评分委托 + ClockGuard 注入 / UI 层四档评分按钮 + 调度信息展示。TIER_FRAMEWORK 档位。10 单测。Follow-up #1 ClockGuard 注入 + #2 interval coerceAtLeast(0) 已修复。agent-pr-review ✅ Approved（0 blocker, 0 must-fix）。Release v0.9.4 已发布（debug 签名 Exception E1） |
 | v0.9.5 关于与教程子路由 | ✅ 完成 + 已发布（2026-07-28） | 设置页"关于"分组新增"关于与教程"入口，注册 ROUTE_ABOUT 子路由（Push/Pop slide + launchSingleTop 防双击压栈），加载 AboutTutorialScreen（7 章深度教程 430 行：定位/模块/FSRS-6/三档记忆/RAG/使用指南/致谢）。Icons.AutoMirrored.Filled.MenuBook 弃用修复。本地验证全绿（236 tests）。agent-pr-review ✅ Ready to merge。**PRR ✅ READY TO RELEASE + RBR ✅ PASS**（per staff-engineer-mode Agent Event Policy）。Release v0.9.5 已发布（debug 签名 Exception E1）。APK SHA-256 `0045a82d...93eb58` / 27,522,631 bytes |
+| v0.9.6 关于与教程精简重构 + 代码卫生审计 | ✅ 完成 + 已发布（2026-07-31） | 响应用户反馈重构 AboutTutorialScreen.kt：7 章 430 行 → 5 节 ~384 行（HeroCard / QuickStart / Modules / Principles 可折叠 / About）。默认视图简洁，深度原理用 ExpandableInfoItem + AnimatedVisibility 按需展开。竖屏友好：MaxContentWidth.compact 限宽。同时修复 4 项代码卫生问题：CardsScreen.kt 弃用图标、FriendlyErrorMessage.kt 冗余 !!、CardsViewModel.kt 2 处 !!、导航 Preview 移除已删除 graph 模块引用。本地验证全绿（403 tests）。**PRR ✅ READY TO RELEASE + RBR ✅ PASS**。Release v0.9.6 已发布（debug 签名 Exception E1）。Debug APK SHA-256 `36237a66...2ff100` / 27,522,631 bytes / Release APK SHA-256 `8661d97b...8d356c` / 19,169,788 bytes |
 
 ## 9. 下一步优先级
 
-1. **P0**：跑 emulator 实测 v0.9.5（已发布）— 验证设置 → 关于 → 关于与教程入口可见可点击 + Push/Pop slide 动画 + 7 章 GroupedCard 完整渲染 + LazyColumn 滚动流畅 + 返回箭头返回设置页 + 横屏/平板内容居中
+1. **P0**：跑 emulator 实测 v0.9.6（已发布）— 验证设置 → 关于 → 关于与教程入口可见可点击 + 5 节结构渲染（HeroCard / QuickStart / Modules / Principles 可折叠 / About）+ ExpandableInfoItem 点击展开/收起动画流畅 + 默认视图简洁（深度原理折叠态）+ 竖屏友好（MaxContentWidth.compact 限宽）+ 横屏/平板内容居中 + 返回箭头返回设置页
 2. **P0**：跑 emulator 实测 v0.9.4 — 验证错题本 DUE 过滤模式 + 四档评分按钮（不会/困难/良好/简单）+ 调度信息展示（下次复习/复习次数/遗忘次数）+ Migration 7→8 升级（已有错题 sched_* 字段默认值正确）+ ClockGuard 时间源对齐（评分后错题不会立即重新出现在 DUE 列表）
 3. **P0**：跑 emulator 实测 v0.9.1（若未测）— 验证关联知识点模块渲染（RelatedPointsSection 应有关联知识点列表）+ 关联知识点点击跳转 + seed 2.13.0 触发重导后 relatedIds 正确填充
 4. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 40+ commit 待 CI 验证（不影响 Release，已通过本地构建 + gh 上传绕过）
-5. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 并替换 v0.9.4 + v0.9.5 asset（消除 Exception E1）
+5. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 并替换 v0.9.4 + v0.9.5 + v0.9.6 asset（消除 Exception E1）
 6. **P1**：启用 R8（P1-PG 规则已就绪 + B5.1 GraphSkeleton 路径已修正，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
 7. **P2 优化项（非阻塞）**：`app/build.gradle.kts` 第 71 行 release keystore fail-fast 应移到 task 执行阶段（当前在配置阶段抛异常，沙箱跑 debug 任务也触发，需 `unset CI` 绕过）
 8. **P1 Phase 2 剩余维度审计**：

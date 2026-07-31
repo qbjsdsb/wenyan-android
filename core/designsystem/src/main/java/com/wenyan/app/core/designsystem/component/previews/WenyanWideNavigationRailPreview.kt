@@ -4,8 +4,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Style
@@ -20,12 +20,12 @@ import com.wenyan.app.core.designsystem.theme.ColorMode
 import com.wenyan.app.core.designsystem.theme.ThemeConfig
 import com.wenyan.app.core.designsystem.theme.WenyanTheme
 
-// v0.6 大屏适配后底部 Tab 改为：知识点/真题/卡片/图谱/设置（AI 改为子路由）
+// v0.9.0 大屏导航栏：知识点/真题/卡片/错题本/设置（图谱已移除，AI 改子路由）
 private val sampleRailItems = listOf(
     WenyanNavItem("knowledge", "知识点", Icons.Default.LibraryBooks),
     WenyanNavItem("quiz", "真题", Icons.Default.BarChart),
     WenyanNavItem("cards", "卡片", Icons.Default.Style),
-    WenyanNavItem("graph", "图谱", Icons.Default.AccountBox),
+    WenyanNavItem("wrong_answer", "错题本", Icons.Default.ErrorOutline),
     WenyanNavItem("settings", "设置", Icons.Default.Settings),
 )
 

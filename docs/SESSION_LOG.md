@@ -5156,3 +5156,118 @@ https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.4
 - **PRR 的 Blocker → Exception 转换有明确边界**：Blocker B1（CI 账单）是客观阻塞，但用户已接受 debug 签名 fallback（v0.8.14-v0.9.4 五次同模式），转换为 Exception E1 + 补偿控制 + Expiry + Refresh trigger，符合 shared risk-acceptance lifecycle
 - **RBR 的 Pinned inputs 表是 reproducibility 的核心**：所有构建输入（JDK / Gradle / AGP / Kotlin / KSP / Compose BOM / material3 / Hilt / Room / compileSdk / minSdk / targetSdk / versionCode / versionName）都有明确锁定来源（mise.toml / libs.versions.toml / build.gradle.kts），任何人都能复现相同 APK
 - **SHA-256 是 artifact identity 的不可变标识**：Debug APK 27,522,631 bytes → SHA-256 `0045a82d...93eb58`，与 GitHub Release asset 一致，任何人下载后都能本地验证完整性
+
+---
+
+## 2026-07-31 v0.9.6 关于与教程精简重构 + 代码卫生审计
+
+### 用户反馈
+
+> "关于与教程界面做的太复杂了，排版也很难看，内容也太多了，竖屏的时候更是非常糟糕，横屏还好，然后整个项目你看看还有什么地方有问题或者可以优化，可以更进一步，仔细检查，反复调查研究，一定要做到最好，反复打磨，最后做好交接"
+
+### 改动 1：AboutTutorialScreen.kt 精简重构
+
+**问题**：v0.9.5 的 AboutTutorialScreen 是 7 章 430 行的密集教程，竖屏体验差（内容过多、排版拥挤、信息过载）。
+
+**方案**：重构为 5 节 ~384 行，默认视图简洁，深度原理用可折叠组件包裹。
+
+**新结构**：
+1. **HeroCard**（TonalCard）— 欢迎卡：App 定位 + 三大理念（用 PrincipleRow 替代密集段落）
+2. **SectionQuickStart**（GroupedCard）— 快速上手：3 步入门（配置 AI 服务 / 浏览知识点 / 每天复习卡片）
+3. **SectionModules**（GroupedCard）— 功能模块：5 个 Tab 简介（知识点 / 真题 / 卡片 / 错题本 / AI 助手）
+4. **SectionPrinciples**（GroupedCard）— 学习原理：FSRS + 三档记忆，用 **ExpandableInfoItem + AnimatedVisibility 可折叠**，默认只显示标题+摘要
+5. **SectionAbout**（GroupedCard）— 关于：技术栈 + FSRS 致谢 + 免责声明
+
+**关键组件 ExpandableInfoItem**：
+- 默认显示：图标 + 标题 + 摘要 + 展开箭头
+- 点击展开：AnimatedVisibility(expandVertically + fadeIn) 显示详情
+- `rememberSaveable` 持久化展开状态，屏幕旋转不丢失
+- `semantics(mergeDescendants = true)` 合并语义，无障碍友好
+- `heightIn(min = 48.dp)` 保证最小触控目标
+
+**竖屏友好**：
+- `MaxContentWidth.compact` 限宽，避免竖屏文本行过长
+- `LazyColumn verticalArrangement = Arrangement.spacedBy(Spacing.xl)` 节间留白
+- `contentPadding` 上下左右 Spacing.lg，顶部 Spacing.lg，底部 Spacing.xxl
+
+### 改动 2：代码卫生审计修复（4 项）
+
+#### Fix 1：CardsScreen.kt 弃用图标（v0.9.5 漏修）
+
+```kotlin
+// Before:
+import androidx.compose.material.icons.filled.MenuBook
+imageVector = Icons.Default.MenuBook,
+
+// After:
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+imageVector = Icons.AutoMirrored.Filled.MenuBook,
+```
+
+**为什么改**：Material Icons 中 `MenuBook` 已迁移到 `AutoMirrored` 包（RTL 语言镜像），原 `Icons.Filled.MenuBook` 已 deprecated。v0.9.5 修复了 AboutTutorialScreen 和 QuizScreen，但 CardsScreen 的 EmptyState "去学习" 按钮漏修。
+
+#### Fix 2：FriendlyErrorMessage.kt 冗余 `!!`
+
+```kotlin
+// Before:
+e.message != null && e.message!!.contains("no such table", ignoreCase = true) ->
+
+// After:
+e.message?.contains("no such table", ignoreCase = true) == true ->
+```
+
+**为什么改**：`e.message != null && e.message!!.contains(...)` 是冗余写法，`e.message?.contains(...) == true` 语义等价且更简洁，避免 `!!` 操作符（Kotlin code smell）。
+
+#### Fix 3：CardsViewModel.kt 2 处 `!!`（L556/L584）
+
+```kotlin
+// Before:
+if (_errorMessage.value == null ||
+    !_errorMessage.value!!.startsWith("评分调度失败")
+) {
+
+// After:
+val currentError = _errorMessage.value
+if (currentError == null ||
+    !currentError.startsWith("评分调度失败")
+) {
+```
+
+**为什么改**：虽然 `!!` 在 `||` 短路求值下是"安全"的（仅当 `_errorMessage.value != null` 时求值右操作数），但仍是 code smell。改用局部变量 `currentError` 语义更清晰，且避免对 StateFlow.value 的重复访问。
+
+#### Fix 4：导航 Preview 移除已删除 graph 模块引用
+
+```kotlin
+// Before:
+WenyanNavItem("graph", "图谱", Icons.Default.AccountBox),
+
+// After:
+WenyanNavItem("wrong_answer", "错题本", Icons.Default.ErrorOutline),
+```
+
+**为什么改**：v0.9.0 已移除 feature:graph 模块并将错题本升级为顶级 Tab，但 WenyanNavigationBarPreview 和 WenyanWideNavigationRailPreview 仍引用 "图谱" Tab。Preview 与实际导航不一致会误导开发者。
+
+### 本地验证
+
+| 验证项 | 命令 | 结果 |
+|--------|------|------|
+| Debug 构建 | `gradle :app:assembleDebug --no-daemon` | BUILD SUCCESSFUL |
+| Release 构建 | `gradle :app:assembleRelease --no-daemon` | BUILD SUCCESSFUL |
+| 单元测试 | `gradle testDebugUnitTest --no-daemon --continue` | BUILD SUCCESSFUL（403 tests, 0 failures） |
+
+### PRR + RBR
+
+- **PRR ✅ READY TO RELEASE**：External Artifact / Blocker B1 → Exception E1（debug 签名 fallback，用户已接受）
+- **RBR ✅ PASS**：Pinned inputs（JDK 17.0.2 / Gradle 8.14.4 / AGP 8.6.0 / Kotlin 2.3.10 / KSP 2.3.2 / Compose BOM 2025.12.00 / Material3 1.5.0-alpha18 / compileSdk 35 / versionCode 31 / versionName "0.9.6"）+ Debug APK SHA-256 `36237a66...2ff100`（27,522,631 bytes）+ Release APK SHA-256 `8661d97b...8d356c`（19,169,788 bytes）+ signer `CN=Android Debug`
+
+### APK 校验
+
+- Debug APK: 27,522,631 bytes, SHA-256 `36237a66d911d06cf21e45aba9b3c5394db7cbaf22a101417aea12ff712ff100`
+- Release APK: 19,169,788 bytes, SHA-256 `8661d97bba625d837aa535df32ae6ab644906e12866b332d4a1144fb5b8d356c`（debug 签名 Exception E1）
+
+### 交接
+
+- **AGENTS.md**：第 7 节"当前状态"已更新为 v0.9.6
+- **00-STATUS.md**：当前状态快照 + 新会话首要任务已更新
+- **release-receipts/v0.9.6-release-receipt.md**：完整 receipt（PRR + RBR + Changed Files + Post-Release Verification）
+- **下一步**：emulator 实测 v0.9.6（P0），验证 5 节结构渲染 + ExpandableInfoItem 展开动画 + 竖屏友好

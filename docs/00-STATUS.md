@@ -1,9 +1,11 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-07-28
+> 最后更新：2026-07-31
 
 ## ✅ 当前状态
+
+**v0.9.6 关于与教程精简重构 + 代码卫生审计（已发布）** — 响应用户反馈"关于与教程界面做的太复杂了，排版也很难看，内容也太多了，竖屏的时候更是非常糟糕"，重构 AboutTutorialScreen.kt：7 章 430 行 → 5 节 ~384 行（HeroCard / QuickStart / Modules / Principles 可折叠 / About）。默认视图简洁，深度原理用 ExpandableInfoItem + AnimatedVisibility 按需展开。竖屏友好：MaxContentWidth.compact 限宽。同时修复 4 项代码卫生问题：CardsScreen.kt 弃用图标、FriendlyErrorMessage.kt 冗余 !!、CardsViewModel.kt 2 处 !!、导航 Preview 移除已删除 graph 模块引用。本地验证全绿（403 tests）。**PRR ✅ READY TO RELEASE + RBR ✅ PASS**（per staff-engineer-mode Agent Event Policy）。Release v0.9.6 已发布（debug 签名 Exception E1）。Debug APK SHA-256 `36237a66...2ff100` / 27,522,631 bytes / Release APK SHA-256 `8661d97b...8d356c` / 19,169,788 bytes。
 
 **v0.9.5 关于与教程子路由（已发布）** — 设置页"关于"分组新增"关于与教程"入口，注册 ROUTE_ABOUT 子路由（Push/Pop slide + launchSingleTop 防双击压栈），加载 AboutTutorialScreen（7 章深度教程 430 行：定位/模块/FSRS-6/三档记忆/RAG/使用指南/致谢）。Icons.AutoMirrored.Filled.MenuBook 弃用修复。本地验证全绿（236 tests）。agent-pr-review ✅ Ready to merge。**PRR ✅ READY TO RELEASE + RBR ✅ PASS**（per staff-engineer-mode Agent Event Policy）。Release v0.9.5 已发布（debug 签名 Exception E1）。APK SHA-256 `0045a82d...93eb58` / 27,522,631 bytes。
 
@@ -11,10 +13,10 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | `79ca50c` docs(receipt): v0.9.5 release receipt — PRR + RBR + agent-pr-review |
-| 最新 Release | **v0.9.5**（2026-07-28 发布，debug 签名 fallback — Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.5 |
-| 编译验证 | **:app:assembleDebug + :app:assembleRelease + 全模块 testDebugUnitTest SUCCESSFUL**（v0.9.5 release，236 tests 0 failures） |
-| versionCode / versionName | **30 / "0.9.5"** |
+| 最新 commit | （待 commit 后填入） |
+| 最新 Release | **v0.9.6**（2026-07-31 发布，debug 签名 fallback — Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.6 |
+| 编译验证 | **:app:assembleDebug + :app:assembleRelease + 全模块 testDebugUnitTest SUCCESSFUL**（v0.9.6 release，403 tests 0 failures） |
+| versionCode / versionName | **31 / "0.9.6"** |
 | 知识点 | **910 个**（entities/relations 数据补全） |
 | 真题 | **485 道**（v0.7.6 已删除 sample_essay 冗余字段） |
 | seed 版本 | **2.13.0**（v0.9.1 relatedIds 派生，触发重新导入） |
@@ -22,26 +24,27 @@
 | 章节树 | **二级层级**（subject → default_chapter → chapter_<tag>，基于文学时段自动生成） |
 | 关联模块 | **3 关系类型**（RELATED/CONTRAST/EXTENSION）+ 视觉编码 + **v0.9.1: relatedIds 基于 tags 派生**（同 subject + 共享 tag，按共享数降序取前 5） |
 | 错题本 FSRS | **v0.9.4 已发布**：DUE 过滤模式 + 四档评分（不会/困难/良好/简单）+ 调度信息展示（下次复习/复习次数/遗忘次数）+ TIER_FRAMEWORK 档位 + ClockGuard 时间源对齐 + interval 下界保护 |
+| 关于与教程 | **v0.9.6 精简重构**：5 节简洁版（HeroCard / QuickStart / Modules / Principles 可折叠 / About），默认视图简洁，深度原理按需展开 |
 | 底部导航 | **5 Tab**：知识点 / 真题 / 卡片 / 错题本 / 设置（v0.9.0 错题本替换原图谱） |
 | 图谱 UI | **已移除**（v0.9.0 feature:graph 模块删除） |
-| 图谱数据层 | **保留**（core/database GraphNodeDao/GraphEdgeDao + core/data GraphRepository/Impl + GraphSkeleton + 算法服务，FSRS 调度链路消费） |
+| 图谱数据层 | **已移除**（v0.9.3 优化 4 全部移除，详见 [docs/release-receipts/v0.9.3-opt4-graph-removal-receipt.md](release-receipts/v0.9.3-opt4-graph-removal-receipt.md)） |
 | 启动图标 | **v3 "印章文"**（米色印面 + 墨黑"文"字 + 圆角 12dp + monochrome 适配） |
 | 日志门面 | **Logging.kt**（Timber 封装，Debug=Logcat / Release=WARN+ERROR） |
 | 工具链锁定 | **mise.toml**（JDK 17.0.2 + Gradle 8.14.4） |
 | 阻塞 | **CI 账单问题** — 需用户处理，不影响 Release（debug 签名可用） |
-| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-28 v0.9.5 关于与教程子路由） |
+| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-31 v0.9.6 关于与教程精简重构 + 代码卫生审计） |
 
 ## 🚨 新会话首要任务
 
-**v0.9.5 关于与教程子路由已发布**（2026-07-28，commit `79ca50c`，tag `v0.9.5`）。最新 Release：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.5
+**v0.9.6 关于与教程精简重构 + 代码卫生审计已发布**（2026-07-31，tag `v0.9.6`）。最新 Release：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.6
 
 下一步优先级（按顺序）：
 
-1. **P0**：emulator 实测 v0.9.5（已发布）— 验证设置 → 关于 → 关于与教程入口可见可点击 + Push/Pop slide 动画 + 7 章 GroupedCard 完整渲染 + LazyColumn 滚动流畅 + 返回箭头返回设置页 + 横屏/平板内容居中
+1. **P0**：emulator 实测 v0.9.6 — 验证设置 → 关于 → 关于与教程入口可见可点击 + 5 节结构渲染（HeroCard / QuickStart / Modules / Principles 可折叠 / About）+ ExpandableInfoItem 点击展开/收起动画流畅 + 默认视图简洁（深度原理折叠态）+ 竖屏友好（MaxContentWidth.compact 限宽）+ 横屏/平板内容居中 + 返回箭头返回设置页
 2. **P0**：emulator 实测 v0.9.4 — 验证错题本 DUE 过滤模式 + 四档评分按钮（不会/困难/良好/简单）+ 调度信息展示（下次复习/复习次数/遗忘次数）+ Migration 7→8 升级（已有错题 sched_* 字段默认值正确）+ ClockGuard 时间源对齐（评分后错题不会立即重新出现在 DUE 列表）
 3. **P0**：emulator 实测 v0.9.1（若未测）— 验证关联知识点模块渲染（RelatedPointsSection 应有关联知识点列表）+ 关联知识点点击跳转 + seed 2.13.0 触发重导后 relatedIds 正确填充
 4. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 40+ commit 待 CI 验证（不影响 Release，已通过本地构建 + gh 上传绕过）
-5. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 并替换 v0.9.4 + v0.9.5 asset（消除 Exception E1）
+5. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 并替换 v0.9.4 + v0.9.5 + v0.9.6 asset（消除 Exception E1）
 6. **P1**：启用 R8（P1-PG 规则已就绪 + B5.1 GraphSkeleton 路径已修正，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
 7. **P1 Phase 2 剩余维度审计**：
    - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）

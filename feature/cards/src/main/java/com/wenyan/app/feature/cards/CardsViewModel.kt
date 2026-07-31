@@ -552,8 +552,9 @@ class CardsViewModel @Inject constructor(
                             throw e
                         } catch (e: Exception) {
                             // v0.8.12 P1-3:仅在无更高优先级错误时显示
-                            if (_errorMessage.value == null ||
-                                !_errorMessage.value!!.startsWith("评分调度失败")
+                            val currentError = _errorMessage.value
+                            if (currentError == null ||
+                                !currentError.startsWith("评分调度失败")
                             ) {
                                 _errorMessage.value = "学习进度记录失败：${e.message ?: "未知错误"}"
                             }
@@ -580,8 +581,9 @@ class CardsViewModel @Inject constructor(
                     throw e
                 } catch (e: Exception) {
                     // v0.8.12 P1-3:仅在无更高优先级错误时显示
-                    if (_errorMessage.value == null ||
-                        !_errorMessage.value!!.startsWith("评分调度失败")
+                    val currentError = _errorMessage.value
+                    if (currentError == null ||
+                        !currentError.startsWith("评分调度失败")
                     ) {
                         _errorMessage.value = "错题记录失败：${e.message ?: "未知错误"}"
                     }

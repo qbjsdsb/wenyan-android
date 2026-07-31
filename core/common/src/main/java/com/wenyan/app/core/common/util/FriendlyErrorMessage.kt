@@ -42,7 +42,7 @@ fun friendlyErrorMessage(e: Throwable): String = when {
 
     // 数据库表不存在的特殊情况(message 包含 "no such table")
     // 通常发生在 DB schema 升级失败或 seed 数据未正确导入
-    e.message != null && e.message!!.contains("no such table", ignoreCase = true) ->
+    e.message?.contains("no such table", ignoreCase = true) == true ->
         "数据库版本异常,请重启 App"
 
     // 兜底:未知异常统一显示友好提示
