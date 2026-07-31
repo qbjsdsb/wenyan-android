@@ -108,14 +108,11 @@ fun WenyanAdaptiveNavigation(
                 } else {
                     // 无导航栏（子路由）：内容全屏，不添加额外底部色块。
                     //
-                    // 注意：不设置 background 也不添加 bottomPadding，
-                    // 子页面自己的 ExpressiveScaffold 会处理背景和系统 insets。
-                    // 仅保留顶部 statusBar inset 避免内容被系统状态栏遮挡。
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(top = topInsetDp),
-                    ) {
+                    // 不设置 background 也不添加 bottomPadding，
+                    // 子页面自己的 ExpressiveScaffold 会通过 contentWindowInsets
+                    // 处理系统栏 insets(状态栏/导航栏/IME)。
+                    // 外层不需要额外 padding，避免与 Scaffold 的 inset 消费重复。
+                    Box(modifier = Modifier.fillMaxSize()) {
                         content(PaddingValues(0.dp))
                     }
                 }

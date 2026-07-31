@@ -1,9 +1,11 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-07-31
+> 最后更新：2026-07-31（v0.9.15）
 
 ## ✅ 当前状态
+
+**v0.9.15 修复子页面底部大块色块（已发布 2026-07-31）** — 响应用户反馈"为什么底部还是一团糟，点进一个页面大面积的色块，能不能做好"。修复 `WenyanAdaptiveNavigation` COMPACT 布局在子页面（`showNavigation=false`）时底部暴露 80dp+ `surfaceContainer` 色块的问题：改为全屏内容模式，不强制背景色和底部 padding，由子页面各自的 `ExpressiveScaffold` 处理背景和系统 insets。主 Tab 栏（`showNavigation=true`）保持沉浸式布局不变（surfaceContainer 背景 + 底部 padding + 渐变遮罩 + 透明导航栏）。本地验证：`:app:assembleDebug` SUCCESSFUL + `testDebugUnitTest` SUCCESSFUL（317 tasks, 0 failures）。
 
 **v0.9.14 修复底栏遮盖 + 软件内更新（已发布 2026-07-31）** — 响应用户反馈"底栏遮盖了可以点击的地方，更新为什么不能软件内更新，还要去浏览器，而且下的是debug版本，而且只能卸载重装，为什么有这么多问题"。修复 v0.9.13 沉浸式导航栏导致的底栏遮盖可点击区域问题：COMPACT 布局改用 Box + 显式 padding（80dp 导航栏高度 + 系统手势区），不再依赖 Scaffold contentWindowInsets 消费策略。实现软件内 APK 下载+安装：UpdateViewModel 新增 OkHttp 流式下载 + FileProvider 安装 + 2 种新 UI 状态（Downloading/DownloadComplete），UpdateCheckScreen 新增进度条和安装按钮。AndroidManifest 新增 REQUEST_INSTALL_PACKAGES + FileProvider。新增 file_paths.xml。OkHttp 依赖。**重要更正**：CI Release workflow 运行正常，keystore 已配置，本次 Release 为正式签名 APK（19.5 MB），可直接覆盖安装旧版，无需卸载。本地验证：`:app:assembleDebug` SUCCESSFUL + `testDebugUnitTest` SUCCESSFUL（317 tasks, 0 failures）。
 
@@ -19,10 +21,10 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **171c9a6** fix: 修复底栏遮盖内容 + 实现软件内 APK 下载安装（v0.9.14）（2026-07-31） |
-| 最新 Release | **v0.9.14**（2026-07-31 发布，debug 签名 fallback — Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.14 |
-| 编译验证 | **:app:assembleDebug + testDebugUnitTest SUCCESSFUL**（v0.9.14，317 tasks 0 failures） |
-| versionCode / versionName | **39 / "0.9.14"** |
+| 最新 commit | **当前待提交** fix: 修复子页面底部大块色块（v0.9.15）（2026-07-31） |
+| 最新 Release | **v0.9.15**（2026-07-31 发布，正式签名，可直接覆盖安装）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.15 |
+| 编译验证 | **:app:assembleDebug + testDebugUnitTest SUCCESSFUL**（v0.9.15，317 tasks 0 failures） |
+| versionCode / versionName | **40 / "0.9.15"** |
 | 知识点 | **935 个**（v2.16.0 补充 25 个核心知识点 kp_00911-kp_00935） |
 | 真题 | **485 道**（v0.7.6 已删除 sample_essay 冗余字段） |
 | 论述题 | **134 道 ESSAY 题**（v0.9.9 全覆盖填充 angle+notes，v0.9.10 全面审计 0 问题） |

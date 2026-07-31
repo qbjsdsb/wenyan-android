@@ -39,7 +39,11 @@ android {
         //   - 新增：file_paths.xml + OkHttp 依赖
         //   - UI 更新：UpdateCheckScreen 新增 Downloading/DownloadComplete 状态
         //   assembleDebug + 全模块 testDebugUnitTest 全绿）
-        versionCode = 39
+        // v0.9.15=40（修复子页面底部大块色块：
+        //   - 修复：COMPACT 布局 showNavigation=false 时不再添加 surfaceContainer 背景和底部 padding
+        //   - 子页面全屏内容，由各自的 ExpressiveScaffold 处理背景和系统 insets
+        //   - 编译：assembleDebug + 全模块 testDebugUnitTest 全绿（317 tasks, 0 failures））
+        versionCode = 40
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.7：知识卡片功能完善 + 界面审查修复（响应用户反馈"功能还是不够完善"）。
         //   数据一致性修复（B1/B2/B3）：
@@ -97,7 +101,7 @@ android {
         //     - Icons.AutoMirrored.Filled.Send 弃用修复（原 Icons.Filled.Send）
         //     - SocraticTutorTest/AiAssistantViewModelTest 接口提取后实例化修正
         //   本地验证：:app:assembleDebug + 全模块 testDebugUnitTest 全绿（471 tests, 0 failures）
-        versionName = "0.9.14"
+        versionName = "0.9.15"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

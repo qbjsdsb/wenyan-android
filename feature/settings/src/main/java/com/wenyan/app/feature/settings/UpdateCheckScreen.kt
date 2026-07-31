@@ -36,8 +36,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -82,7 +82,7 @@ fun UpdateCheckScreen(
         viewModel.checkForUpdate()
     }
 
-    Scaffold(
+    ExpressiveScaffold(
         topBar = {
             TopAppBar(
                 title = { Text("检查更新") },
