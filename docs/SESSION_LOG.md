@@ -5798,6 +5798,25 @@ WenyanNavItem("wrong_answer", "错题本", Icons.Default.ErrorOutline),
 - `:app:assembleDebug` BUILD SUCCESSFUL
 - 全模块 `testDebugUnitTest` BUILD SUCCESSFUL
 
+### 4. 底部大块色块修复（子页面底部 surfaceContainer 色块）
+
+**根因**：`WenyanAdaptiveNavigation` COMPACT 布局在有/无导航栏两种情况下都使用了相同的 `surfaceContainer` 背景 + `bottomPadding = 80dp + systemNavBarBottomDp`。进入子页面时（`showNavigation = false`），虽然导航栏和渐变遮罩被隐藏，但底部 80dp+ 区域仍然是纯 `surfaceContainer` 色块，造成"大面积的色块"视觉问题。
+
+**修复**：将 COMPACT 布局拆分为两个分支：
+- `showNavigation = true`（顶级 Tab）：保持不变——`surfaceContainer` 背景 + 80dp 底部 padding + 渐变遮罩 + 透明导航栏
+- `showNavigation = false`（子路由）：全屏内容——无强制背景色、无底部 padding，让子页面自己的 `ExpressiveScaffold` 处理背景和系统 insets。仅保留顶部 statusBar inset 避免被系统状态栏遮挡
+
+**涉及文件**：
+
+| 文件 | 操作 |
+|------|------|
+| `core/designsystem/.../WenyanAdaptiveNavigation.kt` | 修改：COMPACT 布局按 `showNavigation` 分支，子路由不添加底部色块 |
+
+### 本地验证
+
+- `:app:assembleDebug` BUILD SUCCESSFUL
+- 全模块 `testDebugUnitTest` BUILD SUCCESSFUL（317 tasks, 0 failures）
+
 ### 已知限制
 
 - **Exception E1**（CI 账单问题）：所有 Release APK 使用 debug 签名 fallback。软件内更新下载的 APK 仍为 debug 签名，需卸载后安装。CI 恢复后需：

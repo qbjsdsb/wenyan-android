@@ -71,36 +71,53 @@ fun WenyanAdaptiveNavigation(
                 val systemNavBarBottomDp = with(density) {
                     WindowInsets.navigationBars.only(WindowInsetsSides.Bottom).getBottom(density).toDp()
                 }
-                // 底部间距 = 导航栏高度(80dp) + 系统导航栏手势区
-                // 注意：IME 键盘不由底部间距处理（Scaffold 默认行为），
-                // 顶部内容区由 verticalScroll + imePadding 处理。
-                val bottomPadding = 80.dp + systemNavBarBottomDp
 
-                // 1. 内容区：surfaceContainer 背景 + 显式 padding
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceContainer)
-                        .padding(top = topInsetDp, bottom = bottomPadding),
-                ) {
-                    content(PaddingValues(0.dp))
-                }
-
-                // 2. 底部渐变遮罩（覆盖在内容之上，导航栏之下）
                 if (showNavigation) {
+                    // 有导航栏：沉浸式布局
+                    //
+                    // 布局结构（Box 叠加）：
+                    //   1. 内容区：surfaceContainer 背景，底部显式 padding 避开导航栏
+                    //   2. 渐变遮罩：底部 120dp 渐变，让内容平滑过渡
+                    //   3. 导航栏：透明背景，浮在最上层
+                    //
+                    // 底部间距 = 导航栏高度(80dp) + 系统导航栏手势区
+                    val bottomPadding = 80.dp + systemNavBarBottomDp
+
+                    // 1. 内容区：surfaceContainer 背景 + 显式 padding
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .padding(top = topInsetDp, bottom = bottomPadding),
+                    ) {
+                        content(PaddingValues(0.dp))
+                    }
+
+                    // 2. 底部渐变遮罩（覆盖在内容之上，导航栏之下）
                     Box(Modifier.align(Alignment.BottomCenter)) {
                         BottomGradientScrim()
                     }
-                }
 
-                // 3. 底部导航栏（透明背景，浮在最上层）
-                if (showNavigation) {
+                    // 3. 底部导航栏（透明背景，浮在最上层）
                     WenyanNavigationBar(
                         items = items,
                         currentRoute = currentRoute,
                         onNavigate = onNavigate,
                         modifier = Modifier.align(Alignment.BottomCenter),
                     )
+                } else {
+                    // 无导航栏（子路由）：内容全屏，不添加额外底部色块。
+                    //
+                    // 注意：不设置 background 也不添加 bottomPadding，
+                    // 子页面自己的 ExpressiveScaffold 会处理背景和系统 insets。
+                    // 仅保留顶部 statusBar inset 避免内容被系统状态栏遮挡。
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = topInsetDp),
+                    ) {
+                        content(PaddingValues(0.dp))
+                    }
                 }
             }
         }
