@@ -20,10 +20,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.InstallMobile
+import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Button
@@ -32,6 +33,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -56,12 +58,14 @@ import com.wenyan.app.feature.settings.BuildConfig
 /**
  * 检查更新页面。
  *
- * 5 种状态：
+ * 7 种状态：
  * - Idle：初始状态，显示"检查更新"按钮
  * - Checking：检查中，显示加载动画
  * - Latest：已是最新版本，显示绿色勾
  * - UpdateAvailable：新版本可用，显示版本信息和下载按钮
- * - Error：检查失败，显示错误信息和重试按钮
+ * - Downloading：下载中，显示进度条
+ * - DownloadComplete：下载完成，显示安装按钮
+ * - Error：检查/下载失败，显示错误信息和重试按钮
  *
  * 进入页面时自动触发检查（LaunchedEffect 仅执行一次）。
  */
@@ -125,7 +129,6 @@ fun UpdateCheckScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
-                        // App 图标区
                         Icon(
                             imageVector = Icons.Default.SystemUpdate,
                             contentDescription = null,
@@ -143,6 +146,15 @@ fun UpdateCheckScreen(
                             text = "当前版本 v${BuildConfig.VERSION_NAME}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        // 显示构建类型（debug/release），帮助用户理解签名差异
+                        Text(
+                            text = if (BuildConfig.DEBUG) "Debug 构建（仅开发测试）" else "Release 构建",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (BuildConfig.DEBUG)
+                                MaterialTheme.colorScheme.error
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -164,11 +176,23 @@ fun UpdateCheckScreen(
                         is UpdateUiState.UpdateAvailable -> UpdateAvailableContent(
                             latestVersion = state.latestVersion,
                             releaseNotes = state.releaseNotes,
-                            onDownload = { viewModel.openDownloadPage(state.downloadUrl) },
+                            // 软件内下载
+                            onDownload = viewModel::downloadAndInstallApk,
+                            // 备用：浏览器下载
+                            onOpenInBrowser = { viewModel.openDownloadPage(state.downloadUrl) },
+                        )
+                        is UpdateUiState.Downloading -> DownloadingContent(
+                            progress = state.progress,
+                        )
+                        is UpdateUiState.DownloadComplete -> DownloadCompleteContent(
+                            onInstall = { viewModel.downloadAndInstallApk() },
                         )
                         is UpdateUiState.Error -> ErrorContent(
                             message = state.message,
-                            onRetry = viewModel::checkForUpdate,
+                            onRetry = {
+                                viewModel.resetState()
+                                viewModel.checkForUpdate()
+                            },
                         )
                     }
                 }
@@ -262,6 +286,7 @@ private fun UpdateAvailableContent(
     latestVersion: String,
     releaseNotes: String,
     onDownload: () -> Unit,
+    onOpenInBrowser: () -> Unit,
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -328,18 +353,141 @@ private fun UpdateAvailableContent(
 
         Spacer(modifier = Modifier.height(Spacing.sm))
 
-        // 下载按钮
+        // 软件内更新按钮（主操作）
         Button(
             onClick = onDownload,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(
-                imageVector = Icons.Filled.OpenInBrowser,
+                imageVector = Icons.Default.CloudDownload,
+                contentDescription = null,
+                modifier = Modifier.size(ButtonDefaults.IconSize),
+            )
+            Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
+            Text("软件内更新")
+        }
+
+        // 浏览器下载（备用链接）
+        OutlinedButton(
+            onClick = onOpenInBrowser,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(
+                imageVector = Icons.Default.OpenInBrowser,
                 contentDescription = null,
                 modifier = Modifier.size(ButtonDefaults.IconSize),
             )
             Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
             Text("在浏览器中下载")
+        }
+    }
+}
+
+@Composable
+private fun DownloadingContent(progress: Int) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        TonalCard(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(Spacing.xl),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CloudDownload,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = "正在下载更新…",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+
+                // 进度条
+                LinearProgressIndicator(
+                    progress = { progress / 100f },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp),
+                )
+
+                // 进度百分比
+                Text(
+                    text = "$progress%",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+
+                Text(
+                    text = "下载完成后将自动安装，请勿离开此页面",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DownloadCompleteContent(onInstall: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        TonalCard(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(Spacing.xl),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = "下载完成！",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = "点击下方按钮开始安装",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+
+        Button(
+            onClick = onInstall,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(
+                imageVector = Icons.Default.InstallMobile,
+                contentDescription = null,
+                modifier = Modifier.size(ButtonDefaults.IconSize),
+            )
+            Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
+            Text("安装更新")
         }
     }
 }

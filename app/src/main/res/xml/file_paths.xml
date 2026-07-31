@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 文研App FileProvider 路径配置（软件内更新 APK 下载） -->
+<paths>
+    <!-- 下载的 APK 文件存储在 cache 目录下，安装后自动清理 -->
+    <cache-path name="downloaded_apk" path="apk/" />
+</paths>

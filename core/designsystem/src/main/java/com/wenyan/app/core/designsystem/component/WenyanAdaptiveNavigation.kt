@@ -9,8 +9,9 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
@@ -53,31 +54,46 @@ fun WenyanAdaptiveNavigation(
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
     when (windowSizeClass.windowWidthSizeClass) {
         WindowWidthSizeClass.COMPACT -> {
-            // 手机：沉浸式底部导航栏（v0.11 沉浸式改造）
-            // 使用 Box 叠加布局：内容全屏延伸至底部，NavigationBar 透明叠加在内容之上。
-            // 底部渐变遮罩让内容在导航栏区域平滑过渡到背景色，避免被截断感。
+            // 手机：沉浸式底部导航栏（v0.9.13 沉浸式改造，v0.9.14 修复底栏遮盖）
+            //
+            // 布局结构（Box 叠加）：
+            //   1. 内容区：surfaceContainer 背景，底部显式 padding 避开导航栏
+            //   2. 渐变遮罩：底部 120dp 渐变，让内容平滑过渡
+            //   3. 导航栏：透明背景，浮在最上层
+            //
+            // 关键修复：不再依赖 ExpressiveScaffold 的 contentWindowInsets 消费策略，
+            // 直接用 Modifier.padding 为内容添加底部间距，确保可点击区域不被导航栏遮挡。
             Box(modifier = modifier.fillMaxSize()) {
                 val density = LocalDensity.current
-                val topInset = WindowInsets.statusBars.only(WindowInsetsSides.Top).getTop(density)
-                val bottomInset = WindowInsets.ime.getBottom(density)
-                ExpressiveScaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    // 只保留状态栏顶部 + IME 底部间距，不消费底部导航栏 insets，
-                    // 让内容延伸到导航栏后面，实现沉浸效果。
-                    // 使用 WindowInsets(top, bottom) 构造避免 + 操作符（部分 Compose 版本不可用）。
-                    contentWindowInsets = WindowInsets(top = topInset, bottom = bottomInset),
-                ) { padding ->
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        content(padding)
-                        // 底部渐变遮罩（带对齐，作用在父 Box 内）
-                        if (showNavigation) {
-                            Box(Modifier.align(Alignment.BottomCenter)) {
-                                BottomGradientScrim()
-                            }
-                        }
+                val topInsetDp = with(density) {
+                    WindowInsets.statusBars.only(WindowInsetsSides.Top).getTop(density).toDp()
+                }
+                val systemNavBarBottomDp = with(density) {
+                    WindowInsets.navigationBars.only(WindowInsetsSides.Bottom).getBottom(density).toDp()
+                }
+                // 底部间距 = 导航栏高度(80dp) + 系统导航栏手势区
+                // 注意：IME 键盘不由底部间距处理（Scaffold 默认行为），
+                // 顶部内容区由 verticalScroll + imePadding 处理。
+                val bottomPadding = 80.dp + systemNavBarBottomDp
+
+                // 1. 内容区：surfaceContainer 背景 + 显式 padding
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
+                        .padding(top = topInsetDp, bottom = bottomPadding),
+                ) {
+                    content(PaddingValues(0.dp))
+                }
+
+                // 2. 底部渐变遮罩（覆盖在内容之上，导航栏之下）
+                if (showNavigation) {
+                    Box(Modifier.align(Alignment.BottomCenter)) {
+                        BottomGradientScrim()
                     }
                 }
-                // 底部导航栏叠加层：透明背景，浮在内容之上
+
+                // 3. 底部导航栏（透明背景，浮在最上层）
                 if (showNavigation) {
                     WenyanNavigationBar(
                         items = items,

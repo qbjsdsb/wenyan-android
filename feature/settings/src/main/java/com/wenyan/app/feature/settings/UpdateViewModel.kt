@@ -3,6 +3,7 @@ package com.wenyan.app.feature.settings
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.repository.UpdateCheckResult
@@ -10,21 +11,30 @@ import com.wenyan.app.core.data.repository.UpdateRepository
 import com.wenyan.app.feature.settings.BuildConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.io.File
+import java.io.FileOutputStream
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 /**
  * 检查更新 ViewModel。
  *
- * 管理 5 种 UI 状态：
+ * 管理 7 种 UI 状态：
  * - Idle：初始状态，用户尚未触发检查
  * - Checking：检查中，防重复点击
  * - Latest：已是最新版本
  * - UpdateAvailable：新版本可用，携带版本号/下载链接/更新说明
- * - Error：检查失败，携带错误信息
+ * - Downloading：下载中，携带进度（0-100）
+ * - DownloadComplete：下载完成，准备安装
+ * - Error：检查/下载失败，携带错误信息
  */
 sealed class UpdateUiState {
     data object Idle : UpdateUiState()
@@ -35,6 +45,12 @@ sealed class UpdateUiState {
         val downloadUrl: String,
         val releaseNotes: String,
     ) : UpdateUiState()
+
+    /** 下载中，progress 为 0-100 整数百分比 */
+    data class Downloading(val progress: Int) : UpdateUiState()
+
+    /** 下载完成，准备安装 */
+    data class DownloadComplete(val apkFile: File) : UpdateUiState()
 
     data class Error(val message: String) : UpdateUiState()
 }
@@ -48,8 +64,22 @@ class UpdateViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<UpdateUiState>(UpdateUiState.Idle)
     val uiState: StateFlow<UpdateUiState> = _uiState.asStateFlow()
 
-    /** 防重入锁 */
+    /** 检查更新防重入锁 */
     private var isChecking = false
+
+    /** 下载防重入锁 */
+    private var isDownloading = false
+
+    /** 下载 URL（在 UpdateAvailable 时保存，供下载用） */
+    private var pendingDownloadUrl: String = ""
+
+    /** OkHttp 客户端（超时 30s，流式下载） */
+    private val okHttpClient = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .build()
 
     /**
      * 检查更新。
@@ -71,12 +101,14 @@ class UpdateViewModel @Inject constructor(
                 _uiState.value = when (result) {
                     is UpdateCheckResult.Latest ->
                         UpdateUiState.Latest(currentVersion = result.currentVersion)
-                    is UpdateCheckResult.UpdateAvailable ->
+                    is UpdateCheckResult.UpdateAvailable -> {
+                        pendingDownloadUrl = result.downloadUrl
                         UpdateUiState.UpdateAvailable(
                             latestVersion = result.latestVersion,
                             downloadUrl = result.downloadUrl,
                             releaseNotes = result.releaseNotes,
                         )
+                    }
                     is UpdateCheckResult.Error ->
                         UpdateUiState.Error(message = result.message)
                 }
@@ -91,12 +123,149 @@ class UpdateViewModel @Inject constructor(
     }
 
     /**
-     * 在浏览器中打开下载页面。
+     * 软件内下载并安装 APK。
+     *
+     * 使用 OkHttp 流式下载到 cache 目录，下载完成后自动弹出安装界面。
+     * 防重入：下载中再次调用直接返回。
+     */
+    fun downloadAndInstallApk() {
+        if (isDownloading) return
+        if (pendingDownloadUrl.isBlank()) return
+
+        isDownloading = true
+        _uiState.value = UpdateUiState.Downloading(progress = 0)
+
+        viewModelScope.launch {
+            try {
+                val file = withContext(Dispatchers.IO) {
+                    downloadApk(pendingDownloadUrl)
+                }
+                _uiState.value = UpdateUiState.DownloadComplete(apkFile = file)
+                // 下载完成后自动触发安装
+                installApk(file)
+            } catch (e: Exception) {
+                val message = when {
+                    e.message?.contains("Unable to resolve host") == true ||
+                        e.message?.contains("Failed to connect") == true ||
+                        e.message?.contains("timeout", ignoreCase = true) == true ->
+                        "下载失败，请检查网络后重试"
+
+                    e.message?.contains("403") == true ->
+                        "下载被拒绝，请稍后再试"
+
+                    e.message?.contains("No space left") == true ->
+                        "存储空间不足，请清理后重试"
+
+                    else -> "下载失败：${e.message ?: "未知错误"}"
+                }
+                _uiState.value = UpdateUiState.Error(message = message)
+            } finally {
+                isDownloading = false
+            }
+        }
+    }
+
+    /**
+     * 使用 OkHttp 下载 APK 到缓存目录。
+     *
+     * @param url APK 下载 URL
+     * @return 下载完成的 File 对象
+     */
+    @Throws(Exception::class)
+    private fun downloadApk(url: String): File {
+        // 确保缓存目录存在
+        val cacheDir = File(context.cacheDir, "apk")
+        if (!cacheDir.exists()) cacheDir.mkdirs()
+
+        // 清理旧文件
+        cacheDir.listFiles()?.forEach { it.delete() }
+
+        val file = File(cacheDir, "wenyan-update.apk")
+
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", "Wenyan-Android-App")
+            .build()
+
+        val response = okHttpClient.newCall(request).execute()
+        if (!response.isSuccessful) {
+            throw RuntimeException("HTTP ${response.code}")
+        }
+
+        val body = response.body ?: throw RuntimeException("响应体为空")
+        val contentLength = body.contentLength()
+        val inputStream = body.byteStream()
+
+        FileOutputStream(file).use { outputStream ->
+            val buffer = ByteArray(8192)
+            var bytesRead: Int
+            var totalBytesRead = 0L
+            var lastProgress = -1
+
+            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                outputStream.write(buffer, 0, bytesRead)
+                totalBytesRead += bytesRead
+
+                // 更新进度（仅在有 Content-Length 时）
+                if (contentLength > 0) {
+                    val progress = ((totalBytesRead * 100) / contentLength).toInt()
+                    if (progress != lastProgress) {
+                        lastProgress = progress
+                        _uiState.value = UpdateUiState.Downloading(progress = progress)
+                    }
+                }
+            }
+            outputStream.flush()
+        }
+
+        return file
+    }
+
+    /**
+     * 通过系统安装器安装 APK。
+     *
+     * 使用 FileProvider 提供文件 URI，避免 file:// URI 导出限制（Android 7+）。
+     */
+    private fun installApk(file: File) {
+        val apkUri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file,
+        )
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(apkUri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(intent)
+    }
+
+    /**
+     * 在浏览器中打开下载页面（备用方案）。
      */
     fun openDownloadPage(url: String) {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(intent)
+    }
+
+    /**
+     * 重置到初始状态（用于错误后重试）。
+     */
+    fun resetState() {
+        _uiState.value = UpdateUiState.Idle
+        pendingDownloadUrl = ""
+        isChecking = false
+        isDownloading = false
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // 清理下载的 APK 文件
+        val cacheDir = File(context.cacheDir, "apk")
+        if (cacheDir.exists()) {
+            cacheDir.listFiles()?.forEach { it.delete() }
+        }
     }
 }
