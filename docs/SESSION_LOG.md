@@ -5390,6 +5390,20 @@ WenyanNavItem("wrong_answer", "错题本", Icons.Default.ErrorOutline),
 4. **EssayEntryCard 双入口设计**：知识点 Tab 顶部入口（浏览全部论述题）+ 知识点详情页底部"相关论述题"区块（从特定知识点跳转关联论述题），形成完整浏览路径
 5. **状态独立 StateFlow**：selectedYear/selectedSubjectId/onlyWithAngle 独立于 uiState，error/loading 态下也可切换筛选（与 KnowledgeViewModel.selectedCategory 解耦策略一致）
 
+### 审查修复（Phase 2 后静态审查）
+
+对论述题板块 11 个文件做静态审查，修复 2 项问题：
+
+| 问题 | 文件 | 修复 |
+|------|------|------|
+| parseEssayAngle/parseEssayNotes 静默吞异常无日志（与 EssayDetailViewModel KDoc 声明"Timber.w 日志"不符，且与 v0.9.7 M9 修复模式不一致——静默失败不利于排查 seed_data.json 格式错误） | EssayDetailModels.kt | 两处 catch 块加 `Timber.w(e, "...failed: json=%s", json.take(200))` |
+| 私有 `Surface` 包装函数冗余（只包装 `androidx.compose.material3.Surface` 无附加逻辑，过度封装） | EssayDetailScreen.kt | 删除私有函数，Preview 改用全限定名 `androidx.compose.material3.Surface`（与 EssayListScreen 一致） |
+
+**已知限制（评估后不修，记录备查）**：
+- EssayListViewModel.retry 不设 isLoading=true（架构限制：stateIn 无 setter，combine 重建 < 50ms 实际影响小；EssayDetailViewModel 用 _uiState+collect 架构故能即时显示 loading）
+- Preview 覆盖不足（EssayListScreen 1 个 Light、EssayDetailScreen 1 个 Light，功能不影响）
+- 导航栈潜在膨胀（复用既有 quizDestination 的 popUpTo 模式，非新引入）
+
 ### 交接
 
 - **00-STATUS.md**：v0.9.8 描述已追加 Phase 2 + 测试数 452→469 + 新会话首要任务已更新

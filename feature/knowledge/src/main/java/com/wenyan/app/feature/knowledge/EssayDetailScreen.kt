@@ -628,7 +628,7 @@ private fun LabeledText(
 @Composable
 private fun EssayDetailLightPreview() {
     WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT, dynamicColor = false)) {
-        Surface {
+        androidx.compose.material3.Surface {
             Column(
                 modifier = Modifier.padding(Spacing.lg),
                 verticalArrangement = Arrangement.spacedBy(Spacing.lg),
@@ -638,9 +638,4 @@ private fun EssayDetailLightPreview() {
             }
         }
     }
-}
-
-@Composable
-private fun Surface(content: @Composable () -> Unit) {
-    androidx.compose.material3.Surface { content() }
 }

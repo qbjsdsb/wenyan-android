@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import timber.log.Timber
 
 /**
  * 论述题审题思路解析模型（v0.9.8 新增）。
@@ -188,12 +189,17 @@ private val essayJson = Json { ignoreUnknownKeys = true }
  *
  * 解析失败时返回 null（UI 隐藏审题思路区块），
  * 不抛异常（JSON 格式错误不应崩溃）。
+ *
+ * v0.9.8 审查修复：补 Timber.w 日志（原静默吞异常，与 EssayDetailViewModel KDoc
+ * 声明的"Timber.w 日志"不符，且与 v0.9.7 M9 修复模式一致——静默失败不利于排查
+ * seed_data.json 格式错误）。
  */
 internal fun parseEssayAngle(json: String?): EssayAngle? {
     if (json.isNullOrBlank()) return null
     return try {
         essayJson.decodeFromString<EssayAngle>(json)
     } catch (e: Exception) {
+        Timber.w(e, "parseEssayAngle failed: json=%s", json.take(200))
         null
     }
 }
@@ -202,13 +208,14 @@ internal fun parseEssayAngle(json: String?): EssayAngle? {
  * 安全解析 notes JSON（v0.9.8 新增）。
  *
  * 解析失败时返回 null（UI 隐藏依据区块），
- * 不抛异常。
+ * 不抛异常。日志策略同 [parseEssayAngle]。
  */
 internal fun parseEssayNotes(json: String?): EssayNotes? {
     if (json.isNullOrBlank()) return null
     return try {
         essayJson.decodeFromString<EssayNotes>(json)
     } catch (e: Exception) {
+        Timber.w(e, "parseEssayNotes failed: json=%s", json.take(200))
         null
     }
 }
