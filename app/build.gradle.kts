@@ -28,7 +28,11 @@ android {
         // v0.9.12=37（修复检查更新 NetworkOnMainThreadException + 新增 api.github.com
         //   访问失败时降级到 github.com 重定向备用方案 + 超时 10s→8s 提速。
         //   本地验证：assembleDebug + testDebugUnitTest 全绿）
-        versionCode = 37
+        // v0.9.13=38（沉浸式底部导航栏：COMPACT 模式 Box 叠加布局 + NavigationBar 透明 +
+        //   BottomGradientScrim 120dp 渐变遮罩 + contentWindowInsets 仅状态栏顶+IME 底。
+        //   5 文件修改：WenyanAdaptiveNavigation/WenyanNavigationBar/ExpressiveScaffold +
+        //   gradle 依赖。480 tests 全绿）
+        versionCode = 38
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.7：知识卡片功能完善 + 界面审查修复（响应用户反馈"功能还是不够完善"）。
         //   数据一致性修复（B1/B2/B3）：
@@ -86,7 +90,7 @@ android {
         //     - Icons.AutoMirrored.Filled.Send 弃用修复（原 Icons.Filled.Send）
         //     - SocraticTutorTest/AiAssistantViewModelTest 接口提取后实例化修正
         //   本地验证：:app:assembleDebug + 全模块 testDebugUnitTest 全绿（471 tests, 0 failures）
-        versionName = "0.9.12"
+        versionName = "0.9.13"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
