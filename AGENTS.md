@@ -155,7 +155,7 @@ tools/                           # Python 管线脚本
 
 **✅ v0.9.4 错题本接入 FSRS 间隔重复调度（已发布）** — 为 wrong_answers 表添加 10 个 sched_* FSRS 调度字段，复用 FSRS-6 算法 + TIER_FRAMEWORK 档位（R_target=0.90），实现错题的间隔重复复习。5 层实现：数据层（Migration 7→8 + 10 字段 + 索引）+ 映射层（WrongAnswerSchedulingMapper）+ 仓库层（SchedulingRepository.rateWrongAnswer）+ ViewModel 层（DUE 过滤 + 评分委托 + ClockGuard 注入）+ UI 层（四档评分按钮 + 调度信息展示）。Follow-up #1 ClockGuard 注入 + #2 interval coerceAtLeast(0) 已修复。+10 单测。agent-pr-review ✅ Approved（0 blocker, 0 must-fix）。Release v0.9.4 已发布（debug 签名 fallback — Exception E1）。
 
-- 最新 commit：（待 commit 后填入）
+- 最新 commit：**a62f181** fix(essay): 论述题板块审查修复 — JSON 解析日志 + 私有 Surface 包装冗余（2026-07-31）
 - 最新 Release：**v0.9.6**（2026-07-31 发布，debug 签名 fallback — Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.6
 - 本地验证（2026-07-31 v0.9.8 phase2）：`:app:assembleDebug` + 全模块 `testDebugUnitTest` 全绿（469 tests, 0 failures）
 - versionCode / versionName：**33 / "0.9.8"**
