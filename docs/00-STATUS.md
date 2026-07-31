@@ -5,7 +5,7 @@
 
 ## ✅ 当前状态
 
-**v0.9.14 修复底栏遮盖 + 软件内更新（已发布 2026-07-31）** — 响应用户反馈"底栏遮盖了可以点击的地方，更新为什么不能软件内更新，还要去浏览器，而且下的是debug版本，而且只能卸载重装，为什么有这么多问题"。修复 v0.9.13 沉浸式导航栏导致的底栏遮盖可点击区域问题：COMPACT 布局改用 Box + 显式 padding（80dp 导航栏高度 + 系统手势区），不再依赖 Scaffold contentWindowInsets 消费策略。实现软件内 APK 下载+安装：UpdateViewModel 新增 OkHttp 流式下载 + FileProvider 安装 + 2 种新 UI 状态（Downloading/DownloadComplete），UpdateCheckScreen 新增进度条和安装按钮。AndroidManifest 新增 REQUEST_INSTALL_PACKAGES + FileProvider。新增 file_paths.xml。OkHttp 依赖。本地验证：`:app:assembleDebug` SUCCESSFUL + `testDebugUnitTest` SUCCESSFUL（317 tasks, 0 failures）。**已知限制**：所有 Release APK 仍使用 debug 签名 fallback（Exception E1 CI 账单问题），软件内更新下载的 APK 仍为 debug 签名，需卸载后安装。CI 恢复后可生成正式签名 APK 实现无缝更新。
+**v0.9.14 修复底栏遮盖 + 软件内更新（已发布 2026-07-31）** — 响应用户反馈"底栏遮盖了可以点击的地方，更新为什么不能软件内更新，还要去浏览器，而且下的是debug版本，而且只能卸载重装，为什么有这么多问题"。修复 v0.9.13 沉浸式导航栏导致的底栏遮盖可点击区域问题：COMPACT 布局改用 Box + 显式 padding（80dp 导航栏高度 + 系统手势区），不再依赖 Scaffold contentWindowInsets 消费策略。实现软件内 APK 下载+安装：UpdateViewModel 新增 OkHttp 流式下载 + FileProvider 安装 + 2 种新 UI 状态（Downloading/DownloadComplete），UpdateCheckScreen 新增进度条和安装按钮。AndroidManifest 新增 REQUEST_INSTALL_PACKAGES + FileProvider。新增 file_paths.xml。OkHttp 依赖。**重要更正**：CI Release workflow 运行正常，keystore 已配置，本次 Release 为正式签名 APK（19.5 MB），可直接覆盖安装旧版，无需卸载。本地验证：`:app:assembleDebug` SUCCESSFUL + `testDebugUnitTest` SUCCESSFUL（317 tasks, 0 failures）。
 
 **v2.16.0 知识点补充（论述题 knowledgeGaps 完整化，已 commit c951b2e）** — 响应用户需求"可以的，你帮我补充一下知识点，然后整体严谨检查一下，一定要仔细严谨，不要出问题，包括我的考研要学习的内容"。补充论述题 knowledgeGaps 字段明确建议的 25 个核心知识点（kp_00911-kp_00935），对齐袁行霈/钱理群/朱维之/童庆炳四教材，并清理 eq_0100 OCR 错误条目。学科分布：古代4（王勃/江淹/唐传奇/清初才子佳人小说）/现当代8（戴望舒/穆时英/萧红/路遥/钱钟书围城/陈忠实/宋晓贤/陆蠡）/外国6（乔伊斯/伍尔夫/劳伦斯/王尔德/简·奥斯汀/陀思妥耶夫斯基罪与罚）/文论7（列宁论托尔斯泰/刘勰文心雕龙/姚斯接受美学/布洛心理距离/康德美学/罗兰·巴特/莱辛拉奥孔）。新增 `tools/essay_fill/fill_missing_knowledge_points.py`（542 行生成脚本）。seed_data.json 2.15.0→2.16.0，知识点库 910→935 完整化。严谨检查：85 个 knowledgeGaps 关键词全部匹配到知识点（0 真正缺失），OCR 错误条目已清理，新增知识点结构规范（study_text 平均 622 字符），关联派生模拟 16/134 论述题关联新增知识点。本地验证：`:app:assembleDebug` SUCCESSFUL + `:core:data:testDebugUnitTest` SeedDataLoaderTest 21 tests 0 failures（--rerun-tasks 强制重跑）。**agent-pr-review ✅ READY TO MERGE**（0 blocker, 0 must-fix, 1 follow-up）。Receipt：[docs/release-receipts/v2.16.0-knowledge-supplement-pr-review.md](release-receipts/v2.16.0-knowledge-supplement-pr-review.md)。
 
@@ -39,7 +39,7 @@
 | 启动图标 | **v3 "印章文"**（米色印面 + 墨黑"文"字 + 圆角 12dp + monochrome 适配） |
 | 日志门面 | **Logging.kt**（Timber 封装，Debug=Logcat / Release=WARN+ERROR） |
 | 工具链锁定 | **mise.toml**（JDK 17.0.2 + Gradle 8.14.4） |
-| 阻塞 | **CI 账单问题** — 需用户处理，不影响 Release（debug 签名可用） |
+| 阻塞 | **无** — CI Release workflow 正常运行，keystore 已配置 |
 | 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-31 v0.9.14 修复底栏遮盖 + 软件内更新） |
 
 ## 🚨 新会话首要任务
@@ -49,8 +49,7 @@
 下一步优先级（按顺序）：
 
 1. **P0**：emulator 实测 v0.9.14 — 验证：①底部导航栏不遮挡可点击区域 ②软件内更新下载进度条显示正常 ③下载完成后自动弹出安装界面 ④各 Tab 页面正常显示
-2. **P0**：**解决 GitHub Actions 账单问题** — 这是所有问题的根源。配置 `KEYSTORE_BASE64` / `KEYSTORE_PASSWORD` / `KEY_ALIAS` / `KEY_PASSWORD` 四个 Secrets 后，Release APK 将被正式签名，实现：①软件内更新无缝安装（无需卸载重装）②所有旧版本 APK 可替换为正式签名版本
-5. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
+2. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
 6. **P1 Phase 2 剩余维度审计**：
    - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）
    - 2.L：错误处理一致性 + 日志规范（sealed AppError + Timber + Snackbar 统一） — v0.8.18 已完成 Timber 引入，剩 sealed AppError + Snackbar 统一
