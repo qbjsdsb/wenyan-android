@@ -2,8 +2,10 @@ package com.wenyan.app.core.data.repository
 
 import app.cash.turbine.test
 import com.wenyan.app.core.database.dao.DataSourceDao
+import com.wenyan.app.core.database.dao.ExamQuestionDao
 import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.entity.DataSourceEntity
+import com.wenyan.app.core.database.entity.ExamQuestionEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import kotlinx.coroutines.Dispatchers
@@ -46,6 +48,7 @@ class KnowledgeRepositoryTest {
 
     private lateinit var knowledgePointDao: FakeKpDao
     private lateinit var dataSourceDao: FakeDsDao
+    private lateinit var examQuestionDao: FakeExamQuestionDao
     private lateinit var repository: KnowledgeRepository
 
     @Before
@@ -54,7 +57,8 @@ class KnowledgeRepositoryTest {
 
         knowledgePointDao = FakeKpDao()
         dataSourceDao = FakeDsDao()
-        repository = KnowledgeRepository(knowledgePointDao, dataSourceDao)
+        examQuestionDao = FakeExamQuestionDao()
+        repository = KnowledgeRepository(knowledgePointDao, dataSourceDao, examQuestionDao)
 
         advanceUntilIdle()
     }
@@ -196,6 +200,173 @@ class KnowledgeRepositoryTest {
             // 三组 ID 都为空时,不调用 getByIds(短路返回 detail)
             assertEquals(0, knowledgePointDao.getByIdsCalls.size)
         }
+    }
+
+    // ── observeRelatedEssays (v0.9.8 新增) ─────────────────────
+
+    /**
+     * v0.9.8: observeRelatedEssays 内存过滤 — 仅返回 relatedPointIds 包含 pointId 的论述题。
+     *
+     * 验证要点:
+     * - 包含目标 pointId 的题目进入结果
+     * - 不包含的题目被过滤
+     * - relatedPointIds 为 null 的题目被过滤(避免 NPE)
+     */
+    @Test
+    fun observeRelatedEssays_filtersByPointId() = runTest(testDispatcher) {
+        examQuestionDao.setEssays(
+            listOf(
+                makeEssay(id = "eq_1", year = 2020, relatedPointIds = listOf("kp_main", "kp_other")),
+                makeEssay(id = "eq_2", year = 2019, relatedPointIds = listOf("kp_other")),
+                makeEssay(id = "eq_3", year = 2018, relatedPointIds = null),
+                makeEssay(id = "eq_4", year = 2021, relatedPointIds = listOf("kp_main")),
+            ),
+        )
+
+        repository.observeRelatedEssays("kp_main").test {
+            advanceUntilIdle()
+            val result = awaitItem()
+            // 仅 eq_1 和 eq_4 包含 kp_main，按年份倒序 eq_4(2021) 在 eq_1(2020) 前
+            assertEquals(2, result.size)
+            assertEquals("eq_4", result[0].id)
+            assertEquals("eq_1", result[1].id)
+        }
+    }
+
+    @Test
+    fun observeRelatedEssays_noMatches_returnsEmpty() = runTest(testDispatcher) {
+        examQuestionDao.setEssays(
+            listOf(
+                makeEssay(id = "eq_1", relatedPointIds = listOf("kp_other")),
+                makeEssay(id = "eq_2", relatedPointIds = null),
+            ),
+        )
+
+        repository.observeRelatedEssays("kp_main").test {
+            advanceUntilIdle()
+            val result = awaitItem()
+            assertTrue(result.isEmpty())
+        }
+    }
+
+    @Test
+    fun observeRelatedEssays_emptyDao_returnsEmpty() = runTest(testDispatcher) {
+        examQuestionDao.setEssays(emptyList())
+
+        repository.observeRelatedEssays("kp_main").test {
+            advanceUntilIdle()
+            val result = awaitItem()
+            assertTrue(result.isEmpty())
+        }
+    }
+
+    /**
+     * 验证 SQL LIKE 误匹配的规避:kp_1 不应匹配 kp_10/kp_100。
+     *
+     * 这是内存过滤而非 SQL LIKE 的核心动机(见 DAO 注释)。
+     */
+    @Test
+    fun observeRelatedEssays_exactMatch_kp1DoesNotMatchKp10() = runTest(testDispatcher) {
+        examQuestionDao.setEssays(
+            listOf(
+                makeEssay(id = "eq_1", relatedPointIds = listOf("kp_1")),
+                makeEssay(id = "eq_2", relatedPointIds = listOf("kp_10")),
+                makeEssay(id = "eq_3", relatedPointIds = listOf("kp_100")),
+            ),
+        )
+
+        repository.observeRelatedEssays("kp_1").test {
+            advanceUntilIdle()
+            val result = awaitItem()
+            // 仅 eq_1 精确匹配 kp_1，SQL LIKE '%kp_1%' 会误匹配全部 3 个
+            assertEquals(1, result.size)
+            assertEquals("eq_1", result[0].id)
+        }
+    }
+
+    // ── observeEssayById (v0.9.8 新增) ────────────────────────
+
+    @Test
+    fun observeEssayById_exists_returnsEssay() = runTest(testDispatcher) {
+        val essay = makeEssay(id = "eq_0038", year = 2008, score = 25)
+        examQuestionDao.setEssays(listOf(essay))
+
+        repository.observeEssayById("eq_0038").test {
+            advanceUntilIdle()
+            val result = awaitItem()
+            assertNotNull(result)
+            assertEquals("eq_0038", result?.id)
+            assertEquals(2008, result?.year)
+        }
+    }
+
+    @Test
+    fun observeEssayById_notExists_returnsNull() = runTest(testDispatcher) {
+        examQuestionDao.setEssays(emptyList())
+
+        repository.observeEssayById("ghost").test {
+            advanceUntilIdle()
+            assertNull(awaitItem())
+        }
+    }
+
+    // ── getKnowledgePointsByIds (v0.9.8 新增) ─────────────────
+
+    @Test
+    fun getKnowledgePointsByIds_emptyInput_returnsEmpty() = runTest(testDispatcher) {
+        val result = repository.getKnowledgePointsByIds(emptyList())
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun getKnowledgePointsByIds_allExist_preservesOrder() = runTest(testDispatcher) {
+        knowledgePointDao.setPoints(
+            mapOf(
+                "kp_a" to makePoint(id = "kp_a", title = "A"),
+                "kp_b" to makePoint(id = "kp_b", title = "B"),
+                "kp_c" to makePoint(id = "kp_c", title = "C"),
+            ),
+        )
+
+        // 入参顺序与 map 顺序不同，验证结果保留入参顺序
+        val result = repository.getKnowledgePointsByIds(listOf("kp_c", "kp_a", "kp_b"))
+        assertEquals(3, result.size)
+        assertEquals("kp_c", result[0].id)
+        assertEquals("kp_a", result[1].id)
+        assertEquals("kp_b", result[2].id)
+    }
+
+    @Test
+    fun getKnowledgePointsByIds_partialExist_filtersMissing() = runTest(testDispatcher) {
+        knowledgePointDao.setPoints(
+            mapOf(
+                "kp_a" to makePoint(id = "kp_a", title = "A"),
+                "kp_c" to makePoint(id = "kp_c", title = "C"),
+            ),
+        )
+
+        val result = repository.getKnowledgePointsByIds(listOf("kp_a", "kp_ghost", "kp_c"))
+        // kp_ghost 不存在被过滤
+        assertEquals(2, result.size)
+        assertEquals("kp_a", result[0].id)
+        assertEquals("kp_c", result[1].id)
+    }
+
+    /**
+     * 验证去重:同一 ID 在入参中出现多次时，结果中也只出现一次，
+     * 且调用 DAO 时传入去重后的列表。
+     */
+    @Test
+    fun getKnowledgePointsByIds_deduplicatesIds() = runTest(testDispatcher) {
+        knowledgePointDao.setPoints(
+            mapOf("kp_a" to makePoint(id = "kp_a", title = "A")),
+        )
+
+        val result = repository.getKnowledgePointsByIds(listOf("kp_a", "kp_a", "kp_a"))
+        assertEquals(1, result.size)
+        // DAO 收到去重后的列表(只调用一次 getByIds)
+        assertEquals(1, knowledgePointDao.getByIdsCalls.size)
+        assertEquals(listOf("kp_a"), knowledgePointDao.getByIdsCalls.last())
     }
 
     // ── escapeLikeWildcards ───────────────────────────────────
@@ -385,6 +556,41 @@ class KnowledgeRepositoryTest {
         ocrStatus = "VERIFIED",
         createdAt = System.currentTimeMillis(),
     )
+
+    /**
+     * 构造测试用论述题(v0.9.8 新增)。
+     *
+     * 默认为 ESSAY 题型,year=2020, score=20, relatedPointIds=null,
+     * 可通过参数覆盖。
+     */
+    private fun makeEssay(
+        id: String = "eq_test",
+        year: Int = 2020,
+        subjectId: String = "subj_xd",
+        content: String = "测试论述题内容",
+        score: Int = 20,
+        relatedPointIds: List<String>? = null,
+        angle: String? = null,
+        notes: String? = null,
+        answerFramework: String? = null,
+    ) = ExamQuestionEntity(
+        id = id,
+        year = year,
+        subjectId = subjectId,
+        questionType = "ESSAY",
+        content = content,
+        score = score,
+        angle = angle,
+        relatedPointIds = relatedPointIds,
+        answerFramework = answerFramework,
+        notes = notes,
+        createdAt = System.currentTimeMillis(),
+        examPaperCode = null,
+        answerStatus = null,
+        materialText = null,
+        sourceFile = null,
+        sourcePage = null,
+    )
 }
 
 /**
@@ -516,4 +722,74 @@ private class FakeDsDao(
         throw UnsupportedOperationException()
 
     override fun observeAll(): Flow<List<DataSourceEntity>> = throw UnsupportedOperationException()
+}
+
+/**
+ * [ExamQuestionDao] 的 Fake 实现(v0.9.8 新增)。
+ *
+ * 仅 stub [KnowledgeRepository] 论述题板块用到的方法:
+ * - [observeAllEssays]:返回注入的论述题列表(供 observeRelatedEssays 内存过滤)
+ * - [observeById]:按 ID 查找(供 observeEssayById)
+ *
+ * 其他方法抛 [UnsupportedOperationException],避免静默返回错误默认值。
+ *
+ * 通过 [setEssays] 可控注入论述题数据,支持知识点关联 + 单题查询场景测试。
+ */
+private class FakeExamQuestionDao(
+    initialEssays: List<ExamQuestionEntity> = emptyList(),
+) : ExamQuestionDao {
+
+    private val _essays = MutableStateFlow(initialEssays)
+
+    /** 设置论述题列表(覆盖) */
+    fun setEssays(essays: List<ExamQuestionEntity>) {
+        _essays.value = essays
+    }
+
+    override suspend fun insert(entity: ExamQuestionEntity) =
+        throw UnsupportedOperationException()
+
+    override suspend fun insertAll(entities: List<ExamQuestionEntity>) =
+        throw UnsupportedOperationException()
+
+    override suspend fun update(entity: ExamQuestionEntity) =
+        throw UnsupportedOperationException()
+
+    override suspend fun deleteById(id: String) =
+        throw UnsupportedOperationException()
+
+    override suspend fun getById(id: String): ExamQuestionEntity? =
+        _essays.value.firstOrNull { it.id == id }
+
+    override fun observeById(id: String): Flow<ExamQuestionEntity?> =
+        _essays.map { essays -> essays.firstOrNull { it.id == id } }
+
+    override fun observeBySubject(subjectId: String): Flow<List<ExamQuestionEntity>> =
+        throw UnsupportedOperationException()
+
+    override fun observeByYear(year: Int): Flow<List<ExamQuestionEntity>> =
+        throw UnsupportedOperationException()
+
+    override fun observeByQuestionType(type: String): Flow<List<ExamQuestionEntity>> =
+        throw UnsupportedOperationException()
+
+    /**
+     * 返回注入的全部 ESSAY 题(生产按 year DESC 排序,测试中也保持该顺序)。
+     *
+     * 测试通过 [setEssays] 注入时自行按年份倒序,与生产 SQL ORDER BY year DESC 一致。
+     */
+    override fun observeAllEssays(): Flow<List<ExamQuestionEntity>> =
+        _essays.map { it.sortedByDescending { e -> e.year } }
+
+    override fun observeByExamPaperCode(code: String): Flow<List<ExamQuestionEntity>> =
+        throw UnsupportedOperationException()
+
+    override fun observeByAnswerStatus(status: String): Flow<List<ExamQuestionEntity>> =
+        throw UnsupportedOperationException()
+
+    override fun observeYears(): Flow<List<Int>> =
+        throw UnsupportedOperationException()
+
+    override suspend fun countBySubject(subjectId: String): Int =
+        throw UnsupportedOperationException()
 }

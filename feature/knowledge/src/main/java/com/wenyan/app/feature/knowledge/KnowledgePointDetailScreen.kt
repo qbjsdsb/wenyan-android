@@ -63,6 +63,7 @@ import com.wenyan.app.core.designsystem.theme.ColorMode
 import com.wenyan.app.core.designsystem.theme.ThemeConfig
 import com.wenyan.app.core.designsystem.theme.WenyanTheme
 import com.wenyan.app.core.database.entity.DataSourceEntity
+import com.wenyan.app.core.database.entity.ExamQuestionEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
 
@@ -80,6 +81,7 @@ import com.wenyan.app.core.database.entity.WrongAnswerEntity
 fun KnowledgePointDetailScreen(
     onBack: () -> Unit = {},
     onNavigateToDetail: (String) -> Unit = {},
+    onNavigateToEssay: (String) -> Unit = {},
     viewModel: KnowledgePointDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -199,6 +201,12 @@ fun KnowledgePointDetailScreen(
                                 RelatedPointsSection(
                                     detail = uiState.detail,
                                     onNavigateToDetail = onNavigateToDetail,
+                                )
+
+                                // ── 相关论述题(v0.9.8 知识点串联器) ──
+                                RelatedEssaysSection(
+                                    essays = uiState.relatedEssays,
+                                    onNavigateToEssay = onNavigateToEssay,
                                 )
 
                                 // ── 错题记录(v0.8.19 P1-REL-1) ──
@@ -621,6 +629,98 @@ private fun examFrequencyChip(examFrequency: String): Pair<String, ChipVariant> 
     "LOW" -> "低频" to ChipVariant.TERTIARY
     else -> "未考" to ChipVariant.NEUTRAL
 }
+
+// ── 相关论述题（v0.9.8 知识点串联器） ──────────────────────
+
+/**
+ * 相关论述题区块（v0.9.8 新增，论述题板块核心入口）。
+ *
+ * 设计目标（对应 docs/design/essay-module-design.md 1.2 节"知识点串联器"）：
+ * 把 910 个孤立知识点通过 134 道论述题串联成答题网络。
+ * 用户在知识点详情页看到"这道题考过这个知识点"，点击进入论述题详情页
+ * 查看审题思路 + 答题框架 + 依据 + 交叉验证链接。
+ *
+ * UI 结构（与 [SourcesSection] / [WrongAnswersSection] 一致的 GroupedCard 模式）：
+ * - 标题："相关论述题（N）"+ 论述题图标
+ * - 列表项：年份 chip + 分值 chip + 题目正文预览（截断 2 行）
+ * - 点击列表项 → 跳转论述题详情页（[onNavigateToEssay]）
+ *
+ * 无关联论述题时不显示该区块（与 [WrongAnswersSection] 一致的空数据降级策略）。
+ *
+ * @param essays 关联论述题列表（按年份倒序，来自 [KnowledgePointDetailViewModel.uiState.relatedEssays]）
+ * @param onNavigateToEssay 点击论述题跳转详情页，参数为 examQuestionId
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RelatedEssaysSection(
+    essays: List<ExamQuestionEntity>,
+    onNavigateToEssay: (String) -> Unit,
+) {
+    if (essays.isEmpty()) return
+
+    GroupedCard(title = "相关论述题（${essays.size}）") {
+        essays.forEachIndexed { index, essay ->
+            EssayItem(
+                essay = essay,
+                onClick = { onNavigateToEssay(essay.id) },
+            )
+            if (index < essays.size - 1) {
+                GroupedCardDivider()
+            }
+        }
+    }
+}
+
+/**
+ * 论述题列表项。
+ *
+ * 信息层级（从上到下）：
+ * 1. 年份 chip + 分值 chip（横向 FlowRow，快速定位考题年份和分值权重）
+ * 2. 题目正文预览（maxLines=2 + Ellipsis，截断超长题目避免撑高卡片）
+ *
+ * 不展示关联知识点数量：该信息在论述题详情页"关联知识点"区块展示，
+ * 列表项保持简洁，与 [RelatedPointItem] 的信息密度策略一致。
+ *
+ * @param essay 论述题实体
+ * @param onClick 点击跳转论述题详情页
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun EssayItem(
+    essay: ExamQuestionEntity,
+    onClick: () -> Unit,
+) {
+    GroupedCardItem(
+        title = essay.content.trim().take(MAX_ESSAY_PREVIEW_LENGTH),
+        onClick = onClick,
+        trailing = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                WenyanInfoChip(
+                    text = "${essay.year}年",
+                    variant = ChipVariant.SECONDARY,
+                )
+                if (essay.score > 0) {
+                    WenyanInfoChip(
+                        text = "${essay.score}分",
+                        variant = ChipVariant.NEUTRAL,
+                    )
+                }
+            }
+        },
+    )
+}
+
+/**
+ * 论述题正文预览的最大字符数。
+ *
+ * 120 字符：覆盖大多数论述题的前 2-3 句（含审题关键词），
+ * 足够用户判断是否需要跳转查看完整审题思路和答题框架。
+ * 超长截断，避免单条论述题撑高卡片（部分论述题正文 300+ 字）。
+ */
+private const val MAX_ESSAY_PREVIEW_LENGTH = 120
 
 // ── 错题记录(v0.8.19 P1-REL-1 新增) ───────────────────────
 

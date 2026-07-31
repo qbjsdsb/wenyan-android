@@ -5271,3 +5271,76 @@ WenyanNavItem("wrong_answer", "错题本", Icons.Default.ErrorOutline),
 - **00-STATUS.md**：当前状态快照 + 新会话首要任务已更新
 - **release-receipts/v0.9.6-release-receipt.md**：完整 receipt（PRR + RBR + Changed Files + Post-Release Verification）
 - **下一步**：emulator 实测 v0.9.6（P0），验证 5 节结构渲染 + ExpandableInfoItem 展开动画 + 竖屏友好
+
+## 2026-07-31 v0.9.8 论述题板块（知识点串联器）
+
+> 响应用户需求："增加论述题板块融合在知识点板块，串联知识点，每题给依据+交叉验证链接+思路。先严谨仔细深入调研，反复验证反复调研反复检查。"
+
+### 深度调研阶段
+
+产出 795 行调研报告 + 44 可点击来源（`docs/research/essay-deep-research.md` + `docs/design/essay-module-design.md`），覆盖五大维度：
+
+1. **南师大现当代文学考研命题特征**：历年真题题型分布、命题趋势、高频考点（鲁迅/新时期文学/流派论争/文学史叙事）
+2. **导师研究方向对命题的影响**：施军（叙事学/中国现当代小说）、何平（当代文学批评/田野调查）、沈杏培（当代小说/文学史叙事）、刘志权（鲁迅研究/启蒙文学）、陈伟军（媒介与文学）、李玮（网络文学/民国文学）、张娟（女性写作/海派文学）等
+3. **现当代文学知识网络结构**：四维脉络（时段/主题/流派-作家-作品/理论概念）+ 6 种节点关系
+4. **文学研究引用规范**：GB/T 7714-2025 / MLA / Chicago 三种格式 + 一次文献与二次文献区分 + 交叉验证方法论（文本互证/历史语境/理论框架/接受史/比较文学）
+5. **六类论述题答题方法论**：比较型/演变型/作品分析型/理论应用型/评价型/综合型，每类提供审题关键词、论证路径、常见误区
+
+### 设计方案
+
+**核心价值定位**：论述题作为"知识点串联器" — 通过真实考题把分散的知识点织成网络，每题提供审题思路 + 依据 + 交叉验证 + 关联知识点。
+
+**复用现有 exam_questions 表**（避免 schema 变更风险），新增两个 JSON 字段：
+- `angle`（审题思路）：questionType / coreKeywords / limitKeywords / task / breakthroughAngles / angleRationale / argumentPath
+- `notes`（依据/交叉验证）：evidences（含 linkedKnowledgePointId）/ crossValidation / referenceLinks / knowledgeGaps
+
+### 实现（两 Phase）
+
+#### Phase 0 数据层（commit `b07da8a`）
+
+| 文件 | 改动 |
+|------|------|
+| `core/database/.../ExamQuestionDao.kt` | 新增 `observeAllEssays()`：内存过滤 ESSAY 题型，避免 SQL LIKE 误匹配 JSON 子串 |
+| `core/data/.../KnowledgeRepository.kt` | 新增 `observeRelatedEssays(pointId)` / `observeEssayById(id)` / `getKnowledgePointsByIds(ids)` |
+| `core/data/.../SeedDataLoader.kt` | 新增 `computeExamQuestionRelatedPoints`：title 权重 2 / tag 权重 1 派生 relatedPointIds |
+| `app/src/main/assets/seed_data.json` | seed 2.13.1 → 2.14.0；3 道示例题（eq_0038/eq_0182/eq_0254）angle/notes 完整填充；131 道派生 relatedPointIds |
+
+#### Phase 1 UI 层（本次 commit）
+
+| 文件 | 改动 |
+|------|------|
+| `feature/knowledge/.../KnowledgePointDetailScreen.kt` | 新增 `RelatedEssaysSection` + `EssayItem`（年份/分值 chip + 内容预览），知识点详情页底部展示关联论述题 |
+| `feature/knowledge/.../KnowledgePointDetailViewModel.kt` | 三流合并（知识点详情 + 错题 + 关联论述题），UI state 新增 `relatedEssays` 字段 |
+| `feature/knowledge/.../EssayDetailModels.kt`（新建） | kotlinx.serialization 数据类（EssayAngle / EssayNotes / EssayArgumentPath / EssayEvidence / EssayCrossValidation / EssayReferenceLink / EssayKnowledgeGap）+ `parseEssayAngle` / `parseEssayNotes` 优雅降级（解析失败返回 null） |
+| `feature/knowledge/.../EssayDetailViewModel.kt`（新建） | 加载论述题 + 解析 angle/notes JSON + 聚合关联知识点（relatedPointIds + evidences.linkedKnowledgePointId 合并去重）+ retry |
+| `feature/knowledge/.../EssayDetailScreen.kt`（新建） | 10 区块结构：①题目信息 ②题目正文 ③审题思路 ④论证路径 ⑤答题框架 ⑥依据 ⑦交叉验证 ⑧参考链接 ⑨知识盲点 ⑩关联知识点；angle/notes 为 null 时优雅降级（仅显示 ①②⑤⑩）；参考链接用 CustomTabsIntent 打开浏览器 |
+| `app/.../WenyanNavHost.kt` | 新增 `ROUTE_ESSAY_DETAIL` 子路由（Push/Pop slide）+ `knowledgeDetailDestination` 增加 `onNavigateToEssay` 参数，实现双向导航（知识点↔论述题） |
+| `feature/knowledge/build.gradle.kts` | 引入 `kotlin.serialization` 插件 + `kotlinx-serialization-json` 依赖 |
+| `app/build.gradle.kts` | versionCode 31 → 33 / versionName "0.9.6" → "0.9.8" |
+
+### 测试（+47）
+
+| 测试类 | 测试数 | 覆盖点 |
+|--------|--------|--------|
+| `KnowledgeRepositoryTest` | +10 | observeRelatedEssays（含 SQL LIKE 误匹配规避）/ observeEssayById / getKnowledgePointsByIds（去重/顺序/过滤） |
+| `KnowledgePointDetailViewModelTest` | +5 | relatedEssays 状态（含 Flow 自动刷新） |
+| `EssayDetailViewModelTest`（新建） | 15 | JSON 优雅降级 / 关联知识点聚合 / retry / notFound / error |
+| `EssayDetailModelsTest`（新建） | 16 | parseEssayAngle / parseEssayNotes 全分支（null/空/畸形 JSON/部分字段缺失） |
+
+### 本地验证
+
+| 验证项 | 命令 | 结果 |
+|--------|------|------|
+| Debug 构建 | `gradle :app:assembleDebug --no-daemon` | BUILD SUCCESSFUL |
+| 单元测试 | `gradle testDebugUnitTest --no-daemon --continue` | BUILD SUCCESSFUL（452 tests, 0 failures） |
+
+### 交接
+
+- **00-STATUS.md**：当前状态快照 + 新会话首要任务已更新为 v0.9.8
+- **docs/design/essay-module-design.md**：完整设计方案（含 Phase 2/3 规划：论述题列表页 + 题型筛选 + AI 审题助手集成）
+- **docs/research/essay-deep-research.md**：795 行深度调研报告 + 44 可点击来源
+- **下一步**：
+  1. emulator 实测 v0.9.8（P0）：验证知识点详情页"相关论述题"区块 + 论述题详情页 10 区块 + 优雅降级 + 双向导航
+  2. Phase 2（P1）：独立论述题列表页（按年份/科目/题型筛选）+ 入口（知识点 Tab 顶部或真题 Tab 子页）
+  3. Phase 3（P2）：AI 审题助手集成（苏格拉底三阶段引导 + 知识盲点检测 + 范文对比）
+  4. 数据扩充：当前仅 3 道完整 angle/notes，后续可用 LLM 管线批量填充（基于 full_content + 关联知识点自动生成）

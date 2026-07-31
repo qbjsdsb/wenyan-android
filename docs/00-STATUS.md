@@ -5,6 +5,8 @@
 
 ## ✅ 当前状态
 
+**v0.9.8 论述题板块（待发布）** — 响应用户需求"增加论述题板块融合在知识点板块，串联知识点，每题给依据+交叉验证链接+思路"。深度调研 795 行报告 + 44 可点击来源（南师大命题特征/导师方向/现当代文学知识网络/文学引用规范/六类论述题方法论）。**Phase 0 数据层**：ExamQuestionDao.observeAllEssays（内存过滤避免 SQL LIKE 误匹配 JSON 子串）+ KnowledgeRepository.observeRelatedEssays/observeEssayById/getKnowledgePointsByIds + SeedDataLoader.computeExamQuestionRelatedPoints（title 权重 2/tag 权重 1 派生）+ seed 2.13.1→2.14.0 + 3 道示例题（eq_0038/eq_0182/eq_0254）angle/notes 完整填充。**Phase 1 UI 层**：知识点详情页新增"相关论述题"区块（知识点→论述题入口）+ 论述题详情页 10 区块结构（题目/审题/论证/框架/依据/交叉验证/参考链接/知识盲点/关联知识点）+ EssayDetailViewModel（JSON 解析 + 关联知识点聚合，relatedPointIds + evidences.linkedKnowledgePointId 合并去重）+ EssayDetailModels（kotlinx.serialization 优雅降级）+ WenyanNavHost ROUTE_ESSAY_DETAIL 子路由双向导航。**测试 +47**：Repository 10 测试（含 SQL LIKE 误匹配规避）+ KnowledgePointDetailViewModel 5 测试（含 Flow 自动刷新）+ EssayDetailViewModel 15 测试（含 JSON 优雅降级/聚合/retry）+ EssayDetailModels 16 测试（parseEssayAngle/parseEssayNotes 全分支）。本地验证：`:app:assembleDebug` + 全模块 `testDebugUnitTest` 全绿（452 tests, 0 failures）。
+
 **v0.9.6 关于与教程精简重构 + 代码卫生审计（已发布）** — 响应用户反馈"关于与教程界面做的太复杂了，排版也很难看，内容也太多了，竖屏的时候更是非常糟糕"，重构 AboutTutorialScreen.kt：7 章 430 行 → 5 节 ~384 行（HeroCard / QuickStart / Modules / Principles 可折叠 / About）。默认视图简洁，深度原理用 ExpandableInfoItem + AnimatedVisibility 按需展开。竖屏友好：MaxContentWidth.compact 限宽。同时修复 4 项代码卫生问题：CardsScreen.kt 弃用图标、FriendlyErrorMessage.kt 冗余 !!、CardsViewModel.kt 2 处 !!、导航 Preview 移除已删除 graph 模块引用。本地验证全绿（403 tests）。**PRR ✅ READY TO RELEASE + RBR ✅ PASS**（per staff-engineer-mode Agent Event Policy）。Release v0.9.6 已发布（debug 签名 Exception E1）。Debug APK SHA-256 `36237a66...2ff100` / 27,522,631 bytes / Release APK SHA-256 `8661d97b...8d356c` / 19,169,788 bytes。
 
 **v0.9.5 关于与教程子路由（已发布）** — 设置页"关于"分组新增"关于与教程"入口，注册 ROUTE_ABOUT 子路由（Push/Pop slide + launchSingleTop 防双击压栈），加载 AboutTutorialScreen（7 章深度教程 430 行：定位/模块/FSRS-6/三档记忆/RAG/使用指南/致谢）。Icons.AutoMirrored.Filled.MenuBook 弃用修复。本地验证全绿（236 tests）。agent-pr-review ✅ Ready to merge。**PRR ✅ READY TO RELEASE + RBR ✅ PASS**（per staff-engineer-mode Agent Event Policy）。Release v0.9.5 已发布（debug 签名 Exception E1）。APK SHA-256 `0045a82d...93eb58` / 27,522,631 bytes。
@@ -15,15 +17,17 @@
 |----|-----|
 | 最新 commit | （待 commit 后填入） |
 | 最新 Release | **v0.9.6**（2026-07-31 发布，debug 签名 fallback — Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.6 |
-| 编译验证 | **:app:assembleDebug + :app:assembleRelease + 全模块 testDebugUnitTest SUCCESSFUL**（v0.9.6 release，403 tests 0 failures） |
-| versionCode / versionName | **31 / "0.9.6"** |
+| 编译验证 | **:app:assembleDebug + 全模块 testDebugUnitTest SUCCESSFUL**（v0.9.8，452 tests 0 failures） |
+| versionCode / versionName | **33 / "0.9.8"** |
 | 知识点 | **910 个**（entities/relations 数据补全） |
 | 真题 | **485 道**（v0.7.6 已删除 sample_essay 冗余字段） |
-| seed 版本 | **2.13.0**（v0.9.1 relatedIds 派生，触发重新导入） |
+| 论述题 | **v0.9.8 新增**：134 道 ESSAY 题，3 道完整 angle/notes（eq_0038/eq_0182/eq_0254），131 道派生 relatedPointIds |
+| seed 版本 | **2.14.0**（v0.9.8 论述题板块：3 道示例题 angle/notes + 131 道派生 relatedPointIds，触发重新导入） |
 | 数据库版本 | **8**（v0.9.4 Migration_7_8 wrong_answers 添加 10 个 sched_* FSRS 调度字段 + 索引） |
 | 章节树 | **二级层级**（subject → default_chapter → chapter_<tag>，基于文学时段自动生成） |
 | 关联模块 | **3 关系类型**（RELATED/CONTRAST/EXTENSION）+ 视觉编码 + **v0.9.1: relatedIds 基于 tags 派生**（同 subject + 共享 tag，按共享数降序取前 5） |
 | 错题本 FSRS | **v0.9.4 已发布**：DUE 过滤模式 + 四档评分（不会/困难/良好/简单）+ 调度信息展示（下次复习/复习次数/遗忘次数）+ TIER_FRAMEWORK 档位 + ClockGuard 时间源对齐 + interval 下界保护 |
+| 论述题板块 | **v0.9.8 新增**：知识点详情页"相关论述题"区块 + 论述题详情页 10 区块结构 + JSON 优雅降级 + 双向导航（知识点↔论述题） |
 | 关于与教程 | **v0.9.6 精简重构**：5 节简洁版（HeroCard / QuickStart / Modules / Principles 可折叠 / About），默认视图简洁，深度原理按需展开 |
 | 底部导航 | **5 Tab**：知识点 / 真题 / 卡片 / 错题本 / 设置（v0.9.0 错题本替换原图谱） |
 | 图谱 UI | **已移除**（v0.9.0 feature:graph 模块删除） |
@@ -32,17 +36,17 @@
 | 日志门面 | **Logging.kt**（Timber 封装，Debug=Logcat / Release=WARN+ERROR） |
 | 工具链锁定 | **mise.toml**（JDK 17.0.2 + Gradle 8.14.4） |
 | 阻塞 | **CI 账单问题** — 需用户处理，不影响 Release（debug 签名可用） |
-| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-31 v0.9.6 关于与教程精简重构 + 代码卫生审计） |
+| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-31 v0.9.8 论述题板块） |
 
 ## 🚨 新会话首要任务
 
-**v0.9.6 关于与教程精简重构 + 代码卫生审计已发布**（2026-07-31，tag `v0.9.6`）。最新 Release：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.6
+**v0.9.8 论述题板块已完成本地验证**（2026-07-31，待 Release）。本地构建全绿：`:app:assembleDebug` + 全模块 `testDebugUnitTest`（452 tests, 0 failures）。
 
 下一步优先级（按顺序）：
 
-1. **P0**：emulator 实测 v0.9.6 — 验证设置 → 关于 → 关于与教程入口可见可点击 + 5 节结构渲染（HeroCard / QuickStart / Modules / Principles 可折叠 / About）+ ExpandableInfoItem 点击展开/收起动画流畅 + 默认视图简洁（深度原理折叠态）+ 竖屏友好（MaxContentWidth.compact 限宽）+ 横屏/平板内容居中 + 返回箭头返回设置页
-2. **P0**：emulator 实测 v0.9.4 — 验证错题本 DUE 过滤模式 + 四档评分按钮（不会/困难/良好/简单）+ 调度信息展示（下次复习/复习次数/遗忘次数）+ Migration 7→8 升级（已有错题 sched_* 字段默认值正确）+ ClockGuard 时间源对齐（评分后错题不会立即重新出现在 DUE 列表）
-3. **P0**：emulator 实测 v0.9.1（若未测）— 验证关联知识点模块渲染（RelatedPointsSection 应有关联知识点列表）+ 关联知识点点击跳转 + seed 2.13.0 触发重导后 relatedIds 正确填充
+1. **P0**：emulator 实测 v0.9.8 论述题板块 — 验证知识点详情页底部"相关论述题"区块渲染（仅有关联题目时显示）+ 点击论述题跳转论述题详情页 + 10 区块结构渲染（题目/审题/论证/框架/依据/交叉验证/参考链接/知识盲点/关联知识点）+ angle/notes 为 null 的论述题优雅降级（仅显示题目+正文+框架+关联知识点）+ 参考链接可点击打开浏览器 + 关联知识点点击跳回知识点详情（双向导航）+ seed 2.14.0 触发重导后 relatedPointIds 正确填充
+2. **P0**：emulator 实测 v0.9.6 — 验证设置 → 关于 → 关于与教程入口可见可点击 + 5 节结构渲染（HeroCard / QuickStart / Modules / Principles 可折叠 / About）+ ExpandableInfoItem 点击展开/收起动画流畅 + 默认视图简洁（深度原理折叠态）+ 竖屏友好（MaxContentWidth.compact 限宽）+ 横屏/平板内容居中 + 返回箭头返回设置页
+3. **P0**：emulator 实测 v0.9.4 — 验证错题本 DUE 过滤模式 + 四档评分按钮（不会/困难/良好/简单）+ 调度信息展示（下次复习/复习次数/遗忘次数）+ Migration 7→8 升级（已有错题 sched_* 字段默认值正确）+ ClockGuard 时间源对齐（评分后错题不会立即重新出现在 DUE 列表）
 4. **P0 阻塞**：等待 GitHub Actions 账单问题解决 — 40+ commit 待 CI 验证（不影响 Release，已通过本地构建 + gh 上传绕过）
 5. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 并替换 v0.9.4 + v0.9.5 + v0.9.6 asset（消除 Exception E1）
 6. **P1**：启用 R8（P1-PG 规则已就绪 + B5.1 GraphSkeleton 路径已修正，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）

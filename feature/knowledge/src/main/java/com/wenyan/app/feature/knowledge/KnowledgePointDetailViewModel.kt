@@ -7,6 +7,7 @@ import com.wenyan.app.core.data.repository.KnowledgePointDetail
 import com.wenyan.app.core.data.repository.KnowledgeRepository
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.database.entity.DataSourceEntity
+import com.wenyan.app.core.database.entity.ExamQuestionEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -115,10 +116,12 @@ class KnowledgePointDetailViewModel @Inject constructor(
                     if (pointId.isBlank()) {
                         flowOf(KnowledgePointDetailUiState(isLoading = false, notFound = true))
                     } else {
+                        // v0.9.8：三流合并 — 知识点详情 + 错题 + 关联论述题
                         combine(
                             knowledgeRepository.observeKnowledgePointDetail(pointId),
                             wrongAnswerRepository.observeByPoint(pointId),
-                        ) { detail, wrongAnswers ->
+                            knowledgeRepository.observeRelatedEssays(pointId),
+                        ) { detail, wrongAnswers, relatedEssays ->
                             if (detail == null) {
                                 KnowledgePointDetailUiState(isLoading = false, notFound = true)
                             } else {
@@ -128,6 +131,7 @@ class KnowledgePointDetailViewModel @Inject constructor(
                                     isLoading = false,
                                     detail = detail,
                                     wrongAnswers = unresolved,
+                                    relatedEssays = relatedEssays,
                                 )
                             }
                         }
@@ -194,6 +198,8 @@ class KnowledgePointDetailViewModel @Inject constructor(
  *
  * P1-3 新增 [error] 字段：数据流加载失败时携带错误信息，UI 据此提示用户。
  * v0.8.19 新增 [wrongAnswers] 字段:该知识点的未解决错题列表,供 UI 展示。
+ * v0.9.8 新增 [relatedEssays] 字段:该知识点关联的论述题列表,供 UI 展示
+ *（点击跳转论述题详情页,实现"知识点串联"核心价值）。
  */
 data class KnowledgePointDetailUiState(
     val isLoading: Boolean = false,
@@ -203,6 +209,8 @@ data class KnowledgePointDetailUiState(
     val error: String? = null,
     /** 未解决错题列表(v0.8.19 P1-REL-1 新增,按 lastWrongAt DESC) */
     val wrongAnswers: List<WrongAnswerEntity> = emptyList(),
+    /** 关联论述题列表(v0.9.8 新增,按年份倒序,点击跳转论述题详情) */
+    val relatedEssays: List<ExamQuestionEntity> = emptyList(),
 ) {
     /** 知识点实体（便捷访问） */
     val point: KnowledgePointEntity? get() = detail?.point

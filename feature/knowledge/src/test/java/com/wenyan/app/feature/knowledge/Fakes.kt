@@ -3,8 +3,10 @@ package com.wenyan.app.feature.knowledge
 import com.wenyan.app.core.data.repository.KnowledgeRepository
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.database.dao.DataSourceDao
+import com.wenyan.app.core.database.dao.ExamQuestionDao
 import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.entity.DataSourceEntity
+import com.wenyan.app.core.database.entity.ExamQuestionEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
@@ -251,13 +253,18 @@ class FakeKnowledgeWrongAnswerRepository(
  * v0.8.19 P1-REL-2:用真实 Repository + Fake DAOs,
  * 顺带覆盖 Repository 的 observeKnowledgePointDetail 合并逻辑(relatedPoints 分组等),
  * 避免为测试把 KnowledgeRepository 改为 interface(较大重构)。
+ *
+ * v0.9.8:新增 [examQuestionDao] 参数,支持论述题板块(observeRelatedEssays /
+ * observeEssayById / getKnowledgePointsByIds)测试。
  */
 fun buildKnowledgeRepository(
     knowledgePointDao: FakeKnowledgePointDao,
     dataSourceDao: FakeDataSourceDao,
+    examQuestionDao: FakeExamQuestionDao = FakeExamQuestionDao(),
 ): KnowledgeRepository = KnowledgeRepository(
     knowledgePointDao = knowledgePointDao,
     dataSourceDao = dataSourceDao,
+    examQuestionDao = examQuestionDao,
 )
 
 /**
@@ -267,3 +274,83 @@ fun buildKnowledgeRepository(
  */
 private fun <T, R> MutableStateFlow<T>.mapStateFlow(transform: (T) -> R): Flow<R> =
     map { transform(it) }
+
+/**
+ * [ExamQuestionDao] 的 Fake 实现(v0.9.8 论述题板块新增)。
+ *
+ * 仅 stub [KnowledgeRepository] 论述题板块用到的方法:
+ * - [observeAllEssays]:返回注入的论述题列表(供 observeRelatedEssays 内存过滤)
+ * - [observeById]:按 ID 查找(供 observeEssayById)
+ *
+ * 其他方法抛 [UnsupportedOperationException],避免静默返回错误默认值。
+ *
+ * 通过 [setEssays] 可控注入论述题数据,支持:
+ * - 知识点详情页"相关论述题"区块(observeRelatedEssays)
+ * - 论述题详情页主体数据(observeEssayById)
+ */
+class FakeExamQuestionDao(
+    initialEssays: List<ExamQuestionEntity> = emptyList(),
+) : ExamQuestionDao {
+
+    private val _essays = MutableStateFlow(initialEssays)
+
+    /** 当前论述题列表快照(测试可读写) */
+    val essays: List<ExamQuestionEntity> get() = _essays.value
+
+    /** 设置论述题列表(覆盖) */
+    fun setEssays(essays: List<ExamQuestionEntity>) {
+        _essays.value = essays
+    }
+
+    override suspend fun insert(entity: ExamQuestionEntity) {
+        _essays.value = _essays.value + entity
+    }
+
+    override suspend fun insertAll(entities: List<ExamQuestionEntity>) {
+        _essays.value = _essays.value + entities
+    }
+
+    override suspend fun update(entity: ExamQuestionEntity) {
+        _essays.value = _essays.value.map { if (it.id == entity.id) entity else it }
+    }
+
+    override suspend fun deleteById(id: String) {
+        _essays.value = _essays.value.filter { it.id != id }
+    }
+
+    override suspend fun getById(id: String): ExamQuestionEntity? =
+        _essays.value.firstOrNull { it.id == id }
+
+    override fun observeById(id: String): Flow<ExamQuestionEntity?> =
+        _essays.mapStateFlow { essays -> essays.firstOrNull { it.id == id } }
+
+    override fun observeBySubject(subjectId: String): Flow<List<ExamQuestionEntity>> =
+        _essays.mapStateFlow { it.filter { e -> e.subjectId == subjectId } }
+
+    override fun observeByYear(year: Int): Flow<List<ExamQuestionEntity>> =
+        _essays.mapStateFlow { it.filter { e -> e.year == year } }
+
+    override fun observeByQuestionType(type: String): Flow<List<ExamQuestionEntity>> =
+        _essays.mapStateFlow { it.filter { e -> e.questionType == type } }
+
+    /**
+     * 返回全部 ESSAY 题,按年份倒序(与生产 SQL ORDER BY year DESC 一致)。
+     *
+     * 调用方(KnowledgeRepository.observeRelatedEssays)在内存中按
+     * relatedPointIds.contains(pointId) 过滤。
+     */
+    override fun observeAllEssays(): Flow<List<ExamQuestionEntity>> =
+        _essays.mapStateFlow { it.filter { e -> e.questionType == "ESSAY" }.sortedByDescending { e -> e.year } }
+
+    override fun observeByExamPaperCode(code: String): Flow<List<ExamQuestionEntity>> =
+        _essays.mapStateFlow { it.filter { e -> e.examPaperCode == code } }
+
+    override fun observeByAnswerStatus(status: String): Flow<List<ExamQuestionEntity>> =
+        _essays.mapStateFlow { it.filter { e -> e.answerStatus == status } }
+
+    override fun observeYears(): Flow<List<Int>> =
+        _essays.mapStateFlow { it.map { e -> e.year }.distinct().sortedDescending() }
+
+    override suspend fun countBySubject(subjectId: String): Int =
+        _essays.value.count { it.subjectId == subjectId }
+}

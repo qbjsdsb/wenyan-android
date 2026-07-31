@@ -2,6 +2,7 @@ package com.wenyan.app.feature.knowledge
 
 import androidx.lifecycle.SavedStateHandle
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
+import com.wenyan.app.core.database.entity.ExamQuestionEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
 import kotlinx.coroutines.Dispatchers
@@ -50,6 +51,7 @@ class KnowledgePointDetailViewModelTest {
 
     private lateinit var knowledgePointDao: FakeKnowledgePointDao
     private lateinit var dataSourceDao: FakeDataSourceDao
+    private lateinit var examQuestionDao: FakeExamQuestionDao
     private lateinit var wrongAnswerRepository: FakeKnowledgeWrongAnswerRepository
 
     @Before
@@ -58,6 +60,7 @@ class KnowledgePointDetailViewModelTest {
 
         knowledgePointDao = FakeKnowledgePointDao()
         dataSourceDao = FakeDataSourceDao()
+        examQuestionDao = FakeExamQuestionDao()
         wrongAnswerRepository = FakeKnowledgeWrongAnswerRepository()
     }
 
@@ -74,7 +77,7 @@ class KnowledgePointDetailViewModelTest {
         }
         return KnowledgePointDetailViewModel(
             savedStateHandle = savedStateHandle,
-            knowledgeRepository = buildKnowledgeRepository(knowledgePointDao, dataSourceDao),
+            knowledgeRepository = buildKnowledgeRepository(knowledgePointDao, dataSourceDao, examQuestionDao),
             wrongAnswerRepository = wrongAnswerRepository,
         )
     }
@@ -324,6 +327,120 @@ class KnowledgePointDetailViewModelTest {
         assertNull("retry() 应清空 error", viewModel.uiState.value.error)
     }
 
+    // ── relatedEssays (v0.9.8 论述题板块新增) ──────────────────
+
+    /**
+     * v0.9.8: 知识点详情页三流合并 — 知识点 + 错题 + 关联论述题。
+     *
+     * 验证 relatedEssays 正确填充到 uiState，按年份倒序排列。
+     */
+    @Test
+    fun uiState_relatedEssays_populatedAndSortedByYearDesc() = runTest(testDispatcher) {
+        val point = makePoint(id = "kp_main", title = "鲁迅小说")
+        knowledgePointDao.setPoints(mapOf("kp_main" to point))
+        examQuestionDao.setEssays(
+            listOf(
+                makeEssay(id = "eq_1", year = 2020, relatedPointIds = listOf("kp_main")),
+                makeEssay(id = "eq_2", year = 2018, relatedPointIds = listOf("kp_other")),
+                makeEssay(id = "eq_3", year = 2022, relatedPointIds = listOf("kp_main", "kp_other")),
+                makeEssay(id = "eq_4", year = 2019, relatedPointIds = null),
+            ),
+        )
+
+        val viewModel = createViewModel(pointId = "kp_main")
+        backgroundScope.launch { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        // 仅 eq_1 和 eq_3 关联 kp_main，按年份倒序 eq_3(2022) → eq_1(2020)
+        assertEquals(2, state.relatedEssays.size)
+        assertEquals("eq_3", state.relatedEssays[0].id)
+        assertEquals("eq_1", state.relatedEssays[1].id)
+    }
+
+    @Test
+    fun uiState_noRelatedEssays_emptyList() = runTest(testDispatcher) {
+        val point = makePoint(id = "kp_main")
+        knowledgePointDao.setPoints(mapOf("kp_main" to point))
+        // 论述题不关联 kp_main
+        examQuestionDao.setEssays(
+            listOf(makeEssay(id = "eq_1", relatedPointIds = listOf("kp_other"))),
+        )
+
+        val viewModel = createViewModel(pointId = "kp_main")
+        backgroundScope.launch { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.relatedEssays.isEmpty())
+    }
+
+    @Test
+    fun uiState_emptyExamQuestionDao_emptyRelatedEssays() = runTest(testDispatcher) {
+        val point = makePoint(id = "kp_main")
+        knowledgePointDao.setPoints(mapOf("kp_main" to point))
+        // 不注入任何论述题
+        val viewModel = createViewModel(pointId = "kp_main")
+        backgroundScope.launch { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.relatedEssays.isEmpty())
+    }
+
+    /**
+     * 验证 SQL LIKE 误匹配规避:kp_1 不应匹配 kp_10/kp_100。
+     *
+     * 内存过滤 List.contains 精确匹配,与生产实现一致。
+     */
+    @Test
+    fun uiState_relatedEssays_exactIdMatch_kp1NotMatchingKp10() = runTest(testDispatcher) {
+        val point = makePoint(id = "kp_1")
+        knowledgePointDao.setPoints(mapOf("kp_1" to point))
+        examQuestionDao.setEssays(
+            listOf(
+                makeEssay(id = "eq_1", relatedPointIds = listOf("kp_1")),
+                makeEssay(id = "eq_2", relatedPointIds = listOf("kp_10")),
+                makeEssay(id = "eq_3", relatedPointIds = listOf("kp_100")),
+            ),
+        )
+
+        val viewModel = createViewModel(pointId = "kp_1")
+        backgroundScope.launch { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        val related = viewModel.uiState.value.relatedEssays
+        assertEquals(1, related.size)
+        assertEquals("eq_1", related[0].id)
+    }
+
+    /**
+     * 验证论述题数据变化时 Flow 自动刷新(知识点串联器实时更新)。
+     */
+    @Test
+    fun uiState_essaysUpdated_flowAutoRefreshes() = runTest(testDispatcher) {
+        val point = makePoint(id = "kp_main")
+        knowledgePointDao.setPoints(mapOf("kp_main" to point))
+        examQuestionDao.setEssays(
+            listOf(makeEssay(id = "eq_1", year = 2020, relatedPointIds = listOf("kp_main"))),
+        )
+
+        val viewModel = createViewModel(pointId = "kp_main")
+        backgroundScope.launch { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.relatedEssays.size)
+
+        // 模拟新增论述题(如种子数据升级)
+        examQuestionDao.setEssays(
+            listOf(
+                makeEssay(id = "eq_1", year = 2020, relatedPointIds = listOf("kp_main")),
+                makeEssay(id = "eq_2", year = 2021, relatedPointIds = listOf("kp_main")),
+            ),
+        )
+        advanceUntilIdle()
+
+        // Flow 自动刷新,新增论述题出现在 uiState
+        assertEquals(2, viewModel.uiState.value.relatedEssays.size)
+    }
+
     // ── 工厂方法 ──────────────────────────────────────────────
 
     private fun makePoint(
@@ -393,5 +510,40 @@ class KnowledgePointDetailViewModelTest {
         resolvedAt = resolvedAt,
         aiExplanation = null,
         createdAt = System.currentTimeMillis(),
+    )
+
+    /**
+     * 构造测试用论述题(v0.9.8 新增)。
+     *
+     * 默认为 ESSAY 题型,year=2020, score=20, relatedPointIds=null,
+     * 可通过参数覆盖。
+     */
+    private fun makeEssay(
+        id: String = "eq_test",
+        year: Int = 2020,
+        subjectId: String = "subj_xd",
+        content: String = "测试论述题内容",
+        score: Int = 20,
+        relatedPointIds: List<String>? = null,
+        angle: String? = null,
+        notes: String? = null,
+        answerFramework: String? = null,
+    ) = ExamQuestionEntity(
+        id = id,
+        year = year,
+        subjectId = subjectId,
+        questionType = "ESSAY",
+        content = content,
+        score = score,
+        angle = angle,
+        relatedPointIds = relatedPointIds,
+        answerFramework = answerFramework,
+        notes = notes,
+        createdAt = System.currentTimeMillis(),
+        examPaperCode = null,
+        answerStatus = null,
+        materialText = null,
+        sourceFile = null,
+        sourcePage = null,
     )
 }

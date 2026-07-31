@@ -10,6 +10,7 @@ import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import com.wenyan.app.feature.aiassistant.AiAssistantScreen
 import com.wenyan.app.feature.aiassistant.ApiConfigScreen
 import com.wenyan.app.feature.cards.CardsScreen
+import com.wenyan.app.feature.knowledge.EssayDetailScreen
 import com.wenyan.app.feature.knowledge.KnowledgePointDetailScreen
 import com.wenyan.app.feature.knowledge.KnowledgeScreen
 import com.wenyan.app.feature.quiz.QuizScreen
@@ -162,6 +163,24 @@ fun WenyanNavHost(
                     launchSingleTop = true
                 }
             },
+            onNavigateToEssay = { essayId ->
+                // v0.9.8：知识点详情 → 论述题详情，Push/Pop slide + launchSingleTop
+                navController.navigate("$ROUTE_ESSAY_DETAIL/$essayId") {
+                    launchSingleTop = true
+                }
+            },
+        )
+        essayDetailDestination(
+            onBack = { navController.popBackStack() },
+            onNavigateToKnowledgeDetail = { pointId ->
+                // v0.9.8：论述题详情 → 知识点详情（双向串联）
+                navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId") {
+                    popUpTo("$ROUTE_KNOWLEDGE_DETAIL/{pointId}") {
+                        inclusive = true
+                    }
+                    launchSingleTop = true
+                }
+            },
         )
     }
 }
@@ -279,9 +298,11 @@ private fun NavGraphBuilder.apiConfigDestination(
 }
 
 // 知识点详情子路由（Spec C1.27 多教材对照 + C7.2 来源溯源）
+// v0.9.8：新增 onNavigateToEssay，知识点详情 → 论述题详情（知识点串联器）
 private fun NavGraphBuilder.knowledgeDetailDestination(
     onBack: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
+    onNavigateToEssay: (String) -> Unit,
 ) {
     composable(
         route = "$ROUTE_KNOWLEDGE_DETAIL/{pointId}",
@@ -293,6 +314,26 @@ private fun NavGraphBuilder.knowledgeDetailDestination(
         KnowledgePointDetailScreen(
             onBack = onBack,
             onNavigateToDetail = onNavigateToDetail,
+            onNavigateToEssay = onNavigateToEssay,
+        )
+    }
+}
+
+// v0.9.8：论述题详情子路由（10 区块结构：题目/审题/论证/框架/依据/交叉验证/链接/盲点/关联知识点）
+private fun NavGraphBuilder.essayDetailDestination(
+    onBack: () -> Unit,
+    onNavigateToKnowledgeDetail: (String) -> Unit,
+) {
+    composable(
+        route = "$ROUTE_ESSAY_DETAIL/{examQuestionId}",
+        enterTransition = { WenyanMotion.PushEnterTransition },
+        exitTransition = { WenyanMotion.PushExitTransition },
+        popEnterTransition = { WenyanMotion.PopEnterTransition },
+        popExitTransition = { WenyanMotion.PopExitTransition },
+    ) {
+        EssayDetailScreen(
+            onBack = onBack,
+            onNavigateToKnowledgeDetail = onNavigateToKnowledgeDetail,
         )
     }
 }
@@ -302,3 +343,4 @@ private const val ROUTE_API_CONFIG = "api_config"
 private const val ROUTE_AI_ASSISTANT = "aiassistant"
 private const val ROUTE_KNOWLEDGE_DETAIL = "knowledge_detail"
 private const val ROUTE_ABOUT = "about"
+private const val ROUTE_ESSAY_DETAIL = "essay_detail"

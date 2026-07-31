@@ -21,7 +21,8 @@ android {
         // v0.9.5=30（关于与教程子路由：设置页"关于"分组新增"关于与教程"入口，注册 ROUTE_ABOUT 子路由 Push/Pop slide + launchSingleTop，加载 AboutTutorialScreen 7 章深度教程 430 行：定位/模块/FSRS-6/三档记忆/RAG/使用指南/致谢。Icons.AutoMirrored.Filled.MenuBook 弃用修复。agent-pr-review ✅ Ready to merge，PRR ✅ READY TO RELEASE，RBR ✅ PASS）
         // v0.9.6=31（关于与教程精简重构 + 代码卫生审计：AboutTutorialScreen 7 章→5 节可折叠 + 4 项代码卫生修复。PRR ✅ READY TO RELEASE，RBR ✅ PASS）
         // v0.9.7=32（知识卡片功能完善 + 界面审查修复：B1 sibling去重FSRS调度漏洞 + B2 Leech误报(RELEARNING状态) + B3 无pointId卡日志 + M2 sibling卡打散 + M4 翻转滚动重置 + M5 完成态撤销 + M9 无效cardType日志 + M11 预览闪烁 + M10 @Preview + 2 测试。PRR ✅ READY TO RELEASE，RBR ✅ PASS）
-        versionCode = 32
+        // v0.9.8=33（论述题板块：知识点详情页"相关论述题"区块 + 论述题详情页 10 区块结构（题目/审题/论证/框架/依据/交叉验证/参考链接/知识盲点/关联知识点）+ JSON 解析优雅降级 + 双向导航 + seed 2.13.1→2.14.0 + 3 道示例题 angle/notes 完整填充 + 131 道派生 relatedPointIds + 47 新测试（Repository/ViewModel/Models）。452 tests 全绿）
+        versionCode = 33
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.7：知识卡片功能完善 + 界面审查修复（响应用户反馈"功能还是不够完善"）。
         //   数据一致性修复（B1/B2/B3）：
@@ -40,7 +41,28 @@ android {
         //     - B2 修复 RELEARNING 状态 AGAIN 评分 failCount 不变时不误报 Leech
         //     - B2 对照组 REVIEW 状态 AGAIN 评分 failCount 跨阈值时正确弹 Leech
         //   本地验证：:app:assembleDebug + testDebugUnitTest 全绿
-        versionName = "0.9.7"
+        // v0.9.8：论述题板块（响应用户需求"增加论述题板块融合在知识点板块"）。
+        //   深度调研：795 行调研报告 + 44 可点击来源，覆盖南师大命题特征/导师方向/
+        //     现当代文学知识网络/文学研究引用规范/六类论述题答题方法论
+        //   数据层（Phase 0，已 commit b07da8a）：
+        //     - ExamQuestionDao.observeAllEssays()：内存过滤避免 SQL LIKE 误匹配 JSON 子串
+        //     - KnowledgeRepository: observeRelatedEssays / observeEssayById / getKnowledgePointsByIds
+        //     - SeedDataLoader: computeExamQuestionRelatedPoints（title 权重 2 / tag 权重 1 派生）
+        //     - seed 2.13.1→2.14.0 + 3 道示例题（eq_0038/eq_0182/eq_0254）angle/notes 完整填充
+        //   UI 层（Phase 1）：
+        //     - KnowledgePointDetailScreen: 新增 RelatedEssaysSection（知识点→论述题入口）
+        //     - EssayDetailScreen: 10 区块结构（题目/审题/论证/框架/依据/交叉验证/参考链接/知识盲点/关联知识点）
+        //     - EssayDetailViewModel: JSON 解析 + 关联知识点聚合（relatedPointIds + evidences.linkedKnowledgePointId 合并去重）
+        //     - EssayDetailModels: kotlinx.serialization 解析 angle/notes JSON，优雅降级（解析失败返回 null）
+        //     - WenyanNavHost: ROUTE_ESSAY_DETAIL 子路由，Push/Pop slide，双向导航（知识点↔论述题）
+        //     - feature:knowledge/build.gradle.kts: 引入 kotlin.serialization 插件 + kotlinx-serialization-json 依赖
+        //   测试（+47）：
+        //     - KnowledgeRepositoryTest: observeRelatedEssays（4 测试，含 SQL LIKE 误匹配规避）+ observeEssayById（2）+ getKnowledgePointsByIds（4，含去重/顺序/过滤）
+        //     - KnowledgePointDetailViewModelTest: relatedEssays 状态（5 测试，含 Flow 自动刷新）
+        //     - EssayDetailViewModelTest: 新建（15 测试，含 JSON 优雅降级/关联知识点聚合/retry）
+        //     - EssayDetailModelsTest: 新建（16 测试，覆盖 parseEssayAngle/parseEssayNotes 全分支）
+        //   本地验证：:app:assembleDebug + 全模块 testDebugUnitTest 全绿（452 tests, 0 failures）
+        versionName = "0.9.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
