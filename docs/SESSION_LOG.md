@@ -5411,3 +5411,68 @@ WenyanNavItem("wrong_answer", "错题本", Icons.Default.ErrorOutline),
   1. emulator 实测 v0.9.8（P0）：Phase 2 列表页（入口卡片 + 三维筛选 + 状态切换）+ Phase 1 详情页（10 区块 + 优雅降级 + 双向导航）
   2. Phase 3（P2）：AI 审题助手集成（苏格拉底三阶段引导 + 知识盲点检测 + 范文对比）
   3. 数据扩充：当前仅 3 道完整 angle/notes，后续可用 LLM 管线批量填充
+
+---
+
+## 2026-07-31 论述题全覆盖填充（134/134 题）
+
+**触发**：用户需求"因为我要考研嘛，你帮我把所有论述题都整理，然后放在软件里面，反复研究调查"。v0.9.8 Phase 0-2 仅填充 3 道示例题，其余 131 道论述题 angle+notes 为空，考生在知识点详情页"相关论述题"区块只能看到题干，无法获取审题思路、论证框架、作品原文依据与教材交叉验证，违背"以真题为纲、深度背诵"理念。
+
+**完成内容**：将 2007-2022 年 610/614/615/616 卷全部 134 道论述题的审题思路与依据交叉验证一次性补齐，使论述题板块成为可直接用于考研复习的完整资料库。
+
+### 填充标准（对齐 eq_0038/eq_0182/eq_0254 三道示例题）
+
+| 字段 | 内容 |
+|------|------|
+| angle | questionType（综合/比较/作品分析/理论分析/理论应用/评论/演变型）/ coreKeywords / limitKeywords / task / breakthroughAngles / angleRationale / argumentPath(thesis + points 总述-分论点-总结 + conclusion) |
+| notes | evidences（作品原文 WORK_TEXT + 学者观点 SCHOLAR_OPINION + 教材定论 TEXTBOOK_CONSENSUS）/ crossValidation（教材对比 + 学者对比）/ referenceLinks（中国作家网/中国文艺评论网等权威开放资源）/ knowledgeGaps（未覆盖知识点记入，建议补充） |
+
+### 覆盖范围（按年份分布）
+
+| 年份 | 题数 | 备注 |
+|------|------|------|
+| 2007-2009 | 3 | 含三大专业必做综合题 |
+| 2010 | 12 | 古代/外国/现当代/理论四科 |
+| 2011 | 13 | 含 OCR 损坏题 eq_0100 标记待重 OCR |
+| 2012 | 15 | |
+| 2013-2015 | 26 | |
+| 2016 | 23 | 610 综合卷 + 614/615/616 分科卷，两批处理 |
+| 2017-2018 | 16 | |
+| 2019-2020 | 13 | 曹禺/寻根文学/百年孤独等高频考点 |
+| 2021-2022 | 11 | 红与黑/哈姆雷特/喧哗与骚动等 |
+| **合计** | **134** | **134/134 ✓** |
+
+### 学术严谨性
+
+- **作品原文**：如实引用，标注出处（作者+作品+年代/出版社）
+- **学者观点**：标注原作者与文献（含王富仁/汪晖/钱理群/王晓明/陈寅恪/朱光潜/王季思/袁行霈/洪子诚/陈思和等）
+- **教材定论**：以袁行霈《中国文学史》、钱理群《三十年》、朱维之《外国文学史》、童庆炳《文学理论教程》为基准
+- **crossValidation**：同时对比两套教材 + 三种学者视角
+- **knowledgeGaps**：未覆盖的知识点（如王勃/江淹/高适/岑参/陶渊明/孔尚任等）如实记入，建议补充，不臆造关联
+
+### 实现方式
+
+- `tools/essay_fill/` 新增 11 个 Python 脚本按年份批量填充（fill_2007_2009 / fill_2010 / fill_2011 / fill_2012 / fill_2013_2015 / fill_2016_batch1 / fill_2016_batch2 / fill_2016_other / fill_2017_2018 / fill_2019_2020 / fill_2021_2022）
+- `seed_data.json` metadata.version 2.14.0 → 2.15.0
+- 修复多处 JSON 语法错误（eq_0389/eq_0361 缺右花括号、eq_0329 嵌套引号改用中文「」）
+
+### 本地验证
+
+| 验证项 | 命令 | 结果 |
+|--------|------|------|
+| Debug 构建 | `gradle :app:assembleDebug --no-daemon` | BUILD SUCCESSFUL |
+| 单元测试 | `gradle testDebugUnitTest --no-daemon` | BUILD SUCCESSFUL（469 tests, 0 failures，全 UP-TO-DATE） |
+| JSON 有效性 | `python3 -c "json.load(...)"` | ✓ |
+| 论述题填充完整性 | 134/134 已填充 angle+notes | ✓ |
+
+### 提交
+
+- commit `17dec70` feat(essay): 论述题全覆盖填充 — 134/134 题审题思路+依据+交叉验证
+- 12 files changed, 11899 insertions(+), 134 deletions(-)
+- 已 push origin main：`66cd40e..17dec70 main -> main`
+
+### 下一步
+
+1. emulator 实测（P0）：验证 134 道论述题在论述题列表页 + 详情页正确渲染（10 区块结构 + JSON 解析 + 关联知识点跳转）
+2. 后续可基于 knowledgeGaps 清单补充缺失的知识点（王勃/江淹/高适/岑参/陶渊明/孔尚任等）
+3. Release v0.9.9（论述题全覆盖填充版）待定，需先 emulator 实测确认无渲染问题
