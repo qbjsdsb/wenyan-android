@@ -20,11 +20,20 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        // 国内镜像优先（阿里云），加速依赖下载
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
-        google()
-        mavenCentral()
+        // CI 环境（美/欧 runner）：阿里云镜像可能不可达，官方仓库优先
+        // 本地环境（国内）：阿里云镜像优先，加速依赖下载
+        val isCI = System.getenv("CI") == "true"
+        if (isCI) {
+            google()
+            mavenCentral()
+            maven { url = uri("https://maven.aliyun.com/repository/google") }
+            maven { url = uri("https://maven.aliyun.com/repository/public") }
+        } else {
+            maven { url = uri("https://maven.aliyun.com/repository/google") }
+            maven { url = uri("https://maven.aliyun.com/repository/public") }
+            google()
+            mavenCentral()
+        }
         // P0-B8 修正：移除 jitpack.io 死仓库声明（项目无 com.github.* 依赖，FSRS 自实现）。
         // 原声明导致 CI/沙盒环境（jitpack 不可达）依赖解析卡在 TCP 超时。
     }
