@@ -373,8 +373,12 @@ class CardsViewModel @Inject constructor(
                 .map { it.currentCard to it.currentIndex }
                 .distinctUntilChanged()
                 .collectLatest { (card, _) ->
+                    // v0.9.7 M11 修复:进入 collectLatest 时立即清空预览,
+                    // 避免快速切卡时新卡预览加载期间 UI 短暂显示旧卡的"6天/12天"预览(误导用户)。
+                    // 原实现仅在 card==null / templateType==null / 加载失败时清空,
+                    // 正常加载期间(异步 suspend)仍持有上一张卡的预览。
+                    _currentPreviews.value = emptyMap()
                     if (card == null || card.pointId.isBlank()) {
-                        _currentPreviews.value = emptyMap()
                         return@collectLatest
                     }
                     val templateType = try {
@@ -383,7 +387,6 @@ class CardsViewModel @Inject constructor(
                         null
                     }
                     if (templateType == null) {
-                        _currentPreviews.value = emptyMap()
                         return@collectLatest
                     }
                     try {
@@ -395,7 +398,7 @@ class CardsViewModel @Inject constructor(
                         throw e
                     } catch (e: Exception) {
                         // 预览失败不阻塞主流程,UI 降级为无预览按钮
-                        _currentPreviews.value = emptyMap()
+                        Timber.w(e, "previewIntervals failed for pointId=${card.pointId}")
                     }
                 }
         }
@@ -464,13 +467,30 @@ class CardsViewModel @Inject constructor(
         //
         // 现恢复 v0.8.5 设计:无 pointId 卡不记录错题(无知识点关联,记录无意义)。
         // TODO:如需记录,需要 schema 改动用 cardId 作为关联键。
+        //
+        // v0.9.7 B3 修复:无 pointId 卡评分不调用 recordStudySession(streakDays 不更新),
+        // 因为 recordStudySession 需要 pointId 作为 last_point_id,空字符串语义错误。
+        // 当前 CardRepositoryImpl.generateCardsFromKnowledgePoint 总是设置 pointId,
+        // 无 pointId 卡是数据完整性问题,加日志警告便于生产排查。
         if (pointId.isBlank()) {
+            Timber.w("Card with blank pointId rated, skip study progress record. cardId=${current.id}, cardType=$cardTypeStr")
             ratingHistory.addLast(RatingStep(rating = rating, pointId = ""))
             return
         }
 
         // v0.8.5 P0：sibling 去重 — 同 pointId 仅第一次评分触发 FSRS 调度
-        val shouldSchedule = pointId !in ratedPointIds
+        // v0.9.7 B1 修复：原实现先 `ratedPointIds.add(pointId)` 再判断 templateType 是否有效,
+        // 若 cardTypeStr 是无效枚举名(数据损坏/未来枚举变更),pointId 已加入 ratedPointIds
+        // 但 FSRS 调度被跳过。后续同 pointId 卡 shouldSchedule=false,永远不会重试调度,
+        // FSRS 数据永久缺失。现将 templateType 解析提前,仅当可调度时才 add。
+        val templateType = try {
+            CardTemplateType.valueOf(cardTypeStr)
+        } catch (e: IllegalArgumentException) {
+            // v0.9.7 M9:静默失败改为日志记录,生产环境可排查为何某些卡未触发调度
+            Timber.w(e, "Invalid cardType for pointId=$pointId, cardTypeStr=$cardTypeStr, skip FSRS scheduling")
+            null
+        }
+        val shouldSchedule = pointId !in ratedPointIds && templateType != null
         if (shouldSchedule) {
             ratedPointIds.add(pointId)
             // v0.8.13 P1-1:记录该 pointId 的首张评分卡 id,
@@ -490,74 +510,77 @@ class CardsViewModel @Inject constructor(
             }
 
             // 仅第一次评分触发 FSRS 调度
+            // 注:shouldSchedule = pointId !in ratedPointIds && templateType != null,
+            // templateType 是 val 且 shouldSchedule 隐含 templateType != null,
+            // Kotlin smart cast 可通过 Boolean val 传播推断此处 templateType 非空。
             if (shouldSchedule) {
-                val templateType = try {
-                    CardTemplateType.valueOf(cardTypeStr)
-                } catch (e: IllegalArgumentException) {
+                val updated = try {
+                    schedulingRepository.rateCard(pointId, fsrsRating, templateType)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // v0.8.12 P1-3:错误优先级调度失败 > 学习进度 > 错题,用 hasSchedulingError 标记
+                    _errorMessage.value = "评分调度失败：${e.message ?: "未知错误"}"
                     null
                 }
-                if (templateType != null) {
-                    val updated = try {
-                        schedulingRepository.rateCard(pointId, fsrsRating, templateType)
+
+                if (updated != null) {
+                    // v0.8.17 P1-3 修复:oldFailCount 计算改为延迟到 updated != null 块内,
+                    // 支持进程恢复后 lastFailCounts 为空时从 updated.failCount 反推基准。
+                    //
+                    // 背景:进程被杀恢复后 lastFailCounts(内存)丢失,原实现 oldFailCount = 0,
+                    // 若 DB 中 failCount 已 >= 8(之前已跨 Leech 阈值),评分后 failCount 继续增长,
+                    // 触发 `0 < 8 && newFailCount >= 8` → Leech 警告误报(用户之前已见过此警告)。
+                    //
+                    // v0.9.7 B2 修复:原实现 AGAIN 总是 `failCount - 1`,但 FSRS-6 中
+                    // 仅 REVIEW + AGAIN 增加 lapses(=failCount),LEARNING/RELEARNING + AGAIN
+                    // 不增加(注释"学习阶段答Again:尚未记住,不构成遗忘")。
+                    // 若 RELEARNING + AGAIN 时 updated.failCount 未变,反推 oldFailCount = failCount - 1
+                    // 会误算(可能导致 Leech 误报或漏报)。现根据 updated.state 区分:
+                    // - state == "REVIEW" + AGAIN:lapses+1,oldFailCount = failCount - 1
+                    // - 其他状态 + AGAIN:lapses 不变,oldFailCount = failCount
+                    // - 非 AGAIN 评分:lapses 不变,oldFailCount = failCount
+                    //
+                    // 仅当内存有记录时优先用内存值(更准确,反映本次会话内的连续 AGAIN 序列),
+                    // 内存无记录时才反推(进程恢复场景)。
+                    val oldFailCount = lastFailCounts[pointId] ?: when (fsrsRating) {
+                        Rating.AGAIN -> if (updated.state == "REVIEW") {
+                            (updated.failCount - 1).coerceAtLeast(0)
+                        } else {
+                            updated.failCount
+                        }
+                        else -> updated.failCount
+                    }
+
+                    // 更新 failCount 跟踪
+                    lastFailCounts[pointId] = updated.failCount
+
+                    // v0.8.12 P1-1:Leech 检测改为"新增 leech"
+                    // 原实现用累计 failCount >= 8,导致达到阈值后每次评分都弹警告
+                    // 现仅当 oldFailCount < 8 && newFailCount >= 8 时弹警告(首次跨阈值)
+                    if (oldFailCount < LEECH_THRESHOLD && updated.failCount >= LEECH_THRESHOLD) {
+                        _leechWarnings.value = _leechWarnings.value + LeechWarning(
+                            message = "这张卡片已连续答错 ${updated.failCount} 次，" +
+                                "建议查看知识点详情重新理解，或问 AI 助手辅助。",
+                            pointId = pointId,
+                        )
+                    }
+
+                    // v0.8.12 P0-2:recordStudySession 移入 if (updated != null) 块
+                    // 原实现在 rateCard 失败(updated=null)时仍调用 recordStudySession,
+                    // 导致 study_progress 更新(learning streak +1)但 memo_records 未更新(FSRS 失败),
+                    // 数据不一致。现仅调度成功后才记录学习进度。
+                    try {
+                        studyProgressRepository.recordStudySession(pointId)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        // v0.8.12 P1-3:错误优先级调度失败 > 学习进度 > 错题,用 hasSchedulingError 标记
-                        _errorMessage.value = "评分调度失败：${e.message ?: "未知错误"}"
-                        null
-                    }
-
-                    if (updated != null) {
-                        // v0.8.17 P1-3 修复:oldFailCount 计算改为延迟到 updated != null 块内,
-                        // 支持进程恢复后 lastFailCounts 为空时从 updated.failCount 反推基准。
-                        //
-                        // 背景:进程被杀恢复后 lastFailCounts(内存)丢失,原实现 oldFailCount = 0,
-                        // 若 DB 中 failCount 已 >= 8(之前已跨 Leech 阈值),评分后 failCount 继续增长,
-                        // 触发 `0 < 8 && newFailCount >= 8` → Leech 警告误报(用户之前已见过此警告)。
-                        //
-                        // 修复:从 updated.failCount 反推 oldFailCount:
-                        // - AGAIN 评分:FSRS-6 中 lapses+1,所以 oldFailCount = updated.failCount - 1
-                        // - GOOD/HARD/EASY 评分:lapses 不变,oldFailCount = updated.failCount
-                        //   (但此时 updated.failCount 不会刚跨阈值,因为非 AGAIN 评分不增加 failCount,
-                        //    若 updated.failCount >= 8 说明之前已 >= 8,oldFailCount 也 >= 8,不触发警告)
-                        //
-                        // 仅当内存有记录时优先用内存值(更准确,反映本次会话内的连续 AGAIN 序列),
-                        // 内存无记录时才反推(进程恢复场景)。
-                        val oldFailCount = lastFailCounts[pointId] ?: when (fsrsRating) {
-                            Rating.AGAIN -> (updated.failCount - 1).coerceAtLeast(0)
-                            else -> updated.failCount
-                        }
-
-                        // 更新 failCount 跟踪
-                        lastFailCounts[pointId] = updated.failCount
-
-                        // v0.8.12 P1-1:Leech 检测改为"新增 leech"
-                        // 原实现用累计 failCount >= 8,导致达到阈值后每次评分都弹警告
-                        // 现仅当 oldFailCount < 8 && newFailCount >= 8 时弹警告(首次跨阈值)
-                        if (oldFailCount < LEECH_THRESHOLD && updated.failCount >= LEECH_THRESHOLD) {
-                            _leechWarnings.value = _leechWarnings.value + LeechWarning(
-                                message = "这张卡片已连续答错 ${updated.failCount} 次，" +
-                                    "建议查看知识点详情重新理解，或问 AI 助手辅助。",
-                                pointId = pointId,
-                            )
-                        }
-
-                        // v0.8.12 P0-2:recordStudySession 移入 if (updated != null) 块
-                        // 原实现在 rateCard 失败(updated=null)时仍调用 recordStudySession,
-                        // 导致 study_progress 更新(learning streak +1)但 memo_records 未更新(FSRS 失败),
-                        // 数据不一致。现仅调度成功后才记录学习进度。
-                        try {
-                            studyProgressRepository.recordStudySession(pointId)
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            // v0.8.12 P1-3:仅在无更高优先级错误时显示
-                            val currentError = _errorMessage.value
-                            if (currentError == null ||
-                                !currentError.startsWith("评分调度失败")
-                            ) {
-                                _errorMessage.value = "学习进度记录失败：${e.message ?: "未知错误"}"
-                            }
+                        // v0.8.12 P1-3:仅在无更高优先级错误时显示
+                        val currentError = _errorMessage.value
+                        if (currentError == null ||
+                            !currentError.startsWith("评分调度失败")
+                        ) {
+                            _errorMessage.value = "学习进度记录失败：${e.message ?: "未知错误"}"
                         }
                     }
                 }

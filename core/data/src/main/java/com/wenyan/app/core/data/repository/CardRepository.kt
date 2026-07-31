@@ -69,17 +69,56 @@ class CardRepositoryImpl @Inject constructor(
      * (next_review_at <= 当前时间)的知识点,并每 60s 自动刷新让新到期卡片进入队列。
      * 逐个调用 [generateCardsFromKnowledgePoint] 生成卡片后展平。
      *
+     * v0.9.7 M2 修复:sibling 卡打散顺序。
+     * 原实现 `duePoints.map { generateCardsFromKnowledgePoint(it) }.flatten()` 会把
+     * 同一知识点的 5-6 张卡(名词解释拆卡 + 论述要点卡 + 区分卡)连续排列,
+     * 用户可能连续答 5 个"建安风骨-时代/代表作家/风格/意义/影响",体验差(疲劳 + FSRS 调度被稀释)。
+     * 现按 pointId 分组后交错排列(round-robin),让同 pointId 的卡分散到队列不同位置,
+     * 用户先看到不同知识点的首卡,再看到次卡,类似 Anki 的"混合复习"模式。
+     *
      * [generateCardsFromKnowledgePoint] 为 suspend 函数(需查询对比知识点标题),
      * 此处利用 [Flow.map] 的 suspend lambda + [Iterable.map] 的 inline 特性
      * 在 Flow 链内安全调用 suspend 函数。
      *
-     * @return 今日待复习卡片流(已按最小信息原则拆分)
+     * @return 今日待复习卡片流(已按最小信息原则拆分 + sibling 打散)
      */
     override fun getCardsForReview(): Flow<List<CardTemplate>> =
         reviewRepository.getReviewQueue().map { duePoints ->
             // Iterable.map 是 inline 函数,其 lambda 在 suspend 上下文中可调用 suspend 函数
-            duePoints.map { generateCardsFromKnowledgePoint(it) }.flatten()
+            val cardsByPoint = duePoints.map { generateCardsFromKnowledgePoint(it) }
+            interleaveSiblingCards(cardsByPoint)
         }.catchAndLog(TAG, "getCardsForReview") { emptyList() }
+
+    /**
+     * 按知识点分组交错排列 sibling 卡(v0.9.7 M2)。
+     *
+     * 输入:[[A1,A2,A3], [B1,B2], [C1,C2,C3,C4]]
+     * 输出:[A1,B1,C1,A2,B2,C2,A3,C3,C4]
+     *
+     * 算法:round-robin 从每个分组取首张,该组取空后跳过。
+     * 保证同 pointId 的卡分散到队列不同位置,避免连续 5-6 张同知识点。
+     */
+    private fun interleaveSiblingCards(cardsByPoint: List<List<CardTemplate>>): List<CardTemplate> {
+        if (cardsByPoint.isEmpty()) return emptyList()
+        // 单组时无需打散(避免无谓拷贝)
+        if (cardsByPoint.size == 1) return cardsByPoint.first()
+
+        val result = ArrayList<CardTemplate>(cardsByPoint.sumOf { it.size })
+        val queues = cardsByPoint.map { it.toMutableList() }.toMutableList()
+        // 按每组剩余卡数降序排序,优先取出卡多的组(让长序列先出现,均衡分布)
+        // 注:每次循环重新判断,避免迭代器并发修改
+        while (queues.any { it.isNotEmpty() }) {
+            queues.removeAll { it.isEmpty() }
+            if (queues.isEmpty()) break
+            // 按 size 降序取首张(让卡多的组先出,均衡打散)
+            queues.sortedByDescending { it.size }.forEach { queue ->
+                if (queue.isNotEmpty()) {
+                    result.add(queue.removeAt(0))
+                }
+            }
+        }
+        return result
+    }
 
     /**
      * 根据知识点自动生成卡片(Task 18.3)。

@@ -1757,6 +1757,115 @@ class CardsViewModelTest {
         // 后续 P2 修复应改为 friendlyErrorMessage,届时此断言需相应更新。
         // 现仅断言前缀存在,允许 message 内容变化。
     }
+
+    // ---------- v0.9.7 新增：B2 Leech oldFailCount 反推修复测试 ----------
+
+    /**
+     * 场景 40（v0.9.7 B2 修复）：RELEARNING 状态 + AGAIN 评分时 failCount 不变,
+     * 不应误触发 Leech 警告。
+     *
+     * 背景:FSRS-6 中仅 REVIEW + AGAIN 增加 lapses(=failCount),
+     * LEARNING/RELEARNING + AGAIN 不增加(注释"学习阶段答Again:尚未记住,不构成遗忘")。
+     *
+     * 原 bug:CardsViewModel L526-529 反推 oldFailCount 时,AGAIN 总是 `failCount - 1`,
+     * 若 RELEARNING + AGAIN 时 updated.failCount=8(未变),反推 oldFailCount=7,
+     * 误满足 `7 < 8 && 8 >= 8` → 弹 Leech 警告(误报)。
+     *
+     * 修复后:根据 updated.state 区分,RELEARNING + AGAIN 时 oldFailCount = failCount(不减 1),
+     * `8 < 8` 为 false → 不弹警告。
+     *
+     * 测试构造:FakeSchedulingRepository 返回 state="RELEARNING", failCount=8,
+     * 模拟用户在 RELEARNING 状态答 AGAIN。期望:不弹 leechWarning。
+     */
+    @Test
+    fun `B2 修复 RELEARNING 状态 AGAIN 评分 failCount 不变时不误报 Leech`() = runTest(testDispatcher) {
+        cardRepository = FakeCardRepository(listOf(testClozeCard()))
+        schedulingRepository = FakeSchedulingRepository(
+            rateCardResult = MemoRecordEntity(
+                pointId = "point_1",
+                state = "RELEARNING", // 关键:RELEARNING 状态,AGAIN 不增加 lapses
+                stability = 1f,
+                difficulty = 9f,
+                lastReviewAt = 1000L,
+                nextReviewAt = 2000L,
+                reviewCount = 8,
+                failCount = 8, // 已达 LEECH_THRESHOLD=8,但因 RELEARNING + AGAIN 不增加,oldFailCount 应=8
+                elapsedDays = 0,
+                scheduledDays = 0,
+                reps = 8,
+                inPriorityQueue = 0,
+            ),
+        )
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        assertNull("评分前 leechWarning 应为 null", viewModel.leechWarning.value)
+
+        viewModel.rateCard(CardRating.AGAIN)
+        advanceUntilIdle()
+
+        assertNull(
+            "RELEARNING + AGAIN 时 failCount 未变(8→8),oldFailCount 应=8,不满足 oldFailCount<8,不应弹 leechWarning",
+            viewModel.leechWarning.value,
+        )
+    }
+
+    /**
+     * 场景 41（v0.9.7 B2 对照组）：REVIEW 状态 + AGAIN 评分时 failCount 从 7→8,
+     * 应正确触发 Leech 警告。
+     *
+     * 这是 B2 修复的对照组:REVIEW + AGAIN 确实增加 lapses(7→8),
+     * oldFailCount = 8 - 1 = 7,满足 `7 < 8 && 8 >= 8` → 弹警告。
+     * 验证 B2 修复没有破坏正常的 Leech 检测。
+     */
+    @Test
+    fun `B2 对照组 REVIEW 状态 AGAIN 评分 failCount 跨阈值时正确弹 Leech`() = runTest(testDispatcher) {
+        cardRepository = FakeCardRepository(listOf(testClozeCard()))
+        schedulingRepository = FakeSchedulingRepository(
+            rateCardResult = MemoRecordEntity(
+                pointId = "point_1",
+                state = "REVIEW", // 关键:REVIEW 状态,AGAIN 增加 lapses
+                stability = 1f,
+                difficulty = 9f,
+                lastReviewAt = 1000L,
+                nextReviewAt = 2000L,
+                reviewCount = 8,
+                failCount = 8, // 跨阈值:7→8
+                elapsedDays = 0,
+                scheduledDays = 0,
+                reps = 8,
+                inPriorityQueue = 0,
+            ),
+        )
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        viewModel.rateCard(CardRating.AGAIN)
+        advanceUntilIdle()
+
+        val warning = viewModel.leechWarning.value
+        assertNotNull(
+            "REVIEW + AGAIN 时 failCount 7→8 跨阈值,应弹 leechWarning",
+            warning,
+        )
+        assertEquals("point_1", warning!!.pointId)
+    }
 }
 
 /** 测试用 StudyProgressRepository(P0 v0.7.2 新增,直接实例化 + Fake DAO) */

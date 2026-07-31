@@ -68,9 +68,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wenyan.app.core.data.cards.ClozeQuoteCard
 import com.wenyan.app.core.data.repository.IntervalPreview
 import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ErrorState
@@ -78,6 +80,9 @@ import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
+import com.wenyan.app.core.designsystem.theme.ColorMode
+import com.wenyan.app.core.designsystem.theme.ThemeConfig
+import com.wenyan.app.core.designsystem.theme.WenyanTheme
 import com.wenyan.app.core.fsrs.Rating
 
 /**
@@ -232,11 +237,13 @@ fun CardsScreen(
                     // v0.8.17 P1:sessionDurationMinutes 改为 collect StateFlow,
                     // 避免在 Composable 函数体中直接调用 viewModel.getSessionDurationMinutes()
                     // 破坏重组稳定性(每次重组返回不同值,SessionCompleteState 无谓重组)
+                    // v0.9.7 M5:新增 onUndo 参数,允许用户撤销最后一张卡的评分(回退到 CardReviewContent)
                     SessionCompleteState(
                         reviewedCount = sessionReviewed,
                         againCount = sessionAgain,
                         sessionDurationMinutes = sessionDurationMinutes,
                         onRetry = viewModel::retry,
+                        onUndo = viewModel::undo,
                         onExit = onNavigateToKnowledge,
                     )
                 }
@@ -537,6 +544,7 @@ private fun SessionCompleteState(
     againCount: Int,
     sessionDurationMinutes: Int,
     onRetry: () -> Unit,
+    onUndo: () -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -650,6 +658,24 @@ private fun SessionCompleteState(
                 modifier = Modifier.padding(end = Spacing.sm),
             )
             Text("再复习一轮")
+        }
+        // v0.9.7 M5:撤销最后一张卡评分,回退到 CardReviewContent 重新评分。
+        // 适用场景:用户评完最后一张才发现评错了(如本想评 GOOD 却点了 AGAIN),
+        // 此时 Crossfade 已切到完成态,原实现无法撤销。现提供撤销入口,
+        // undo 后 currentIndex 回退,isFinished 变 false,Crossfade 切回复习态。
+        // 仅在 reviewedCount > 0 时显示(无评分无可撤销)。
+        if (reviewedCount > 0) {
+            FilledTonalButton(
+                onClick = onUndo,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Undo,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = Spacing.sm),
+                )
+                Text("撤销最后一张")
+            }
         }
         // v0.8.7：退出按钮,让用户明确离开复习(导航到知识点列表)
         // v0.8.13 P1-2:文案从"返回学习"改为"返回知识点列表"
@@ -779,6 +805,15 @@ private fun FlipCard(
 
     val showBack by remember { derivedStateOf { shouldShowBack(rotation) } }
 
+    // v0.9.7 M4 修复:翻转时重置滚动位置,避免背面继承正面滚动状态。
+    // 原实现用 rememberScrollState() 内联,翻转前后共享同一 scrollState,
+    // 用户在正面滚到底部后翻转,背面也滚到底部(但背面内容不同,应从顶部开始)。
+    // 现提升 scrollState 到变量,LaunchedEffect 监听 isFlipped 变化时 scrollTo(0)。
+    val scrollState = rememberScrollState()
+    LaunchedEffect(isFlipped) {
+        scrollState.scrollTo(0)
+    }
+
     Card(
         modifier = modifier
             .graphicsLayer {
@@ -803,13 +838,17 @@ private fun FlipCard(
             contentAlignment = Alignment.Center,
         ) {
             val template = card.template
+            // v0.9.7 N1:简化 null 分支。
+            // CardItem.template 在 toUiItem 中总是赋值(template = this),
+            // 但类型仍为 CardTemplate?(data class 默认值 null),需保留 null 安全。
+            // 兜底显示 card.back/card.front 纯文本(理论上不会触发)。
             Box(
                 modifier = Modifier
                     .graphicsLayer {
                         rotationY = if (showBack) 180f else 0f
                     }
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(scrollState),
                 contentAlignment = Alignment.Center,
             ) {
                 if (template != null) {
@@ -1002,3 +1041,118 @@ private fun RatingButtonContent(label: String, intervalText: String?) {
  * 会在每帧更新 rotation，本函数在每帧被调用以决定内容切换时机。
  */
 internal fun shouldShowBack(rotation: Float): Boolean = rotation > 90f
+
+// ---------- v0.9.7 M10: @Preview ----------
+//
+// CardsScreen 顶层使用 hiltViewModel() 注入,无法直接 @Preview(Preview 不支持 Hilt)。
+// 现对 Crossfade 内三种关键状态分支的私有组件添加 @Preview,
+// 便于 IDE 中实时查看 UI 效果 + 回归视觉检查(颜色/间距/无障碍文案):
+// 1. Normal Review — 正常复习态(已翻转,展示四档评分按钮 + 撤销/跳过)
+// 2. Empty — 今日无到期卡空状态
+// 3. Finished — 会话完成统计态(已复习/需重练/掌握率 + 撤销/再复习/返回)
+//
+// 注:Preview 用静态数据,不触发 FSRS 调度/错题记录等副作用,onXxx 回调均为空 lambda。
+
+/**
+ * Preview 用的测试 [CardItem](ClozeQuoteCard 模板)。
+ *
+ * 构造一张"苏轼名句填空"卡,内容真实可读,便于在 Preview 中验证
+ * CardContent 渲染(正面挖空 / 背面答案) + FlipCard 翻转 + 评分按钮布局。
+ */
+private fun previewCardItem(): CardItem = CardItem(
+    id = "preview_card_1",
+    front = "苏轼____，号东坡居士",
+    back = "轼",
+    cardType = "CLOZE_QUOTE",
+    pointId = "preview_point_1",
+    template = ClozeQuoteCard(
+        front = "苏轼____，号东坡居士",
+        back = "轼",
+        pointId = "preview_point_1",
+        quote = "苏轼____，号东坡居士",
+        blank = "轼",
+        hint = "北宋文学家，唐宋八大家之一",
+    ),
+)
+
+/**
+ * Preview 用的测试 [CardsUiState]。
+ *
+ * @param isFlipped 是否已翻转(true=展示背面+评分按钮,false=展示正面问题)
+ */
+private fun previewUiState(isFlipped: Boolean = true): CardsUiState = CardsUiState(
+    cards = listOf(previewCardItem()),
+    currentIndex = 0,
+    isFlipped = isFlipped,
+)
+
+/**
+ * 正常复习态 Preview(已翻转)。
+ *
+ * 展示:进度条(1/1) + 翻转卡(背面答案) + 四档评分按钮 + 撤销/跳过按钮。
+ * previews=emptyMap() 降级为无预期间隔的纯文字按钮(模拟新卡预览未加载完)。
+ */
+@Preview(name = "Cards - Normal Review (Light)", showBackground = true)
+@Composable
+private fun CardsNormalReviewPreview() {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT, dynamicColor = false)) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            CardReviewContent(
+                card = previewCardItem(),
+                uiState = previewUiState(isFlipped = true),
+                previews = emptyMap(),
+                isSiblingAlreadyRated = false,
+                onFlip = {},
+                onRate = {},
+                onUndo = {},
+                onSkip = {},
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
+/**
+ * 今日无到期卡空状态 Preview。
+ *
+ * 展示:CheckCircle 图标 + "今天没有到期卡片" + 描述文案。
+ * 对应 CardsScreen Crossfade 中 `!key.hasCards` 分支。
+ */
+@Preview(name = "Cards - Empty (Light)", showBackground = true)
+@Composable
+private fun CardsEmptyPreview() {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT, dynamicColor = false)) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            EmptyState(
+                icon = Icons.Default.CheckCircle,
+                title = "今天没有到期卡片",
+                description = "已全部复习完毕，可去知识点列表预习新内容",
+            )
+        }
+    }
+}
+
+/**
+ * 会话完成态 Preview。
+ *
+ * 展示:AutoAwesome 图标 + "本次复习完成" + 用时 + 统计卡(已复习12/需重练3/掌握率75%)
+ * + 鼓励文案 + 再复习一轮/撤销最后一张/返回知识点列表 三个按钮。
+ * 对应 CardsScreen Crossfade 中 `key.isFinished` 分支。
+ */
+@Preview(name = "Cards - Finished (Light)", showBackground = true)
+@Composable
+private fun CardsFinishedPreview() {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT, dynamicColor = false)) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            SessionCompleteState(
+                reviewedCount = 12,
+                againCount = 3,
+                sessionDurationMinutes = 8,
+                onRetry = {},
+                onUndo = {},
+                onExit = {},
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
