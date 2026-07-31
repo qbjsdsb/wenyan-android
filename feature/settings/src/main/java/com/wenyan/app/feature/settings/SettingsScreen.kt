@@ -34,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -51,7 +52,6 @@ import com.wenyan.app.core.designsystem.theme.ThemeViewModel
 import com.wenyan.app.core.designsystem.theme.WenyanPaletteStyle
 import com.wenyan.app.core.fsrs.ExamCountdownManager
 import com.wenyan.app.core.fsrs.StudyPhase
-import com.wenyan.app.feature.settings.BuildConfig
 
 /**
  * 设置页面。
@@ -86,6 +86,14 @@ fun SettingsScreen(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
     )
+    val context = LocalContext.current
+    val currentVersionName = remember {
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0.0.0"
+        } catch (e: Exception) {
+            "0.0.0"
+        }
+    }
 
     ExpressiveScaffold(
         topBar = {
@@ -295,8 +303,8 @@ fun SettingsScreen(
                 GroupedCard(title = "关于") {
                     GroupedCardItem(
                         title = "版本",
-                        // P1-M2 修正：原硬编码 "v0.1.0" 与实际版本脱节，改读 BuildConfig.VERSION_NAME
-                        subtitle = "v${BuildConfig.VERSION_NAME}",
+                        // P1-M2 修正：原硬编码 "v0.1.0" 与实际版本脱节，改读系统 packageManager
+                        subtitle = "v$currentVersionName",
                     )
                     GroupedCardDivider()
                     // v0.9.11 新增：检查更新入口

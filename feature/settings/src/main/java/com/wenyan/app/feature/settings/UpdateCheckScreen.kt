@@ -43,8 +43,10 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -53,7 +55,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.designsystem.component.MaxContentWidth
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.TonalCard
-import com.wenyan.app.feature.settings.BuildConfig
 
 /**
  * 检查更新页面。
@@ -76,6 +77,14 @@ fun UpdateCheckScreen(
     viewModel: UpdateViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val currentVersionName = remember {
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0.0.0"
+        } catch (e: Exception) {
+            "0.0.0"
+        }
+    }
 
     // 进入页面自动检查更新
     LaunchedEffect(Unit) {
@@ -143,7 +152,7 @@ fun UpdateCheckScreen(
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            text = "当前版本 v${BuildConfig.VERSION_NAME}",
+                            text = "当前版本 v$currentVersionName",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -160,35 +169,46 @@ fun UpdateCheckScreen(
                 }
 
                 // ── 状态区域（AnimatedContent 过渡动画） ──
+                // 使用基于状态类型的稳定 key，避免进度更新时触发过渡动画（闪烁）
+                val stateKey = when (uiState) {
+                    is UpdateUiState.Idle -> "idle"
+                    is UpdateUiState.Checking -> "checking"
+                    is UpdateUiState.Latest -> "latest"
+                    is UpdateUiState.UpdateAvailable -> "update_available"
+                    is UpdateUiState.Downloading -> "downloading"
+                    is UpdateUiState.DownloadComplete -> "download_complete"
+                    is UpdateUiState.Error -> "error"
+                }
                 AnimatedContent(
-                    targetState = uiState,
+                    targetState = stateKey,
                     transitionSpec = {
                         fadeIn(tween(300)) togetherWith fadeOut(tween(300))
                     },
                     label = "update_state",
-                ) { state ->
-                    when (state) {
+                ) {
+                    val s = uiState
+                    when (s) {
                         is UpdateUiState.Idle -> IdleContent(onCheck = viewModel::checkForUpdate)
                         is UpdateUiState.Checking -> CheckingContent()
                         is UpdateUiState.Latest -> LatestContent(
-                            currentVersion = state.currentVersion,
+                            currentVersion = s.currentVersion,
                         )
                         is UpdateUiState.UpdateAvailable -> UpdateAvailableContent(
-                            latestVersion = state.latestVersion,
-                            releaseNotes = state.releaseNotes,
+                            latestVersion = s.latestVersion,
+                            releaseNotes = s.releaseNotes,
                             // 软件内下载
                             onDownload = viewModel::downloadAndInstallApk,
                             // 备用：浏览器下载
-                            onOpenInBrowser = { viewModel.openDownloadPage(state.downloadUrl) },
+                            onOpenInBrowser = { viewModel.openDownloadPage(s.downloadUrl) },
                         )
                         is UpdateUiState.Downloading -> DownloadingContent(
-                            progress = state.progress,
+                            progress = s.progress,
                         )
                         is UpdateUiState.DownloadComplete -> DownloadCompleteContent(
                             onInstall = { viewModel.downloadAndInstallApk() },
                         )
                         is UpdateUiState.Error -> ErrorContent(
-                            message = state.message,
+                            message = s.message,
                             onRetry = {
                                 viewModel.resetState()
                                 viewModel.checkForUpdate()

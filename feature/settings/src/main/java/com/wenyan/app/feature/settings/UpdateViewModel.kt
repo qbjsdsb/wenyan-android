@@ -8,7 +8,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.repository.UpdateCheckResult
 import com.wenyan.app.core.data.repository.UpdateRepository
-import com.wenyan.app.feature.settings.BuildConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -96,7 +95,14 @@ class UpdateViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val currentVersion = BuildConfig.VERSION_NAME
+                val currentVersion = try {
+                    val pkgInfo = context.packageManager.getPackageInfo(
+                        context.packageName, 0
+                    )
+                    pkgInfo.versionName ?: "0.0.0"
+                } catch (e: Exception) {
+                    "0.0.0"
+                }
                 val result = updateRepository.checkForUpdate(currentVersion)
                 _uiState.value = when (result) {
                     is UpdateCheckResult.Latest ->
