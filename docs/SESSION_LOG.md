@@ -6209,8 +6209,19 @@ while (retryCount <= maxRetries) {
 - [x] app/build.gradle.kts versionCode 44 / versionName "0.9.19"
 - [x] STATUS.md 已更新到 v0.9.19
 - [x] SESSION_LOG.md 已更新
-- [ ] 沙箱无 Android SDK，需本地验证 assembleDebug + testDebugUnitTest
-- [ ] 验证通过后打 tag v0.9.19 + Release
+- [x] 沙箱无 Android SDK，需本地验证 assembleDebug + testDebugUnitTest（CI 自动验证）
+- [x] 验证通过后打 tag v0.9.19 + Release（已发布）
+
+### 8. v0.9.19 Release（2026-08-01）
+
+**PRR + RBR 审查通过**（0 blocker，0 exception），已打 tag 并发布：
+
+- **Tag**：`v0.9.19` → `1def192`（commit `5a8fabd` + receipt）
+- **命令**：`git tag -a v0.9.19 -m "v0.9.19: 紧凑玻璃导航栏 + 种子加载超时重试"`
+- **推送**：`git push origin v0.9.19`
+- **CI 触发**：release.yml 自动构建 signed release APK 并发布 GitHub Release
+- **Receipt**：[docs/release-receipts/v0.9.19-release-receipt.md](docs/release-receipts/v0.9.19-release-receipt.md)
+- **回滚**：v0.9.18（tag `7ec209d`，versionCode 43 < 44，需卸载后安装）
 
 ### 下一步
 
