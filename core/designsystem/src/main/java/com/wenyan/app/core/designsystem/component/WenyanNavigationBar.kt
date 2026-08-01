@@ -94,24 +94,25 @@ fun WenyanNavigationBar(
                 // 紧凑：高度从 80dp 降至 56dp
                 modifier = Modifier.height(56.dp),
             ) {
-            items.forEach { item ->
-                val selected = item.route == currentRoute
-                NavigationBarItem(
-                    selected = selected,
-                    onClick = { onNavigate(item.route) },
-                    // v0.8.3 修复：原 contentDescription = item.label 与 label Text 重复，
-                    // TalkBack 朗读"首页首页"。NavigationBarItem 已合并子节点语义，
-                    // Icon 设为装饰性（null），由 label Text 提供唯一语义名称。
-                    icon = { Icon(imageVector = item.icon, contentDescription = null) },
-                    label = { Text(text = item.label) },
-                    colors = NavigationBarItemDefaults.colors(
-                        indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
-                        selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        selectedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    ),
-                )
+                items.forEach { item ->
+                    val selected = item.route == currentRoute
+                    NavigationBarItem(
+                        selected = selected,
+                        onClick = { onNavigate(item.route) },
+                        // v0.8.3 修复：原 contentDescription = item.label 与 label Text 重复，
+                        // TalkBack 朗读"首页首页"。NavigationBarItem 已合并子节点语义，
+                        // Icon 设为装饰性（null），由 label Text 提供唯一语义名称。
+                        icon = { Icon(imageVector = item.icon, contentDescription = null) },
+                        label = { Text(text = item.label) },
+                        colors = NavigationBarItemDefaults.colors(
+                            indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
+                            selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            selectedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
+                    )
+                }
             }
         }
     }
