@@ -133,6 +133,24 @@ tools/                           # Python 管线脚本
 | key password | GitHub Secrets: `KEY_PASSWORD`（与 KEYSTORE_PASSWORD 相同） |
 | LLM API key | 本地环境变量配置 |
 
+### 沙箱推送通道（2026-08-02 新增，CodeBuddy 环境）
+
+**背景**：沙箱网络无法直连 github.com（TLS 握手被中间设备掐断），api.github.com / SSH 亦不可达。经排查，**ghfast.top 镜像可透传 git 协议（含 git-receive-pack 写操作）**，配合 GitHub PAT 可正常 clone / push / 打 tag。
+
+**用法**（已配置到本地仓库，新会话直接用）：
+
+```bash
+git pull origin main
+git push origin main
+git tag vX.Y.Z && git push origin vX.Y.Z   # 打 tag 触发 Release
+```
+
+**认证**：GitHub PAT（ghp_ 开头，classic）由用户提供，存于沙箱 ~/.git-credentials + 环境变量 GITHUB_PAT（~/.zshrc）。git 已配置 credential.helper store，自动填充认证，无需在命令中携带 token。
+
+**有效期**：90 天（用户 2026-08-02 设置，预计 2026-10-31 到期）。到期后需用户重新提供 PAT。若 GitHub 返回 Invalid username or token → 检查 ~/.git-credentials 是否有效。
+
+**安全**：PAT 只存沙箱本地（~/.git-credentials 权限 600），绝不写入仓库。
+
 ## 6. AI 协作规则
 
 - **每次会话结束前**更新 [docs/SESSION_LOG.md](docs/SESSION_LOG.md) 并 commit
