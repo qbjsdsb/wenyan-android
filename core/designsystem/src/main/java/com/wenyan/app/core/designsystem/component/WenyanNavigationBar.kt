@@ -1,5 +1,10 @@
 package com.wenyan.app.core.designsystem.component
 
+import android.os.Build
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -11,6 +16,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -51,18 +57,43 @@ fun WenyanNavigationBar(
     modifier: Modifier = Modifier,
 ) {
     // v0.9.18 悬浮导航栏改造：Surface 包裹 NavigationBar 提供圆角/投影/间距
+    // v0.9.19 紧凑玻璃风格改造：
+    //   - 圆角 16dp → 24dp，更圆润
+    //   - tonalElevation 3dp → 2dp，更轻
+    //   - 颜色 surfaceContainer → surfaceContainerHigh.copy(alpha=0.85f)，半透明玻璃质感
+    //   - 水平留边 16dp → 8dp，底部 8dp → 4dp，更紧凑
+    //   - NavigationBar 高度 80dp → 56dp，减少遮挡
+    //   - Android 12+ 叠加渐变光泽 overlay，模拟流体玻璃
     Surface(
-        shape = RoundedCornerShape(16.dp),
-        tonalElevation = 3.dp,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        // 水平留边 16dp，底部在系统手势区之上 8dp
+        shape = RoundedCornerShape(24.dp),
+        tonalElevation = 2.dp,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f),
+        // 水平留边 8dp，底部在系统手势区之上 4dp
         // 注：padding(horizontal, bottom) 无此重载，需链式调用
-        modifier = modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp),
+        modifier = modifier.padding(horizontal = 8.dp).padding(bottom = 4.dp),
     ) {
-        NavigationBar(
-            containerColor = Color.Transparent,
-            tonalElevation = 0.dp,
-        ) {
+        // Android 12+ 叠加渐变光泽，模拟玻璃反光效果
+        val glassOverlayModifier = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Modifier.background(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.04f),
+                        Color.Transparent,
+                        Color.White.copy(alpha = 0.06f),
+                    ),
+                ),
+                shape = RoundedCornerShape(24.dp),
+            )
+        } else {
+            Modifier
+        }
+        Box(modifier = glassOverlayModifier.fillMaxWidth()) {
+            NavigationBar(
+                containerColor = Color.Transparent,
+                tonalElevation = 0.dp,
+                // 紧凑：高度从 80dp 降至 56dp
+                modifier = Modifier.height(56.dp),
+            ) {
             items.forEach { item ->
                 val selected = item.route == currentRoute
                 NavigationBarItem(

@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
@@ -75,14 +76,31 @@ class WenyanApplication : Application() {
         }
         super.onCreate()
         applicationScope.launch {
-            // P1 修正：种子加载加超时保护，防止 I/O 挂起或 DB 死锁导致协程永久阻塞。
-            // 超时抛出 TimeoutCancellationException，由 exceptionHandler 记录日志，
-            // App 正常启动（下次启动时 ensureSeedDataLoaded 会重试）。
+            // P1 修正：种子加载加超时保护 + 重试机制。
             // v0.7.1 修正：30s → 120s。909 知识点（含 study_text）+ 909 写作素材 +
             // 481 真题的 JSON 解析 + 事务导入，30 秒在低端设备上不够，导致超时后
             // 异常被吞、知识点为空（详见 SESSION_LOG v0.7.1 修复）。
-            withTimeout(120_000L) {
-                seedDataLoader.ensureSeedDataLoaded()
+            // v0.9.19 修正：120s → 300s + 1 次重试。v0.9.18 用户反馈更新后知识点
+            // 数据丢失（删除重装后恢复），根因是 120s 超时后直接失败，不重试，
+            // 导致 App 启动后数据库为空。300s 覆盖低端设备首次加载，1 次重试
+            // 覆盖偶发 I/O 抖动（如后台系统更新/媒体扫描占满闪存带宽）。
+            var retryCount = 0
+            val maxRetries = 1
+            while (retryCount <= maxRetries) {
+                try {
+                    withTimeout(300_000L) { // 5 分钟
+                        seedDataLoader.ensureSeedDataLoaded()
+                    }
+                    break
+                } catch (e: TimeoutCancellationException) {
+                    if (retryCount < maxRetries) {
+                        Timber.i("Seed data load timed out, retrying (attempt ${retryCount + 1})")
+                        retryCount++
+                    } else {
+                        Timber.e(e, "Seed data load failed after ${maxRetries + 1} attempts")
+                        throw e
+                    }
+                }
             }
         }
     }

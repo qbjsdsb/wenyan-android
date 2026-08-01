@@ -6098,3 +6098,122 @@ M40,50 L68,50 L68,54 L58,54 L66,66 L58,66 L54,58 L50,66 L42,66 L50,54 L40,54 Z
 1. **P0**：emulator 实测 v0.9.18 — 验证悬浮导航栏 5 项效果 + 手动加入错题本完整流程
 2. **P0**：emulator 实测启动图标 v4 — 验证书+文负空间图标显示
 3. **P0**：emulator 实测 v0.9.14 — 验证底栏不遮挡 + 软件内更新
+
+---
+
+## 2026-08-01 v0.9.19 紧凑玻璃导航栏 + 种子加载超时重试
+
+**响应用户需求"这个悬浮导航栏占用空间太大了，我说的悬浮导航栏是就像苹果的流体玻璃底栏那种" + "包括种子加载超时的问题一并修复了"** — 基于 v0.9.18 悬浮导航栏的反馈，进一步改造为紧凑玻璃风格，同时修复种子加载超时导致的数据丢失问题。
+
+### 1. 调查结果
+
+**用户反馈 #1：悬浮导航栏占用空间太大**
+- 当前配置：导航栏高度 80dp + BottomGradientScrim 80dp + 水平间距 16dp + 底部 8dp = 共约 184dp
+- 问题：导航栏+渐变遮罩合计高度约 184dp，占屏幕约 21%（6.1" 屏幕），内容区域被过度挤压
+- 用户期望：像苹果流体玻璃底栏 — 半透明、紧凑、不遮挡内容
+
+**用户反馈 #2：更新后知识点数据丢失**
+- 根因：WenyanApplication.kt 种子加载超时 120s 后直接失败，不重试
+- 表现：App 启动后数据库为空，知识点列表空白
+- 结论：删除重装后恢复，因为首次加载是完整导入（无旧数据），不会超时
+- 修复方向：增加超时时间 + 重试机制
+
+### 2. 代码变更
+
+#### Phase 1: 种子加载超时修复（WenyanApplication.kt）
+
+| 项 | 改前 | 改后 |
+|----|------|------|
+| 超时时间 | 120s | 300s |
+| 重试机制 | 无 | 1 次重试 |
+| 异常处理 | 直接抛给 exceptionHandler | 先重试，再抛给 exceptionHandler |
+
+**关键代码**：
+```kotlin
+var retryCount = 0
+val maxRetries = 1
+while (retryCount <= maxRetries) {
+    try {
+        withTimeout(300_000L) {
+            seedDataLoader.ensureSeedDataLoaded()
+        }
+        break
+    } catch (e: TimeoutCancellationException) {
+        if (retryCount < maxRetries) {
+            Timber.i("Seed data load timed out, retrying (attempt ${retryCount + 1})")
+            retryCount++
+        } else {
+            Timber.e(e, "Seed data load failed after ${maxRetries + 1} attempts")
+            throw e
+        }
+    }
+}
+```
+
+#### Phase 2a: WenyanNavigationBar.kt — 紧凑玻璃风格
+
+| 项 | 改前 | 改后 |
+|----|------|------|
+| 圆角 | RoundedCornerShape(16.dp) | RoundedCornerShape(24.dp) |
+| tonalElevation | 3.dp | 2.dp |
+| 颜色 | surfaceContainer | surfaceContainerHigh.copy(alpha = 0.85f) |
+| 水平留边 | 16.dp | 8.dp |
+| 底部留边 | 8.dp | 4.dp |
+| NavigationBar 高度 | 默认 80dp | Modifier.height(56.dp) |
+| Android 12+ 叠加 | 无 | 水平渐变光泽 overlay（0.04f→Transparent→0.06f） |
+
+**视觉设计**：半透明 `surfaceContainerHigh` 底色 + 水平渐变光泽 overlay，模拟流体玻璃的 frosted glass 质感。56dp 紧凑高度减少遮挡，24dp 大圆角更圆润。
+
+#### Phase 2b: WenyanAdaptiveNavigation.kt — 移除渐变遮罩 + 调整 padding
+
+| 项 | 改前 | 改后 |
+|----|------|------|
+| BottomGradientScrim | 有（80dp 渐变遮罩） | 无（已移除） |
+| 底部内容 padding | 80.dp + systemNavBarBottomDp | 56.dp + 4.dp + systemNavBarBottomDp |
+| 总遮挡面积 | ~184dp（80dp 导航栏 + 80dp 渐变 + 16dp 间距 + 8dp 底部） | ~68dp（56dp 导航栏 + 8dp 间距 + 4dp 底部） |
+
+**遮挡面积变化**：~184dp → ~68dp，减少 ~63%。内容区域增加约 116dp（~14% 的 6.1" 屏幕）。
+
+### 3. 文件变更清单
+
+| 文件 | 改动 | 行数变化 |
+|------|------|----------|
+| `WenyanApplication.kt` | 种子加载 300s + 1 次重试 + TimeoutCancellationException import | +15/-3 |
+| `WenyanNavigationBar.kt` | 紧凑玻璃风格全部改造（圆角/半透明/高度/光泽 overlay） | +20/-4 |
+| `WenyanAdaptiveNavigation.kt` | 移除 BottomGradientScrim + 调整 padding + 清理 import | +5/-25 |
+| `app/build.gradle.kts` | versionCode 43→44, versionName "0.9.18"→"0.9.19" | +2/-2 |
+
+### 4. 设计文档
+
+- [docs/plans/floating-navigation-bar.md](docs/plans/floating-navigation-bar.md) — 紧凑玻璃导航栏设计
+
+### 5. 待 emulator 实测
+
+1. **玻璃导航栏效果**：圆角 24dp / 半透明 / 渐变光泽 / 紧凑高度 56dp
+2. **种子加载**：首次启动 300s 内完成 + 超时后自动重试 1 次
+3. **内容区域**：移除 BottomGradientScrim 后无异常
+4. **浅色/深色模式**：半透明 surfaceContainerHigh 在不同主题下视觉效果
+
+### 6. 已知限制（v0.9.19）
+
+- 玻璃效果在 Android 11 及以下无渐变光泽 overlay（仅半透明 + 圆角 + 投影）
+- 本次未实现滚动感知显隐（scroll-aware visibility）
+- 沙箱无 Android SDK，无法编译验证，需本地或 CI 验证
+- **待 emulator 实测**：验证玻璃导航栏效果 + 种子加载正常
+
+### 7. 交接清单
+
+- [x] WenyanApplication.kt 种子加载 300s + 1 次重试
+- [x] WenyanNavigationBar.kt 紧凑玻璃风格改造（圆角/半透明/高度/光泽）
+- [x] WenyanAdaptiveNavigation.kt 移除 BottomGradientScrim + 调整 padding
+- [x] app/build.gradle.kts versionCode 44 / versionName "0.9.19"
+- [x] STATUS.md 已更新到 v0.9.19
+- [x] SESSION_LOG.md 已更新
+- [ ] 沙箱无 Android SDK，需本地验证 assembleDebug + testDebugUnitTest
+- [ ] 验证通过后打 tag v0.9.19 + Release
+
+### 下一步
+
+1. **P0**：emulator 实测 v0.9.19 — 验证玻璃导航栏 8 项效果 + 种子加载正常
+2. **P0**：emulator 实测启动图标 v4 — 验证书+文负空间图标显示
+3. **P0**：emulator 实测 v2.16.0 — 验证 935 知识点正确导入

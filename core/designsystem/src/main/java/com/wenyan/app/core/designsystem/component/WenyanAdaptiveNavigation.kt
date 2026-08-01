@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -18,8 +16,6 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowWidthSizeClass
@@ -58,8 +54,11 @@ fun WenyanAdaptiveNavigation(
             //
             // 布局结构（Box 叠加）：
             //   1. 内容区：surfaceContainer 背景，底部显式 padding 避开导航栏
-            //   2. 渐变遮罩：底部 80dp 渐变，让内容平滑过渡到悬浮导航栏
-            //   3. 导航栏：Surface 悬浮容器（圆角 16dp + 投影 3dp + 水平间距 16dp）
+            //   2. 导航栏：Surface 悬浮容器（圆角 24dp + 半透明玻璃质感 + 水平间距 8dp）
+            //
+            // v0.9.19 紧凑玻璃风格：
+            //   - 移除 BottomGradientScrim：导航栏自身半透明，不再需要渐变遮罩过渡
+            //   - 底部 padding 从 80dp 降至 56dp+4dp，减少遮挡面积 ~30%
             //
             // 关键修复：不再依赖 ExpressiveScaffold 的 contentWindowInsets 消费策略，
             // 直接用 Modifier.padding 为内容添加底部间距，确保可点击区域不被导航栏遮挡。
@@ -77,11 +76,11 @@ fun WenyanAdaptiveNavigation(
                     //
                     // 布局结构（Box 叠加）：
                     //   1. 内容区：surfaceContainer 背景，底部显式 padding 避开导航栏
-                    //   2. 渐变遮罩：底部 80dp 渐变，让内容平滑过渡
-                    //   3. 导航栏：透明背景，浮在最上层
+                    //   2. 导航栏：半透明玻璃质感，浮在最上层
                     //
-                    // 底部间距 = 导航栏高度(80dp) + 系统导航栏手势区
-                    val bottomPadding = 80.dp + systemNavBarBottomDp
+                    // 底部间距 = 导航栏高度(56dp) + 底部留边(4dp) + 系统导航栏手势区
+                    // v0.9.19 紧凑玻璃风格：导航栏高度从 80dp 降至 56dp，底部留边 4dp
+                    val bottomPadding = 56.dp + 4.dp + systemNavBarBottomDp
 
                     // 1. 内容区：surfaceContainer 背景 + 显式 padding
                     Box(
@@ -93,12 +92,8 @@ fun WenyanAdaptiveNavigation(
                         content(PaddingValues(0.dp))
                     }
 
-                    // 2. 底部渐变遮罩（覆盖在内容之上，导航栏之下）
-                    Box(Modifier.align(Alignment.BottomCenter)) {
-                        BottomGradientScrim()
-                    }
-
-                    // 3. 底部导航栏（透明背景，浮在最上层）
+                    // 2. 底部导航栏（透明背景，浮在最上层）
+                    // v0.9.19 移除 BottomGradientScrim：紧凑玻璃风格导航栏自身半透明，不再需要渐变遮罩过渡
                     WenyanNavigationBar(
                         items = items,
                         currentRoute = currentRoute,
@@ -175,31 +170,4 @@ private fun AdaptiveRailScaffold(
             content(padding)
         }
     }
-}
-
-/**
- * 底部渐变遮罩层（沉浸式导航栏专用）。
- *
- * 从透明渐变到 [MaterialTheme.colorScheme.surfaceContainer]，
- * 让内容在导航栏区域平滑过渡，避免被导航栏截断的突兀感。
- * 高度 80dp 覆盖导航栏区域，悬浮导航栏自带 surfaceContainer 背景，不再需要大片渐变。
- */
-@Composable
-private fun BottomGradientScrim() {
-    val surfaceContainer = MaterialTheme.colorScheme.surfaceContainer
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(80.dp)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        surfaceContainer.copy(alpha = 0.60f),
-                        surfaceContainer.copy(alpha = 0.85f),
-                        surfaceContainer,
-                    ),
-                ),
-            ),
-    )
 }
