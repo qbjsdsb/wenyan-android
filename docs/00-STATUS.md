@@ -1,11 +1,11 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-07-31（启动图标 v4 设计重构）
+> 最后更新：2026-08-01（真题→论述题迁移 v0.9.16）
 
 ## ✅ 当前状态
 
-**v4 启动图标设计重构（书+文负空间，待发布）** — 响应用户需求"把这个app的图标重新设计一下"。用户选择方案 B（书+文负空间），经精修后实施。从 v3 "印章文"（5 个独立矩形 path）改为 v4 "展开的书 + 文负空间"（单 path + evenOdd fillType 镂空）。设计语言：Google Play Books（书形）+ Google Docs（字母负空间）混合。精修要点：去 serif 平底收笔 + "文"字垂直居中于书页。Safe Zone 检查全部通过。本地验证：`:app:assembleDebug` BUILD SUCCESSFUL + 测试全绿。**待 emulator 实测**：验证新图标启动屏/桌面/通知栏显示效果。
+**v0.9.16 真题→论述题迁移（底部导航 Tab 替换，已发布）** — 响应用户需求"真题这个部分删除，因为已经有论述题部分了，然后论述题部分放到原来真题的位置"。底部导航第 2 个 Tab 从"真题"(Quiz) 替换为"论述题"(Essay)。3 文件修改：TopLevelDestination.kt（Quiz→Essay），WenyanNavHost.kt（quizDestination→essayTabDestination），KnowledgeScreen.kt（删除 EssayEntryCard）。死代码审查：无残留 ROUTE_QUIZ/quizDestination/onNavigateToEssays/EssayEntryCard/ROUTE_ESSAY_LIST。versionCode 40→41，versionName "0.9.15"→"0.9.16"。**Exception E1**：CI 账单问题，release APK 使用 debug 签名 fallback（与 v0.9.4-v0.9.13 一致）。**待 emulator 实测**：验证论述题 Tab 替换 + 5 项功能（列表筛选/知识点跳转/双向导航）。
 
 **v0.9.14 修复底栏遮盖 + 软件内更新（已发布 2026-07-31）** — 响应用户反馈"底栏遮盖了可以点击的地方，更新为什么不能软件内更新，还要去浏览器，而且下的是debug版本，而且只能卸载重装，为什么有这么多问题"。修复 v0.9.13 沉浸式导航栏导致的底栏遮盖可点击区域问题：COMPACT 布局改用 Box + 显式 padding（80dp 导航栏高度 + 系统手势区），不再依赖 Scaffold contentWindowInsets 消费策略。实现软件内 APK 下载+安装：UpdateViewModel 新增 OkHttp 流式下载 + FileProvider 安装 + 2 种新 UI 状态（Downloading/DownloadComplete），UpdateCheckScreen 新增进度条和安装按钮。AndroidManifest 新增 REQUEST_INSTALL_PACKAGES + FileProvider。新增 file_paths.xml。OkHttp 依赖。**重要更正**：CI Release workflow 运行正常，keystore 已配置，本次 Release 为正式签名 APK（19.5 MB），可直接覆盖安装旧版，无需卸载。本地验证：`:app:assembleDebug` SUCCESSFUL + `testDebugUnitTest` SUCCESSFUL（317 tasks, 0 failures）。
 
@@ -21,10 +21,10 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **本会话** feat(icon): 启动图标 v4 设计重构 — 书+文负空间（2026-07-31） |
-| 最新 Release | **v0.9.15**（2026-07-31 发布，正式签名，可直接覆盖安装）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.15 |
-| 编译验证 | **:app:assembleDebug + testDebugUnitTest SUCCESSFUL**（v0.9.15，317 tasks 0 failures） |
-| versionCode / versionName | **40 / "0.9.15"** |
+| 最新 commit | **本会话** 真题→论述题迁移（2026-08-01） |
+| 最新 Release | **v0.9.16**（2026-08-01 发布，debug 签名 Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.16 |
+| 编译验证 | **沙箱无 Android SDK，跳过本地编译**（纯 Kotlin/Compose 导航逻辑改动） |
+| versionCode / versionName | **41 / "0.9.16"** |
 | 知识点 | **935 个**（v2.16.0 补充 25 个核心知识点 kp_00911-kp_00935） |
 | 真题 | **485 道**（v0.7.6 已删除 sample_essay 冗余字段） |
 | 论述题 | **134 道 ESSAY 题**（v0.9.9 全覆盖填充 angle+notes，v0.9.10 全面审计 0 问题） |

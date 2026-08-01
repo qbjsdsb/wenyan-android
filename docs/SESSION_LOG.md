@@ -5886,3 +5886,64 @@ M40,50 L68,50 L68,54 L58,54 L66,66 L58,66 L54,58 L50,66 L42,66 L50,54 L40,54 Z
 - 图标改动仅涉及 2 个 XML 文件（foreground + monochrome），不涉代码逻辑
 - 视觉验证（emulator 实测）需在有屏幕环境执行：安装后检查启动屏/桌面/最近任务栏/通知栏图标显示
 - Android 13+ 用户可在设置 → 壁纸和样式 → 主题图标切换验证 themed icon 效果
+
+---
+
+## 2026-08-01 真题→论述题迁移（底部导航 Tab 替换 + 发布 v0.9.16）
+
+**响应用户需求"真题这个部分删除，因为已经有论述题部分了，然后论述题部分放到原来真题的位置"** — 将底部导航第 2 个 Tab 从"真题"(Quiz) 替换为"论述题"(Essay)，移除知识点列表 EssayEntryCard 入口。
+
+### 1. 代码变更（3 文件修改）
+
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `app/.../navigation/TopLevelDestination.kt` | 修改 | `Quiz` data object → `Essay` data object，`ROUTE_QUIZ` → `ROUTE_ESSAY`，底部导航第 2 个 Tab 变更为"论述题" |
+| `app/.../navigation/WenyanNavHost.kt` | 修改 | `quizDestination` → `essayTabDestination`，`EssayListScreen` 作为顶级 Tab（`onBack = null`），删除 `essayListDestination`/`ROUTE_ESSAY_LIST`，`knowledgeDestination` 移除 `onNavigateToEssays` 参数 |
+| `feature/knowledge/.../KnowledgeScreen.kt` | 修改 | 删除 `EssayEntryCard` Composable + `onNavigateToEssays` 参数 |
+| `feature/knowledge/.../EssayListScreen.kt` | 修改 | `onBack` 改为 nullable（顶级 Tab 模式无返回箭头） |
+| `feature/settings/.../AboutTutorialScreen.kt` | 修改 | 真题→论述题描述更新，`Icons.Filled.Quiz` → `Icons.AutoMirrored.Filled.MenuBook`，新增 `Icons.Filled.ErrorOutline` 导入 |
+
+### 2. 死代码审查
+
+- ✅ `ROUTE_QUIZ` 在 `.kt` 文件中无残留（仅 docs 计划文档有说明性引用）
+- ✅ `quizDestination` 在 `.kt` 文件中无残留（仅 WenyanNavHost.kt 注释中有说明）
+- ✅ `onNavigateToEssays` 在 `.kt` 文件中无残留
+- ✅ `EssayEntryCard` 在 `.kt` 文件中无残留
+- ✅ `ROUTE_ESSAY_LIST` 在 `.kt` 文件中无残留
+- ✅ `feature:quiz` 模块保留（含 `WrongAnswerScreen`，仍被 WenyanNavHost.kt 引用）
+- ✅ `QuizScreen.kt` 文件存在但不再被任何导航引用（死代码，后续可清理）
+
+### 3. 本地验证
+
+沙箱环境无 Android SDK，跳过本地编译验证。按 AGENTS.md 规则，纯 Kotlin/Compose 导航与 UI 逻辑改动不需等 CI。
+
+### 4. Release 发布
+
+- versionCode: 40 → 41
+- versionName: "0.9.15" → "0.9.16"
+- commit: 当前分支 `trae/agent-Nx0L7f`，合并到 main 后打 tag `v0.9.16`
+- Exception E1：CI 账单问题，debug 签名 fallback（与 v0.9.4-v0.9.14 一致）
+
+### 5. 已知限制
+
+- **Exception E1**：CI 账单问题，release APK 使用 debug 签名 fallback
+- **emulator 实测待办**：
+  1. 底部导航第 2 个 Tab 显示"论述题"图标，点击进入论述题列表
+  2. 知识点列表顶部不再显示 EssayEntryCard
+  3. 论述题列表三维筛选（年份/科目/审题思路）正常
+  4. 知识点详情页→论述题详情跳转不受影响
+  5. 论述题详情页→知识点详情跳转不受影响
+
+### 6. 交接清单
+
+- [x] 代码审查通过（5 文件修改，无残留死代码引用）
+- [x] git tag v0.9.16 已推送
+- [x] GitHub Release 已创建（含 Release Notes）
+- [x] STATUS.md 已更新到 v0.9.16
+- [x] SESSION_LOG.md 已更新
+- [x] 已知限制已记录（Exception E1 + emulator 实测待办）
+
+### 下一步
+
+1. **P0**：emulator 实测 v0.9.16 — 验证论述题 Tab 替换 + 5 项实测待办（见上）
+2. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 替换所有 Release asset（消除 Exception E1）

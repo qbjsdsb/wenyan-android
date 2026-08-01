@@ -143,7 +143,9 @@ tools/                           # Python 管线脚本
 - commit message 说清"为什么改"，不只是"改了什么"
 - 用户偏好：中文交流、严谨验证、反复检查、有趣的教学风格、M3 谷歌味道 UI
 
-## 7. 当前状态（2026-07-31）
+## 7. 当前状态（2026-08-01）
+
+**✅ v0.9.16 真题→论述题迁移（底部导航 Tab 替换，已发布）** — 响应用户需求"真题这个部分删除，因为已经有论述题部分了，然后论述题部分放到原来真题的位置"。底部导航第 2 个 Tab 从"真题"(Quiz) 替换为"论述题"(Essay)。3 文件修改：TopLevelDestination.kt（Quiz→Essay），WenyanNavHost.kt（quizDestination→essayTabDestination），KnowledgeScreen.kt（删除 EssayEntryCard）。EssayListScreen onBack 改为 nullable（顶级 Tab 模式无返回箭头）。AboutTutorialScreen 真题→论述题描述更新 + ErrorOutline 导入修复。死代码审查：无残留 ROUTE_QUIZ/quizDestination/onNavigateToEssays/EssayEntryCard/ROUTE_ESSAY_LIST。versionCode 40→41，versionName "0.9.15"→"0.9.16"。**Exception E1**：CI 账单问题，release APK 使用 debug 签名 fallback（与 v0.9.4-v0.9.13 一致）。**待 emulator 实测**：验证论述题 Tab 替换 + 5 项功能（列表筛选/知识点跳转/双向导航）。
 
 **✅ v4 启动图标设计重构（书+文负空间，已实施，待发布）** — 响应用户需求"把这个app的图标重新设计一下"。用户选择方案 B（书+文负空间），经精修后实施。从 v3 "印章文"（5 个独立矩形 path）改为 v4 "展开的书 + 文负空间"（单 path + evenOdd fillType 镂空）。设计语言：Google Play Books（书形）+ Google Docs（字母负空间）混合。精修要点：去 serif 平底收笔 + "文"字垂直居中于书页。Safe Zone 检查全部通过。本地验证：`:app:assembleDebug` BUILD SUCCESSFUL + 全模块 `testDebugUnitTest` UP-TO-DATE。**待 emulator 实测**：验证新图标启动屏/桌面/通知栏显示效果。设计文档：[docs/design/icon-redesign.md](docs/design/icon-redesign.md)，精修预览：`.tmp-preview/icon-preview.html`。
 

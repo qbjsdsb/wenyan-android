@@ -43,7 +43,15 @@ android {
         //   - 修复：COMPACT 布局 showNavigation=false 时不再添加 surfaceContainer 背景和底部 padding
         //   - 子页面全屏内容，由各自的 ExpressiveScaffold 处理背景和系统 insets
         //   - 编译：assembleDebug + 全模块 testDebugUnitTest 全绿（317 tasks, 0 failures））
-        versionCode = 40
+        // v0.9.16=41（真题→论述题迁移：底部导航第 2 个 Tab 从"真题"替换为"论述题"，
+        //   - TopLevelDestination: ROUTE_QUIZ → ROUTE_ESSAY，Quiz data object → Essay data object
+        //   - WenyanNavHost: quizDestination → essayTabDestination，EssayListScreen 作为顶级 Tab
+        //   - KnowledgeScreen: 移除 EssayEntryCard + onNavigateToEssays 参数
+        //   - EssayListScreen: onBack 改为 nullable（顶级 Tab 模式无返回箭头）
+        //   - AboutTutorialScreen: 真题→论述题描述更新 + ErrorOutline 导入修复
+        //   - 死代码审查：无残留 ROUTE_QUIZ/quizDestination/onNavigateToEssays/EssayEntryCard/ROUTE_ESSAY_LIST
+        //   - 编译：需本地 emulator 验证 assembleDebug + testDebugUnitTest）
+        versionCode = 41
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.7：知识卡片功能完善 + 界面审查修复（响应用户反馈"功能还是不够完善"）。
         //   数据一致性修复（B1/B2/B3）：
@@ -101,7 +109,8 @@ android {
         //     - Icons.AutoMirrored.Filled.Send 弃用修复（原 Icons.Filled.Send）
         //     - SocraticTutorTest/AiAssistantViewModelTest 接口提取后实例化修正
         //   本地验证：:app:assembleDebug + 全模块 testDebugUnitTest 全绿（471 tests, 0 failures）
-        versionName = "0.9.15"
+        // v0.9.16：真题→论述题迁移（底部导航 Tab 替换 + 代码清理 + AboutTutorialScreen 修复）
+        versionName = "0.9.16"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
