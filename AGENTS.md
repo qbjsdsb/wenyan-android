@@ -145,7 +145,7 @@ tools/                           # Python 管线脚本
 
 ## 7. 当前状态（2026-08-01）
 
-**✅ v0.9.16 真题→论述题迁移（底部导航 Tab 替换，已发布）** — 响应用户需求"真题这个部分删除，因为已经有论述题部分了，然后论述题部分放到原来真题的位置"。底部导航第 2 个 Tab 从"真题"(Quiz) 替换为"论述题"(Essay)。3 文件修改：TopLevelDestination.kt（Quiz→Essay），WenyanNavHost.kt（quizDestination→essayTabDestination），KnowledgeScreen.kt（删除 EssayEntryCard）。EssayListScreen onBack 改为 nullable（顶级 Tab 模式无返回箭头）。AboutTutorialScreen 真题→论述题描述更新 + ErrorOutline 导入修复。死代码审查：无残留 ROUTE_QUIZ/quizDestination/onNavigateToEssays/EssayEntryCard/ROUTE_ESSAY_LIST。versionCode 40→41，versionName "0.9.15"→"0.9.16"。**Exception E1**：CI 账单问题，release APK 使用 debug 签名 fallback（与 v0.9.4-v0.9.13 一致）。**待 emulator 实测**：验证论述题 Tab 替换 + 5 项功能（列表筛选/知识点跳转/双向导航）。
+**✅ v0.9.18 悬浮底部导航栏 + 知识卡片手动加入错题本（已发布）** — 双功能发布。**悬浮导航栏**：响应用户需求"ksunext 底部悬浮"，Surface 包裹 NavigationBar（圆角 16dp + tonalElevation 3dp + 水平间距 16dp + 底部 8dp 留空），BottomGradientScrim 缩短至 80dp（原 120dp），减少遮挡面积 20%。**手动加入错题本**：响应用户需求"在知识卡片里面加一个按钮，可以把卡片手动加入错题本"，5 层实现（SOURCE_CARD_MANUAL 常量 / `addToWrongAnswerBook()` 防重入+防重复+NonCancellable 原子写入 / `AddToWrongAnswerButton` 三态 UI / `isCurrentCardInWrongBook` sibling 感知 / 10+ 新测试）。**CI 修复**：3 轮编译错误修复 + 14 个测试失败修复（移除 Dispatchers.IO，与 rateCard() 模式一致）。CI 全绿后正确打 tag v0.9.18 → commit `7ec209da`。**Release 2026-08-01T18:46:10Z 成功发布**，APK 19,475,344 bytes SHA-256 `3d968ad5...0561f5`。Exception E1（debug 签名 fallback）。设计文档：[docs/plans/floating-navigation-bar.md](docs/plans/floating-navigation-bar.md) + [docs/plans/cards-add-to-wrong-answer-book.md](docs/plans/cards-add-to-wrong-answer-book.md)。**待 emulator 实测**：验证悬浮导航栏 + 手动加入错题本 + 启动图标 v4 三项功能。
 
 **✅ v4 启动图标设计重构（书+文负空间，已实施，待发布）** — 响应用户需求"把这个app的图标重新设计一下"。用户选择方案 B（书+文负空间），经精修后实施。从 v3 "印章文"（5 个独立矩形 path）改为 v4 "展开的书 + 文负空间"（单 path + evenOdd fillType 镂空）。设计语言：Google Play Books（书形）+ Google Docs（字母负空间）混合。精修要点：去 serif 平底收笔 + "文"字垂直居中于书页。Safe Zone 检查全部通过。本地验证：`:app:assembleDebug` BUILD SUCCESSFUL + 全模块 `testDebugUnitTest` UP-TO-DATE。**待 emulator 实测**：验证新图标启动屏/桌面/通知栏显示效果。设计文档：[docs/design/icon-redesign.md](docs/design/icon-redesign.md)，精修预览：`.tmp-preview/icon-preview.html`。
 
@@ -159,13 +159,13 @@ tools/                           # Python 管线脚本
 
 **✅ v0.9.4 错题本接入 FSRS 间隔重复调度（已发布）** — 为 wrong_answers 表添加 10 个 sched_* FSRS 调度字段，复用 FSRS-6 算法 + TIER_FRAMEWORK 档位（R_target=0.90），实现错题的间隔重复复习。5 层实现：数据层（Migration 7→8 + 10 字段 + 索引）+ 映射层（WrongAnswerSchedulingMapper）+ 仓库层（SchedulingRepository.rateWrongAnswer）+ ViewModel 层（DUE 过滤 + 评分委托 + ClockGuard 注入）+ UI 层（四档评分按钮 + 调度信息展示）。Follow-up #1 ClockGuard 注入 + #2 interval coerceAtLeast(0) 已修复。+10 单测。agent-pr-review ✅ Approved（0 blocker, 0 must-fix）。Release v0.9.4 已发布（debug 签名 fallback — Exception E1）。
 
-- 最新 commit：**本会话** feat(icon): 启动图标 v4 设计重构 — 书+文负空间（2026-07-31）
-- 最新 Release：**v0.9.9**（2026-07-31 发布，debug 签名 fallback — Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.9
-- 本地验证（2026-07-31 v0.9.9）：`:app:assembleDebug` + `:app:assembleRelease` + 全模块 `testDebugUnitTest` 全绿（469 tests, 0 failures）
-- versionCode / versionName：**34 / "0.9.9"**
-- v0.9.9 APK 校验：Debug APK 29,074,437 bytes SHA-256 `2a4b38fb1889010dcbb8623c5adbb29392e57f18d61e69e68d8c5fe66fd7c6ea`（debug 签名 Exception E1）/ Release APK 19,412,892 bytes SHA-256 `0327eb562fc2be9696adee057e924b3cbe4e3efa54834997bdc80fcd2750c563`
-- v0.9.9 Rollback target：[v0.9.7](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.7)（uninstall v0.9.9 + install v0.9.7，versionCode 32 < 34 需卸载后安装）
-- v0.9.9 receipt：[docs/release-receipts/v0.9.9-release-receipt.md](docs/release-receipts/v0.9.9-release-receipt.md)（含 PRR + RBR + agent-pr-review + Post-Release Verification）
+- 最新 commit：**v0.9.18** `7ec209da` fix: 移除 addToWrongAnswerBook 中 Dispatchers.IO（2026-08-01）
+- 最新 Release：**v0.9.18**（2026-08-01 发布，debug 签名 fallback — Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.18
+- 本地验证（2026-08-01 v0.9.18）：CI 全绿（60 tests, 0 failures）
+- versionCode / versionName：**43 / "0.9.18"**
+- v0.9.18 APK 校验：wenyan-v0.9.18.apk 19,475,344 bytes SHA-256 `3d968ad5e1e2eee8c96cab214541f086ed1a8b699b734a5f72945c725d0561f5`（debug 签名 Exception E1）
+- v0.9.18 Rollback target：[v0.9.17](https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.17)（uninstall v0.9.18 + install v0.9.17，versionCode 42 < 43 需卸载后安装）
+- v0.9.18 receipt：待生成（optionally：docs/release-receipts/v0.9.18-release-receipt.md）
 - v0.9.6 核心改动：
   - **AboutTutorialScreen.kt 精简重构**：7 章 430 行 → 5 节 ~384 行
     - HeroCard（欢迎卡：定位 + 三大理念，TonalCard + PrincipleRow）

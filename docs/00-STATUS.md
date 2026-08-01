@@ -1,11 +1,22 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-08-01（悬浮底部导航栏 v0.9.18）
+> 最后更新：2026-08-01（v0.9.18 悬浮导航栏 + 手动加入错题本，已发布）
 
 ## ✅ 当前状态
 
-**v0.9.18 悬浮底部导航栏（改造中，本会话）** — 响应用户需求"我看 ksunext 等等这种用 M3 Expressive 的软件底部是悬浮的，你研究一下可不可以做到这样"。基于深度调研，采用 Surface 包裹 NavigationBar 方案实现悬浮效果：WenyanNavigationBar.kt 外层 Surface 容器（圆角 16dp + tonalElevation 3dp + 水平间距 16dp + 底部 8dp 留空），内层 NavigationBar 透明。WenyanAdaptiveNavigation.kt BottomGradientScrim 缩短至 80dp（原 120dp），渐变从 3 色改为 4 色（Transparent → 0.60f → 0.85f → solid），减少遮挡面积 20%（200dp→160dp）。设计文档：[docs/plans/floating-navigation-bar.md](plans/floating-navigation-bar.md)。**待 emulator 实测**：验证 5 个 Tab 悬浮效果、渐变遮罩过渡、子路由返回、沉浸式体验。
+**v0.9.18 悬浮底部导航栏 + 知识卡片手动加入错题本（已发布 ✅）** — 双功能发布。
+
+**悬浮导航栏**：响应用户需求"ksunext 底部悬浮"，采用 Surface 包裹 NavigationBar 方案实现：WenyanNavigationBar.kt 外层 Surface 容器（圆角 16dp + tonalElevation 3dp + 水平间距 16dp + 底部 8dp 留空），内层 NavigationBar 透明。WenyanAdaptiveNavigation.kt BottomGradientScrim 缩短至 80dp（原 120dp），渐变从 3 色改为 4 色（Transparent → 0.60f → 0.85f → solid），减少遮挡面积 20%（200dp→160dp）。设计文档：[docs/plans/floating-navigation-bar.md](plans/floating-navigation-bar.md)。
+
+**手动加入错题本**：响应用户需求"在知识卡片里面加一个按钮，可以把卡片手动加入错题本"。5 层实现：数据层（SOURCE_CARD_MANUAL 常量）、ViewModel 状态层（`_manualAddedPointIds`/`isCurrentCardInWrongBook`/`_isAddingBookmark`/`_successMessage`/`_sessionManualAddCount`）、ViewModel 逻辑层（`addToWrongAnswerBook()` 防重入+防重复+NonCancellable 原子写入+文本截断+控制字符过滤）、UI 层（`AddToWrongAnswerButton` 三态+图标切换+颜色编码）、测试层（10+ 新测试）。设计文档：[docs/plans/cards-add-to-wrong-answer-book.md](plans/cards-add-to-wrong-answer-book.md)。
+
+**CI 修复**：3 轮编译错误修复 + 14 个测试失败修复（移除 Dispatchers.IO，与 rateCard() 模式一致）。CI 全绿后正确打 tag v0.9.18 → commit `7ec209da`。
+
+**Release 状态**：**✅ 2026-08-01T18:46:10Z 成功发布**。APK 19,475,344 bytes，SHA-256 `3d968ad5...0561f5`。由 CI/CD pipeline（github-actions[bot]）发布，非 draft 非 prerelease。链接：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.18
+
+**Exception E1**：CI 账单问题，release APK 使用 debug 签名 fallback（与 v0.9.4-v0.9.13 一致）。
+**待 emulator 实测**：验证悬浮导航栏 5 项效果 + 手动加入错题本完整流程 + 启动图标 v4。
 
 **v0.9.17 题号前缀剥离（已发布）** — 响应用户需求"去掉题号前缀"。创建 ExamContentCleaner 集中清洗工具，剥离所有题目内容中的阿拉伯数字前缀（"1. " "2. "）和中文数字前缀（"一、" "二、" "三、论述题" 等），包括试卷标题。6 个 UI 展示点统一清洗：论述题列表预览（EssayListViewModel）、论述题详情正文（EssayDetailScreen）、知识点关联预览（KnowledgePointDetailScreen）、真题练习题目（QuizScreen）、错题本题目标题（WrongAnswerScreen）、AI 审题助手输入（EssayDetailViewModel）。不修改 seed_data.json，仅运行时清洗。versionCode 41→42，versionName "0.9.16"→"0.9.17"。**Exception E1**：CI 账单问题，release APK 使用 debug 签名 fallback（与 v0.9.4-v0.9.16 一致）。**待 emulator 实测**：验证 6 个展示点题号前缀全部剥离、AI 审题助手接收清洗后内容。
 
@@ -25,10 +36,10 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **本会话** 悬浮底部导航栏 v0.9.18（2026-08-01） |
-| 最新 Release | **v0.9.17**（2026-08-01 发布，debug 签名 Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.17 |
-| 编译验证 | **沙箱无 Android SDK，跳过本地编译**（纯 Compose 视觉参数调整，无 API/逻辑变更） |
-| versionCode / versionName | **42 / "0.9.17"**（v0.9.18 尚未升级版本号） |
+| 最新 commit | **v0.9.18** `7ec209da` fix: 移除 addToWrongAnswerBook 中 Dispatchers.IO（2026-08-01） |
+| 最新 Release | **v0.9.18**（2026-08-01 发布，debug 签名 Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.18 |
+| 编译验证 | **CI 全绿**（60 tests, 0 failures）— 悬浮导航栏 + 手动加入错题本 |
+| versionCode / versionName | **43 / "0.9.18"** |
 | 知识点 | **935 个**（v2.16.0 补充 25 个核心知识点 kp_00911-kp_00935） |
 | 真题 | **485 道**（v0.7.6 已删除 sample_essay 冗余字段） |
 | 论述题 | **134 道 ESSAY 题**（v0.9.9 全覆盖填充 angle+notes，v0.9.10 全面审计 0 问题） |
@@ -46,22 +57,22 @@
 | 日志门面 | **Logging.kt**（Timber 封装，Debug=Logcat / Release=WARN+ERROR） |
 | 工具链锁定 | **mise.toml**（JDK 17.0.2 + Gradle 8.14.4） |
 | 阻塞 | **无** — CI Release workflow 正常运行，keystore 已配置 |
-| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-07-31 启动图标 v4 设计重构 — 书+文负空间） |
+| 详情 | [SESSION_LOG.md](SESSION_LOG.md) 最后一节（2026-08-01 v0.9.18 悬浮导航栏 + 手动加入错题本 + 发布） |
 
 ## 🚨 新会话首要任务
 
-**v0.9.18 悬浮底部导航栏（改造中，本会话）** — 响应需求"ksunext 底部悬浮"。WenyanNavigationBar.kt Surface 包裹（圆角 16dp + tonalElevation 3dp + 水平间距 16dp + 底部 8dp）。WenyanAdaptiveNavigation.kt BottomGradientScrim 缩短至 80dp（原 120dp），渐变 4 色（Transparent→0.60f→0.85f→solid）。减少遮挡面积 20%（200dp→160dp）。设计文档：[docs/plans/floating-navigation-bar.md](plans/floating-navigation-bar.md)。**待 emulator 实测**：验证悬浮效果、渐变过渡、沉浸式体验。
+**v0.9.18 悬浮底部导航栏 + 手动加入错题本（已发布 ✅）** — 双功能发布。悬浮导航栏：WenyanNavigationBar.kt Surface 包裹（圆角 16dp + tonalElevation 3dp + 水平间距 16dp + 底部 8dp），BottomGradientScrim 缩短至 80dp。手动加入错题本：5 层实现（SOURCE_CARD_MANUAL / addToWrongAnswerBook / AddToWrongAnswerButton 三态 UI / 10+ 新测试）。CI 3 轮修复后全绿。Release 2026-08-01T18:46:10Z 成功发布。设计文档：[docs/plans/floating-navigation-bar.md](plans/floating-navigation-bar.md) + [docs/plans/cards-add-to-wrong-answer-book.md](plans/cards-add-to-wrong-answer-book.md)。**待 emulator 实测**：验证悬浮效果 + 手动加入错题本完整流程。
 
-**启动图标 v4 设计重构（书+文负空间，已实施，待 push）** — 响应用户需求"把这个app的图标重新设计一下"。用户选择方案 B（书+文负空间），经精修后实施。从 v3 "印章文"（5 个独立矩形 path）改为 v4 "展开的书 + 文负空间"（单 path + evenOdd fillType 镂空）。设计语言：Google Play Books（书形）+ Google Docs（字母负空间）混合。精修要点：去 serif 平底收笔 + "文"字垂直居中于书页。Safe Zone 检查全部通过。本地验证：`:app:assembleDebug` BUILD SUCCESSFUL（279 tasks）+ `testDebugUnitTest`（317 tasks, 0 failures）。**待 emulator 实测**：验证新图标启动屏/桌面/通知栏显示效果。
+**启动图标 v4 设计重构（书+文负空间，已实施，待发布）** — 响应用户需求"把这个app的图标重新设计一下"。用户选择方案 B（书+文负空间），经精修后实施。从 v3 "印章文"（5 个独立矩形 path）改为 v4 "展开的书 + 文负空间"（单 path + evenOdd fillType 镂空）。设计语言：Google Play Books（书形）+ Google Docs（字母负空间）混合。精修要点：去 serif 平底收笔 + "文"字垂直居中于书页。Safe Zone 检查全部通过。本地验证：`:app:assembleDebug` BUILD SUCCESSFUL（279 tasks）+ `testDebugUnitTest`（317 tasks, 0 failures）。**待 emulator 实测**：验证新图标启动屏/桌面/通知栏显示效果。
 
-**v0.9.14 已发布**（2026-07-31，debug 签名 fallback — Exception E1）。本地构建全绿：`:app:assembleDebug` + `testDebugUnitTest`（317 tasks 0 failures）。修复底栏遮盖 + 实现软件内 APK 下载+安装。
+**v2.16.0 知识点补充（已 commit c951b2e，待发布）** — 补充论述题 knowledgeGaps 字段建议的 25 个核心知识点（kp_00911-kp_00935），知识点库 910→935 完整化。**待 emulator 实测**：验证 935 知识点正确导入 + 25 个新增知识点可浏览/搜索。
 
 下一步优先级（按顺序）：
 
-1. **P0**：emulator 实测 v0.9.18 悬浮导航栏 — 验证：①导航栏悬浮效果（圆角/投影/间距）②渐变遮罩过渡（80dp 平滑过渡）③5 个 Tab 切换正常 ④子路由返回后导航栏恢复 ⑤AMOLED 模式下投影可见
+1. **P0**：emulator 实测 v0.9.18 — 验证：①悬浮导航栏效果（圆角/投影/间距）②渐变遮罩过渡（80dp 平滑过渡）③5 个 Tab 切换正常 ④子路由返回后导航栏恢复 ⑤手动加入错题本按钮显示/交互/已加入状态 ⑥错题本中可看到手动加入的记录
 2. **P0**：emulator 实测启动图标 v4 — 验证：①启动屏图标显示正确（书+文负空间）②桌面图标（方形+圆形遮罩）③最近任务栏小尺寸图标清晰 ④Android 13+ themed icon 模式下"文"字负空间保留
-3. **P0**：emulator 实测 v0.9.14 — 验证：①底部导航栏不遮挡可点击区域 ②软件内更新下载进度条显示正常 ③下载完成后自动弹出安装界面 ④各 Tab 页面正常显示
-3. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
+3. **P0**：emulator 实测 v2.16.0 — 验证：①seed 2.16.0 触发重导后 935 知识点正确导入 ②25 个新增知识点（kp_00911-kp_00935）可浏览/搜索 ③新增知识点按学科正确分类 ④论述题详情页"关联知识点"区块正确派生
+4. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
 4. **P1 Phase 2 剩余维度审计**：
    - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）
    - 2.L：错误处理一致性 + 日志规范（sealed AppError + Timber + Snackbar 统一） — v0.8.18 已完成 Timber 引入，剩 sealed AppError + Snackbar 统一

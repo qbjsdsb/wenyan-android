@@ -6039,8 +6039,62 @@ M40,50 L68,50 L68,54 L58,54 L66,66 L58,66 L54,58 L50,66 L42,66 L50,54 L40,54 Z
 - [x] SESSION_LOG.md 已更新
 - [x] 已知限制已记录
 
+### 7. 扩展：手动加入错题本（v0.9.18 本会话追加）
+
+**响应用户需求"在知识卡片里面加一个按钮，可以把卡片手动加入错题本"** — 在 CardsViewModel 新增 `addToWrongAnswerBook()` 方法 + CardsScreen 新增 `AddToWrongAnswerButton` 组件。
+
+**5 层实现**：
+- **数据层**：WrongAnswerRepository.SOURCE_CARD_MANUAL 常量（"CARD_MANUAL"）
+- **ViewModel 状态层**：`_manualAddedPointIds` / `_isAddingBookmark` / `_successMessage` / `_sessionManualAddCount` + `isCurrentCardInWrongBook`（combine _uiState + _manualAddedPointIds）
+- **ViewModel 逻辑层**：`addToWrongAnswerBook()` — 防重入（_isAddingBookmark）+ 防重复（_manualAddedPointIds 检查）+ NonCancellable 原子写入 + 文本截断（front 200 字符 / correctAnswer 500 字符）+ 控制字符过滤
+- **UI 层**：`AddToWrongAnswerButton` — 已加入/加载中/未加入 三态 + 图标切换（BookmarkBorder/CheckCircle）+ 颜色编码（已加入→绿色）
+- **测试层**：CardsViewModelTest 新增 10+ 测试（成功/失败/重复加入/sibling 感知/进程恢复/retry 清空）
+
+**设计文档**：[docs/plans/cards-add-to-wrong-answer-book.md](docs/plans/cards-add-to-wrong-answer-book.md)
+
+### 8. CI 修复与发布
+
+**CI 编译错误**（3 轮修复）：
+1. **Round 1**：WenyanNavigationBar.kt 缺少 `padding` import → 添加 import
+2. **Round 2**：CardsScreen.kt Preview 缺少 `isInWrongBook`/`isAddingBookmark`/`onAddToWrongAnswerBook` 参数 → 添加默认值
+3. **Round 3**：CardsViewModel.kt forward reference（`isCurrentCardInWrongBook` 引用 `_uiState` 但后者声明在后）→ 调整声明顺序
+
+**CI 测试失败**（14 个 CardsViewModelTest 失败）：
+- **根因**：`addToWrongAnswerBook` 使用 `withContext(Dispatchers.IO + NonCancellable)`，额外切换 `Dispatchers.IO` 导致测试中 `advanceUntilIdle()` 无法推进 IO 调度器上的协程
+- **修复**：移除 `Dispatchers.IO`，仅保留 `NonCancellable`。与 `rateCard()` 中调用 `recordWrongAnswer` 的模式保持一致
+- **验证**：CI 通过，60 tests 全绿
+
+**版本信息**：versionCode 42→43，versionName "0.9.17"→"0.9.18"
+
+**Release 状态**：**✅ 已成功发布**（2026-08-01T18:46:10Z）
+- Tag：v0.9.18 → commit `7ec209da`（修复 Dispatchers.IO 后的正确 commit）
+- APK：wenyan-v0.9.18.apk（19,475,344 bytes）
+- SHA-256：`3d968ad5e1e2eee8c96cab214541f086ed1a8b699b734a5f72945c725d0561f5`
+- 发布者：github-actions[bot]（CI/CD pipeline）
+- 状态：Published（非 draft 非 prerelease）
+- 链接：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.18
+
+### 交接清单
+
+- [x] 悬浮导航栏调研 + 实现（WenyanNavigationBar.kt Surface 包裹）
+- [x] 设计文档更新（[docs/plans/floating-navigation-bar.md](docs/plans/floating-navigation-bar.md)）
+- [x] 手动加入错题本实现（CardsViewModel + CardsScreen + WrongAnswerRepository）
+- [x] 设计文档更新（[docs/plans/cards-add-to-wrong-answer-book.md](docs/plans/cards-add-to-wrong-answer-book.md)）
+- [x] CI 修复（3 轮编译错误 + 14 个测试失败 → 全绿）
+- [x] tag v0.9.18 正确指向修复 commit（7ec209da）
+- [x] Release v0.9.18 成功发布（APK 已上传）
+- [x] STATUS.md 已更新到 v0.9.18
+- [x] SESSION_LOG.md 已更新
+
+### 已知限制（v0.9.18）
+
+- 本次仅实现静态悬浮效果，滚动感知显隐（scroll-aware visibility）已规划为后续迭代
+- 不支持选中态 Tab 滑动动画、Filled/Outlined 双图标切换
+- **Exception E1**：CI 账单问题，release APK 使用 debug 签名 fallback（与 v0.9.4-v0.9.13 一致）
+- **待 emulator 实测**：验证悬浮导航栏 + 手动加入错题本 + 启动图标 v4 三项功能
+
 ### 下一步
 
-1. **P0**：emulator 实测 v0.9.18 — 验证悬浮导航栏 5 项效果
+1. **P0**：emulator 实测 v0.9.18 — 验证悬浮导航栏 5 项效果 + 手动加入错题本完整流程
 2. **P0**：emulator 实测启动图标 v4 — 验证书+文负空间图标显示
 3. **P0**：emulator 实测 v0.9.14 — 验证底栏不遮挡 + 软件内更新
