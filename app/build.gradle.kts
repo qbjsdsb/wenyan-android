@@ -51,7 +51,15 @@ android {
         //   - AboutTutorialScreen: 真题→论述题描述更新 + ErrorOutline 导入修复
         //   - 死代码审查：无残留 ROUTE_QUIZ/quizDestination/onNavigateToEssays/EssayEntryCard/ROUTE_ESSAY_LIST
         //   - 编译：需本地 emulator 验证 assembleDebug + testDebugUnitTest）
-        versionCode = 41
+        // v0.9.17=42（题号前缀剥离：创建 ExamContentCleaner 集中清洗工具，
+        //   - 剥离所有题目内容中的阿拉伯数字前缀（"1. " "2. "）和中文数字前缀（"一、" "二、"），
+        //   - 包括试卷标题（"三、论述题" → "论述题"），
+        //   - 6 个 UI 展示点统一清洗：EssayListViewModel（列表预览）、EssayDetailScreen（详情正文）、
+        //     KnowledgePointDetailScreen（知识点关联预览）、QuizScreen（真题练习）、
+        //     WrongAnswerScreen（错题本标题）、EssayDetailViewModel（AI 审题助手输入），
+        //   - 不修改 seed_data.json，仅运行时清洗，
+        //   - 编译：需本地 emulator 验证 assembleDebug + testDebugUnitTest）
+        versionCode = 42
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.7：知识卡片功能完善 + 界面审查修复（响应用户反馈"功能还是不够完善"）。
         //   数据一致性修复（B1/B2/B3）：
@@ -110,7 +118,9 @@ android {
         //     - SocraticTutorTest/AiAssistantViewModelTest 接口提取后实例化修正
         //   本地验证：:app:assembleDebug + 全模块 testDebugUnitTest 全绿（471 tests, 0 failures）
         // v0.9.16：真题→论述题迁移（底部导航 Tab 替换 + 代码清理 + AboutTutorialScreen 修复）
-        versionName = "0.9.16"
+        // v0.9.17：题号前缀剥离（创建 ExamContentCleaner 集中清洗工具，
+        //   6 个 UI 展示点 + AI 审题助手输入统一清洗，不修改种子数据）
+        versionName = "0.9.17"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

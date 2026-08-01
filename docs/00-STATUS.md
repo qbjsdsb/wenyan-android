@@ -1,11 +1,13 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-08-01（真题→论述题迁移 v0.9.16）
+> 最后更新：2026-08-01（题号前缀剥离 v0.9.17）
 
 ## ✅ 当前状态
 
-**v0.9.16 真题→论述题迁移（底部导航 Tab 替换，已发布）** — 响应用户需求"真题这个部分删除，因为已经有论述题部分了，然后论述题部分放到原来真题的位置"。底部导航第 2 个 Tab 从"真题"(Quiz) 替换为"论述题"(Essay)。3 文件修改：TopLevelDestination.kt（Quiz→Essay），WenyanNavHost.kt（quizDestination→essayTabDestination），KnowledgeScreen.kt（删除 EssayEntryCard）。死代码审查：无残留 ROUTE_QUIZ/quizDestination/onNavigateToEssays/EssayEntryCard/ROUTE_ESSAY_LIST。versionCode 40→41，versionName "0.9.15"→"0.9.16"。**Exception E1**：CI 账单问题，release APK 使用 debug 签名 fallback（与 v0.9.4-v0.9.13 一致）。**待 emulator 实测**：验证论述题 Tab 替换 + 5 项功能（列表筛选/知识点跳转/双向导航）。
+**v0.9.17 题号前缀剥离（已发布）** — 响应用户需求"去掉题号前缀"。创建 ExamContentCleaner 集中清洗工具，剥离所有题目内容中的阿拉伯数字前缀（"1. " "2. "）和中文数字前缀（"一、" "二、" "三、论述题" 等），包括试卷标题。6 个 UI 展示点统一清洗：论述题列表预览（EssayListViewModel）、论述题详情正文（EssayDetailScreen）、知识点关联预览（KnowledgePointDetailScreen）、真题练习题目（QuizScreen）、错题本题目标题（WrongAnswerScreen）、AI 审题助手输入（EssayDetailViewModel）。不修改 seed_data.json，仅运行时清洗。versionCode 41→42，versionName "0.9.16"→"0.9.17"。**Exception E1**：CI 账单问题，release APK 使用 debug 签名 fallback（与 v0.9.4-v0.9.16 一致）。**待 emulator 实测**：验证 6 个展示点题号前缀全部剥离、AI 审题助手接收清洗后内容。
+
+**v0.9.16 真题→论述题迁移（底部导航 Tab 替换，已发布）** — 响应用户需求"真题这个部分删除，因为已经有论述题部分了，然后论述题部分放到原来真题的位置"。底部导航第 2 个 Tab 从"真题"(Quiz) 替换为"论述题"(Essay)。死代码审查：无残留。versionCode 40→41，versionName "0.9.15"→"0.9.16"。**Exception E1**：CI 账单问题，release APK 使用 debug 签名 fallback。
 
 **v0.9.14 修复底栏遮盖 + 软件内更新（已发布 2026-07-31）** — 响应用户反馈"底栏遮盖了可以点击的地方，更新为什么不能软件内更新，还要去浏览器，而且下的是debug版本，而且只能卸载重装，为什么有这么多问题"。修复 v0.9.13 沉浸式导航栏导致的底栏遮盖可点击区域问题：COMPACT 布局改用 Box + 显式 padding（80dp 导航栏高度 + 系统手势区），不再依赖 Scaffold contentWindowInsets 消费策略。实现软件内 APK 下载+安装：UpdateViewModel 新增 OkHttp 流式下载 + FileProvider 安装 + 2 种新 UI 状态（Downloading/DownloadComplete），UpdateCheckScreen 新增进度条和安装按钮。AndroidManifest 新增 REQUEST_INSTALL_PACKAGES + FileProvider。新增 file_paths.xml。OkHttp 依赖。**重要更正**：CI Release workflow 运行正常，keystore 已配置，本次 Release 为正式签名 APK（19.5 MB），可直接覆盖安装旧版，无需卸载。本地验证：`:app:assembleDebug` SUCCESSFUL + `testDebugUnitTest` SUCCESSFUL（317 tasks, 0 failures）。
 
@@ -21,10 +23,10 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **本会话** 真题→论述题迁移（2026-08-01） |
-| 最新 Release | **v0.9.16**（2026-08-01 发布，debug 签名 Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.16 |
-| 编译验证 | **沙箱无 Android SDK，跳过本地编译**（纯 Kotlin/Compose 导航逻辑改动） |
-| versionCode / versionName | **41 / "0.9.16"** |
+| 最新 commit | **本会话** 题号前缀剥离 v0.9.17（2026-08-01） |
+| 最新 Release | **v0.9.17**（2026-08-01 发布，debug 签名 Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.17 |
+| 编译验证 | **沙箱无 Android SDK，跳过本地编译**（UI 层清洗逻辑，不涉及数据/API 变更） |
+| versionCode / versionName | **42 / "0.9.17"** |
 | 知识点 | **935 个**（v2.16.0 补充 25 个核心知识点 kp_00911-kp_00935） |
 | 真题 | **485 道**（v0.7.6 已删除 sample_essay 冗余字段） |
 | 论述题 | **134 道 ESSAY 题**（v0.9.9 全覆盖填充 angle+notes，v0.9.10 全面审计 0 问题） |
