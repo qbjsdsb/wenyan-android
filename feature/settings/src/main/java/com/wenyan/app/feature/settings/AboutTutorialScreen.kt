@@ -21,11 +21,9 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Biotech
 import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Psychology
-import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.Verified
@@ -224,10 +222,10 @@ private fun SectionModules() {
         )
         GroupedCardDivider()
         GroupedCardItem(
-            title = "真题",
-            subtitle = "历年真题",
-            leadingIcon = Icons.Filled.Quiz,
-            description = "按年份分组，答题后自评，答错自动入错题本。",
+            title = "论述题",
+            subtitle = "真题论述题",
+            leadingIcon = Icons.AutoMirrored.Filled.MenuBook,
+            description = "历年真题论述题 · 审题思路 + 依据 + 知识点串联",
         )
         GroupedCardDivider()
         GroupedCardItem(

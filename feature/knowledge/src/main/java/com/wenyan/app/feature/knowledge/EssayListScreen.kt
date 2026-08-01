@@ -75,7 +75,7 @@ import com.wenyan.app.core.designsystem.theme.WenyanTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EssayListScreen(
-    onBack: () -> Unit = {},
+    onBack: (() -> Unit)? = null,
     onNavigateToEssayDetail: (String) -> Unit = {},
     viewModel: EssayListViewModel = hiltViewModel(),
 ) {

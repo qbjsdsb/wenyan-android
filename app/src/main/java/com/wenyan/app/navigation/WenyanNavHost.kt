@@ -14,7 +14,6 @@ import com.wenyan.app.feature.knowledge.EssayDetailScreen
 import com.wenyan.app.feature.knowledge.EssayListScreen
 import com.wenyan.app.feature.knowledge.KnowledgePointDetailScreen
 import com.wenyan.app.feature.knowledge.KnowledgeScreen
-import com.wenyan.app.feature.quiz.QuizScreen
 import com.wenyan.app.feature.quiz.WrongAnswerScreen
 import com.wenyan.app.feature.settings.AboutTutorialScreen
 import com.wenyan.app.feature.settings.SettingsScreen
@@ -25,7 +24,7 @@ import com.wenyan.app.feature.settings.UpdateCheckScreen
  *
  * 承载 5 个顶级路由的 composable 目的地（底部 NavigationBar）：
  * - knowledge：知识点列表
- * - quiz：真题练习
+ * - essay：论述题
  * - cards：记忆卡片
  * - wrong_answer：错题本（v0.9.0 起从 quiz 子路由提升为顶级 Tab，占据原 graph 位置）
  * - settings：设置（v0.6 起从子路由提升为顶级 Tab）
@@ -40,7 +39,7 @@ import com.wenyan.app.feature.settings.UpdateCheckScreen
  * - 移除 graph 顶级 Tab（feature:graph 模块整体删除，知识点关联改走树结构）
  * - WrongAnswer 从子路由提升为顶级 Tab，删除 quiz TopBar Inbox 入口
  *
- * 3 个主屏（knowledge/quiz/cards）TopBar 右上角均提供 AI 入口（SmartToy 图标），
+ * 3 个主屏（knowledge/essay/cards）TopBar 右上角均提供 AI 入口（SmartToy 图标），
  * 点击后以子路由 Push 动画进入 AI 助手，避免与底部 NavigationBar 叠加冲突。
  */
 @Composable
@@ -79,24 +78,12 @@ fun WenyanNavHost(
                     launchSingleTop = true
                 }
             },
-            onNavigateToEssays = {
-                // v0.9.8 Phase 2：知识点 Tab → 论述题列表，Push/Pop slide + launchSingleTop
-                navController.navigate(ROUTE_ESSAY_LIST) {
-                    launchSingleTop = true
-                }
-            },
         )
-        quizDestination(
-            onNavigateToAiAssistant = {
-                navController.navigate(ROUTE_AI_ASSISTANT) {
-                    launchSingleTop = true
-                }
-            },
-            onNavigateToDetail = { pointId ->
-                navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId") {
-                    popUpTo("$ROUTE_KNOWLEDGE_DETAIL/{pointId}") {
-                        inclusive = true
-                    }
+        // v0.9.9：真题 → 论述题迁移，essayTabDestination 替换 quizDestination
+        // 顶级 Tab 使用 NavHost 默认 Tab fade transition（与 cards/wrongAnswer/settings 一致）
+        essayTabDestination(
+            onNavigateToEssayDetail = { essayId ->
+                navController.navigate("$ROUTE_ESSAY_DETAIL/$essayId") {
                     launchSingleTop = true
                 }
             },
@@ -199,15 +186,6 @@ fun WenyanNavHost(
                 }
             },
         )
-        essayListDestination(
-            onBack = { navController.popBackStack() },
-            onNavigateToEssayDetail = { essayId ->
-                // v0.9.8 Phase 2：论述题列表 → 论述题详情，Push/Pop slide + launchSingleTop
-                navController.navigate("$ROUTE_ESSAY_DETAIL/$essayId") {
-                    launchSingleTop = true
-                }
-            },
-        )
     }
 }
 
@@ -215,25 +193,24 @@ fun WenyanNavHost(
 private fun NavGraphBuilder.knowledgeDestination(
     onNavigateToAiAssistant: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
-    onNavigateToEssays: () -> Unit,
 ) {
     composable(TopLevelDestination.ROUTE_KNOWLEDGE) {
         KnowledgeScreen(
             onNavigateToAiAssistant = onNavigateToAiAssistant,
             onNavigateToDetail = onNavigateToDetail,
-            onNavigateToEssays = onNavigateToEssays,
         )
     }
 }
 
-private fun NavGraphBuilder.quizDestination(
-    onNavigateToAiAssistant: () -> Unit,
-    onNavigateToDetail: (String) -> Unit,
+// v0.9.9：真题→论述题迁移，essayTabDestination 替换 quizDestination
+// 顶级 Tab 使用 NavHost 默认 Tab fade transition（与 cards/wrongAnswer/settings 一致）
+private fun NavGraphBuilder.essayTabDestination(
+    onNavigateToEssayDetail: (String) -> Unit,
 ) {
-    composable(TopLevelDestination.ROUTE_QUIZ) {
-        QuizScreen(
-            onNavigateToAiAssistant = onNavigateToAiAssistant,
-            onNavigateToDetail = onNavigateToDetail,
+    composable(TopLevelDestination.ROUTE_ESSAY) {
+        EssayListScreen(
+            onBack = null,
+            onNavigateToEssayDetail = onNavigateToEssayDetail,
         )
     }
 }
@@ -385,32 +362,11 @@ private fun NavGraphBuilder.essayDetailDestination(
     }
 }
 
-// v0.9.8 Phase 2：论述题列表子路由（入口：知识点列表页顶部"论述题练习"卡片）
-// 子路由用 Push/Pop slide transition（覆盖 NavHost 默认的 Tab fade）
-private fun NavGraphBuilder.essayListDestination(
-    onBack: () -> Unit,
-    onNavigateToEssayDetail: (String) -> Unit,
-) {
-    composable(
-        route = ROUTE_ESSAY_LIST,
-        enterTransition = { WenyanMotion.PushEnterTransition },
-        exitTransition = { WenyanMotion.PushExitTransition },
-        popEnterTransition = { WenyanMotion.PopEnterTransition },
-        popExitTransition = { WenyanMotion.PopExitTransition },
-    ) {
-        EssayListScreen(
-            onBack = onBack,
-            onNavigateToEssayDetail = onNavigateToEssayDetail,
-        )
-    }
-}
-
 // 子路由常量
 private const val ROUTE_API_CONFIG = "api_config"
 private const val ROUTE_AI_ASSISTANT = "aiassistant"
 private const val ROUTE_KNOWLEDGE_DETAIL = "knowledge_detail"
 private const val ROUTE_ABOUT = "about"
 private const val ROUTE_ESSAY_DETAIL = "essay_detail"
-private const val ROUTE_ESSAY_LIST = "essay_list"
 // v0.9.11：检查更新子路由
 private const val ROUTE_UPDATE_CHECK = "update_check"
