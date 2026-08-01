@@ -1,9 +1,11 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-08-01（题号前缀剥离 v0.9.17）
+> 最后更新：2026-08-01（悬浮底部导航栏 v0.9.18）
 
 ## ✅ 当前状态
+
+**v0.9.18 悬浮底部导航栏（改造中，本会话）** — 响应用户需求"我看 ksunext 等等这种用 M3 Expressive 的软件底部是悬浮的，你研究一下可不可以做到这样"。基于深度调研，采用 Surface 包裹 NavigationBar 方案实现悬浮效果：WenyanNavigationBar.kt 外层 Surface 容器（圆角 16dp + tonalElevation 3dp + 水平间距 16dp + 底部 8dp 留空），内层 NavigationBar 透明。WenyanAdaptiveNavigation.kt BottomGradientScrim 缩短至 80dp（原 120dp），渐变从 3 色改为 4 色（Transparent → 0.60f → 0.85f → solid），减少遮挡面积 20%（200dp→160dp）。设计文档：[docs/plans/floating-navigation-bar.md](plans/floating-navigation-bar.md)。**待 emulator 实测**：验证 5 个 Tab 悬浮效果、渐变遮罩过渡、子路由返回、沉浸式体验。
 
 **v0.9.17 题号前缀剥离（已发布）** — 响应用户需求"去掉题号前缀"。创建 ExamContentCleaner 集中清洗工具，剥离所有题目内容中的阿拉伯数字前缀（"1. " "2. "）和中文数字前缀（"一、" "二、" "三、论述题" 等），包括试卷标题。6 个 UI 展示点统一清洗：论述题列表预览（EssayListViewModel）、论述题详情正文（EssayDetailScreen）、知识点关联预览（KnowledgePointDetailScreen）、真题练习题目（QuizScreen）、错题本题目标题（WrongAnswerScreen）、AI 审题助手输入（EssayDetailViewModel）。不修改 seed_data.json，仅运行时清洗。versionCode 41→42，versionName "0.9.16"→"0.9.17"。**Exception E1**：CI 账单问题，release APK 使用 debug 签名 fallback（与 v0.9.4-v0.9.16 一致）。**待 emulator 实测**：验证 6 个展示点题号前缀全部剥离、AI 审题助手接收清洗后内容。
 
@@ -23,10 +25,10 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **本会话** 题号前缀剥离 v0.9.17（2026-08-01） |
+| 最新 commit | **本会话** 悬浮底部导航栏 v0.9.18（2026-08-01） |
 | 最新 Release | **v0.9.17**（2026-08-01 发布，debug 签名 Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.17 |
-| 编译验证 | **沙箱无 Android SDK，跳过本地编译**（UI 层清洗逻辑，不涉及数据/API 变更） |
-| versionCode / versionName | **42 / "0.9.17"** |
+| 编译验证 | **沙箱无 Android SDK，跳过本地编译**（纯 Compose 视觉参数调整，无 API/逻辑变更） |
+| versionCode / versionName | **42 / "0.9.17"**（v0.9.18 尚未升级版本号） |
 | 知识点 | **935 个**（v2.16.0 补充 25 个核心知识点 kp_00911-kp_00935） |
 | 真题 | **485 道**（v0.7.6 已删除 sample_essay 冗余字段） |
 | 论述题 | **134 道 ESSAY 题**（v0.9.9 全覆盖填充 angle+notes，v0.9.10 全面审计 0 问题） |
@@ -37,7 +39,7 @@
 | 错题本 FSRS | **v0.9.4 已发布**：DUE 过滤模式 + 四档评分（不会/困难/良好/简单）+ 调度信息展示（下次复习/复习次数/遗忘次数）+ TIER_FRAMEWORK 档位 + ClockGuard 时间源对齐 + interval 下界保护 |
 | 论述题板块 | **v0.9.8 + v0.9.9 已发布**：知识点详情页"相关论述题"区块 + 论述题详情页 11 区块结构（含 AI 审题助手）+ JSON 优雅降级 + 双向导航 + 独立列表页（三维筛选）+ EssayEntryCard 入口 + 134/134 题 angle+notes 完整填充 |
 | 关于与教程 | **v0.9.6 精简重构**：5 节简洁版（HeroCard / QuickStart / Modules / Principles 可折叠 / About），默认视图简洁，深度原理按需展开 |
-| 底部导航 | **5 Tab**：知识点 / 真题 / 卡片 / 错题本 / 设置（v0.9.0 错题本替换原图谱） |
+| 底部导航 | **5 Tab**（知识点 / 论述题 / 卡片 / 错题本 / 设置），**v0.9.18 悬浮式**：Surface 圆角 16dp + tonalElevation 3dp + 水平留边 16dp + 底部留空 8dp |
 | 图谱 UI | **已移除**（v0.9.0 feature:graph 模块删除） |
 | 图谱数据层 | **已移除**（v0.9.3 优化 4 全部移除，详见 [docs/release-receipts/v0.9.3-opt4-graph-removal-receipt.md](release-receipts/v0.9.3-opt4-graph-removal-receipt.md)） |
 | 启动图标 | **v4 "书+文负空间"**（展开的书 + "文"字镂空 negative space，单 path + evenOdd fillType，书形占 safe zone 70%+） |
@@ -48,14 +50,17 @@
 
 ## 🚨 新会话首要任务
 
+**v0.9.18 悬浮底部导航栏（改造中，本会话）** — 响应需求"ksunext 底部悬浮"。WenyanNavigationBar.kt Surface 包裹（圆角 16dp + tonalElevation 3dp + 水平间距 16dp + 底部 8dp）。WenyanAdaptiveNavigation.kt BottomGradientScrim 缩短至 80dp（原 120dp），渐变 4 色（Transparent→0.60f→0.85f→solid）。减少遮挡面积 20%（200dp→160dp）。设计文档：[docs/plans/floating-navigation-bar.md](plans/floating-navigation-bar.md)。**待 emulator 实测**：验证悬浮效果、渐变过渡、沉浸式体验。
+
 **启动图标 v4 设计重构（书+文负空间，已实施，待 push）** — 响应用户需求"把这个app的图标重新设计一下"。用户选择方案 B（书+文负空间），经精修后实施。从 v3 "印章文"（5 个独立矩形 path）改为 v4 "展开的书 + 文负空间"（单 path + evenOdd fillType 镂空）。设计语言：Google Play Books（书形）+ Google Docs（字母负空间）混合。精修要点：去 serif 平底收笔 + "文"字垂直居中于书页。Safe Zone 检查全部通过。本地验证：`:app:assembleDebug` BUILD SUCCESSFUL（279 tasks）+ `testDebugUnitTest`（317 tasks, 0 failures）。**待 emulator 实测**：验证新图标启动屏/桌面/通知栏显示效果。
 
 **v0.9.14 已发布**（2026-07-31，debug 签名 fallback — Exception E1）。本地构建全绿：`:app:assembleDebug` + `testDebugUnitTest`（317 tasks 0 failures）。修复底栏遮盖 + 实现软件内 APK 下载+安装。
 
 下一步优先级（按顺序）：
 
-1. **P0**：emulator 实测启动图标 v4 — 验证：①启动屏图标显示正确（书+文负空间）②桌面图标（方形+圆形遮罩）③最近任务栏小尺寸图标清晰 ④Android 13+ themed icon 模式下"文"字负空间保留
-2. **P0**：emulator 实测 v0.9.14 — 验证：①底部导航栏不遮挡可点击区域 ②软件内更新下载进度条显示正常 ③下载完成后自动弹出安装界面 ④各 Tab 页面正常显示
+1. **P0**：emulator 实测 v0.9.18 悬浮导航栏 — 验证：①导航栏悬浮效果（圆角/投影/间距）②渐变遮罩过渡（80dp 平滑过渡）③5 个 Tab 切换正常 ④子路由返回后导航栏恢复 ⑤AMOLED 模式下投影可见
+2. **P0**：emulator 实测启动图标 v4 — 验证：①启动屏图标显示正确（书+文负空间）②桌面图标（方形+圆形遮罩）③最近任务栏小尺寸图标清晰 ④Android 13+ themed icon 模式下"文"字负空间保留
+3. **P0**：emulator 实测 v0.9.14 — 验证：①底部导航栏不遮挡可点击区域 ②软件内更新下载进度条显示正常 ③下载完成后自动弹出安装界面 ④各 Tab 页面正常显示
 3. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
 4. **P1 Phase 2 剩余维度审计**：
    - 2.E 剩余：strings.xml 完整性（NF-U2）、dimens.xml（NF-C10）

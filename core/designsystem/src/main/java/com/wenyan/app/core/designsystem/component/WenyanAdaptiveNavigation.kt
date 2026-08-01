@@ -58,8 +58,8 @@ fun WenyanAdaptiveNavigation(
             //
             // 布局结构（Box 叠加）：
             //   1. 内容区：surfaceContainer 背景，底部显式 padding 避开导航栏
-            //   2. 渐变遮罩：底部 120dp 渐变，让内容平滑过渡
-            //   3. 导航栏：透明背景，浮在最上层
+            //   2. 渐变遮罩：底部 80dp 渐变，让内容平滑过渡到悬浮导航栏
+            //   3. 导航栏：Surface 悬浮容器（圆角 16dp + 投影 3dp + 水平间距 16dp）
             //
             // 关键修复：不再依赖 ExpressiveScaffold 的 contentWindowInsets 消费策略，
             // 直接用 Modifier.padding 为内容添加底部间距，确保可点击区域不被导航栏遮挡。
@@ -77,7 +77,7 @@ fun WenyanAdaptiveNavigation(
                     //
                     // 布局结构（Box 叠加）：
                     //   1. 内容区：surfaceContainer 背景，底部显式 padding 避开导航栏
-                    //   2. 渐变遮罩：底部 120dp 渐变，让内容平滑过渡
+                    //   2. 渐变遮罩：底部 80dp 渐变，让内容平滑过渡
                     //   3. 导航栏：透明背景，浮在最上层
                     //
                     // 底部间距 = 导航栏高度(80dp) + 系统导航栏手势区
@@ -182,7 +182,7 @@ private fun AdaptiveRailScaffold(
  *
  * 从透明渐变到 [MaterialTheme.colorScheme.surfaceContainer]，
  * 让内容在导航栏区域平滑过渡，避免被导航栏截断的突兀感。
- * 高度 120dp 覆盖导航栏 + 手势条区域。
+ * 高度 80dp 覆盖导航栏区域，悬浮导航栏自带 surfaceContainer 背景，不再需要大片渐变。
  */
 @Composable
 private fun BottomGradientScrim() {
@@ -190,11 +190,12 @@ private fun BottomGradientScrim() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(120.dp)
+            .height(80.dp)
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
                         Color.Transparent,
+                        surfaceContainer.copy(alpha = 0.60f),
                         surfaceContainer.copy(alpha = 0.85f),
                         surfaceContainer,
                     ),

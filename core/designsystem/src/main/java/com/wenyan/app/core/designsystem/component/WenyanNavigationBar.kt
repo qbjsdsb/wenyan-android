@@ -1,10 +1,12 @@
 package com.wenyan.app.core.designsystem.component
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -47,29 +49,37 @@ fun WenyanNavigationBar(
     onNavigate: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    NavigationBar(
-        modifier = modifier,
-        containerColor = Color.Transparent,
-        tonalElevation = 0.dp,
+    // v0.9.18 悬浮导航栏改造：Surface 包裹 NavigationBar 提供圆角/投影/间距
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = 3.dp,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        // 水平留边 16dp，底部在系统手势区之上 8dp
+        modifier = modifier.padding(horizontal = 16.dp, bottom = 8.dp),
     ) {
-        items.forEach { item ->
-            val selected = item.route == currentRoute
-            NavigationBarItem(
-                selected = selected,
-                onClick = { onNavigate(item.route) },
-                // v0.8.3 修复：原 contentDescription = item.label 与 label Text 重复，
-                // TalkBack 朗读"首页首页"。NavigationBarItem 已合并子节点语义，
-                // Icon 设为装饰性（null），由 label Text 提供唯一语义名称。
-                icon = { Icon(imageVector = item.icon, contentDescription = null) },
-                label = { Text(text = item.label) },
-                colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
-                    selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    selectedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-            )
+        NavigationBar(
+            containerColor = Color.Transparent,
+            tonalElevation = 0.dp,
+        ) {
+            items.forEach { item ->
+                val selected = item.route == currentRoute
+                NavigationBarItem(
+                    selected = selected,
+                    onClick = { onNavigate(item.route) },
+                    // v0.8.3 修复：原 contentDescription = item.label 与 label Text 重复，
+                    // TalkBack 朗读"首页首页"。NavigationBarItem 已合并子节点语义，
+                    // Icon 设为装饰性（null），由 label Text 提供唯一语义名称。
+                    icon = { Icon(imageVector = item.icon, contentDescription = null) },
+                    label = { Text(text = item.label) },
+                    colors = NavigationBarItemDefaults.colors(
+                        indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
+                        selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        selectedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
+                )
+            }
         }
     }
 }

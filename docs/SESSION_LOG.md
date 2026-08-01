@@ -5955,3 +5955,92 @@ M40,50 L68,50 L68,54 L58,54 L66,66 L58,66 L54,58 L50,66 L42,66 L50,54 L40,54 Z
 - Release URL: https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.16
 - Release Notes: 真题→论述题迁移，版本号 0.9.15→0.9.16
 - Exception E1：debug 签名 fallback，APK 需本地构建后上传
+
+---
+
+## 2026-08-01 题号前缀剥离（v0.9.17 发布）
+
+**响应用户需求"去掉题号前缀"** — 创建 ExamContentCleaner 集中清洗工具，剥离所有题目内容中的阿拉伯数字前缀和中文数字前缀（含试卷标题）。
+
+### 1. 代码变更
+
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `core/common/.../ExamContentCleaner.kt` | 新增 | 集中清洗工具：剥离阿拉伯数字前缀（"1. " "2. "）和中文数字前缀（"一、" "二、" "三、论述题" 等），含试卷标题 |
+| `feature/essay/.../EssayListViewModel.kt` | 修改 | 列表预览标题清洗 |
+| `feature/essay/.../EssayDetailScreen.kt` | 修改 | 详情正文标题清洗 |
+| `feature/knowledge/.../KnowledgePointDetailScreen.kt` | 修改 | 关联预览标题清洗 |
+| `feature/quiz/.../QuizScreen.kt` | 修改 | 真题练习题目清洗 |
+| `feature/wronganswer/.../WrongAnswerScreen.kt` | 修改 | 错题本标题清洗 |
+| `feature/essay/.../EssayDetailViewModel.kt` | 修改 | AI 审题助手输入清洗（不修改 seed_data.json，仅运行时清洗） |
+
+### 2. 本地验证
+
+沙箱环境无 Android SDK，跳过本地编译验证。纯 UI 层清洗逻辑，不涉及数据/API 变更。
+
+### 3. Release 发布
+
+- versionCode: 41 → 42
+- versionName: "0.9.16" → "0.9.17"
+- Exception E1：CI 账单问题，debug 签名 fallback（与 v0.9.4-v0.9.16 一致）
+
+---
+
+## 2026-08-01 悬浮底部导航栏改造（v0.9.18 本会话）
+
+**响应用户需求"我看 ksunext 等等这种用 M3 Expressive 的软件底部是悬浮的"** — 基于深度调研，采用 Surface 包裹 NavigationBar 方案实现悬浮底部导航栏。
+
+### 1. 调研与方案确定
+
+**调研结果**：KSUNext 用 Surface 包裹 NavigationBar 实现悬浮效果，NavigationBar 本身没有 `shape` 参数，不能直接设置圆角。
+
+**方案对比**：
+- **方案 A（推荐）**：Surface 包裹 NavigationBar — Native 支持 shape + elevation，内层 NavigationBar 透明
+- **方案 B（不推荐）**：NavigationBar 直接 clip — clip 只裁剪视觉不参与布局，四角空白透出底层内容
+
+**设计文档**：[docs/plans/floating-navigation-bar.md](docs/plans/floating-navigation-bar.md)
+
+### 2. 代码变更（2 文件修改）
+
+| 文件 | 改动 | 行数变化 |
+|------|------|----------|
+| `WenyanNavigationBar.kt` | 外层 Surface 容器（圆角 16dp + tonalElevation 3dp + 水平 padding 16dp + 底部 padding 8dp），内层 NavigationBar containerColor=Transparent | +5 |
+| `WenyanAdaptiveNavigation.kt` | BottomGradientScrim 高度 120dp→80dp，渐变 3 色→4 色（Transparent→0.60f→0.85f→solid），注释同步更新 | +3/-2 |
+
+### 3. 视觉变化
+
+| 方面 | 改造前 | 改造后 |
+|------|--------|--------|
+| 导航栏背景 | 透明，透出内容和渐变 | surfaceContainer，不透明 |
+| 底部间距 | 0dp（紧贴屏幕底边） | 水平 16dp + 底部 8dp + 系统手势区 |
+| 圆角 | 无（直角） | 16dp RoundedCorner |
+| 投影 | 无 | 3dp tonalElevation |
+| 渐变遮罩 | 120dp，3 色渐变 | 80dp，4 色渐变（更平滑） |
+| 遮挡面积 | 200dp（80+120） | 160dp（80+80），减少 20% |
+
+### 4. 测试影响
+
+- WenyanNavigationBarTest（3 个测试）：不受影响，API 签名不变 ✅
+- WenyanNavigationBarPreview（3 个 Preview）：自动显示悬浮效果 ✅
+
+### 5. 已知限制
+
+- 本次仅实现静态悬浮效果，滚动感知显隐（scroll-aware visibility）已规划为后续迭代
+- 不支持选中态 Tab 滑动动画、Filled/Outlined 双图标切换
+- **待 emulator 实测**：验证复杂内容页面（长列表/图片）下悬浮效果 + 渐变遮罩过渡
+
+### 6. 交接清单
+
+- [x] 深度调研完成（调研 KSUNext 源码方案 + M3 Expressive 2025-05 NavigationBar API）
+- [x] 设计文档已更新（[docs/plans/floating-navigation-bar.md](docs/plans/floating-navigation-bar.md)）
+- [x] WenyanNavigationBar.kt 已修改（Surface 包裹）
+- [x] WenyanAdaptiveNavigation.kt 已修改（BottomGradientScrim 缩短 + 透明度调整）
+- [x] STATUS.md 已更新到 v0.9.18
+- [x] SESSION_LOG.md 已更新
+- [x] 已知限制已记录
+
+### 下一步
+
+1. **P0**：emulator 实测 v0.9.18 — 验证悬浮导航栏 5 项效果
+2. **P0**：emulator 实测启动图标 v4 — 验证书+文负空间图标显示
+3. **P0**：emulator 实测 v0.9.14 — 验证底栏不遮挡 + 软件内更新
