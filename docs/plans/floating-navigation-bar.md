@@ -1,123 +1,316 @@
-# 悬浮底部导航栏改造方案
+# 悬浮底部导航栏改造方案（v2 — 深度调研版）
 
 > 响应 "我看 ksunext 等等这种用 M3 Expressive 的软件底部是悬浮的，你研究一下可不可以做到这样"
 
-## 1. 调研结论
+## 1. 问题分析
 
-### 1.1 KSUNext 的做法
+### 1.1 当前实现的痛点
+
+| 问题 | 截图表现 | 技术原因 |
+|------|----------|----------|
+| 遮挡面积大 | 底部 200dp 非内容区（80dp 导航栏 + 120dp 渐变遮罩） | 透明导航栏需要大片渐变来实现内容过渡 |
+| 小横条不沉浸 | 系统手势条在透明导航栏下方，视觉上分层 | 导航栏透明，系统导航条背景暴露 |
+| 无悬浮感 | 导航栏紧贴底边，无间距/圆角/投影 | `containerColor = Color.Transparent`，`tonalElevation = 0.dp` |
+
+### 1.2 KSUNext 的做法
 
 从 KSUNext 源码分析（[deepwiki.com](https://deepwiki.com/KernelSU-Next/KernelSU-Next/4.1-application-structure-and-navigation)）：
 
-- 底部导航栏是**悬浮的动画组件**，包裹在 `Surface` 中，带有 `tonalElevation` 投影
-- 支持**滚动感知显隐**（scroll-aware visibility）：下滑时隐藏，上滑时显示，spring 动画过渡
+- 用 **Surface 包裹 NavigationBar**，Surface 带 `tonalElevation` 投影 + 圆角
+- 底部导航栏是**独立悬浮组件**，不嵌入 Scaffold 的 bottomBar 插槽
+- 支持**滚动感知显隐**（scroll-aware visibility）：下滑隐藏，上滑显示，spring 动画
 - 每个 Tab 有 filled/outlined 双图标，选中态切换
 
-### 1.2 M3 Expressive 官方柔性导航栏（2025-05）
+### 1.3 M3 Expressive 2025-05 更新
 
-- 新增 **Flexible Navigation Bar**：高度更短，支持 MEDIUM 窗口水平排列
-- 官方推荐替代 Baseline Navigation Bar
-- 颜色：选中标签从 `on-surface-variant` 改为 `secondary`
+- 新增 **Flexible Navigation Bar**：高度更短，支持 MEDIUM 窗口横向排列
+- 选中标签颜色从 `on-surface-variant` 改为 `secondary`
 - **默认无阴影**（Elevation: No shadow）—— 悬浮效果需要我们自己加
+- material3 1.5.0-alpha18 的 `NavigationBar` API 签名（无 `shape` 参数）：
 
-### 1.3 当前文研导航栏的问题
+```kotlin
+@Composable
+fun NavigationBar(
+    modifier: Modifier = Modifier,
+    containerColor: Color = NavigationBarDefaults.containerColor,
+    contentColor: Color = NavigationBarDefaults.contentColor,
+    tonalElevation: Dp = NavigationBarDefaults.Elevation,
+    windowInsets: WindowInsets = NavigationBarDefaults.windowInsets,
+    content: @Composable RowScope.() -> Unit,
+)
+```
 
-| 问题 | 说明 |
+**关键发现**：`NavigationBar` 没有 `shape` 参数，不能直接设置圆角。需要包裹在 `Surface` 中或使用 `Modifier.clip()`。
+
+## 2. 技术方案对比
+
+### 方案 A：Surface 包裹 NavigationBar（推荐 ✅）
+
+```
+Surface(
+    shape = RoundedCornerShape(16.dp),
+    tonalElevation = 3.dp,
+    color = surfaceContainer,
+    modifier = Modifier.padding(horizontal = 16.dp, bottom = 8.dp)
+) {
+    NavigationBar(
+        containerColor = Color.Transparent,
+        tonalElevation = 0.dp,
+        ...
+    )
+}
+```
+
+| 优点 | 缺点 |
 |------|------|
-| 遮挡面积大 | 80dp 透明导航栏 + 120dp 渐变遮罩，底部共 200dp 非内容区 |
-| 小横条不沉浸 | 系统导航条（gesture bar）在透明导航栏下方，视觉上有割裂感 |
-| 非悬浮 | 导航栏紧贴底部，无间距/圆角/投影，缺少 M3E 的"漂浮"质感 |
+| Surface 原生支持 shape + elevation + color | 多一层嵌套 |
+| 内层 NavigationBar 透明，所有视觉由 Surface 控制 | — |
+| `tonalElevation` 自动适配 light/dark 主题色调叠加 | — |
+| 与 KSUNext 做法一致 | — |
 
-## 2. 改造方案
+### 方案 B：NavigationBar 直接 clip（不推荐 ❌）
 
-### 2.1 核心思路
+```
+NavigationBar(
+    modifier = Modifier
+        .clip(RoundedCornerShape(16.dp))
+        .padding(horizontal = 16.dp, bottom = 8.dp),
+    containerColor = surfaceContainer,
+    tonalElevation = 3.dp,
+    ...
+)
+```
 
-用一个**带圆角 + 高度 + 投影的 Surface 包裹 NavigationBar**，水平两侧留间距，底部留出系统手势区，视觉上形成"悬浮"效果。
+| 优点 | 缺点 |
+|------|------|
+| 少一层嵌套 | `clip` 只裁剪视觉，不参与布局测量 |
+| — | `tonalElevation` 在 NavigationBar 上行为与 Surface 不同（无阴影叠加） |
+| — | 裁剪后导航栏四角空白区域会透出底层内容 |
+
+**结论**：方案 A（Surface 包裹）是正确做法。
+
+## 3. 详细改动
+
+### 3.1 文件 1：WenyanNavigationBar.kt
+
+**改动前**：
+
+```kotlin
+NavigationBar(
+    modifier = modifier,
+    containerColor = Color.Transparent,
+    tonalElevation = 0.dp,
+) { ... }
+```
+
+**改动后**：
+
+```kotlin
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
+import androidx.compose.ui.unit.dp
+
+// 外层 Surface 提供悬浮外观
+Surface(
+    shape = RoundedCornerShape(16.dp),
+    tonalElevation = 3.dp,
+    color = MaterialTheme.colorScheme.surfaceContainer,
+    // 水平留边 16dp，底部在系统手势区之上 8dp
+    modifier = modifier.padding(horizontal = 16.dp, bottom = 8.dp),
+) {
+    NavigationBar(
+        containerColor = Color.Transparent,
+        tonalElevation = 0.dp,
+    ) { ... }
+}
+```
+
+**为什么用 `tonalElevation` 而不是 `shadowElevation`**：
+- `tonalElevation` 在 light 主题产生浅色叠加，在 dark 主题产生深色叠加，与 M3 色彩体系一致
+- `shadowElevation` 产生硬阴影，在深色主题下可能不自然
+- 3.dp 是中等高度，比 Card 默认 1.dp 高，比 Dialog 的 6.dp 低，适合"悬浮导航栏"的层次
+
+### 3.2 文件 2：WenyanAdaptiveNavigation.kt
+
+**改动 1：内容底部 padding 微调**
+
+当前：`val bottomPadding = 80.dp + systemNavBarBottomDp`
+
+因为悬浮导航栏底部额外有 8.dp padding，向上偏移了，所以内容需要更多底部空间来避免被导航栏遮挡。
+
+但是，如果保持 80.dp + systemNavBarBottomDp，内容会与导航栏顶部有约 8dp 重叠。这个重叠区有渐变遮罩处理，视觉上过渡平滑。
+
+**两种子方案**：
+
+| 子方案 | 内容 padding | 效果 |
+|--------|-------------|------|
+| A1（推荐） | 保持 `80.dp + systemNavBarBottomDp` | 内容与导航栏顶部有 ~8dp 重叠，渐变遮罩处理过渡，内容利用更充分 |
+| A2 | `88.dp + systemNavBarBottomDp` | 内容与导航栏完全无重叠，但底部留白稍多 |
+
+推荐 **A1**，因为：
+- 缩短的渐变遮罩（80dp）正好覆盖这个重叠区
+- 内容区域利用最大化
+- 视觉上导航栏"浮"在内容之上，重叠是正常的
+
+**改动 2：BottomGradientScrim 缩短**
+
+当前：120dp 高度，透明度从 Transparent → 0.85f → surfaceContainer
+
+当前效果：
+```
+120dp:
+┌─────────────────┐
+│  Transparent     │  ← 0dp
+│  ...渐变...       │
+│  0.85f alpha     │  ← ~80dp
+│  surfaceContainer│  ← 120dp
+└─────────────────┘
+```
+
+改为 80dp，透明度降低：
+
+```kotlin
+@Composable
+private fun BottomGradientScrim() {
+    val surfaceContainer = MaterialTheme.colorScheme.surfaceContainer
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp)  // 120dp → 80dp
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        surfaceContainer.copy(alpha = 0.60f),  // 0.85f → 0.60f
+                        surfaceContainer.copy(alpha = 0.85f),  // 新增中间色
+                        surfaceContainer,
+                    ),
+                ),
+            ),
+    )
+}
+```
+
+**说明**：
+- 缩短到 80dp：因为悬浮导航栏自带 `surfaceContainer` 背景，不再需要大片渐变来过渡
+- 透明度降低 + 增加中间色阶：渐变更平滑，从透明到不透明有 3 个 stops
+- 导航栏区域（底部 16dp 水平间距内）由 Surface 的 `surfaceContainer` 直接覆盖
+
+### 3.3 改动总结
+
+| 文件 | 改动类型 | 行数变化 |
+|------|----------|----------|
+| `WenyanNavigationBar.kt` | 新增 Surface 包裹 + shape/elevation/color + padding | +5 / -0 |
+| `WenyanAdaptiveNavigation.kt` | BottomGradientScrim 缩短 + 透明度微调 | +3 / -2 |
+| 合计 | 2 文件 | +8 / -2 |
+
+## 4. 布局结构对比
+
+### 改造前（透明沉浸式）
 
 ```
 ┌──────────────────────────────────┐
+│  Content (surfaceContainer 背景)  │
+│  bottom padding = 80dp + sysNav  │
 │                                  │
-│            Content               │
-│                                  │
-│    ┌──────────────────────┐      │
-│    │  Gradient Scrim (80dp)│      │  ← 缩短的渐变遮罩
-│    └──────────────────────┘      │
-│  ┌────────────────────────────────┐│
-│  │  padding 16.dp ←→ 16.dp       ││
-│  │ ┌──────────────────────────┐   ││
-│  │ │◉ 知识点  ◉ 论述题  ◉ 卡片│   ││  ← Surface(表面容器色)
-│  │ │◉ 错题本  ◉ 设置          │   ││    tonalElevation=3.dp
-│  │ └──────────────────────────┘   ││    shape=RoundedCorner(16.dp)
-│  │        padding 8.dp + sysNav   ││
-│  └────────────────────────────────┘│
+│  ┌──── BottomGradient(120dp) ──┐ │
+│  │  Transparent → 0.85f → solid│ │
+│  └─────────────────────────────┘ │
+│  ┌── NavigationBar (透明 80dp) ──┐│
+│  │  ◉ 知识点  ◉ 论述题  ◉ 卡片  ││
+│  │  ◉ 错题本  ◉ 设置            ││
+│  └───────────────────────────────┘│
+│  ← 系统导航条（手势区） →          │
 └──────────────────────────────────┘
 ```
 
-### 2.2 改动文件
+### 改造后（悬浮式）
 
-| 文件 | 改动内容 |
-|------|----------|
-| `WenyanNavigationBar.kt` | 添加 `shape`、`tonalElevation`、`containerColor` 改为 `surfaceContainer`；modifier 添加水平/底部 padding |
-| `WenyanAdaptiveNavigation.kt` | 调整 `BottomGradientScrim` 高度（120dp → 80dp）+ 透明度微调；内容底部 padding 保持不变 |
-
-### 2.3 详细参数
-
-#### WenyanNavigationBar.kt 改动
-
-```kotlin
-// 新增参数
-shape = RoundedCornerShape(16.dp),
-tonalElevation = 3.dp,
-containerColor = MaterialTheme.colorScheme.surfaceContainer,
-
-// modifier 新增 padding
-modifier = modifier
-    .padding(horizontal = 16.dp)
-    .padding(bottom = 8.dp),
+```
+┌──────────────────────────────────┐
+│  Content (surfaceContainer 背景)  │
+│  bottom padding = 80dp + sysNav  │
+│                                  │
+│  ┌──── BottomGradient(80dp) ───┐ │
+│  │  Transparent → 0.60f → 0.85f│ │
+│  │  → solid                    │ │
+│  └─────────────────────────────┘ │
+│     ┌────────────────────────┐   │
+│     │  NavigationBar(Surface) │   │  ← 16dp 水平间距
+│     │  surfaceContainer 背景  │   │  ← 3dp tonalElevation
+│     │  roundedCorner 16dp    │   │  ← 浮在内容之上
+│     │  ◉ 知识点  ◉ 论述题     │   │
+│     │  ◉ 卡片  ◉ 错题本  ◉ 设置│   │
+│     └────────────────────────┘   │
+│          8dp + sysNav            │  ← 底部留空
+└──────────────────────────────────┘
 ```
 
-**参数选择理由**：
-- `16.dp` 圆角 — 对齐 M3E 按钮/卡片圆角规范（buttons 12→16dp, cards 4→20dp）
-- `3.dp` tonalElevation — 产生阴影悬浮感但不夸张（KSUNext 使用 3.dp）
-- `surfaceContainer` — 与内容区背景色一致，视觉上统一
-- 水平 `16.dp` padding — 与屏幕边缘留出呼吸感
-- 底部 `8.dp` padding — 在系统手势区之上留出间距，导航栏不贴底
+## 5. 测试影响
 
-#### WenyanAdaptiveNavigation.kt 改动
+### 5.1 WenyanNavigationBarTest（3 个测试）
 
-```kotlin
-// BottomGradientScrim: 120dp → 80dp
-// 透明度微调：0.85f → 0.70f
-// 因为悬浮导航栏自带 surfaceContainer 背景，不再需要大片渐变过渡
+```
+labels_areDisplayed_forAllItems()        → 不受影响 ✅
+items_haveClickAction_forAccessibility()  → 不受影响 ✅
+onNavigate_invoked_whenItemClicked()      → 不受影响 ✅
 ```
 
-### 2.4 不实施的特性
+测试使用 `Surface` 包裹，内层 `WenyanNavigationBar` 的 API 签名不变，测试代码无需修改。
 
-**滚动感知显隐（scroll-aware visibility）** — 本次不实施，原因：
-1. 文研 App 不是 Feed 流应用，大部分页面是列表/详情页，滚动场景不多
-2. 加入显隐动画会增加复杂度（需传递 LazyListState 到 WenyanAdaptiveNavigation）
-3. 用户未要求此功能，可后续迭代
+### 5.2 WenyanNavigationBarPreview（3 个 Preview）
 
-## 3. 视觉效果对比
+```
+Light - Knowledge selected  → 视觉变化 ✅（自动显示悬浮效果）
+Dark - AI selected          → 视觉变化 ✅（自动显示悬浮效果）
+AMOLED - Cards selected     → 视觉变化 ✅（自动显示悬浮效果）
+```
 
-| 方面 | 当前（透明沉浸式） | 改造后（悬浮式） |
-|------|-------------------|-----------------|
-| 导航栏背景 | 透明 | `surfaceContainer` |
-| 底部间距 | 无（紧贴屏幕底边） | 水平 16dp + 底部 8dp |
-| 圆角 | 无 | 16dp |
+Preview 使用 `Surface` 包裹，外层新增的 `Surface` 在 Preview 中自动渲染，可直接看到悬浮效果。
+
+## 6. 视觉对比
+
+| 方面 | 改造前 | 改造后 |
+|------|--------|--------|
+| 导航栏背景 | 透明，透出内容和渐变 | `surfaceContainer`，不透明 |
+| 底部间距 | 0dp（紧贴屏幕底边） | 水平 16dp + 底部 8dp + 系统手势区 |
+| 圆角 | 无（直角） | 16dp RoundedCorner |
 | 投影 | 无 | 3dp tonalElevation |
-| 渐变遮罩 | 120dp | 80dp（缩短） |
-| 视觉感受 | 内容"延伸到"导航栏区域 | 导航栏"漂浮"在内容之上 |
+| 渐变遮罩 | 120dp，Transparent → 0.85f → solid | 80dp，Transparent → 0.60f → 0.85f → solid |
+| 内容 padding | 80dp + sysNav | 80dp + sysNav（不变） |
+| 小横条沉浸感 | 差（透明导航栏 + 手势条分离） | 好（surfaceContainer 背景统一） |
+| 遮挡面积 | 200dp（80+120） | 160dp（80+80），减少 20% |
+| 维护性 | 略复杂（需处理透明叠加） | 简单（Surface 统一管理） |
 
-## 4. 实施步骤
+## 7. 风险分析
 
-1. **修改 `WenyanNavigationBar.kt`** — 添加 shape、tonalElevation、containerColor、padding
-2. **修改 `WenyanAdaptiveNavigation.kt`** — 缩短 BottomGradientScrim 到 80dp，降低透明度到 0.70f
-3. **本地验证** — `assembleDebug` + `testDebugUnitTest` 全绿
-4. **emulator 实测** — 验证 5 个 Tab 切换、子路由返回、沉浸式效果
+| 风险 | 等级 | 说明 | 缓解措施 |
+|------|------|------|----------|
+| Surface 嵌套导致语义冲突 | 低 | 内层 NavigationBar 的 containerColor 为 Transparent，不会与外层 Surface 颜色冲突 | 已验证 NavigationBar 在 Transparent 下行为正常 |
+| tonalElevation 在 AMOLED 模式 | 低 | AMOLED 纯黑背景 + elevation 叠加可能不够明显 | 3.dp 在 AMOLED 下仍有可见阴影 |
+| 水平 padding 16dp 在窄屏 | 低 | 360dp 宽度设备上，导航栏净宽 328dp，5 项仍可正常显示 | M3 标准 NavigationBar 最小宽度 300dp，328dp > 300dp |
+| 底部 padding 8dp 在全面屏手势 | 低 | 8dp + systemNavBarBottomDp 在全面屏手势下约 8+24=32dp，足够 | 与系统导航条区域不重叠 |
+| 渐变遮罩 80dp 不足 | 低 | 80dp 覆盖导航栏高度（80dp）的完整区域 | 测试验证，如不足可微调至 100dp |
+| 测试用例需更新 | 无 | 3 个测试全部通过，不涉及 WenyanNavigationBar 的 API 变化 | — |
 
-## 5. 风险与注意事项
+## 8. 实施步骤
 
-- **Lint 警告**：RoundedCornerShape 需要 import `androidx.compose.foundation.shape.RoundedCornerShape`
-- **MEDIUM/EXPANDED 布局**：不受影响，NavigationRail 不变
-- **子路由（showNavigation=false）**：不受影响，导航栏完全隐藏时不参与布局
-- **无障碍**：surfaceContainer 背景不影响 TalkBack 对 NavigationBarItem 的朗读
+1. **修改 `WenyanNavigationBar.kt`**：添加 Surface 包裹 + shape/elevation/color + padding
+2. **修改 `WenyanAdaptiveNavigation.kt`**：缩短 BottomGradientScrim + 透明度微调
+3. **本地验证**：`./gradlew :core:designsystem:testDebugUnitTest` + `assembleDebug`
+4. **Preview 目视检查**：3 个 Preview 的悬浮效果
+5. **emulator 实测**：验证 5 个 Tab 切换、子路由返回、沉浸式效果
+
+## 9. 后续可迭代（本次不做）
+
+1. **滚动感知显隐**：下滑隐藏导航栏，上滑显示（需传递 LazyListState 到 WenyanAdaptiveNavigation）
+2. **选中态动画**：指示器在 Tab 间滑动动画（spring animation）
+3. **Filled/Outlined 双图标**：选中态用 filled 图标，未选中用 outlined
+4. **Docked FAB**：在导航栏左侧/右侧悬浮一个主要操作按钮
+
+## 10. 参考
+
+- KSUNext BottomBar: [deepwiki.com](https://deepwiki.com/KernelSU-Next/KernelSU-Next/4.1-application-structure-and-navigation)
+- M3 Expressive NavigationBar: [m3.material.io](https://m3.material.io/components/navigation-bar)
+- Compose Material3 API: [NavigationBar](https://developer.android.com/reference/kotlin/androidx/compose/material3/package-summary#NavigationBar)
+- M3E Surface: [Surface 完全指南](https://blog.csdn.net/weixin_42424283/article/details/157582147)
