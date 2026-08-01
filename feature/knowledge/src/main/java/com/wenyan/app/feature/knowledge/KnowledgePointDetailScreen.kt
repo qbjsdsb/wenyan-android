@@ -52,6 +52,7 @@ import com.wenyan.app.core.designsystem.component.ChipVariant
 import com.wenyan.app.core.designsystem.component.ContentSourceBadge
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.GroupedCard
+import com.wenyan.app.core.common.util.ExamContentCleaner
 import com.wenyan.app.core.designsystem.component.GroupedCardDivider
 import com.wenyan.app.core.designsystem.component.GroupedCardItem
 import com.wenyan.app.core.designsystem.component.MaxContentWidth
@@ -691,7 +692,7 @@ private fun EssayItem(
     onClick: () -> Unit,
 ) {
     GroupedCardItem(
-        title = essay.content.trim().take(MAX_ESSAY_PREVIEW_LENGTH),
+        title = ExamContentCleaner.stripQuestionNumber(essay.content).trim().take(MAX_ESSAY_PREVIEW_LENGTH),
         onClick = onClick,
         trailing = {
             Row(

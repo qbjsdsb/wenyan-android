@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.ai.SocraticGuide
 import com.wenyan.app.core.ai.SocraticTutor
+import com.wenyan.app.core.common.util.ExamContentCleaner
 import com.wenyan.app.core.data.repository.KnowledgeRepository
 import com.wenyan.app.core.data.repository.SchedulingRepository
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
@@ -228,7 +229,7 @@ class EssayDetailViewModel @Inject constructor(
 
         aiGuideJob = viewModelScope.launch {
             try {
-                socraticTutor.guideEssayAnswer(essay.content, userAnswer).collect { guide ->
+                socraticTutor.guideEssayAnswer(ExamContentCleaner.stripQuestionNumber(essay.content), userAnswer).collect { guide ->
                     _uiState.value = _uiState.value.copy(
                         aiGuides = _uiState.value.aiGuides + guide,
                     )

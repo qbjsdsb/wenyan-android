@@ -3,6 +3,7 @@ package com.wenyan.app.feature.quiz
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import com.wenyan.app.core.common.util.ExamContentCleaner
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -334,9 +335,9 @@ private fun QuestionCard(
                 )
             }
 
-            // 4. 题目正文（完整展示）
+            // 4. 题目正文（完整展示，剥离题号前缀）
             Text(
-                text = question.content,
+                text = ExamContentCleaner.stripQuestionNumber(question.content),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(top = Spacing.sm),
             )

@@ -53,6 +53,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.ai.SocraticGuide
+import com.wenyan.app.core.common.util.ExamContentCleaner
 import com.wenyan.app.core.ai.SocraticStage
 import com.wenyan.app.core.designsystem.component.ChipVariant
 import com.wenyan.app.core.designsystem.component.EmptyState
@@ -278,7 +279,7 @@ private fun EssayHeaderSection(
 private fun EssayContentSection(content: String) {
     GroupedCard(title = "题目") {
         Text(
-            text = content.trim(),
+            text = ExamContentCleaner.stripQuestionNumber(content).trim(),
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(
                 start = Spacing.lg,

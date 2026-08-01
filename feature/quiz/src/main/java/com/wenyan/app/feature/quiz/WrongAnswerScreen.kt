@@ -54,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wenyan.app.core.common.util.ExamContentCleaner
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.designsystem.component.ChipVariant
 import com.wenyan.app.core.designsystem.component.EmptyState
@@ -410,7 +411,7 @@ private fun WrongAnswerCard(
                 modifier = Modifier.padding(top = Spacing.sm),
             )
             Text(
-                text = title ?: "（题目已删除）",
+                text = title?.let { ExamContentCleaner.stripQuestionNumber(it) } ?: "（题目已删除）",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = if (title != null) {

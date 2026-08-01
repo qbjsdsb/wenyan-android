@@ -3,6 +3,7 @@ package com.wenyan.app.feature.knowledge
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wenyan.app.core.common.util.ExamContentCleaner
 import com.wenyan.app.core.data.repository.ChapterRepository
 import com.wenyan.app.core.data.repository.KnowledgeRepository
 import com.wenyan.app.core.database.entity.SubjectEntity
@@ -91,7 +92,7 @@ class EssayListViewModel @Inject constructor(
                             year = essay.year,
                             subjectName = subjectMap[essay.subjectId] ?: "未知科目",
                             score = essay.score,
-                            contentPreview = essay.content.trim().take(MAX_PREVIEW_LENGTH),
+                            contentPreview = ExamContentCleaner.stripQuestionNumber(essay.content).take(MAX_PREVIEW_LENGTH),
                             hasAngle = !essay.angle.isNullOrBlank(),
                             hasNotes = !essay.notes.isNullOrBlank(),
                             relatedPointCount = essay.relatedPointIds?.size ?: 0,
