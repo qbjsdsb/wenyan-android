@@ -56,7 +56,8 @@ fun WenyanNavigationBar(
         tonalElevation = 3.dp,
         color = MaterialTheme.colorScheme.surfaceContainer,
         // 水平留边 16dp，底部在系统手势区之上 8dp
-        modifier = modifier.padding(horizontal = 16.dp, bottom = 8.dp),
+        // 注：padding(horizontal, bottom) 无此重载，需链式调用
+        modifier = modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp),
     ) {
         NavigationBar(
             containerColor = Color.Transparent,
