@@ -308,9 +308,107 @@ Preview 使用 `Surface` 包裹，外层新增的 `Surface` 在 Preview 中自�
 3. **Filled/Outlined 双图标**：选中态用 filled 图标，未选中用 outlined
 4. **Docked FAB**：在导航栏左侧/右侧悬浮一个主要操作按钮
 
-## 10. 参考
+## 11. v0.9.20 流体玻璃改造（2026-08-01）
 
+### 11.1 背景
+
+v0.9.19 的"紧凑玻璃风格"收到用户强烈负面反馈："底栏还是非常糟糕，怎么一次比一次糟糕"。
+
+### 11.2 问题诊断
+
+| 问题 | v0.9.19 表现 | 根因 |
+|------|-------------|------|
+| 高度太挤 | 56dp，5 项 Tab 图标+文字挤在一起 | 过度追求"减少遮挡" |
+| 留边尴尬 | 水平 8dp，既不是全宽也不是明显悬浮 | 折中方案两头不讨好 |
+| 圆角过激 | 24dp 四角圆角，56dp 高的 bar 圆角吃掉一半 | 视觉上像一颗药丸 |
+| 玻璃效果弱 | 0.04f/0.06f 白色渐变几乎不可见 | 玻璃效果实现不到位 |
+| 误删 Scrim | BottomGradientScrim 被移除，内容到导航栏无过渡 | 以为半透明不需要过渡 |
+| 底部留空 | 离底 4dp，悬浮感变成"飘着" | 仿 iOS 但没仿到位 |
+
+### 11.3 改造方案
+
+#### 11.3.1 设计语言
+
+**目标**：还原 Apple iOS Tab Bar 的流体玻璃风格
+
+| 特性 | iOS Tab Bar | v0.9.20 实现 |
+|------|-------------|-------------|
+| 宽度 | 全宽 | 无水平留边，Surface 撑满 |
+| 圆角 | 顶部微圆角 | 仅顶部 16dp，底部直角贴底 |
+| 高度 | 舒适 | 72dp（5 项 Tab 舒适间距） |
+| 材质 | 毛玻璃模糊 | surfaceContainerHigh alpha=0.75f + 光泽渐变 |
+| 底部 | 贴底 | 无底部空隙，直接延伸到屏幕底部 |
+| 顶部高光 | 细线边缘 | 垂直渐变 0.12f→Transparent，2px 高光 |
+| 过渡 | 自然模糊 | 恢复 40dp BottomGradientScrim |
+
+#### 11.3.2 布局结构
+
+```
+┌──────────────────────────────────────┐
+│  Content area                         │
+│  bottom padding = 72dp + sysNav      │
+│                                       │
+│  ┌── BottomGradientScrim(40dp) ────┐  │
+│  │  Transparent → 0.50f → 0.85f    │  │
+│  │  → surfaceContainer (solid)      │  │
+│  └─────────────────────────────────┘  │
+│  ┌──────────────────────────────────┐  │
+│  │  NavigationBar (全宽, 72dp)       │  │
+│  │  顶部 16dp 圆角, 底部直角贴底     │  │
+│  │  surfaceContainerHigh(0.75) + 光泽│  │
+│  │  ◉ 知识点  ◉ 论述题  ◉ 卡片       │  │
+│  │  ◉ 错题本  ◉ 设置                │  │
+│  │  ── 顶部高光边缘 2px ──          │  │
+│  └──────────────────────────────────┘  │
+│  ← 系统手势区（由 WindowInsets 处理）→  │
+└──────────────────────────────────────┘
+```
+
+#### 11.3.3 改动文件
+
+**WenyanNavigationBar.kt**：
+- 形状：`RoundedCornerShape(topStart=16.dp, topEnd=16.dp, bottomStart=0.dp, bottomEnd=0.dp)`
+- 高度：`72.dp`（val navHeight: Dp = 72.dp）
+- 颜色：`surfaceContainerHigh.copy(alpha = 0.75f)` — 更透明的玻璃质感
+- tonalElevation: `0.dp` — 用玻璃效果代替阴影
+- 无水平 padding，无底部 padding
+- Android 12+ 叠加两层光泽：
+  1. 顶部高光边缘：`verticalGradient(0.12f White → Transparent, startY=0, endY=2)`
+  2. 水平光泽：`horizontalGradient(0.03f → Transparent → 0.05f)`
+
+**WenyanAdaptiveNavigation.kt**：
+- 底部 padding：`72.dp + systemNavBarBottomDp`（之前是 56dp + 4dp）
+- 恢复 BottomGradientScrim（40dp，4 阶渐变：Transparent → 0.50f → 0.85f → solid）
+- 移除底部 4dp 留空
+
+### 11.4 对比
+
+| 方面 | v0.9.19（紧凑玻璃） | v0.9.20（流体玻璃） |
+|------|--------------------|--------------------|
+| 宽度 | 水平 8dp 留边 | 全宽，无留边 |
+| 圆角 | 24dp 四角 | 仅顶部 16dp |
+| 高度 | 56dp | 72dp |
+| 透明度 | 0.85f | 0.75f（更透） |
+| 高光 | 无 | 顶部 2px 高光边缘 |
+| 光泽 | 0.04f/0.06f 渐变 | 0.03f/0.05f 渐变（更自然） |
+| 底部 | 离底 4dp | 贴底 |
+| 过渡 | 无 Scrim | 40dp BottomGradientScrim |
+| 遮挡面积 | 56dp（导航栏） | 72dp（导航栏）+ 40dp（Scrim 覆盖区域与导航栏重叠） |
+
+### 11.5 测试影响
+
+3 个 WenyanNavigationBarTest 的 API 签名不变，不受影响 ✅
+
+### 11.6 潜在风险
+
+| 风险 | 等级 | 说明 | 缓解 |
+|------|------|------|------|
+| 全宽在 AMOLED 下 | 低 | 全宽半透明 bar 在 AMOLED 纯黑背景上可能不够明显 | 顶部高光边缘 + 光泽渐变提供视觉边界 |
+| 72dp 遮挡面积 | 低 | 比 56dp 多 16dp，但恢复的内容过渡更自然 | 用户实际感知是"融合"而非"遮挡" |
+
+## 12. 参考
+
+- Apple HIG Tab Bar: [developer.apple.com](https://developer.apple.com/design/human-interface-guidelines/tab-bars)
 - KSUNext BottomBar: [deepwiki.com](https://deepwiki.com/KernelSU-Next/KernelSU-Next/4.1-application-structure-and-navigation)
 - M3 Expressive NavigationBar: [m3.material.io](https://m3.material.io/components/navigation-bar)
 - Compose Material3 API: [NavigationBar](https://developer.android.com/reference/kotlin/androidx/compose/material3/package-summary#NavigationBar)
-- M3E Surface: [Surface 完全指南](https://blog.csdn.net/weixin_42424283/article/details/157582147)

@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -16,6 +18,8 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowWidthSizeClass
@@ -54,11 +58,14 @@ fun WenyanAdaptiveNavigation(
             //
             // 布局结构（Box 叠加）：
             //   1. 内容区：surfaceContainer 背景，底部显式 padding 避开导航栏
-            //   2. 导航栏：Surface 悬浮容器（圆角 24dp + 半透明玻璃质感 + 水平间距 8dp）
+            //   2. BottomGradientScrim：40dp 渐变遮罩，实现内容到导航栏的平滑过渡
+            //   3. 导航栏：全宽流体玻璃风格，贴底
             //
-            // v0.9.19 紧凑玻璃风格：
-            //   - 移除 BottomGradientScrim：导航栏自身半透明，不再需要渐变遮罩过渡
-            //   - 底部 padding 从 80dp 降至 56dp+4dp，减少遮挡面积 ~30%
+            // v0.9.20 流体玻璃改造：
+            //   - 导航栏全宽，仅顶部圆角，底部贴底
+            //   - 高度 72dp（5 项 Tab 舒适间距）
+            //   - 恢复 BottomGradientScrim（40dp），内容到导航栏平滑过渡
+            //   - 底部 padding = 72dp + 系统导航栏手势区
             //
             // 关键修复：不再依赖 ExpressiveScaffold 的 contentWindowInsets 消费策略，
             // 直接用 Modifier.padding 为内容添加底部间距，确保可点击区域不被导航栏遮挡。
@@ -76,11 +83,12 @@ fun WenyanAdaptiveNavigation(
                     //
                     // 布局结构（Box 叠加）：
                     //   1. 内容区：surfaceContainer 背景，底部显式 padding 避开导航栏
-                    //   2. 导航栏：半透明玻璃质感，浮在最上层
+                    //   2. BottomGradientScrim：40dp 渐变遮罩，内容到导航栏平滑过渡
+                    //   3. 导航栏：全宽流体玻璃，贴底
                     //
-                    // 底部间距 = 导航栏高度(56dp) + 底部留边(4dp) + 系统导航栏手势区
-                    // v0.9.19 紧凑玻璃风格：导航栏高度从 80dp 降至 56dp，底部留边 4dp
-                    val bottomPadding = 56.dp + 4.dp + systemNavBarBottomDp
+                    // 底部间距 = 导航栏高度(72dp) + 系统导航栏手势区
+                    // v0.9.20 流体玻璃：导航栏全宽贴底，高度 72dp，无需底部留边
+                    val bottomPadding = 72.dp + systemNavBarBottomDp
 
                     // 1. 内容区：surfaceContainer 背景 + 显式 padding
                     Box(
@@ -92,8 +100,13 @@ fun WenyanAdaptiveNavigation(
                         content(PaddingValues(0.dp))
                     }
 
-                    // 2. 底部导航栏（透明背景，浮在最上层）
-                    // v0.9.19 移除 BottomGradientScrim：紧凑玻璃风格导航栏自身半透明，不再需要渐变遮罩过渡
+                    // 2. 渐变遮罩：内容到底栏的平滑过渡
+                    // v0.9.20 恢复 BottomGradientScrim（40dp），导航栏半透明时需要过渡
+                    Box(Modifier.align(Alignment.BottomCenter)) {
+                        BottomGradientScrim()
+                    }
+
+                    // 3. 底部导航栏（全宽流体玻璃，贴底）
                     WenyanNavigationBar(
                         items = items,
                         currentRoute = currentRoute,
@@ -170,4 +183,33 @@ private fun AdaptiveRailScaffold(
             content(padding)
         }
     }
+}
+
+/**
+ * 底部渐变遮罩。
+ *
+ * 在内容区与半透明导航栏之间提供平滑过渡，避免内容直接截断在导航栏顶部。
+ * v0.9.20：40dp 高度，与 72dp 导航栏配合，过渡区域约为导航栏高度的一半。
+ *
+ * 颜色从 transparent 渐变到 surfaceContainer（与内容区背景一致），
+ * 视觉上"内容逐渐沉入底部"的效果。
+ */
+@Composable
+private fun BottomGradientScrim() {
+    val surfaceContainer = MaterialTheme.colorScheme.surfaceContainer
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(40.dp)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        surfaceContainer.copy(alpha = 0.50f),
+                        surfaceContainer.copy(alpha = 0.85f),
+                        surfaceContainer,
+                    ),
+                ),
+            ),
+    )
 }
