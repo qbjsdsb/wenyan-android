@@ -1222,10 +1222,13 @@ private fun CardsNormalReviewPreview() {
                 uiState = previewUiState(isFlipped = true),
                 previews = emptyMap(),
                 isSiblingAlreadyRated = false,
+                isInWrongBook = false,
+                isAddingBookmark = false,
                 onFlip = {},
                 onRate = {},
                 onUndo = {},
                 onSkip = {},
+                onAddToWrongAnswerBook = {},
                 modifier = Modifier.fillMaxSize(),
             )
         }

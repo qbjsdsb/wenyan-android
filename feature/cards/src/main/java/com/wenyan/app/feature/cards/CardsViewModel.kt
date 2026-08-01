@@ -225,12 +225,16 @@ class CardsViewModel @Inject constructor(
     )
     val sessionManualAddCount: StateFlow<Int> = _sessionManualAddCount.asStateFlow()
 
+    private val _uiState = MutableStateFlow<CardsUiState>(CardsUiState(isLoading = true))
+    val uiState: StateFlow<CardsUiState> = _uiState.asStateFlow()
+
     /**
      * 当前卡片是否已手动加入错题本（v0.9.18 新增）。
      *
      * 通过 combine _uiState 和 _manualAddedPointIds 自动计算，
      * 当卡片切换或 manualAddedPointIds 变化时自动更新。
      * Sibling 感知：同 pointId 的任意卡被加入，均显示"已加入"。
+     * 注意：_uiState 声明必须在 isCurrentCardInWrongBook 之前（Kotlin 无 forward reference）。
      */
     val isCurrentCardInWrongBook: StateFlow<Boolean> = combine(
         _uiState,
@@ -240,9 +244,6 @@ class CardsViewModel @Inject constructor(
         card.pointId.isNotBlank() && card.pointId in addedIds
     }.distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
-
-    private val _uiState = MutableStateFlow<CardsUiState>(CardsUiState(isLoading = true))
-    val uiState: StateFlow<CardsUiState> = _uiState.asStateFlow()
 
     /**
      * 会话时长(分钟,v0.8.17 P1 修复:改为 StateFlow 暴露)。
