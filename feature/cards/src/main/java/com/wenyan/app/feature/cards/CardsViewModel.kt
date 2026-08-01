@@ -19,7 +19,6 @@ import com.wenyan.app.core.database.entity.CardTemplateType
 import com.wenyan.app.core.fsrs.Rating
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
@@ -849,7 +848,8 @@ class CardsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // DB 写入 + 状态更新在同一 NonCancellable 块内，原子不可分割
-                withContext(Dispatchers.IO + NonCancellable) {
+                // 注：不切换 Dispatchers.IO，repository 的 suspend 函数自行处理 IO 调度
+                withContext(NonCancellable) {
                     // front 截断到 200 字符避免存储过大文本
                     val maxFrontLength = 200
                     val truncatedFront = if (current.front.length > maxFrontLength) {
