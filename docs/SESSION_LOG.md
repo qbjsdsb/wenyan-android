@@ -5947,3 +5947,11 @@ M40,50 L68,50 L68,54 L58,54 L66,66 L58,66 L54,58 L50,66 L42,66 L50,54 L40,54 Z
 
 1. **P0**：emulator 实测 v0.9.16 — 验证论述题 Tab 替换 + 5 项实测待办（见上）
 2. **P0**：CI 账单问题解决后，重新用正式 keystore 构建 release APK 替换所有 Release asset（消除 Exception E1）
+
+### 发布记录（本会话）
+
+- **2026-08-01** staff-engineer-mode 审查通过后，push main + tag v0.9.16 + gh release create
+- 审查结果：agent-pr-review ✅（0 blocker 0 must-fix）→ RBR ✅（0 blocker）→ PRR ✅（0 blocker）
+- Release URL: https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.16
+- Release Notes: 真题→论述题迁移，版本号 0.9.15→0.9.16
+- Exception E1：debug 签名 fallback，APK 需本地构建后上传
