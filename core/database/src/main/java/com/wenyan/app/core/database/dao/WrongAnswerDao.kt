@@ -2,6 +2,7 @@ package com.wenyan.app.core.database.dao
 
 import androidx.room.Dao
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
 import com.wenyan.app.core.database.entity.WrongAnswerWithDetails
@@ -83,6 +84,37 @@ interface WrongAnswerDao {
         examQuestionId: String,
         source: String,
     ): WrongAnswerEntity?
+
+    /**
+     * 事务性写入错题记录（v0.9.18 新增）。
+     *
+     * 在一个 Room 事务内完成"查找已有记录 → 递增或创建"，避免并发竞争。
+     * 返回已有记录 ID（递增后）或 null（表示需要新插入）。
+     *
+     * @param pointId        关联知识点 ID
+     * @param examQuestionId 关联真题 ID
+     * @param source         来源
+     * @param lastWrongAt    最后答错时间戳
+     * @return 已有记录 ID（若已存在且递增），null 表示需要新插入
+     */
+    @Transaction
+    suspend fun recordWrongAnswerTransaction(
+        pointId: String?,
+        examQuestionId: String?,
+        source: String,
+        lastWrongAt: Long,
+    ): String? {
+        val existing: WrongAnswerEntity? = when {
+            pointId != null -> findUnresolvedByPointAndSource(pointId, source)
+            examQuestionId != null -> findUnresolvedByExamQuestionAndSource(examQuestionId, source)
+            else -> null
+        }
+        if (existing != null) {
+            incrementWrongCount(existing.id, lastWrongAt)
+            return existing.id
+        }
+        return null
+    }
 
     /**
      * 递增答错次数并重置为未解决状态。

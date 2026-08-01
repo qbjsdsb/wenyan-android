@@ -53,6 +53,8 @@ import androidx.room.PrimaryKey
         Index("exam_question_id"),
         Index("resolved_at"),
         Index("sched_next_review_at"),
+        Index(value = ["point_id", "source"]),
+        Index(value = ["exam_question_id", "source"]),
     ],
 )
 data class WrongAnswerEntity(

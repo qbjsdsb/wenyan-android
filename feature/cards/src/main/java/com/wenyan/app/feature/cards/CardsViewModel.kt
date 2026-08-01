@@ -19,7 +19,10 @@ import com.wenyan.app.core.database.entity.CardTemplateType
 import com.wenyan.app.core.fsrs.Rating
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -188,6 +191,55 @@ class CardsViewModel @Inject constructor(
      * 默认值为当前时间(首次进入时初始化),恢复时使用 SavedStateHandle 中的旧值。
      */
     private val _sessionStartTime = savedStateHandle.getStateFlow("sessionStartTime", System.currentTimeMillis())
+
+    // ---------- v0.9.18 新增：手动加入错题本 ----------
+
+    /**
+     * 本会话中手动加入错题本的 pointId 集合（v0.9.18 新增）。
+     *
+     * 持久化到 SavedStateHandle，进程恢复后保留。
+     * 序列化格式：逗号分隔的 pointId 列表（pointId 保证不含逗号）。
+     */
+    private val _manualAddedPointIds = MutableStateFlow(
+        savedStateHandle.get<String>("manualAddedPointIds")?.let { raw ->
+            // 校验：空字符串或纯逗号时返回 emptySet
+            if (raw.isBlank() || raw.all { it == ',' }) emptySet()
+            else raw.split(",").filter { it.isNotBlank() }.toSet()
+        } ?: emptySet(),
+    )
+
+    /** 手动加入错题本操作中（防重入锁，v0.9.18 新增） */
+    private val _isAddingBookmark = MutableStateFlow(false)
+    val isAddingBookmark: StateFlow<Boolean> = _isAddingBookmark.asStateFlow()
+
+    /** 本会话中手动加入错题本的 pointId 集合（v0.9.18 新增，供 UI 判断按钮状态） */
+    val manualAddedPointIds: StateFlow<Set<String>> = _manualAddedPointIds.asStateFlow()
+
+    /** 操作成功消息通道（v0.9.18 新增，供 UI 展示 Snackbar） */
+    private val _successMessage = MutableStateFlow<String?>(null)
+    val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
+
+    /** 本会话手动加入错题本次数（v0.9.18 新增，上限 999） */
+    private val _sessionManualAddCount = MutableStateFlow(
+        (savedStateHandle.get<Int>("sessionManualAddCount") ?: 0).coerceIn(0, 999),
+    )
+    val sessionManualAddCount: StateFlow<Int> = _sessionManualAddCount.asStateFlow()
+
+    /**
+     * 当前卡片是否已手动加入错题本（v0.9.18 新增）。
+     *
+     * 通过 combine _uiState 和 _manualAddedPointIds 自动计算，
+     * 当卡片切换或 manualAddedPointIds 变化时自动更新。
+     * Sibling 感知：同 pointId 的任意卡被加入，均显示"已加入"。
+     */
+    val isCurrentCardInWrongBook: StateFlow<Boolean> = combine(
+        _uiState,
+        _manualAddedPointIds,
+    ) { state, addedIds ->
+        val card = state.currentCard ?: return@combine false
+        card.pointId.isNotBlank() && card.pointId in addedIds
+    }.distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _uiState = MutableStateFlow<CardsUiState>(CardsUiState(isLoading = true))
     val uiState: StateFlow<CardsUiState> = _uiState.asStateFlow()
@@ -681,6 +733,11 @@ class CardsViewModel @Inject constructor(
         _errorMessage.value = null
     }
 
+    /** 清除成功消息（v0.9.18 新增，供 UI 消费后调用） */
+    fun clearSuccessMessage() {
+        _successMessage.value = null
+    }
+
     /** 清除当前 Leech 警告(队首),显示队列中下一个(若有) */
     fun clearLeechWarning() {
         _leechWarnings.value = _leechWarnings.value.drop(1)
@@ -728,7 +785,122 @@ class CardsViewModel @Inject constructor(
             currentIndex = 0,
             isFlipped = false,
         )
+        // v0.9.18: retry 清空手动加入错题本状态（新会话重新开始）
+        updateManualAddedPointIds(emptySet())
+        _sessionManualAddCount.value = 0
+        savedStateHandle["sessionManualAddCount"] = 0
+        _successMessage.value = null
         _retryTrigger.value++
+    }
+
+    // ---------- v0.9.18 新增：手动加入错题本 ----------
+
+    /**
+     * 持久化辅助：每次更新时同步写入 SavedStateHandle（v0.9.18 新增）。
+     *
+     * 契约：pointId 不含逗号，确保 joinToString(",") 可逆。
+     */
+    private fun updateManualAddedPointIds(newSet: Set<String>) {
+        require(newSet.all { it.indexOf(',') == -1 }) {
+            "pointId must not contain comma: ${newSet.first { it.indexOf(',') != -1 }}"
+        }
+        _manualAddedPointIds.value = newSet
+        savedStateHandle["manualAddedPointIds"] = newSet.joinToString(",")
+    }
+
+    /**
+     * 手动将当前卡片加入错题本（v0.9.18 新增）。
+     *
+     * 用户在知识卡片页面点击"加入错题本"按钮时调用。
+     * 使用 NonCancellable 上下文确保 DB 写入 + 状态更新原子不可分割。
+     *
+     * 安全设计：
+     * - 防重入锁 [_isAddingBookmark]
+     * - 防重复加入 [_manualAddedPointIds] 检查
+     * - pointId 空值保护
+     * - 文本截断（front 200 字符，correctAnswer 500 字符）
+     * - 控制字符过滤
+     */
+    fun addToWrongAnswerBook() {
+        val current = sessionCards?.getOrNull(_currentIndex.value) ?: return
+        val pointId = current.pointId
+
+        // 1. 检查 pointId 有效性
+        if (pointId.isBlank()) {
+            _errorMessage.value = "无法加入错题本：知识点关联缺失"
+            Timber.w("addToWrongAnswerBook failed: blank pointId, cardId=${current.id}, front=${current.front.take(20)}")
+            return
+        }
+
+        // 2. 检查是否已加入（防重复）
+        if (pointId in _manualAddedPointIds.value) {
+            Timber.d("addToWrongAnswerBook skipped: pointId $pointId already in manualAddedPointIds")
+            return
+        }
+
+        // 3. 防重入锁
+        if (_isAddingBookmark.value) {
+            Timber.d("addToWrongAnswerBook skipped: isAddingBookmark is true")
+            return
+        }
+        _isAddingBookmark.value = true
+
+        viewModelScope.launch {
+            try {
+                // DB 写入 + 状态更新在同一 NonCancellable 块内，原子不可分割
+                withContext(Dispatchers.IO + NonCancellable) {
+                    // front 截断到 200 字符避免存储过大文本
+                    val maxFrontLength = 200
+                    val truncatedFront = if (current.front.length > maxFrontLength) {
+                        current.front.take(maxFrontLength) + "…"
+                    } else {
+                        current.front
+                    }
+                    // 过滤控制字符
+                    val sanitizedFront = truncatedFront.filter { it.category != CharCategory.CONTROL }
+                    val userAnswer = "手动加入：$sanitizedFront"
+
+                    // correctAnswer 长度限制
+                    val maxCorrectAnswerLength = 500
+                    val correctAnswer = extractCorrectAnswer(current)
+                    val truncatedCorrectAnswer = if (correctAnswer != null && correctAnswer.length > maxCorrectAnswerLength) {
+                        correctAnswer.take(maxCorrectAnswerLength) + "…"
+                    } else {
+                        correctAnswer
+                    }
+                    // correctAnswer 空安全兜底
+                    val safeCorrectAnswer = if (truncatedCorrectAnswer.isNullOrBlank()) {
+                        Timber.w("addToWrongAnswerBook: blank correctAnswer for pointId=$pointId, cardId=${current.id}")
+                        "（无答案内容）"
+                    } else {
+                        truncatedCorrectAnswer
+                    }
+
+                    wrongAnswerRepository.recordWrongAnswer(
+                        pointId = pointId,
+                        examQuestionId = null,
+                        userAnswer = userAnswer,
+                        correctAnswer = safeCorrectAnswer,
+                        source = WrongAnswerRepository.SOURCE_CARD_MANUAL,
+                    )
+                    // 状态更新也放在 NonCancellable 块内
+                    updateManualAddedPointIds(_manualAddedPointIds.value + pointId)
+                    val newCount = (_sessionManualAddCount.value + 1).coerceIn(0, 999)
+                    _sessionManualAddCount.value = newCount
+                    savedStateHandle["sessionManualAddCount"] = newCount
+                }
+                // 独立成功通道（在 NonCancellable 块外，丢失不影响数据完整性）
+                _successMessage.value = "已加入错题本"
+                Timber.i("addToWrongAnswerBook succeeded: pointId=$pointId, cardId=${current.id}")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.e(e, "addToWrongAnswerBook failed for pointId=$pointId")
+                _errorMessage.value = "错题本记录失败：${e.message ?: "未知错误"}"
+            } finally {
+                _isAddingBookmark.value = false
+            }
+        }
     }
 
     /** 将 [CardTemplate] 映射为 UI 层 [CardItem] */

@@ -15,18 +15,22 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Replay
@@ -38,6 +42,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -63,6 +68,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -122,6 +128,10 @@ fun CardsScreen(
     val isSiblingAlreadyRated by viewModel.isSiblingAlreadyRated.collectAsStateWithLifecycle()
     // v0.8.17 P1:会话时长改为 StateFlow,避免 Composable 中直接调用函数破坏重组稳定性
     val sessionDurationMinutes by viewModel.sessionDurationMinutes.collectAsStateWithLifecycle()
+    // v0.9.18: 手动加入错题本状态
+    val successMessage by viewModel.successMessage.collectAsStateWithLifecycle()
+    val isAddingBookmark by viewModel.isAddingBookmark.collectAsStateWithLifecycle()
+    val manualAddedPointIds by viewModel.manualAddedPointIds.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
@@ -137,6 +147,15 @@ fun CardsScreen(
         if (error != null && leechWarning == null) {
             snackbarHostState.showSnackbar(error)
             viewModel.clearError()
+        }
+    }
+
+    // v0.9.18: 成功消息（加入错题本）弹 Snackbar
+    LaunchedEffect(successMessage) {
+        val msg = successMessage
+        if (msg != null) {
+            snackbarHostState.showSnackbar(msg)
+            viewModel.clearSuccessMessage()
         }
     }
 
@@ -276,10 +295,13 @@ fun CardsScreen(
                             uiState = uiState,
                             previews = currentPreviews,
                             isSiblingAlreadyRated = isSiblingAlreadyRated,
+                            isInWrongBook = card.pointId in manualAddedPointIds,
+                            isAddingBookmark = isAddingBookmark,
                             onFlip = viewModel::flipCard,
                             onRate = viewModel::rateCard,
                             onUndo = viewModel::undo,
                             onSkip = viewModel::skipCard,
+                            onAddToWrongAnswerBook = viewModel::addToWrongAnswerBook,
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
@@ -322,10 +344,13 @@ private fun CardReviewContent(
     uiState: CardsUiState,
     previews: Map<Rating, IntervalPreview>,
     isSiblingAlreadyRated: Boolean,
+    isInWrongBook: Boolean,
+    isAddingBookmark: Boolean,
     onFlip: () -> Unit,
     onRate: (CardRating) -> Unit,
     onUndo: () -> Unit,
     onSkip: () -> Unit,
+    onAddToWrongAnswerBook: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // v0.8.13 P1-4:大屏适配,限制内容最大宽度避免卡片和按钮在平板/折叠屏上拉伸过宽
@@ -385,6 +410,13 @@ private fun CardReviewContent(
                     onRate = onRate,
                     previews = if (isSiblingAlreadyRated) emptyMap() else previews,
                 )
+                // v0.9.18: 手动加入错题本按钮
+                AddToWrongAnswerButton(
+                    isInWrongBook = isInWrongBook,
+                    isLoading = isAddingBookmark,
+                    pointId = card.pointId,
+                    onClick = onAddToWrongAnswerBook,
+                )
                 // v0.8.8：撤销 + 跳过按钮横排
                 // 撤销：回退上一张（currentIndex > 0 才显示）
                 // 跳过：不评分推进到下一张（避免乱评污染 FSRS）
@@ -414,6 +446,13 @@ private fun CardReviewContent(
                     text = "点击卡片查看答案",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                // v0.9.18: 手动加入错题本按钮（翻转前也可加入）
+                AddToWrongAnswerButton(
+                    isInWrongBook = isInWrongBook,
+                    isLoading = isAddingBookmark,
+                    pointId = card.pointId,
+                    onClick = onAddToWrongAnswerBook,
                 )
                 // v0.8.12 P2-14：未翻转也显示撤销/跳过按钮（与翻转后一致）
                 // 原实现未翻转只显示跳过，用户跳过后想撤销必须先翻转才能看到撤销按钮，操作迂回
@@ -772,6 +811,87 @@ private fun SkipButton(
             modifier = Modifier.padding(end = Spacing.xs),
         )
         Text("跳过")
+    }
+}
+
+// ---------- v0.9.18 新增：加入错题本按钮 ----------
+
+/**
+ * 手动加入错题本按钮（v0.9.18 新增）。
+ *
+ * 在知识卡片正面（翻转前）和背面（翻转后评分按钮下方）均显示。
+ * 用户点击后将该卡片关联的知识点加入错题本，作为"手动加入"来源。
+ *
+ * 状态：
+ * - 未加入：显示 BookmarkBorder 图标 + "加入错题本"
+ * - 已加入：显示 CheckCircle 图标 + "已加入错题本"（禁用）
+ * - 加载中：显示 CircularProgressIndicator + "加入中..."（禁用）
+ * - pointId 为空：显示 "无法加入错题本"（禁用）
+ *
+ * 无障碍：contentDescription 区分四种状态，Snackbar 设为 liveRegion=Assertive
+ */
+@Composable
+private fun AddToWrongAnswerButton(
+    isInWrongBook: Boolean,
+    isLoading: Boolean,
+    pointId: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val label = when {
+        isLoading -> "加入中..."
+        isInWrongBook -> "已加入错题本"
+        pointId.isBlank() -> "无法加入错题本"
+        else -> "加入错题本"
+    }
+    val icon = when {
+        isInWrongBook -> Icons.Default.CheckCircle
+        else -> Icons.Default.BookmarkBorder
+    }
+    val enabled = !isLoading && !isInWrongBook && pointId.isNotBlank()
+
+    FilledTonalButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .semantics {
+                contentDescription = when {
+                    isInWrongBook -> "当前卡片已加入错题本"
+                    isLoading -> "正在加入错题本"
+                    pointId.isBlank() -> "无法加入错题本：知识点关联缺失"
+                    else -> "加入错题本"
+                }
+            },
+        colors = ButtonDefaults.filledTonalButtonColors(
+            containerColor = if (isInWrongBook) {
+                MaterialTheme.colorScheme.surfaceVariant
+            } else {
+                MaterialTheme.colorScheme.secondaryContainer
+            },
+            contentColor = if (isInWrongBook) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                MaterialTheme.colorScheme.onSecondaryContainer
+            },
+        ),
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Spacer(modifier = Modifier.padding(start = Spacing.xs))
+        } else {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.padding(end = Spacing.xs),
+            )
+        }
+        Text(label)
     }
 }
 

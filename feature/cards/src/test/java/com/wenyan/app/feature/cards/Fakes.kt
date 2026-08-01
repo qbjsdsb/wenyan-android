@@ -16,6 +16,7 @@ import com.wenyan.app.core.database.entity.MemoRecordEntity
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
 import com.wenyan.app.core.database.entity.WrongAnswerWithDetails
 import com.wenyan.app.core.fsrs.Rating
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -138,6 +139,10 @@ class FakeWrongAnswerRepository(
     initialAll: List<WrongAnswerWithDetails> = emptyList(),
     initialUnresolved: List<WrongAnswerWithDetails> = emptyList(),
     var unresolvedCount: Int = 0,
+    /** 模拟异步操作的延迟（毫秒，v0.9.18 新增，用于测试 isAddingBookmark 加载中状态） */
+    var delayMs: Long = 0,
+    /** 非 null 时 recordWrongAnswer 抛出指定异常（用于测试错误分支） */
+    var throwOnRecord: Throwable? = null,
 ) : WrongAnswerRepository {
 
     private val _all = MutableStateFlow(initialAll)
@@ -171,6 +176,10 @@ class FakeWrongAnswerRepository(
         correctAnswer: String?,
         source: String,
     ): String {
+        // 模拟异步操作延迟，用于测试 isAddingBookmark 加载中状态
+        if (delayMs > 0) delay(delayMs)
+        // 模拟异常，用于测试错误分支
+        throwOnRecord?.let { throw it }
         recordedWrongAnswers.add(
             RecordedWrongAnswer(pointId, examQuestionId, userAnswer, correctAnswer, source),
         )

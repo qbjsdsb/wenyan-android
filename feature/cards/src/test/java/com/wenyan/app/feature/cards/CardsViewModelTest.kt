@@ -1491,6 +1491,278 @@ class CardsViewModelTest {
         )
     }
 
+    // ========== v0.9.18: addToWrongAnswerBook 测试 ==========
+
+    /**
+     * 场景:addToWrongAnswerBook 成功调用 recordWrongAnswer。
+     * 验证:recordedWrongAnswers 中有一条记录,source=CARD_MANUAL,pointId=当前卡 pointId。
+     */
+    @Test
+    fun `addToWrongAnswerBook 记录错题`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        val currentCard = viewModel.uiState.value.currentCard
+        assertNotNull("应有当前卡片", currentCard)
+
+        viewModel.addToWrongAnswerBook()
+        advanceUntilIdle()
+
+        assertEquals("应记录一条错题", 1, wrongAnswerRepository.recordedWrongAnswers.size)
+        val record = wrongAnswerRepository.recordedWrongAnswers[0]
+        assertEquals("pointId 应为当前卡 pointId", "point_1", record.pointId)
+        assertEquals("source 应为 CARD_MANUAL", WrongAnswerRepository.SOURCE_CARD_MANUAL, record.source)
+        assertNull("examQuestionId 应为 null", record.examQuestionId)
+        assertTrue("userAnswer 应包含'手动加入'", record.userAnswer.contains("手动加入"))
+    }
+
+    /**
+     * 场景:同一卡重复调用 addToWrongAnswerBook 只记录一次。
+     * 验证:第二次调用不增加 recordedWrongAnswers 数量。
+     */
+    @Test
+    fun `addToWrongAnswerBook 重复调用去重`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        viewModel.addToWrongAnswerBook()
+        advanceUntilIdle()
+        viewModel.addToWrongAnswerBook()  // 第二次
+        advanceUntilIdle()
+
+        assertEquals("应只记录一条错题", 1, wrongAnswerRepository.recordedWrongAnswers.size)
+    }
+
+    /**
+     * 场景:sibling 卡（同 pointId）加入后 isCurrentCardInWrongBook 为 true。
+     * 验证:加入卡 A(pointId=p_sibling) 后,卡 B(pointId=p_sibling) 的 isCurrentCardInWrongBook 为 true。
+     */
+    @Test
+    fun `sibling 卡加入后 isCurrentCardInWrongBook 为 true`() = runTest(testDispatcher) {
+        val siblingCards = listOf(
+            testClozeCard(front = "卡 A", pointId = "p_sibling"),
+            testClozeCard(front = "卡 B", pointId = "p_sibling"),
+        )
+        cardRepository = FakeCardRepository(siblingCards)
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        assertFalse("初始状态 isCurrentCardInWrongBook 应为 false",
+            viewModel.isCurrentCardInWrongBook.value)
+
+        viewModel.addToWrongAnswerBook()  // 加入卡 A
+        advanceUntilIdle()
+
+        assertTrue("加入后 isCurrentCardInWrongBook 应为 true",
+            viewModel.isCurrentCardInWrongBook.value)
+
+        // 推进到卡 B（sibling）
+        viewModel.rateCard(CardRating.GOOD)
+        advanceUntilIdle()
+
+        assertTrue("sibling 卡 isCurrentCardInWrongBook 也应为 true",
+            viewModel.isCurrentCardInWrongBook.value)
+    }
+
+    /**
+     * 场景:pointId 为空时不记录错题。
+     * 验证:addToWrongAnswerBook 不调用 recordWrongAnswer,设 errorMessage。
+     */
+    @Test
+    fun `addToWrongAnswerBook 空 pointId 不记录`() = runTest(testDispatcher) {
+        val noPointCard = testClozeCard(pointId = "")
+        cardRepository = FakeCardRepository(listOf(noPointCard))
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        viewModel.addToWrongAnswerBook()
+        advanceUntilIdle()
+
+        assertTrue("不应记录错题", wrongAnswerRepository.recordedWrongAnswers.isEmpty())
+        assertNotNull("应设置 errorMessage", viewModel.errorMessage.value)
+        assertTrue("errorMessage 应包含'知识点关联缺失'",
+            viewModel.errorMessage.value!!.contains("知识点关联缺失"))
+    }
+
+    /**
+     * 场景:recordWrongAnswer 抛异常时设置 errorMessage。
+     * 验证:addToWrongAnswerBook 后 errorMessage 非空且包含"错题本记录失败"。
+     */
+    @Test
+    fun `addToWrongAnswerBook 失败时设 errorMessage`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        wrongAnswerRepository.throwOnRecord = RuntimeException("DB error")
+
+        viewModel.addToWrongAnswerBook()
+        advanceUntilIdle()
+
+        assertNotNull("应设置 errorMessage", viewModel.errorMessage.value)
+        assertTrue("errorMessage 应包含'错题本记录失败'",
+            viewModel.errorMessage.value!!.contains("错题本记录失败"))
+    }
+
+    /**
+     * 场景:addToWrongAnswerBook 后 sessionManualAddCount 递增。
+     * 验证:加入后 sessionManualAddCount 从 0 变为 1。
+     */
+    @Test
+    fun `addToWrongAnswerBook 递增 sessionManualAddCount`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        assertEquals(0, viewModel.sessionManualAddCount.value)
+
+        viewModel.addToWrongAnswerBook()
+        advanceUntilIdle()
+
+        assertEquals("sessionManualAddCount 应为 1", 1, viewModel.sessionManualAddCount.value)
+    }
+
+    /**
+     * 场景:addToWrongAnswerBook 不影响 sessionReviewedCount/sessionAgainCount。
+     * 验证:加入后 sessionReviewedCount 和 sessionAgainCount 仍为 0（未评分）。
+     */
+    @Test
+    fun `addToWrongAnswerBook 不影响会话统计`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        assertEquals(0, viewModel.sessionReviewedCount.value)
+        assertEquals(0, viewModel.sessionAgainCount.value)
+
+        viewModel.addToWrongAnswerBook()
+        advanceUntilIdle()
+
+        assertEquals("sessionReviewedCount 应不变", 0, viewModel.sessionReviewedCount.value)
+        assertEquals("sessionAgainCount 应不变", 0, viewModel.sessionAgainCount.value)
+    }
+
+    /**
+     * 场景:retry 后 sessionManualAddCount 重置为 0。
+     * 验证:加入后 retry,count 回到 0。
+     */
+    @Test
+    fun `retry 重置 sessionManualAddCount`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        viewModel.addToWrongAnswerBook()
+        advanceUntilIdle()
+        assertEquals(1, viewModel.sessionManualAddCount.value)
+
+        viewModel.retry()
+        advanceUntilIdle()
+
+        assertEquals("retry 后 sessionManualAddCount 应为 0", 0, viewModel.sessionManualAddCount.value)
+    }
+
+    /**
+     * 场景:addToWrongAnswerBook 后 isCurrentCardInWrongBook 自动变为 true。
+     * 验证:无需手动触发 _uiState 更新,combine 驱动自动重新计算。
+     */
+    @Test
+    fun `addToWrongAnswerBook 后 isCurrentCardInWrongBook 自动更新`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        assertFalse("初始状态 isCurrentCardInWrongBook 应为 false",
+            viewModel.isCurrentCardInWrongBook.value)
+
+        viewModel.addToWrongAnswerBook()
+        advanceUntilIdle()
+
+        assertTrue("addToWrongAnswerBook 后 isCurrentCardInWrongBook 应自动变为 true",
+            viewModel.isCurrentCardInWrongBook.value)
+    }
+
+    /**
+     * 场景:addToWrongAnswerBook 成功后 successMessage 发射"已加入错题本"。
+     * 验证:调用后 successMessage 非空且内容正确。
+     */
+    @Test
+    fun `addToWrongAnswerBook 成功后发射 successMessage`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        assertNull("初始 successMessage 应为 null", viewModel.successMessage.value)
+
+        viewModel.addToWrongAnswerBook()
+        advanceUntilIdle()
+
+        assertNotNull("addToWrongAnswerBook 后 successMessage 应非空",
+            viewModel.successMessage.value)
+        assertEquals("successMessage 应为'已加入错题本'",
+            "已加入错题本", viewModel.successMessage.value)
+    }
+
+    /**
+     * 场景:clearSuccessMessage 清除 successMessage。
+     * 验证:调用 clearSuccessMessage 后 successMessage 为 null。
+     */
+    @Test
+    fun `clearSuccessMessage 清除成功消息`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        viewModel.addToWrongAnswerBook()
+        advanceUntilIdle()
+        assertNotNull(viewModel.successMessage.value)
+
+        viewModel.clearSuccessMessage()
+        assertNull("clearSuccessMessage 后 successMessage 应为 null",
+            viewModel.successMessage.value)
+    }
+
+    /**
+     * 场景:retry 后 successMessage 被清空。
+     * 验证:addToWrongAnswerBook → retry → successMessage 为 null。
+     */
+    @Test
+    fun `retry 清空 successMessage`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        viewModel.addToWrongAnswerBook()
+        advanceUntilIdle()
+        assertNotNull(viewModel.successMessage.value)
+
+        viewModel.retry()
+        advanceUntilIdle()
+
+        assertNull("retry 后 successMessage 应为 null", viewModel.successMessage.value)
+    }
+
+    /**
+     * 场景:进程死亡恢复后 manualAddedPointIds 从 SavedStateHandle 恢复。
+     * 验证:模拟 SavedStateHandle 持有一个 pointId,初始化后 isCurrentCardInWrongBook 为 true。
+     */
+    @Test
+    fun `进程死亡恢复后 manualAddedPointIds 正确恢复`() = runTest(testDispatcher) {
+        val savedStateHandle = SavedStateHandle().apply {
+            this["manualAddedPointIds"] = "point_1,point_2"
+            this["sessionManualAddCount"] = 2
+        }
+        cardRepository = FakeCardRepository(listOf(
+            testClozeCard(pointId = "point_1"),
+            testClozeCard(pointId = "point_2", front = "卡 B"),
+        ))
+        schedulingRepository = FakeSchedulingRepository()
+        wrongAnswerRepository = FakeWrongAnswerRepository()
+        studyProgressRepository = FakeStudyProgressRepository()
+        val vm = CardsViewModel(
+            savedStateHandle = savedStateHandle,
+            cardRepository = cardRepository,
+            schedulingRepository = schedulingRepository,
+            wrongAnswerRepository = wrongAnswerRepository,
+            studyProgressRepository = studyProgressRepository,
+        )
+        advanceUntilIdle()
+
+        assertTrue("进程恢复后 point_1 的 isCurrentCardInWrongBook 应为 true",
+            vm.isCurrentCardInWrongBook.value)
+        assertEquals("sessionManualAddCount 应恢复为 2", 2, vm.sessionManualAddCount.value)
+    }
+
     // ---------- v0.8.20 P1-2 新增:错误处理统一测试 ----------
 
     /**

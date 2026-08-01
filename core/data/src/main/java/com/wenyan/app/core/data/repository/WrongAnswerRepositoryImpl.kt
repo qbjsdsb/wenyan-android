@@ -48,22 +48,16 @@ class WrongAnswerRepositoryImpl @Inject constructor(
     ): String {
         val now = System.currentTimeMillis()
 
-        // 1. 查找已有未解决错题(按来源区分查询路径)
-        //    - 卡片来源(source = CARD_AGAIN):按 pointId 查
-        //    - 真题来源(source = QUIZ_WRONG):按 examQuestionId 查
-        val existing: WrongAnswerEntity? = when {
-            pointId != null -> wrongAnswerDao.findUnresolvedByPointAndSource(pointId, source)
-            examQuestionId != null -> wrongAnswerDao.findUnresolvedByExamQuestionAndSource(examQuestionId, source)
-            else -> null
-        }
+        // 1. 使用 Room @Transaction 事务性查找已有记录并递增（v0.9.18 新增，防并发竞争）
+        val existingId = wrongAnswerDao.recordWrongAnswerTransaction(
+            pointId = pointId,
+            examQuestionId = examQuestionId,
+            source = source,
+            lastWrongAt = now,
+        )
+        if (existingId != null) return existingId
 
-        // 2. 已有记录 → 递增 wrongCount + 重置 resolvedAt = NULL
-        if (existing != null) {
-            wrongAnswerDao.incrementWrongCount(existing.id, now)
-            return existing.id
-        }
-
-        // 3. 新记录 → upsert WrongAnswerEntity
+        // 2. 无已有记录 → upsert 新 WrongAnswerEntity
         val id = UUID.randomUUID().toString()
         wrongAnswerDao.upsert(
             WrongAnswerEntity(

@@ -71,4 +71,7 @@ dependencies {
     testImplementation(libs.turbine)
     // P0 v0.7.2: 测试需要访问 StudyProgressDao/StudyProgressEntity(Fake 实现)
     testImplementation(project(":core:database"))
+    // v0.9.18: Compose UI 测试依赖（AddToWrongAnswerButton 测试）
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
 }
