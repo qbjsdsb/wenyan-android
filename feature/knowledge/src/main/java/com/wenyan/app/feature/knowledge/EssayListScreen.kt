@@ -15,8 +15,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Inbox
@@ -42,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.designsystem.component.ChipVariant
+import com.wenyan.app.core.designsystem.component.LocalLazyListState
 import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ErrorState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
@@ -261,22 +265,26 @@ private fun EssayList(
     items: List<EssayListItem>,
     onNavigateToEssayDetail: (String) -> Unit,
     contentPadding: PaddingValues,
+    listState: LazyListState = rememberLazyListState(),
 ) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter,
     ) {
-        LazyColumn(
-            modifier = Modifier.widthIn(max = MaxContentWidth.comfortable),
-            contentPadding = contentPadding,
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            items(items = items, key = { it.id }, contentType = { "essayItem" }) { item ->
-                EssayListItemCard(
-                    item = item,
-                    onClick = { onNavigateToEssayDetail(item.id) },
-                    modifier = Modifier.animateItem(),
-                )
+        CompositionLocalProvider(LocalLazyListState provides listState) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.widthIn(max = MaxContentWidth.comfortable),
+                contentPadding = contentPadding,
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            ) {
+                items(items = items, key = { it.id }, contentType = { "essayItem" }) { item ->
+                    EssayListItemCard(
+                        item = item,
+                        onClick = { onNavigateToEssayDetail(item.id) },
+                        modifier = Modifier.animateItem(),
+                    )
+                }
             }
         }
     }

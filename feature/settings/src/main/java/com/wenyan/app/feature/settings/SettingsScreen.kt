@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.CompositionLocalProvider
+import com.wenyan.app.core.designsystem.component.LocalLazyListState
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Palette
@@ -105,6 +108,7 @@ fun SettingsScreen(
     ) { padding ->
         // v0.8.15 Stage 1: 横屏/平板下限制内容最大宽度并居中，避免设置项行宽过宽阅读疲劳。
         // 竖屏（<600dp）下 widthIn(max=600) 不生效（屏幕宽 < max），不影响竖屏布局。
+        val settingsListState = rememberLazyListState()
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -112,10 +116,12 @@ fun SettingsScreen(
                 .padding(padding),
             contentAlignment = Alignment.TopCenter,
         ) {
-            LazyColumn(
-                modifier = Modifier.widthIn(max = MaxContentWidth.compact),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xl),
-            ) {
+            CompositionLocalProvider(LocalLazyListState provides settingsListState) {
+                LazyColumn(
+                    state = settingsListState,
+                    modifier = Modifier.widthIn(max = MaxContentWidth.compact),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xl),
+                ) {
             // P0 v0.7.2: 考研倒计时卡片(接通 ExamCountdownManager,原完全未接入)
             item { ExamCountdownCard() }
 
@@ -324,6 +330,7 @@ fun SettingsScreen(
                 }
             }
             } // LazyColumn end
+            } // CompositionLocalProvider end
         } // Box end
     }
 }

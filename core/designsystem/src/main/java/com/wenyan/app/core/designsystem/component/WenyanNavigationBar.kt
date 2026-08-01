@@ -1,10 +1,14 @@
 package com.wenyan.app.core.designsystem.component
 
 import android.os.Build
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -14,11 +18,13 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 
 /**
@@ -61,6 +67,7 @@ fun WenyanNavigationBar(
     currentRoute: String?,
     onNavigate: (String) -> Unit,
     modifier: Modifier = Modifier,
+    visible: Boolean = true,
 ) {
     // 流体玻璃导航栏：全宽 + 顶部圆角 + 增强玻璃质感
     // 形状：仅顶部圆角（16dp），底部直角贴底，还原 iOS Tab Bar 风格
@@ -74,13 +81,26 @@ fun WenyanNavigationBar(
     // 导航栏高度：72dp — 5 项 Tab 舒适间距，不拥挤也不过度占用空间
     val navHeight: Dp = 72.dp
 
+    // KSU 风格滚动感知显隐：spring 动画驱动 translationY
+    // 下滑隐藏（visible=false）→ 导航栏向下移出屏幕
+    // 上滑显示（visible=true）→ 导航栏回到原位
+    val translationY by animateDpAsState(
+        targetValue = if (visible) 0.dp else navHeight,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium,
+        ),
+        label = "navBarTranslationY",
+    )
+
     Surface(
         shape = shape,
         tonalElevation = 0.dp, // 用玻璃效果代替阴影
         // 半透明背景：alpha=0.75f 让内容微微透出，模拟毛玻璃
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.75f),
         // 全宽：无水平留边，底部无留空，直接贴底
-        modifier = modifier,
+        // offset 驱动导航栏的滚动感知显隐
+        modifier = modifier.offset { IntOffset(0, translationY.roundToPx()) },
     ) {
         // Android 12+ 玻璃光泽叠加层
         // 1. 顶部边缘高光（细白线，模拟 iOS 反光）

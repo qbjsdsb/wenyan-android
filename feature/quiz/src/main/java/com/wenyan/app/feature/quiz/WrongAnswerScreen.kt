@@ -13,7 +13,11 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.CompositionLocalProvider
+import com.wenyan.app.core.designsystem.component.LocalLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
@@ -257,6 +261,7 @@ private fun WrongAnswerList(
     onMarkResolved: (String) -> Unit,
     onDelete: (String) -> Unit,
     onRate: (String, Rating) -> Unit,
+    listState: LazyListState = rememberLazyListState(),
 ) {
     // v0.8.3 新增：删除二次确认状态，防止误触丢失学习数据
     var deletingItem by remember { mutableStateOf<WrongAnswerItem?>(null) }
@@ -266,23 +271,26 @@ private fun WrongAnswerList(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter,
     ) {
-        LazyColumn(
-            modifier = Modifier.widthIn(max = MaxContentWidth.comfortable),
-            contentPadding = PaddingValues(
-                horizontal = Spacing.lg,
-                vertical = Spacing.lg,
-            ),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            items(items = items, key = { it.id }, contentType = { "wrong_answer" }) { item ->
-                WrongAnswerCard(
-                    item = item,
-                    filter = filter,
-                    onMarkResolved = { onMarkResolved(item.id) },
-                    onDelete = { deletingItem = item },
-                    onRate = { rating -> onRate(item.id, rating) },
-                    modifier = Modifier.animateItem(),
-                )
+        CompositionLocalProvider(LocalLazyListState provides listState) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.widthIn(max = MaxContentWidth.comfortable),
+                contentPadding = PaddingValues(
+                    horizontal = Spacing.lg,
+                    vertical = Spacing.lg,
+                ),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            ) {
+                items(items = items, key = { it.id }, contentType = { "wrong_answer" }) { item ->
+                    WrongAnswerCard(
+                        item = item,
+                        filter = filter,
+                        onMarkResolved = { onMarkResolved(item.id) },
+                        onDelete = { deletingItem = item },
+                        onRate = { rating -> onRate(item.id, rating) },
+                        modifier = Modifier.animateItem(),
+                    )
+                }
             }
         }
     }

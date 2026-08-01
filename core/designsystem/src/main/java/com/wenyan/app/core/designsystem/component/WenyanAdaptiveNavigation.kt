@@ -1,5 +1,8 @@
 package com.wenyan.app.core.designsystem.component
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,17 +13,25 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowWidthSizeClass
 
@@ -79,16 +90,62 @@ fun WenyanAdaptiveNavigation(
                 }
 
                 if (showNavigation) {
-                    // 有导航栏：沉浸式布局
+                    // 有导航栏：沉浸式布局 + KSU 风格滚动感知显隐
                     //
                     // 布局结构（Box 叠加）：
                     //   1. 内容区：surfaceContainer 背景，底部显式 padding 避开导航栏
-                    //   2. BottomGradientScrim：40dp 渐变遮罩，内容到导航栏平滑过渡
-                    //   3. 导航栏：全宽流体玻璃，贴底
+                    //   2. 底部容器（scroll-aware 动画组）：渐变遮罩 + 导航栏
+                    //      - 下滑内容 → 整体向下移出屏幕（spring 动画）
+                    //      - 上滑内容 → 整体回到原位（spring 动画）
                     //
                     // 底部间距 = 导航栏高度(72dp) + 系统导航栏手势区
                     // v0.9.20 流体玻璃：导航栏全宽贴底，高度 72dp，无需底部留边
                     val bottomPadding = 72.dp + systemNavBarBottomDp
+
+                    // KSU 风格滚动感知显隐：监听 LocalLazyListState 的滚动方向
+                    val scrollState = LocalLazyListState.current
+                    var barVisible by remember { mutableStateOf(true) }
+
+                    if (scrollState != null) {
+                        // 记录上一次滚动位置，用于检测滚动方向
+                        var previousIndex by remember { mutableStateOf(0) }
+                        var previousOffset by remember { mutableStateOf(0) }
+
+                        LaunchedEffect(scrollState) {
+                            snapshotFlow {
+                                scrollState.firstVisibleItemIndex to
+                                    scrollState.firstVisibleItemScrollOffset
+                            }.collect { (index, offset) ->
+                                // 下滑：index 增大，或同一 index 但 offset 增大（+10px 阈值防抖）
+                                val scrollingDown = index > previousIndex ||
+                                    (index == previousIndex && offset > previousOffset + 10)
+                                // 上滑：index 减小，或同一 index 但 offset 减小（-10px 阈值防抖）
+                                val scrollingUp = index < previousIndex ||
+                                    (index == previousIndex && offset < previousOffset - 10)
+
+                                if (scrollingDown) {
+                                    barVisible = false
+                                } else if (scrollingUp) {
+                                    barVisible = true
+                                }
+
+                                previousIndex = index
+                                previousOffset = offset
+                            }
+                        }
+                    }
+
+                    // 底部容器的总隐藏距离 = 导航栏高度(72dp)
+                    // 渐变遮罩(40dp)跟随导航栏一起移动
+                    val bottomHideDistance = 72.dp
+                    val bottomOffset by animateDpAsState(
+                        targetValue = if (barVisible) 0.dp else bottomHideDistance,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium,
+                        ),
+                        label = "bottomNavGroupOffset",
+                    )
 
                     // 1. 内容区：surfaceContainer 背景 + 显式 padding
                     Box(
@@ -100,19 +157,26 @@ fun WenyanAdaptiveNavigation(
                         content(PaddingValues(0.dp))
                     }
 
-                    // 2. 渐变遮罩：内容到底栏的平滑过渡
-                    // v0.9.20 恢复 BottomGradientScrim（40dp），导航栏半透明时需要过渡
-                    Box(Modifier.align(Alignment.BottomCenter)) {
+                    // 2. 底部容器（scroll-aware 动画组）：渐变遮罩 + 导航栏
+                    // 两者整体移动，下滑时一起移出屏幕，上滑时一起回到原位
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .offset { IntOffset(0, bottomOffset.roundToPx()) },
+                    ) {
+                        // 2a. 渐变遮罩：内容到底栏的平滑过渡
+                        // v0.9.20 恢复 BottomGradientScrim（40dp），导航栏半透明时需要过渡
                         BottomGradientScrim()
-                    }
 
-                    // 3. 底部导航栏（全宽流体玻璃，贴底）
-                    WenyanNavigationBar(
-                        items = items,
-                        currentRoute = currentRoute,
-                        onNavigate = onNavigate,
-                        modifier = Modifier.align(Alignment.BottomCenter),
-                    )
+                        // 2b. 底部导航栏（全宽流体玻璃，贴底）
+                        WenyanNavigationBar(
+                            items = items,
+                            currentRoute = currentRoute,
+                            onNavigate = onNavigate,
+                            visible = true, // 父容器已控制整体偏移，导航栏自身不再额外动画
+                            modifier = Modifier,
+                        )
+                    }
                 } else {
                     // 无导航栏（子路由）：内容全屏，不添加额外底部色块。
                     //

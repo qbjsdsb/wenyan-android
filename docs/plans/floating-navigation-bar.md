@@ -406,7 +406,116 @@ v0.9.19 的"紧凑玻璃风格"收到用户强烈负面反馈："底栏还是非
 | 全宽在 AMOLED 下 | 低 | 全宽半透明 bar 在 AMOLED 纯黑背景上可能不够明显 | 顶部高光边缘 + 光泽渐变提供视觉边界 |
 | 72dp 遮挡面积 | 低 | 比 56dp 多 16dp，但恢复的内容过渡更自然 | 用户实际感知是"融合"而非"遮挡" |
 
-## 12. 参考
+## 12. v0.9.20 KSU 风格滚动感知导航栏（2026-08-01）
+
+### 12.1 背景
+
+响应用户需求"就ksu的吧，做好然后做好交接"。用户对 v0.9.19 紧凑玻璃导航栏不满意后，深入调研 KernelSU Next 的源码实现，发现其核心差异在于**滚动感知显隐（scroll-aware visibility）**：下滑内容时导航栏自动隐藏，上滑时自动显示，用 spring 动画驱动。
+
+### 12.2 实现方案
+
+#### 12.2.1 架构设计
+
+```
+┌──────────────────────────────────────────────┐
+│  CompositionLocal<LazyListState?>             │
+│  ┌─ LocalLazyListState ──────────────────┐   │
+│  │  Screen → LazyColumn → LazyListState  │   │
+│  │  WenyanAdaptiveNavigation → 读取      │   │
+│  └──────────────────────────────────────┘   │
+│                                              │
+│  ┌─ 滚动方向检测 ─────────────────────────┐  │
+│  │  snapshotFlow(firstVisibleItemIndex,    │  │
+│  │    firstVisibleItemScrollOffset)        │  │
+│  │  → 下滑: barVisible = false             │  │
+│  │  → 上滑: barVisible = true              │  │
+│  │  → 10px 阈值防抖                        │  │
+│  └────────────────────────────────────────┘  │
+│                                              │
+│  ┌─ Spring 动画组 ────────────────────────┐  │
+│  │  bottomOffset: 0.dp → 72.dp (spring)  │  │
+│  │  ├─ BottomGradientScrim (40dp)         │  │
+│  │  └─ WenyanNavigationBar (72dp)         │  │
+│  │  整体移动，下滑时一起移出屏幕           │  │
+│  └────────────────────────────────────────┘  │
+└──────────────────────────────────────────────┘
+```
+
+#### 12.2.2 核心组件
+
+**1. LocalScrollState.kt（新增）**
+- 定义 `LocalLazyListState` 为 `CompositionLocal<LazyListState?>`
+- 默认值为 `null`（无 LazyColumn 的页面导航栏保持可见）
+- 设计参照 KernelSU Next 的 scroll-aware 底部导航栏模式
+
+**2. WenyanNavigationBar.kt（修改）**
+- 新增 `visible: Boolean = true` 参数
+- 通过 `animateDpAsState` + `spring` 驱动 `translationY`
+- `visible=false` → 导航栏向下移出屏幕（translationY = navHeight）
+- `visible=true` → 导航栏回到原位（translationY = 0.dp）
+- 默认 `visible=true`，不影响现有测试
+
+**3. WenyanAdaptiveNavigation.kt（修改）**
+- 读取 `LocalLazyListState.current` 获取当前页面的滚动状态
+- 使用 `snapshotFlow` 监听 `firstVisibleItemIndex` + `firstVisibleItemScrollOffset`
+- 滚动方向检测：
+  - 下滑：index 增大，或同一 index 但 offset 增大（+10px 阈值防抖）
+  - 上滑：index 减小，或同一 index 但 offset 减小（-10px 阈值防抖）
+- `BottomGradientScrim` + `WenyanNavigationBar` 通过 `bottomOffset` 整体移动
+
+**4. 各 Screen（修改）**
+- KnowledgeScreen / QuizScreen / WrongAnswerScreen / SettingsScreen / EssayListScreen
+- 每个 LazyColumn 通过 `CompositionLocalProvider(LocalLazyListState provides listState)` 提供滚动状态
+- `listState = rememberLazyListState()` 带默认参数，不影响现有测试
+
+### 12.3 改动文件清单
+
+| 文件 | 改动类型 | 行数变化 |
+|------|----------|----------|
+| `LocalScrollState.kt` | 新增 | +21 |
+| `WenyanNavigationBar.kt` | 修改 | +22 / -1 |
+| `WenyanAdaptiveNavigation.kt` | 修改 | +92 / -42 |
+| `KnowledgeScreen.kt` | 修改 | +30 / -18 |
+| `QuizScreen.kt` | 修改 | +44 / -24 |
+| `WrongAnswerScreen.kt` | 修改 | +42 / -22 |
+| `SettingsScreen.kt` | 修改 | +15 / -8 |
+| `EssayListScreen.kt` | 修改 | +30 / -18 |
+| 合计 | 8 文件 | +296 / -133 |
+
+### 12.4 行为说明
+
+| 场景 | 行为 |
+|------|------|
+| 有 LazyColumn 的页面，下滑内容 | 导航栏 + 渐变遮罩整体向下移出屏幕（spring 动画） |
+| 有 LazyColumn 的页面，上滑内容 | 导航栏 + 渐变遮罩整体回到原位（spring 动画） |
+| 无 LazyColumn 的页面（CardsScreen） | `LocalLazyListState` 为 null，导航栏保持可见 |
+| 子路由（无导航栏） | 不触发滚动感知逻辑 |
+| 快速切换方向 | 10px 阈值防抖，避免在滚动暂停时误触发 |
+| 列表顶部（index=0, offset=0） | 导航栏始终显示，不会误隐藏 |
+
+### 12.5 测试影响
+
+| 测试 | 影响 |
+|------|------|
+| WenyanNavigationBarTest（3 测试） | 不受影响 ✅（visible 默认 true） |
+| 各 Screen 测试 | 不受影响 ✅（listState 默认 rememberLazyListState()） |
+
+### 12.6 风险分析
+
+| 风险 | 等级 | 说明 | 缓解 |
+|------|------|------|------|
+| 10px 阈值在低刷新率设备 | 低 | 60Hz 设备上单次滚动可能超过 10px | 10px 约 0.5 行文本高度，误触率低 |
+| spring 动画在低端设备 | 低 | spring 动画在 GPU 上运行，开销极低 | 仅在滚动停止时触发一次动画 |
+| CompositionLocal 传递 | 低 | 只有 4 个顶级 Screen 提供，无深层传递 | 局部使用，不影响全局状态 |
+| 下拉刷新时导航栏隐藏 | 低 | 下拉刷新初始阶段的滑动方向是"下滑" | 刷新完成后用户自然上滑可恢复导航栏 |
+
+### 12.7 参考
+
+- KernelSU Next BottomBar 源码: [deepwiki.com](https://deepwiki.com/KernelSU-Next/KernelSU-Next/4.1-application-structure-and-navigation)
+- Android Compose CompositionLocal: [developer.android.com](https://developer.android.com/develop/ui/compose/compositionlocal)
+- Compose Animation Spring: [developer.android.com](https://developer.android.com/reference/kotlin/androidx/compose/animation/core/Spring)
+
+## 13. 参考
 
 - Apple HIG Tab Bar: [developer.apple.com](https://developer.apple.com/design/human-interface-guidelines/tab-bars)
 - KSUNext BottomBar: [deepwiki.com](https://deepwiki.com/KernelSU-Next/KernelSU-Next/4.1-application-structure-and-navigation)

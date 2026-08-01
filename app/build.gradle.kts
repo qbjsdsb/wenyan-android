@@ -60,7 +60,8 @@ android {
         //   - 不修改 seed_data.json，仅运行时清洗，
         //   - 编译：需本地 emulator 验证 assembleDebug + testDebugUnitTest）
         // v0.9.19：紧凑玻璃导航栏 + 种子加载超时重试
-        versionCode = 44
+        // v0.9.20=45（KSU 风格滚动感知导航栏：LocalScrollState + WenyanNavigationBar scroll-aware + 5 Screen 提供 LazyListState。versionName "0.9.20"）
+        versionCode = 45
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         //   数据一致性修复（B1/B2/B3）：
@@ -120,7 +121,7 @@ android {
         //   本地验证：:app:assembleDebug + 全模块 testDebugUnitTest 全绿（471 tests, 0 failures）
         // v0.9.16：真题→论述题迁移（底部导航 Tab 替换 + 代码清理 + AboutTutorialScreen 修复）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
-        versionName = "0.9.19"
+        versionName = "0.9.20"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

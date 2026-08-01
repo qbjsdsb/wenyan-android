@@ -1,21 +1,26 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-08-01（v0.9.19 紧凑玻璃导航栏 + 种子加载超时重试，已实施待发布）
+> 最后更新：2026-08-01（v0.9.20 KSU 风格滚动感知导航栏，已实施待发布）
 
 ## ✅ 当前状态
 
-**v0.9.19 紧凑玻璃导航栏 + 种子加载超时重试（已实施，待发布）** — 双修复。
+**v0.9.20 KSU 风格滚动感知导航栏（已实施，待发布）** — 响应用户需求"就ksu的吧，做好然后做好交接"。深入调研 KernelSU Next 源码，实现 scroll-aware 底部导航栏显隐。核心架构：**CompositionLocal 共享 LazyListState** → **snapshotFlow 监听滚动方向** → **spring 动画驱动导航栏整体偏移**。
 
-**紧凑玻璃导航栏**：响应用户需求"悬浮导航栏占用空间太大了，像苹果的流体玻璃底栏"。全面改造 WenyanNavigationBar.kt：圆角 16dp→24dp、tonalElevation 3dp→2dp、颜色 surfaceContainer→surfaceContainerHigh.copy(alpha=0.85f) 半透明玻璃质感、水平留边 16dp→8dp、底部 8dp→4dp、NavigationBar 高度 80dp→56dp。Android 12+ 叠加渐变光泽 overlay（0.04f→Transparent→0.06f 水平渐变）模拟流体玻璃反光。WenyanAdaptiveNavigation.kt 移除 BottomGradientScrim（导航栏自身半透明不再需要渐变遮罩），底部 padding 从 80dp 降至 56dp+4dp，减少遮挡面积 ~30%。设计文档：[docs/plans/floating-navigation-bar.md](plans/floating-navigation-bar.md)。
+**8 文件改动**：
+- `LocalScrollState.kt`（新增）：`CompositionLocal<LazyListState?>` 跨组件共享滚动状态，默认 null 时导航栏保持可见
+- `WenyanNavigationBar.kt`：新增 `visible` 参数 + `animateDpAsState` spring 动画驱动 `translationY`，默认 `visible=true` 不影响现有测试
+- `WenyanAdaptiveNavigation.kt`：读取 `LocalLazyListState` → `snapshotFlow` 监听 scroll → 10px 阈值防抖 → `BottomGradientScrim` + 导航栏整体 spring 偏移（72dp）
+- 5 个顶级 Screen（Knowledge/Quiz/WrongAnswer/Settings/EssayList）：`CompositionLocalProvider` 提供 `LazyListState`
+- CardsScreen 无 LazyColumn → 导航栏保持可见
 
-**种子加载超时重试**：响应用户反馈"更新后知识点数据丢失"。WenyanApplication.kt 种子加载超时从 120s→300s + 新增 1 次重试机制。300s 覆盖低端设备首次加载，1 次重试覆盖偶发 I/O 抖动（如后台系统更新/媒体扫描占满闪存带宽）。两次超时后仍失败则抛出异常（由 CoroutineExceptionHandler 记录日志），App 下次启动时 ensureSeedDataLoaded 会重试。
+**滚动行为**：下滑内容 → 导航栏+渐变遮罩整体移出屏幕（spring 动画）；上滑内容 → 回到原位；列表顶部（index=0, offset=0）→ 始终显示。
 
-**版本信息**：versionCode 43→44，versionName "0.9.18"→"0.9.19"。
+**设计文档**：[docs/plans/floating-navigation-bar.md#12-v0920-ksu-风格滚动感知导航栏2026-08-01](plans/floating-navigation-bar.md#12-v0920-ksu-风格滚动感知导航栏2026-08-01)
 
-**沙箱验证**：沙箱无 Android SDK，无法编译。代码变更已逐行审查确认无误。
+**沙箱验证**：沙箱无 Gradle 网络（services.gradle.org 超时），无法编译。代码变更已逐行审查确认无误。
 
-**待 emulator 实测**：验证玻璃导航栏 5 项效果（圆角/半透明/光泽/紧凑/无遮挡） + 种子加载正常。
+**待 emulator 实测**：验证 5 个顶级 Tab 的滚动感知显隐 + spring 动画流畅度 + 导航栏在 CardsScreen 保持可见 + 子路由无影响 + 快速切换 Tab 时状态正确。**版本信息**：versionCode 44→45，versionName "0.9.19"→"0.9.20"。
 
 **v0.9.17 题号前缀剥离（已发布）** — 响应用户需求"去掉题号前缀"。创建 ExamContentCleaner 集中清洗工具，剥离所有题目内容中的阿拉伯数字前缀（"1. " "2. "）和中文数字前缀（"一、" "二、" "三、论述题" 等），包括试卷标题。6 个 UI 展示点统一清洗：论述题列表预览（EssayListViewModel）、论述题详情正文（EssayDetailScreen）、知识点关联预览（KnowledgePointDetailScreen）、真题练习题目（QuizScreen）、错题本题目标题（WrongAnswerScreen）、AI 审题助手输入（EssayDetailViewModel）。不修改 seed_data.json，仅运行时清洗。versionCode 41→42，versionName "0.9.16"→"0.9.17"。**Exception E1**：CI 账单问题，release APK 使用 debug 签名 fallback（与 v0.9.4-v0.9.16 一致）。**待 emulator 实测**：验证 6 个展示点题号前缀全部剥离、AI 审题助手接收清洗后内容。
 
@@ -35,10 +40,10 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **v0.9.19** 紧凑玻璃导航栏 + 种子加载超时重试（2026-08-01，待发布） |
+| 最新 commit | **v0.9.20** KSU 风格滚动感知导航栏（2026-08-01，待发布） |
 | 最新 Release | **v0.9.18**（2026-08-01 发布，debug 签名 Exception E1）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.18 |
-| 编译验证 | **沙箱无 Android SDK，代码审查确认无误** |
-| versionCode / versionName | **44 / "0.9.19"** |
+| 编译验证 | **沙箱无 Gradle 网络（services.gradle.org 超时），代码审查确认无误** |
+| versionCode / versionName | **45 / "0.9.20"** |
 | 知识点 | **935 个**（v2.16.0 补充 25 个核心知识点 kp_00911-kp_00935） |
 | 真题 | **485 道**（v0.7.6 已删除 sample_essay 冗余字段） |
 | 论述题 | **134 道 ESSAY 题**（v0.9.9 全覆盖填充 angle+notes，v0.9.10 全面审计 0 问题） |
@@ -49,7 +54,7 @@
 | 错题本 FSRS | **v0.9.4 已发布**：DUE 过滤模式 + 四档评分（不会/困难/良好/简单）+ 调度信息展示（下次复习/复习次数/遗忘次数）+ TIER_FRAMEWORK 档位 + ClockGuard 时间源对齐 + interval 下界保护 |
 | 论述题板块 | **v0.9.8 + v0.9.9 已发布**：知识点详情页"相关论述题"区块 + 论述题详情页 11 区块结构（含 AI 审题助手）+ JSON 优雅降级 + 双向导航 + 独立列表页（三维筛选）+ EssayEntryCard 入口 + 134/134 题 angle+notes 完整填充 |
 | 关于与教程 | **v0.9.6 精简重构**：5 节简洁版（HeroCard / QuickStart / Modules / Principles 可折叠 / About），默认视图简洁，深度原理按需展开 |
-| 底部导航 | **5 Tab**（知识点 / 论述题 / 卡片 / 错题本 / 设置），**v0.9.19 紧凑玻璃风格**：圆角 24dp + 半透明 surfaceContainerHigh + 高度 56dp + 水平间距 8dp + 底部 4dp + 渐变光泽 overlay（Android 12+） |
+| 底部导航 | **5 Tab**（知识点 / 论述题 / 卡片 / 错题本 / 设置），**v0.9.20 KSU 风格滚动感知**：流体玻璃全宽贴底 + 72dp 高度 + 顶部圆角 16dp + surfaceContainerHigh(0.75) + 光泽渐变 + **scroll-aware 显隐**（下滑隐藏/上滑显示，spring 动画） |
 | 图谱 UI | **已移除**（v0.9.0 feature:graph 模块删除） |
 | 图谱数据层 | **已移除**（v0.9.3 优化 4 全部移除，详见 [docs/release-receipts/v0.9.3-opt4-graph-removal-receipt.md](release-receipts/v0.9.3-opt4-graph-removal-receipt.md)） |
 | 启动图标 | **v4 "书+文负空间"**（展开的书 + "文"字镂空 negative space，单 path + evenOdd fillType，书形占 safe zone 70%+） |
@@ -60,7 +65,7 @@
 
 ## 🚨 新会话首要任务
 
-**v0.9.19 紧凑玻璃导航栏 + 种子加载超时重试（已实施，待发布）** — 双修复。紧凑玻璃导航栏：WenyanNavigationBar.kt 圆角 24dp + 半透明 surfaceContainerHigh + 高度 56dp + 渐变光泽 overlay（Android 12+）。WenyanAdaptiveNavigation.kt 移除 BottomGradientScrim + 底部 padding 56dp+4dp。种子加载超时 120s→300s + 1 次重试。versionCode 44 / versionName "0.9.19"。设计文档：[docs/plans/floating-navigation-bar.md](plans/floating-navigation-bar.md)。**待 emulator 实测**：验证玻璃导航栏效果 + 种子加载正常。
+**v0.9.20 KSU 风格滚动感知导航栏（已实施，待发布）** — 响应用户需求"就ksu的吧，做好然后做好交接"。8 文件改动：LocalScrollState.kt 新增 + WenyanNavigationBar/WenyanAdaptiveNavigation 滚动感知 + 5 个顶级 Screen 提供 LazyListState。核心架构：CompositionLocal 共享 LazyListState → snapshotFlow 监听滚动方向 → spring 动画驱动导航栏整体偏移。下滑隐藏/上滑显示，列表顶部始终显示。设计文档：[docs/plans/floating-navigation-bar.md#12-v0920-ksu-风格滚动感知导航栏2026-08-01](plans/floating-navigation-bar.md#12-v0920-ksu-风格滚动感知导航栏2026-08-01)。**待 emulator 实测**：验证 5 个顶级 Tab 的滚动感知显隐 + spring 动画流畅度 + 导航栏在 CardsScreen 保持可见。versionCode 45 / versionName "0.9.20"。
 
 **启动图标 v4 设计重构（书+文负空间，已实施，待发布）** — 响应用户需求"把这个app的图标重新设计一下"。用户选择方案 B（书+文负空间），经精修后实施。从 v3 "印章文"（5 个独立矩形 path）改为 v4 "展开的书 + 文负空间"（单 path + evenOdd fillType 镂空）。设计语言：Google Play Books（书形）+ Google Docs（字母负空间）混合。精修要点：去 serif 平底收笔 + "文"字垂直居中于书页。Safe Zone 检查全部通过。本地验证：`:app:assembleDebug` BUILD SUCCESSFUL（279 tasks）+ `testDebugUnitTest`（317 tasks, 0 failures）。**待 emulator 实测**：验证新图标启动屏/桌面/通知栏显示效果。
 
@@ -68,7 +73,7 @@
 
 下一步优先级（按顺序）：
 
-1. **P0**：emulator 实测 v0.9.19 — 验证：①玻璃导航栏圆角 24dp 显示 ②半透明 surfaceContainerHigh 在浅色/深色模式下的视觉效果 ③紧凑型高度 56dp 各 Tab 图标+标签可点击 ④水平间距 8dp 底部 4dp 布局 ⑤Android 12+ 渐变光泽 overlay ⑥移除 BottomGradientScrim 后内容区域无异常 ⑦种子加载不超时（首次启动 300s 内完成数据导入）⑧种子加载超时后自动重试 1 次
+1. **P0**：emulator 实测 v0.9.20 — 验证：①5 个顶级 Tab（知识点/论述题/卡片/错题本/设置）的滚动感知显隐 ②下滑隐藏 spring 动画流畅度 ③上滑显示 spring 动画响应 ④CardsScreen（无 LazyColumn）导航栏保持可见 ⑤子路由无影响 ⑥快速切换 Tab 时状态正确 ⑦列表顶部（index=0, offset=0）导航栏始终显示 ⑧10px 阈值防抖正常
 2. **P0**：emulator 实测启动图标 v4 — 验证：①启动屏图标显示正确（书+文负空间）②桌面图标（方形+圆形遮罩）③最近任务栏小尺寸图标清晰 ④Android 13+ themed icon 模式下"文"字负空间保留
 3. **P0**：emulator 实测 v2.16.0 — 验证：①seed 2.16.0 触发重导后 935 知识点正确导入 ②25 个新增知识点（kp_00911-kp_00935）可浏览/搜索 ③新增知识点按学科正确分类 ④论述题详情页"关联知识点"区块正确派生
 4. **P1**：启用 R8（P1-PG 规则已就绪，需 emulator 实测验证无崩溃后切换 isMinifyEnabled=true）
