@@ -73,7 +73,10 @@ android {
         //   流式自动滚动+状态栏图标色+更新安装已下载 APK+重试 loading+错误态禁用筛选+
         //   长标题截断+种子色暗色适配+卡片滚动重置+错题本 Snackbar+日期行省略+底栏跨 Tab 重置。
         //   versionName "0.9.25"）
-        versionCode = 50
+        // v0.9.26=51（新启动图标 v7.4 Google Play Books 风格黑底白书 / 批三：详情页懒加载+
+        //   RAG VERIFIED 过滤+AI 成本控制(Retry-After+callTimeout+Semaphore)+i18n 资源化+
+        //   convention plugin 抽取。versionName "0.9.26"）
+        versionCode = 51
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         //   数据一致性修复（B1/B2/B3）：
@@ -138,7 +141,8 @@ android {
         // v0.9.23：论述题删年份 + Snackbar 修复 + AI 审计修复 + 更新日志机制（见 versionCode 注释）
         // v0.9.24：批一 AI 体验 + 批二工程质量（见 versionCode 注释）
         // v0.9.25：AI 生成全新启动图标 + 整体界面审查修复（见 versionCode 注释）
-        versionName = "0.9.25"
+        // v0.9.26：新启动图标 v7.4 + 批三（见 versionCode 注释）
+        versionName = "0.9.26"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

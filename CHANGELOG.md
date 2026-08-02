@@ -8,6 +8,31 @@
 > release.yml 会自动读取当前 tag 对应的日志作为 GitHub Release 正文，
 > App 内"检查更新"界面展示的更新日志即来源于此。**务必随版本更新，不要遗漏。**
 
+## [v0.9.26] - 2026-08-03
+
+新启动图标（Google Play Books 风格）+ 批三（性能与整洁）。
+
+### 新增
+
+- **全新启动图标（v7.4 Google Play Books 风格）**：手工矢量「黑底白书」——白色双页书 + 中央书脊缝隙 + 每页 4 条文字线，墨黑 #1A1A1A 背景；纯 VectorDrawable 可无限缩放，资源仅 ~9.8KB（此前位图版 84KB）
+
+### 性能与整洁（批三）
+
+- **详情页懒加载**：知识点详情页 Column+verticalScroll → LazyColumn（全部 section 分 item 懒加载，长详情页不一次布局全部）
+- **RAG 检索质量**：检索过滤 `ocr_status='VERIFIED'`（未校对知识点不进 AI 上下文，与用户搜索一致）
+- **AI 成本控制**：
+  - 429/5xx 时读取 `Retry-After` 头（服务商告知限流秒数，按等待避免再次撞限流）
+  - OkHttp `callTimeout(90s)` 兜底（含 SSE 长连接），防流式卡死空耗 token
+  - AI 全局并发限制（Semaphore 3，跨页面共享，防多页面同时打 API 撞限流）
+- **i18n 资源化**：核心 UI 文本（约 74 处）硬编码 → stringResource（5 个 feature 模块），为多语言/维护做准备
+- **convention plugin 抽取**：新增 build-logic + android-library-convention，11 个库模块共用 compileSdk/minSdk/compileOptions 等配置（约 -130 行重复）
+
+### 技术
+
+- 新图标：手工矢量 path（白书 + 文字线）+ cairosvg 渲染各密度 PNG 兜底 + adaptive icon 三层
+- RAG 停用词剔除尝试后回退（LIKE 匹配语义，多关键词 OR 留待后续）
+- 验证：518 单测 0 失败 + assembleDebug/Release(R8) 通过
+
 ## [v0.9.25] - 2026-08-03
 
 全新启动图标（AI 生成「书堆 + 文」）+ 整体界面审查修复。
