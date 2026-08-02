@@ -67,7 +67,9 @@ android {
         //   FSRS stability=0 防御 / MIGRATION_7_8 补复合索引 / recordWrongAnswer 事务+时间源 / 评分防重入。versionName "0.9.22"）
         // v0.9.23=48（论述题删年份 / Snackbar 常驻修复 / AI 审计修复：URL 拼接+竞态+RAG 降级+注入封堵 /
         //   更新日志机制 CHANGELOG。versionName "0.9.23"）
-        versionCode = 48
+        // v0.9.24=49（批一 AI 体验：流式+停止+多轮上下文+token 统计 / 批二工程质量：R8 混淆+迁移测试+
+        //   Tab 闪烁+补索引(DB 9→10)+事务化。versionName "0.9.24"）
+        versionCode = 49
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         //   数据一致性修复（B1/B2/B3）：
@@ -130,7 +132,8 @@ android {
         // v0.9.21：MD3 规范底栏回归 + inset 双重消费修复
         // v0.9.22：深度审查改进批 A+B（见 versionCode 注释）
         // v0.9.23：论述题删年份 + Snackbar 修复 + AI 审计修复 + 更新日志机制（见 versionCode 注释）
-        versionName = "0.9.23"
+        // v0.9.24：批一 AI 体验 + 批二工程质量（见 versionCode 注释）
+        versionName = "0.9.24"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
