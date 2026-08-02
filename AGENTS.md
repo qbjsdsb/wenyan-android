@@ -118,9 +118,11 @@ tools/                           # Python 管线脚本
 **Release tag 流程**：
 1. 确认本地 `assembleDebug` + `testDebugUnitTest` 全绿
 2. 确认最近一次 CI 全绿（gh run list 查看）
-3. 删除旧 orphan tag（如有）：`git push origin :refs/tags/vX.Y.Z`
-4. 打新 tag：`git tag vX.Y.Z && git push origin vX.Y.Z`
-5. 等 Release workflow 完成，下载 APK 验证
+3. **在 `CHANGELOG.md` 顶部写本版本更新日志**（`## [vX.Y.Z] - 日期`，格式见文件头部说明）并提交推送——release.yml 会自动读取该段作为 Release 正文，App 内"检查更新"界面同步展示。**务必写好，不要遗漏**
+4. 提升 `app/build.gradle.kts` 的 `versionCode` / `versionName`（与 CHANGELOG 版本一致）并提交推送
+5. 删除旧 orphan tag（如有）：`git push origin :refs/tags/vX.Y.Z`
+6. 打新 tag：`git tag vX.Y.Z && git push origin vX.Y.Z`
+7. 等 Release workflow 完成，下载 APK 验证版本号与更新日志
 
 ## 5. 敏感信息（不入仓库）
 

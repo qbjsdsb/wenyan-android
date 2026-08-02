@@ -120,6 +120,29 @@ jobs:
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
+      # v0.9.23 新增：从 CHANGELOG.md 提取当前 tag 版本的更新日志。
+      # 解决"更新界面日志不变"问题：release body 原为静态硬编码功能特性列表，
+      # 不随版本变化。现在从 CHANGELOG.md 读取 "## [vX.Y.Z]" 段作为"更新内容"，
+      # 每次发版前在 CHANGELOG.md 写好本版本日志即可（App 内检查更新界面同步展示）。
+      - name: Extract changelog for version
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          # 提取 CHANGELOG.md 中 "## [VERSION]" 段（到下一个 "## " 或文件尾）
+          NOTES=$(awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" { found=1; next }
+            found && $0 ~ "^## " { exit }
+            found { print }
+          ' CHANGELOG.md)
+          # 未找到日志时给出提示，避免 release body 空缺
+          if [ -z "$NOTES" ]; then
+            NOTES="（本版本未在 CHANGELOG.md 中填写更新日志，请发版前补充）"
+          fi
+          # 多行输出到 GITHUB_OUTPUT（heredoc 方式，防特殊字符）
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Rename APK with version
         run: |
           mkdir -p release-assets
@@ -143,6 +166,10 @@ jobs:
             1. 下载下方 `wenyan-${{ steps.version.outputs.VERSION }}.apk`
             2. 手机设置 → 允许安装未知来源应用
             3. 点击 APK 文件安装
+
+            ### 更新内容
+
+            ${{ steps.changelog.outputs.notes }}
 
             ### 功能特性
 
