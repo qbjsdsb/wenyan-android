@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
@@ -79,9 +78,8 @@ fun WenyanAdaptiveNavigation(
             // 直接用 Modifier.padding 为内容添加底部间距，确保可点击区域不被导航栏遮挡。
             Box(modifier = modifier.fillMaxSize()) {
                 val density = LocalDensity.current
-                val topInsetDp = with(density) {
-                    WindowInsets.statusBars.only(WindowInsetsSides.Top).getTop(density).toDp()
-                }
+                // 顶部 insets 由内层 ExpressiveScaffold 的 contentWindowInsets 消费，
+                // 外层不再加 top padding，避免双倍状态栏空白。
                 val systemNavBarBottomDp = with(density) {
                     WindowInsets.navigationBars.only(WindowInsetsSides.Bottom).getBottom(density).toDp()
                 }
@@ -95,7 +93,9 @@ fun WenyanAdaptiveNavigation(
                     //      - 下滑内容 → 整体向下移出屏幕（spring 动画）
                     //      - 上滑内容 → 整体回到原位（spring 动画）
                     //
-                    // 底部间距 = MD3 导航栏标准高度(80dp) + 系统导航栏手势区
+                    // 底部间距 = MD3 导航栏内容高度(80dp) + 系统手势条区域。
+                    // 导航栏自身通过 windowInsets 吃手势条（总高 = 80dp + 手势条），
+                    // 与 bottomPadding 对齐 → 卡片贴底栏顶，无多余空白。
                     val bottomPadding = 80.dp + systemNavBarBottomDp
 
                     // KSU 风格滚动感知显隐：监听 LocalLazyListState 的滚动方向
@@ -130,8 +130,8 @@ fun WenyanAdaptiveNavigation(
                         }
                     }
 
-                    // 底部容器的总隐藏距离 = MD3 导航栏标准高度(80dp)
-                    val bottomHideDistance = 80.dp
+                    // 底部容器的总隐藏距离 = 导航栏总高（内容 80dp + 手势条区域）
+                    val bottomHideDistance = 80.dp + systemNavBarBottomDp
                     val bottomOffset by animateDpAsState(
                         targetValue = if (barVisible) 0.dp else bottomHideDistance,
                         animationSpec = spring(
@@ -141,12 +141,13 @@ fun WenyanAdaptiveNavigation(
                         label = "bottomNavGroupOffset",
                     )
 
-                    // 1. 内容区：surfaceContainer 背景 + 显式 padding
+                    // 1. 内容区：surfaceContainer 背景 + 底部显式 padding
+                    // 顶部不加 padding（内层 ExpressiveScaffold 消费 statusBars）
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(MaterialTheme.colorScheme.surfaceContainer)
-                            .padding(top = topInsetDp, bottom = bottomPadding),
+                            .padding(bottom = bottomPadding),
                     ) {
                         content(PaddingValues(0.dp))
                     }

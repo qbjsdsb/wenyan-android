@@ -4,11 +4,11 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
@@ -84,10 +84,13 @@ fun WenyanNavigationBar(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         // MD3 默认浅投影，提供底栏层次
         tonalElevation = 3.dp,
+        // windowInsets：底栏吃底部系统手势条 inset。
+        // 总高 = 内容 80dp（icon+label 居中）+ 底部手势条区域，
+        // 与内容区 bottomPadding(80dp + 手势条) 对齐，避免底栏上方多余空白。
+        windowInsets = NavigationBarDefaults.windowInsets,
         // 全宽直角 + 滚动感知 offset
         modifier = modifier
             .fillMaxWidth()
-            .height(navHeight)
             .offset { IntOffset(0, translationY.roundToPx()) },
     ) {
         items.forEach { item ->
