@@ -6322,3 +6322,22 @@ while (retryCount <= maxRetries) {
   - 8.json vs 9.json 对比确认：数据库 8→9 仅新增 2 个复合索引，无列增删，存量用户升级绝对安全
   - aapt2 从 gradle 缓存可找到，可用于 APK 版本校验（发布防呆补充手段）
   - 沙箱无法访问 api.github.com（ghfast.top 拒绝代理 API），但 curl 走镜像可访问 github.com 网页 + release 下载
+
+
+## 2026-08-02 深夜：v0.9.23 发布（论述题删年份 + Snackbar + AI 修复 + 更新日志机制）
+
+- **完成**：
+  - **论述题删年份**（用户需求"论述题不要年份"）：列表/详情/年份筛选/知识点详情"相关论述题"全部移除年份（数据层 year 保留）。commit `361bbbd`
+  - **Snackbar 常驻修复**（用户反馈"已加入通知一直存在"）：CardsScreen 是唯一漏修"先 clear 再 show"的 Screen（AiAssistant/ApiConfig 早已修复）；改先 clear + withTimeout(5s) 兜底。commit `48343e4`
+  - **AI 功能审计**（用户要求"审计 AI 功能，反复打磨"）：2 路并行审查 + 人工复验，发现 2 P0 + 7 P1 + 14 P2；报告存档 `docs/plans/ai-audit-report.md`
+  - **AI 修复**（按最优方案）：P1-1 服务商 URL 拼接（通义/智谱/月之暗面 404，改接口 chat/completions + baseUrl 版本前缀）；P0-1/2 竞态（launchAiTask 统一 Job + 取消在途 + 安全空判断）；P1-3 并发防重入；P2-1 RAG 降级；P2-6 注入封堵。commit `944816b` + `33c5142`，新增 5 个回归测试
+  - **更新日志机制**（用户反馈"更新日志不变"）：根因是 release.yml body 静态硬编码功能特性列表；新增 CHANGELOG.md + release.yml 动态读取当前 tag 版本日志作为 Release 正文。commit `2a19cde`
+  - **v0.9.23 发布**（用户确认"严谨一点，反复检查"）：versionCode 47→48，versionName "0.9.22"→"0.9.23"。Release #52 触发（14:13 UTC）→ 完成。**核心验证：Release body 更新内容来自 CHANGELOG v0.9.23（动态日志机制首次生效）**；APK aapt2 校验 versionCode 48 / versionName "0.9.23"（防错版）
+  - **receipt**：`docs/release-receipts/v0.9.23-release-receipt.md`
+- **进行中**：
+  - 批 C 仓库卫生（release-assets 77MB 旧 APK、过期文档）未做
+  - AI 剩余待办：真流式 SSE、停止生成按钮、多轮上下文、对话列表 UI、AI 批改接入
+- **关键发现**：
+  - 更新日志机制：CHANGELOG.md + release.yml `Extract changelog for version` 步骤（awk 提取 `## [vX.Y.Z]` 段）→ Release body "更新内容"，App 内更新界面同步展示
+  - AGENTS.md 是混合行尾（部分段落 LF、部分 CRLF），Edit 工具编辑会整文件转 LF 导致大 diff；必须用 Python 二进制精确替换（按目标段落实际行尾匹配）
+  - AI 审计发现 CardsScreen 是唯一漏修"先 clear 再 show"的 Screen——与用户 Snackbar 反馈完全吻合
