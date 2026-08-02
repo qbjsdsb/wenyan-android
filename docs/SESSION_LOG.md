@@ -6341,3 +6341,31 @@ while (retryCount <= maxRetries) {
   - 更新日志机制：CHANGELOG.md + release.yml `Extract changelog for version` 步骤（awk 提取 `## [vX.Y.Z]` 段）→ Release body "更新内容"，App 内更新界面同步展示
   - AGENTS.md 是混合行尾（部分段落 LF、部分 CRLF），Edit 工具编辑会整文件转 LF 导致大 diff；必须用 Python 二进制精确替换（按目标段落实际行尾匹配）
   - AI 审计发现 CardsScreen 是唯一漏修"先 clear 再 show"的 Screen——与用户 Snackbar 反馈完全吻合
+
+
+## 2026-08-03 凌晨：批一 AI 体验 + 批二工程质量完成，v0.9.24 待发布
+
+- **完成**：
+  - **批一（AI 体验 4 项，commit `b737f9f`）**：
+    - AI 真·流式输出：新增 chatResultStream(query, history) 接口，OkHttp 原生 SSE 逐行解析（零新依赖），逐 chunk emit AiStreamEvent.Delta/Complete；UiState 加 streamingContent 逐字显示
+    - 停止生成：stopGeneration() = aiJob?.cancel()，job.invokeOnCompletion { call.cancel() } 中断阻塞读取，已生成内容保留
+    - 多轮上下文：ChatMessageDao.getRecentByConversation + ChatRepository.getRecentMessages，最近 20 条注入 LLM
+    - Token 统计：Complete 携带 ChatUsage → AiMessage.tokensUsed 透传 + UI 小字
+    - 保留 chatResult 兼容 SocraticTutor/RecallChecker（5 处 .first() 零改动）
+    - 新增 mockwebserver 流式 SSE 测试（core:ai 3 个）+ ViewModel 流式/多轮/token/停止回归测试（aiassistant 4 个）
+  - **批二（工程质量 5 项，commit `178658b`）**：
+    - R8 混淆：isMinifyEnabled=true，release APK 26.7MB→5.6MB（-79%），mapping.txt 验证，入口 MainActivity 保留；⚠️ 需 emulator 实测
+    - 数据库迁移测试：MigrationTest（8→9、9→10，androidTest）+ room-testing + androidTest assets 指向 schemas
+    - Tab 返回闪烁：EssayList/ApiConfig/StudyProgress 3 处 stateIn 改 Eagerly
+    - DAO 补索引：exam_questions.question_type/answer_status、knowledge_points.content_source；数据库 9→10 + MIGRATION_9_10 + 10.json（SQLite 实测）
+    - ChatRepositoryImpl.appendMessage 事务化（withTransaction）；StudyProgress 评估后保留（并发风险低 + 纯 JVM 单测友好）
+  - **验证**：518 单测 0 失败 + assembleDebug + assembleRelease(R8) 全绿
+  - **交接**：docs/00-STATUS.md 重写为最新状态（v0.9.24 待发布 + 发布前验证清单）
+- **进行中**：
+  - v0.9.24 发布（用户确认"严谨仔细发布"）：提升 versionCode 48→49、versionName "0.9.23"→"0.9.24"，发布前验证（R8 冒烟依赖 emulator）
+  - 批三（性能/整洁）、批四（仓库卫生/合规）待做
+- **关键发现**：
+  - callbackFlow + flowOn(IO) 在测试卡死 → 改"直接在 flow 阻塞读取 + job.invokeOnCompletion 取消"
+  - runTest 虚拟时间无法唤醒真实 IO → 流式测试用 runBlocking
+  - 给 Repository 注入 WenyanDatabase 会破坏纯 JVM 单测（CardsViewModelTest）→ 只给有 in-memory db 测试的 ChatRepositoryImpl 事务化
+  - R8 混淆验证：APK 大小 -79% + mapping.txt 45 万行 + AiServiceImpl 不保留 + MainActivity 保留

@@ -1,7 +1,7 @@
 # 文研 App 完美改进计划（v0.9.24+ 路线图）
 
 > 生成时间：2026-08-02
-> 状态：研究调查完成，待用户确认执行
+> 状态：批一 ✅ 完成、批二 ✅ 完成（commit `178658b`）；批三/批四待执行
 > 方法：多轮深度审计（全仓库/AI/构建CI/商业）+ 专项技术调查（AI 流式方案/对话管理/数据安全）+ 关键问题人工复验
 
 ---
@@ -21,33 +21,33 @@
 
 ## 二、改进计划（4 批，按优先级）
 
-### 🥇 批一：AI 体验（用户感知最强，卖点核心）
+### 🥇 批一：AI 体验（用户感知最强，卖点核心）—— ✅ 已完成（commit `b737f9f`）
 
 > **设计原则**：流式/多轮/停止/token 统计**一次接口升级一起做**（新增 `chatResultStream`，保留 `chatResult` 兼容 SocraticTutor/RecallChecker 的 5 处 `.first()` 调用），避免重复改动。
 
-| # | 项目 | 技术方案（已调查） | 工作量 |
-|---|------|-------------------|--------|
-| 1 | **AI 真·流式输出** | **OkHttp 原生流式（零新依赖）**：不走 Retrofit，`okHttpClient.newCall().execute()` + `source.readUtf8Line()` 逐行解析 SSE（`data: {json}\n\n`，`data: [DONE]` 结束）。新增 `ChatStreamChunk/ChatStreamDelta` DTO（`delta.content`）。UiState 加 `streamingContent: String?` + ViewModel 持 StringBuilder 定时 flush（每 100ms），避免每 chunk 复制整 List | 小-中 |
-| 2 | **停止生成按钮** | `suspendCancellableCoroutine` + `invokeOnCancellation { call.cancel() }`；现有 `RetryInterceptor.isCancellation` 已保证取消不被重试。UI：isLoading 时输入栏变"停止"按钮 | 小 |
-| 3 | **多轮对话上下文** | DAO 加 `getRecentByConversation(id, limit)` → Repository 加方法 → `chatResult(query, history = [])` 默认参数向后兼容 → ViewModel 取最近 20 条注入。裁剪：按条数（20）优先 + 按 token 粗估（中文 1 token/字，上限 4000） | 小-中 |
-| 4 | **Token 用量统计** | `ChatUsage` 已解析（`LlmDtos.kt` L67-75）但从未读取；`appendMessage.tokensUsed` 全传 null。流式接口返回 `AiChatReply(content, usage)` → ViewModel 透传 → `AiMessage.tokensUsed` → 气泡小字展示 | 小-中 |
+| # | 项目 | 状态 |
+|---|------|------|
+| 1 | **AI 真·流式输出** | ✅ OkHttp 原生 SSE 逐行解析（零新依赖），逐 chunk emit Delta；UiState.streamingContent 逐字显示 |
+| 2 | **停止生成按钮** | ✅ stopGeneration() + job.invokeOnCompletion { call.cancel() }，已生成内容保留 |
+| 3 | **多轮对话上下文** | ✅ getRecentByConversation + 最近 20 条注入 + token 裁剪 |
+| 4 | **Token 用量统计** | ✅ AiChatReply.usage → tokensUsed 透传 + 气泡小字 |
 
 **验证**：core:ai + feature:aiassistant 单测（新增流式 collect / history 注入 / usage 透传测试）+ 全量 + assembleDebug + emulator 实测流式体验
 
 ---
 
-### 🥈 批二：工程质量与商业化基础
+### 🥈 批二：工程质量与商业化基础 —— ✅ 已完成（commit `178658b`）
 
-| # | 项目 | 方案 | 工作量 |
-|---|------|------|--------|
-| 5 | **R8/ProGuard 混淆** | `isMinifyEnabled = true` + 完善 consumer-rules（保留 Room/Hilt/serialization 规则）；**需 emulator 实测无崩溃后启用**（AGENTS.md 已知 P1 待办） | 中 |
-| 6 | **崩溃上报 + 分析埋点** | Firebase Crashlytics + Analytics（或 Sentry 轻量替代），线上崩溃/卡顿可视化 | 中 |
-| 7 | **对话列表/历史管理** | `observeConversations`（零消费者）接通：DAO 加 `rename` + Repository + ViewModel `conversations` 状态/切换/重命名/删除 + TopBar"历史对话"入口 + BottomSheet 或子路由列表 + 首条消息自动生成标题（取 query 前 15 字替代写死"AI 对话"） | 中-大 |
-| 8 | **聊天数据加密** | SQLCipher 加密（需评估 Room 集成成本）或至少补隐私说明；与 API key 的 Keystore 加密对齐 | 中 |
-| 9 | **数据库迁移测试** | MigrationTestHelper + 补 1.json/3.json 历史 schema；覆盖 8→9 补索引场景（上次靠人工发现） | 中 |
-| 10 | **Tab 返回闪烁** | 3 处 `stateIn(WhileSubscribed)`（ApiConfig/EssayList/StudyProgress）→ 改 collect 模式或 Eagerly | 小 |
-| 11 | **DAO 查询列补索引** | `exam_questions.question_type/answer_status`、`knowledge_points.content_source` 等（数据库版本 9→10 需迁移，与 8 一并做） | 小 |
-| 12 | **多步写事务化** | `ChatRepositoryImpl.appendMessage`（插入+更新计数）、`StudyProgressRepository.recordStudySession`（读-算-写）包 `@Transaction` | 小 |
+| # | 项目 | 状态 |
+|---|------|------|
+| 5 | **R8/ProGuard 混淆** | ✅ isMinifyEnabled=true，APK -79%，mapping 验证；⚠️ 需 emulator 实测后发布 |
+| 6 | **崩溃上报 + 分析埋点** | ⏳ 待做（需 Firebase/Sentry 账号配置） |
+| 7 | **对话列表/历史管理** | ⏳ 待做（中-大工作量） |
+| 8 | **聊天数据加密** | ⏳ 待做（SQLCipher 风险大，谨慎评估） |
+| 9 | **数据库迁移测试** | ✅ MigrationTestHelper 覆盖 8→9、9→10（androidTest） |
+| 10 | **Tab 返回闪烁** | ✅ 3 处 stateIn 改 Eagerly |
+| 11 | **DAO 查询列补索引** | ✅ 数据库 9→10（question_type/answer_status/content_source） |
+| 12 | **多步写事务化** | ✅ ChatRepositoryImpl.appendMessage；StudyProgress 评估后保留 |
 
 **验证**：相关模块单测 + R8 后 emulator 冒烟（重点：Room/Hilt/序列化/网络）+ 全量 + assembleRelease 签名验证
 
