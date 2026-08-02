@@ -18,7 +18,7 @@
     -->
     <style name="Theme.Wenyan.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/wenyan_window_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
         <item name="postSplashScreenTheme">@style/Theme.Wenyan</item>
     </style>
 </resources>

@@ -167,3 +167,49 @@ fillColor = `@color/wenyan_launcher_background`（#2C2C2C）
 - [Adaptive Icons](https://developer.android.com/develop/ui/views/launch/icon_design_adaptive)
 - [Themed Icons](https://developer.android.com/about/versions/13/features#themed-app-icons)
 - Google Workspace 图标设计原则：Bold + Simple + Distinctive
+
+---
+
+## 8. v5 AI 生成图标（2026-08-03，书堆 + 文）
+
+> 用户反馈"图标想更好看"，选定 **AI 生成全新图标** 路线（ImageGen 生成候选 → 选定「书堆 + 文」）。
+
+### 8.1 变更内容
+
+| 项 | 说明 |
+|----|------|
+| 设计来源 | AI 生成（`Modern_flat_vector_Android_app_2026-08-02T18-24-37.png`），书堆 + 「文」字封面 + 毛笔 + 朱红书签点缀 |
+| 处理管线 | PIL 颜色阈值抠背景（浅灰白→透明）→ 去右下角水印 → 主体缩放至 safe zone 720/1024 → 垂直水平居中 |
+| 前景 | 各密度 `ic_launcher_foreground.webp`（透明背景，mdpi 108 → xxxhdpi 432） |
+| 背景 | 保持 `@drawable/ic_launcher_background`（纯色 #2C2C2C 墨黑） |
+| monochrome | 各密度 `ic_launcher_monochrome.webp`（主体 alpha 二值化简化，Android 13+ themed icon） |
+| 旧设备兜底 | 各密度 `ic_launcher.webp`（墨黑背景 + 主体合成，48→192px） |
+| Splash | `themes.xml` `windowSplashScreenAnimatedIcon` 从 `@drawable/ic_launcher_foreground` 改为 `@mipmap/ic_launcher_foreground` |
+| 旧 v4 矢量 | 移出 res 备份至 `.icon-gen/archive/v4-svg/`（git 历史仍可找回） |
+
+### 8.2 文件清单
+
+```
+app/src/main/res/mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}/ic_launcher.webp        （完整图）
+app/src/main/res/mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}/ic_launcher_foreground.webp
+app/src/main/res/mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}/ic_launcher_monochrome.webp
+app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml        （引用 @mipmap/ic_launcher_foreground + monochrome）
+app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml  （同上）
+app/src/main/res/values/themes.xml                        （splash icon 引用更新）
+```
+
+### 8.3 验证记录
+
+| 验证项 | 结果 |
+|--------|------|
+| `assembleDebug` | ✅ PASS（279 tasks） |
+| `testDebugUnitTest` | ✅ PASS（518 单测 0 失败） |
+| APK 内图标资源 | ✅ 5 密度 webp + adaptive icon XML 齐全 |
+| 资源体积 | ✅ 全部 84KB（webp 压缩），对 APK 增量极小 |
+| 圆形遮罩实测 | 需 emulator，沙箱无法执行 |
+
+### 8.4 附注
+
+- 本变更同时修复了**本机 JDK 20 与项目 Java 17 的 JVM target 不一致**问题：根 `build.gradle.kts` 统一 Kotlin `jvmTarget=17`（与 CI temurin JDK 17 对齐），保证任意 JDK ≥ 17 可构建。
+- 生成过程文件（候选图/中间产物）在 `.icon-gen/`，已加入 .gitignore 不入库。
+- 如需回退 v4 矢量：恢复 `.icon-gen/archive/v4-svg/` 两个 xml 到 `drawable/`，并还原 mipmap-anydpi-v26 引用为 `@drawable/...`。

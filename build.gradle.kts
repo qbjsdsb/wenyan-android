@@ -17,6 +17,15 @@ plugins {
 //       Hilt 2.57 起 kotlin-metadata-jvm 被 unshaded（可覆盖）。
 //       2.59+ 需 AGP 9，与 AGP 8.6.0 不兼容，故用 force 覆盖版本。
 subprojects {
+    // 统一 Kotlin JVM target = 17（与各模块 Java 17 对齐）。
+    // 避免本机 JDK 版本变化（如 JDK 20）导致 Kotlin 默认 jvmTarget 20 与 Java 17 冲突
+    // （CI 使用 temurin JDK 17，本机需在任意 JDK ≥ 17 下均可构建）。
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
+    }
+
     configurations.configureEach {
         resolutionStrategy {
             force("org.jetbrains.kotlin:kotlin-metadata-jvm:${libs.versions.kotlin.get()}")
