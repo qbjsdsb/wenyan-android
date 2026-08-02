@@ -1,6 +1,8 @@
 package com.wenyan.app.core.ai.recall
 
 import com.wenyan.app.core.ai.AiService
+import com.wenyan.app.core.ai.AiStreamEvent
+import com.wenyan.app.core.ai.network.ChatMessage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -471,6 +473,11 @@ private class FakeAiService(
     override fun chat(query: String): Flow<String> = flowOf(response)
 
     override fun chatResult(query: String): Flow<Result<String>> = flowOf(Result.success(response))
+
+    override fun chatResultStream(
+        query: String,
+        history: List<ChatMessage>,
+    ): Flow<Result<AiStreamEvent>> = flowOf(Result.success(AiStreamEvent.Complete(null)))
 
     override fun isAvailable(): Flow<Boolean> = flowOf(true)
 }

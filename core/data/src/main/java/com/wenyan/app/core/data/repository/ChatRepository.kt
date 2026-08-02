@@ -29,6 +29,19 @@ interface ChatRepository {
     /** 观察指定对话的消息列表(按 created_at ASC 排序) */
     fun observeMessages(conversationId: String): Flow<List<ChatMessageEntity>>
 
+    /**
+     * 取指定对话最近 N 条消息（v0.9.24 新增，多轮上下文用）。
+     *
+     * 返回按时间正序（旧→新），供注入 LLM 的 messages 数组。
+     *
+     * @param conversationId 对话 ID
+     * @param limit          最多返回条数（不含 system，调用方另行注入 system + 当前 query）
+     */
+    suspend fun getRecentMessages(
+        conversationId: String,
+        limit: Int,
+    ): List<ChatMessageEntity>
+
     /** 当前选中的对话 ID(持久化在 DataStore,跨进程恢复) */
     val currentConversationId: Flow<String?>
 

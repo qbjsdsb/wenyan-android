@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
@@ -251,6 +252,8 @@ fun AiAssistantScreen(
                 isLoading = uiState.isLoading,
                 onTextChanged = viewModel::updateInput,
                 onSend = { viewModel.sendMessage(uiState.inputText) },
+                // v0.9.24 停止生成
+                onStop = viewModel::stopGeneration,
             )
         },
     ) { innerPadding ->
@@ -301,6 +304,12 @@ fun AiAssistantScreen(
                         // 消息项 contentType="message"，加载指示器 contentType="loading"
                         items(items = uiState.messages, key = { it.id }, contentType = { "message" }) { message ->
                             MessageBubble(message, modifier = Modifier.animateItem())
+                        }
+                        // v0.9.24 流式输出气泡：AI 逐字回复中显示增量文本 + 光标
+                        if (uiState.isLoading && uiState.streamingContent != null) {
+                            item(key = "streaming", contentType = "streaming") {
+                                StreamingBubble(content = uiState.streamingContent ?: "")
+                            }
                         }
                         if (uiState.isLoading) {
                             item(key = "loading", contentType = "loading") {
@@ -537,6 +546,7 @@ private fun InputBar(
     isLoading: Boolean,
     onTextChanged: (String) -> Unit,
     onSend: () -> Unit,
+    onStop: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -561,18 +571,63 @@ private fun InputBar(
             ),
         )
         IconButton(
-            onClick = onSend,
-            enabled = text.isNotBlank() && !isLoading,
+            // v0.9.24 停止生成：isLoading 时点击停止（取消 AI 流式任务）
+            onClick = if (isLoading) onStop else onSend,
+            enabled = if (isLoading) true else text.isNotBlank(),
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.Send,
-                contentDescription = "发送",
-            )
+            if (isLoading) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "停止生成",
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "发送",
+                )
+            }
         }
     }
 }
 
 // ── 消息气泡 ────────────────────────────────────────────────────
+
+/**
+ * 流式输出气泡（v0.9.24 新增）。
+ *
+ * AI 逐字回复中实时显示增量文本，末尾加闪烁光标提示"生成中"。
+ */
+@Composable
+private fun StreamingBubble(
+    content: String,
+    modifier: Modifier = Modifier,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Start,
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(end = 48.dp)
+                .clip(MaterialTheme.shapes.large)
+                .background(colorScheme.surfaceContainerHigh)
+                .padding(Spacing.md),
+        ) {
+            Text(
+                text = if (content.isEmpty()) "……" else content,
+                style = MaterialTheme.typography.bodyMedium,
+                color = colorScheme.onSurface,
+            )
+            // 光标（简单竖线动画提示生成中）
+            Text(
+                text = "▍",
+                style = MaterialTheme.typography.bodyMedium,
+                color = colorScheme.primary,
+            )
+        }
+    }
+}
 
 @Composable
 private fun MessageBubble(
@@ -617,6 +672,15 @@ private fun MessageBubble(
                 modifier = Modifier.padding(start = Spacing.xs, top = Spacing.xs),
             )
             ReferencesList(message)
+            // v0.9.24 token 用量小字（仅 AI 消息、非空时显示）
+            if (message.tokensUsed != null) {
+                Text(
+                    text = "本次回复 ${message.tokensUsed} tokens",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = Spacing.xs, top = Spacing.xs),
+                )
+            }
         }
     }
 }

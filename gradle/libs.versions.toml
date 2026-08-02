@@ -39,6 +39,8 @@ coroutines = "1.8.1"
 # 网络请求 Retrofit + OkHttp
 retrofit = "2.9.0"
 okhttp = "4.12.0"
+# MockWebServer（流式 SSE 测试，与 okhttp 同版本）
+mockwebserver = "4.12.0"
 
 # Kotlinx Serialization
 kotlinxSerialization = "1.6.3"
@@ -129,6 +131,7 @@ retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = 
 retrofit-kotlinx-serialization = { group = "com.jakewharton.retrofit", name = "retrofit2-kotlinx-serialization-converter", version.ref = "retrofitKotlinxSerialization" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttp-logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
+mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "mockwebserver" }
 
 # Kotlinx Serialization
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }

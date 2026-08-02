@@ -73,3 +73,40 @@ data class ChatUsage(
     @SerialName("total_tokens")
     val totalTokens: Int = 0,
 )
+
+// ── 响应 DTO（流式） ──────────────────────────────────────────────
+
+/**
+ * OpenAI 兼容协议的 chat/completions 流式响应 chunk（v0.9.24 新增）。
+ *
+ * SSE 协议：`data: {json}\n\n`，结束标记 `data: [DONE]`。
+ * 流式响应用 `choices[].delta.content`（而非非流式的 `message.content`）。
+ * 部分服务商（DeepSeek 默认 / OpenAI 需 stream_options.include_usage）在
+ * 最后一个 chunk 携带 `usage` 字段。
+ */
+@Serializable
+data class ChatStreamChunk(
+    val id: String? = null,
+    val choices: List<ChatStreamChoice> = emptyList(),
+    val usage: ChatUsage? = null,
+)
+
+/**
+ * 流式响应中的选项。
+ */
+@Serializable
+data class ChatStreamChoice(
+    val index: Int = 0,
+    val delta: ChatStreamDelta? = null,
+    @SerialName("finish_reason")
+    val finishReason: String? = null,
+)
+
+/**
+ * 流式响应中的增量消息。
+ */
+@Serializable
+data class ChatStreamDelta(
+    val role: String? = null,
+    val content: String? = null,
+)

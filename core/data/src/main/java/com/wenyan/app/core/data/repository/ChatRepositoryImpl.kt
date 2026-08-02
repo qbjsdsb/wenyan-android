@@ -41,6 +41,13 @@ class ChatRepositoryImpl @Inject constructor(
     override fun observeMessages(conversationId: String): Flow<List<ChatMessageEntity>> =
         messageDao.observeByConversation(conversationId)
 
+    override suspend fun getRecentMessages(
+        conversationId: String,
+        limit: Int,
+    ): List<ChatMessageEntity> =
+        // DAO 返回倒序（最新在前），这里 reverse 成时间正序供 LLM 注入
+        messageDao.getRecentByConversation(conversationId, limit).reversed()
+
     override val currentConversationId: Flow<String?> =
         preferencesDataStore.data.map { it[KEY_CURRENT_CONVERSATION_ID] }
 

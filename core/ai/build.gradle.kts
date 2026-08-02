@@ -65,4 +65,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
+    // v0.9.24: MockWebServer 用于流式 SSE 响应测试（与 okhttp 同版本）
+    testImplementation(libs.mockwebserver)
 }

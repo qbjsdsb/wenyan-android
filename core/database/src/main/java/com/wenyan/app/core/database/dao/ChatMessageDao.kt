@@ -27,6 +27,21 @@ interface ChatMessageDao {
     @Query("SELECT * FROM chat_messages WHERE conversation_id = :conversationId ORDER BY created_at ASC")
     suspend fun getByConversation(conversationId: String): List<ChatMessageEntity>
 
+    /**
+     * 取指定对话最近 N 条消息（v0.9.24 新增，多轮上下文用）。
+     *
+     * 返回按 created_at **倒序**（最新在前），调用方需 reverse 成时间正序再注入 LLM。
+     * LIMIT :limit 限制条数，避免长对话全量加载。
+     */
+    @Query(
+        "SELECT * FROM chat_messages WHERE conversation_id = :conversationId " +
+            "ORDER BY created_at DESC LIMIT :limit",
+    )
+    suspend fun getRecentByConversation(
+        conversationId: String,
+        limit: Int,
+    ): List<ChatMessageEntity>
+
     @Query("SELECT COUNT(*) FROM chat_messages WHERE conversation_id = :conversationId")
     suspend fun countByConversation(conversationId: String): Int
 }

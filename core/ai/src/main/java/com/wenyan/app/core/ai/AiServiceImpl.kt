@@ -2,16 +2,22 @@ package com.wenyan.app.core.ai
 
 import com.wenyan.app.core.ai.network.ChatMessage
 import com.wenyan.app.core.ai.network.ChatRequest
+import com.wenyan.app.core.ai.network.ChatStreamChunk
+import com.wenyan.app.core.ai.network.ChatUsage
 import com.wenyan.app.core.ai.network.LlmApiService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.Retrofit
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.io.IOException
@@ -181,6 +187,140 @@ class AiServiceImpl @Inject constructor(
     override fun isAvailable(): Flow<Boolean> = flow {
         emit(llmConfigProvider.getCurrentConfig() != null)
     }.flowOn(Dispatchers.IO)
+
+    /**
+     * 发送对话消息，返回流式回复（v0.9.24 新增）。
+     *
+     * 真流式：用 OkHttp 原生 SSE 逐行读取（零新依赖），
+     * 每个 chunk 的增量文本通过 [AiStreamEvent.Delta] emit，
+     * 流结束时 emit [AiStreamEvent.Complete]（携带 token 用量）。
+     *
+     * 停止生成：collect 协程被取消时 [readSseStream] 的
+     * [Job.invokeOnCompletion] 回调调用 `call.cancel()` 中断阻塞读取
+     * （RetryInterceptor 已识别 Canceled 不重试）。
+     *
+     * 多轮上下文：messages = [system] + history + [user query]。
+     */
+    override fun chatResultStream(
+        query: String,
+        history: List<ChatMessage>,
+    ): Flow<Result<AiStreamEvent>> = flow {
+        val config = llmConfigProvider.getCurrentConfig()
+        if (config == null) {
+            emit(Result.failure(IllegalStateException(OFFLINE_MESSAGE)))
+            return@flow
+        }
+        try {
+            val request = ChatRequest(
+                model = config.model,
+                messages = listOf(ChatMessage(role = "system", content = SYSTEM_PROMPT)) +
+                    history +
+                    listOf(ChatMessage(role = "user", content = query)),
+                temperature = config.temperature,
+                maxTokens = config.maxTokens,
+                stream = true,
+            )
+            val authorization = "Bearer ${config.apiKey}"
+            // 逐 chunk 读取 SSE，真正的流式 emit
+            emitAll(readSseStream(config, authorization, request))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: SocketTimeoutException) {
+            emit(Result.failure(SocketTimeoutException("请求超时，请检查网络连接后重试")))
+        } catch (e: UnknownHostException) {
+            emit(Result.failure(UnknownHostException("无法连接到 AI 服务，请检查网络或 baseUrl 配置")))
+        } catch (e: SerializationException) {
+            emit(Result.failure(SerializationException("AI 响应解析失败：${e.message}")))
+        } catch (e: IOException) {
+            if (e.message?.contains("Canceled") == true) {
+                throw CancellationException("流式读取被取消")
+            }
+            emit(Result.failure(IOException("网络错误，请检查网络连接：${e.message}")))
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    /**
+     * 用 OkHttp 阻塞读取 SSE 响应并逐 chunk 解析（v0.9.24）。
+     *
+     * OpenAI 兼容协议 SSE：
+     * ```
+     * data: {chunk json}\n\n
+     * data: {chunk json}\n\n
+     * data: [DONE]\n\n
+     * ```
+     *
+     * 每个 chunk 的增量文本 emit [AiStreamEvent.Delta]；
+     * 流结束（[DONE] 或 EOF）emit [AiStreamEvent.Complete]（携带 token 用量）。
+     *
+     * **取消（停止生成）**：通过 [kotlinx.coroutines.Job.invokeOnCompletion] 注册回调，
+     * 协程被取消时调用 `call.cancel()` 中断阻塞的 `readUtf8Line()`。
+     */
+    private fun readSseStream(
+        config: LlmConfig,
+        authorization: String,
+        request: ChatRequest,
+    ): Flow<Result<AiStreamEvent>> = flow {
+        val baseUrl = if (config.baseUrl.endsWith("/")) config.baseUrl else "${config.baseUrl}/"
+        val requestBody = json.encodeToString(ChatRequest.serializer(), request)
+            .toRequestBody("application/json".toMediaType())
+        val httpRequest = okhttp3.Request.Builder()
+            .url("${baseUrl}chat/completions")
+            .header("Authorization", authorization)
+            .header("Content-Type", "application/json")
+            .header("Accept", "text/event-stream")
+            .post(requestBody)
+            .build()
+
+        val call = okHttpClient.newCall(httpRequest)
+        // 取消回调：协程取消（停止生成）时中断阻塞读取
+        val job = currentCoroutineContext()[Job]
+        val cancelHandle = job?.invokeOnCompletion { call.cancel() }
+        try {
+            call.execute().use { response ->
+                if (!response.isSuccessful) {
+                    val code = response.code
+                    val msg = when (code) {
+                        401, 403 -> "API Key 无效或已过期（HTTP $code），请检查配置"
+                        in 500..599 -> "AI 服务端错误（HTTP $code），请稍后重试"
+                        else -> "API 调用失败（HTTP $code）：${response.message}"
+                    }
+                    throw IllegalStateException(msg)
+                }
+                val source = response.body?.source()
+                    ?: throw IllegalStateException(EMPTY_RESPONSE_MESSAGE)
+                var usage: ChatUsage? = null
+                var gotContent = false
+                while (true) {
+                    val line = source.readUtf8Line() ?: break
+                    if (line.isBlank()) continue
+                    if (!line.startsWith("data:")) continue
+                    val data = line.substring(5).trim()
+                    if (data == "[DONE]") break
+                    val chunk = try {
+                        json.decodeFromString(ChatStreamChunk.serializer(), data)
+                    } catch (e: SerializationException) {
+                        // 跳过无法解析的 chunk（keep-alive / 空数据），不中断流
+                        continue
+                    }
+                    chunk.choices.firstOrNull()?.delta?.content?.let { delta ->
+                        if (delta.isNotEmpty()) {
+                            gotContent = true
+                            emit(Result.success(AiStreamEvent.Delta(delta)))
+                        }
+                    }
+                    chunk.usage?.let { usage = it }
+                }
+                if (!gotContent) throw IllegalStateException(EMPTY_RESPONSE_MESSAGE)
+                emit(Result.success(AiStreamEvent.Complete(usage)))
+            }
+        } finally {
+            cancelHandle?.dispose()
+            // 确保连接释放（流结束后正常调用，取消时也调用）
+            call.cancel()
+        }
+    }
 
     /**
      * 根据配置动态构造 [LlmApiService]。

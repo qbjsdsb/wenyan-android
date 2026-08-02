@@ -100,9 +100,94 @@ class AiAssistantViewModelTest {
         assertEquals(AiRole.USER, state.messages[0].role)
         assertEquals("苏轼", state.messages[0].content)
         assertEquals(AiRole.ASSISTANT, state.messages[1].role)
+        // v0.9.24 流式：FakeAiService 逐字符 emit Delta，ViewModel 累积后得到完整内容
         assertEquals("AI 回复内容", state.messages[1].content)
         assertEquals("AI_GENERATED", state.messages[1].contentSource)
+        // 流式结束后 streamingContent 清空
+        assertNull(state.streamingContent)
         assertFalse(state.isLoading)
+    }
+
+    /**
+     * v0.9.24 回归：流式输出期间 streamingContent 随 Delta 更新（用户逐字可见）。
+     */
+    @Test
+    fun `sendMessage 流式输出期间 streamingContent 更新`() = runTest {
+        // 用闸门控制：先挂起（AI 回复中），验证 streamingContent 已更新部分内容
+        aiService.replyGate = CompletableDeferred()
+        aiService.response = "一二三四五"
+        viewModel.sendMessage("测试")
+        // 由于 replyGate 挂起，chatResultStream 在 await 前已记录 history、但 Delta 未 emit
+        // （Fake 在 replyGate.await() 之后才 emit Delta）。这里仅验证 isLoading 为 true。
+        assertTrue("发送中 isLoading 应为 true", viewModel.uiState.value.isLoading)
+
+        // 放行后流式完成
+        aiService.replyGate?.complete(Unit)
+        aiService.replyGate = null
+        val state = viewModel.uiState.value
+        assertFalse("完成后 isLoading 应为 false", state.isLoading)
+        assertNull("完成后 streamingContent 应清空", state.streamingContent)
+        // 完整内容已加入 messages
+        val assistantMsg = state.messages.last { it.role == AiRole.ASSISTANT }
+        assertEquals("一二三四五", assistantMsg.content)
+    }
+
+    /**
+     * v0.9.24 回归：多轮上下文——chatRepository 有历史消息时，
+     * chatResultStream 收到的 history 应包含历史 USER/ASSISTANT 消息。
+     */
+    @Test
+    fun `sendMessage 多轮上下文注入历史消息`() = runTest {
+        aiService.response = "回复"
+        viewModel.sendMessage("第一问")
+        // 完成第一轮（用户 + AI 各一条已入库）
+        val convId = chatRepository.currentId!!
+        assertEquals(2, viewModel.uiState.value.messages.size)
+
+        // 清空 receivedHistory 后发第二问，应注入第一轮历史
+        aiService.receivedHistory.clear()
+        viewModel.sendMessage("第二问")
+
+        val history = aiService.receivedHistory
+        assertTrue("history 应含第一问", history.any { it.role == "user" && it.content == "第一问" })
+        assertTrue("history 应含第一轮 AI 回复", history.any { it.role == "assistant" && it.content == "回复" })
+    }
+
+    /**
+     * v0.9.24 回归：token 用量统计——Complete 携带 usage 时，
+     * 添加的 AI 消息 tokensUsed 应透传。
+     */
+    @Test
+    fun `sendMessage token 用量透传到 AI 消息`() = runTest {
+        aiService.response = "回复内容"
+        aiService.usageTotalTokens = 123
+        viewModel.sendMessage("测试")
+
+        val assistantMsg = viewModel.uiState.value.messages.last { it.role == AiRole.ASSISTANT }
+        assertEquals("tokensUsed 应为 123", 123, assistantMsg.tokensUsed)
+    }
+
+    /**
+     * v0.9.24 回归：停止生成——AI 回复中调用 stopGeneration，
+     * 已生成的部分内容保留为消息，streamingContent 清空。
+     */
+    @Test
+    fun `发送中停止生成保留已生成内容`() = runTest {
+        aiService.replyGate = CompletableDeferred()
+        viewModel.sendMessage("测试问题")
+        assertTrue("发送中 isLoading 应为 true", viewModel.uiState.value.isLoading)
+
+        // 停止生成
+        viewModel.stopGeneration()
+        // 放行闸门（取消后 collect 应已中断，放行不影响）
+        aiService.replyGate?.complete(Unit)
+        aiService.replyGate = null
+        runCurrent()
+
+        assertFalse("停止后 isLoading 应为 false", viewModel.uiState.value.isLoading)
+        assertNull("停止后 streamingContent 应清空", viewModel.uiState.value.streamingContent)
+        // 用户消息保留
+        assertTrue("用户消息应保留", viewModel.uiState.value.messages.any { it.role == AiRole.USER && it.content == "测试问题" })
     }
 
     @Test

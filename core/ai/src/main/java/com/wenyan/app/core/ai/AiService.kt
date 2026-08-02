@@ -1,5 +1,7 @@
 package com.wenyan.app.core.ai
 
+import com.wenyan.app.core.ai.network.ChatMessage
+import com.wenyan.app.core.ai.network.ChatUsage
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -63,9 +65,47 @@ interface AiService {
     fun chatResult(query: String): Flow<Result<String>>
 
     /**
+     * 发送对话消息，返回流式回复（v0.9.24 新增）。
+     *
+     * 真流式：按 SSE 逐 chunk emit [AiStreamEvent.Delta]（增量文本片段），
+     * 流结束时 emit [AiStreamEvent.Complete]（携带 token 用量）。
+     *
+     * 支持多轮对话上下文：
+     * - [history] 为最近对话消息（OpenAI 兼容 role: user/assistant），默认空（向后兼容）
+     * - 与 [chatResult] 的区别：不传 history 时行为等价（system + 当前 query）
+     *
+     * 停止生成：调用方取消 collect（如 Job.cancel()）即可中断流式读取，
+     * 底层 OkHttp call 会被取消，已生成内容由调用方决定保留或丢弃。
+     *
+     * 失败：emit `Result.failure(exception)`（一次性），异常 message 含差异化提示。
+     *
+     * @param query   用户提问（已含 RAG 上下文的完整 prompt）
+     * @param history 最近对话消息（role=user/assistant，按时间正序），用于多轮上下文
+     * @return 流式事件：Delta × N → Complete(usage)；失败为 failure
+     */
+    fun chatResultStream(
+        query: String,
+        history: List<ChatMessage> = emptyList(),
+    ): Flow<Result<AiStreamEvent>>
+
+    /**
      * 判断当前是否在线可用（设计文档 3.6.5 离线降级支持）。
      *
      * @return true 表示 AI 服务可用，false 时触发离线降级
      */
     fun isAvailable(): Flow<Boolean>
+}
+
+/**
+ * AI 流式回复事件（v0.9.24）。
+ *
+ * - [Delta]：增量文本片段，调用方累积拼接实现逐字显示
+ * - [Complete]：流结束信号，携带 token 用量（部分服务商末 chunk 才有，可能为 null）
+ */
+sealed interface AiStreamEvent {
+    /** 增量文本片段 */
+    data class Delta(val content: String) : AiStreamEvent
+
+    /** 流结束（含 token 用量，可能为 null） */
+    data class Complete(val usage: ChatUsage?) : AiStreamEvent
 }

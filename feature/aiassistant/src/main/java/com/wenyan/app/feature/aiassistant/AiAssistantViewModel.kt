@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.ai.AiService
+import com.wenyan.app.core.ai.AiStreamEvent
 import com.wenyan.app.core.ai.PromptTemplates
 import com.wenyan.app.core.ai.RagEngine
 import com.wenyan.app.core.ai.RagReference
@@ -11,6 +12,7 @@ import com.wenyan.app.core.ai.SocraticGuide
 import com.wenyan.app.core.ai.SocraticStage
 import com.wenyan.app.core.ai.SocraticTutor
 import com.wenyan.app.core.ai.WrongAnswerExplanation
+import com.wenyan.app.core.ai.network.ChatMessage
 import com.wenyan.app.core.ai.recall.AntiRoteMemorization
 import com.wenyan.app.core.ai.recall.QuestionType
 import com.wenyan.app.core.ai.recall.RecallChecker
@@ -205,28 +207,59 @@ class AiAssistantViewModel @Inject constructor(
                     return@launchAiTask
                 }
 
-                // 3. 构建 prompt 并调用 AI（P1-5 改用 chatResult 区分成功/失败）
-                val prompt = PromptTemplates.buildChatPrompt(text, ragResult.references)
-                val result = aiService.chatResult(prompt).first()
-
-                if (result.isFailure) {
-                    _uiState.update {
-                        it.copy(errorMessage = "请求失败：${result.exceptionOrNull()?.message ?: "未知错误"}")
+                // 3. 构建 prompt 并调用 AI（v0.9.24 改流式）
+                //    v0.9.24 多轮上下文：取最近 N 条历史注入 LLM（仅 USER/ASSISTANT 消息）
+                val history = chatRepository
+                    .getRecentMessages(convId, MAX_HISTORY_MESSAGES)
+                    .mapNotNull { entity ->
+                        when (entity.role.uppercase()) {
+                            "USER" -> ChatMessage(role = "user", content = entity.content)
+                            "ASSISTANT" -> ChatMessage(role = "assistant", content = entity.content)
+                            else -> null // 跳过 SYSTEM / 其他
+                        }
                     }
-                    return@launchAiTask
+                val prompt = PromptTemplates.buildChatPrompt(text, ragResult.references)
+                val sb = StringBuilder()
+                var tokensUsed: Int? = null
+
+                aiService.chatResultStream(prompt, history).collect { result ->
+                    result.onSuccess { event ->
+                        when (event) {
+                            is AiStreamEvent.Delta -> {
+                                sb.append(event.content)
+                                // 流式增量：更新 streamingContent 供 UI 逐字显示
+                                _uiState.update { it.copy(streamingContent = sb.toString()) }
+                            }
+                            is AiStreamEvent.Complete -> {
+                                tokensUsed = event.usage?.totalTokens
+                            }
+                        }
+                    }.onFailure { e ->
+                        _uiState.update {
+                            it.copy(errorMessage = "请求失败：${e.message ?: "未知错误"}")
+                        }
+                    }
                 }
 
-                // 4. 添加 AI 回复（标注引用来源）
-                addAssistantMessage(
-                    content = result.getOrThrow(),
-                    contentSource = CONTENT_SOURCE_AI,
-                    references = if (ragResult.hasResults) ragResult.references else emptyList(),
-                )
+                // 4. 添加 AI 回复（标注引用来源 + token 用量）
+                val finalContent = sb.toString().trim()
+                if (finalContent.isNotBlank()) {
+                    addAssistantMessage(
+                        content = finalContent,
+                        contentSource = CONTENT_SOURCE_AI,
+                        references = if (ragResult.hasResults) ragResult.references else emptyList(),
+                        tokensUsed = tokensUsed,
+                    )
+                }
+                // 流式结束，清空 streamingContent
+                _uiState.update { it.copy(streamingContent = null) }
             } catch (e: CancellationException) {
+                // v0.9.24 停止生成：用户取消时保留已生成的部分内容
+                _uiState.update { it.copy(streamingContent = null) }
                 throw e
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(errorMessage = "请求失败：${e.message ?: "未知错误"}")
+                    it.copy(errorMessage = "请求失败：${e.message ?: "未知错误"}", streamingContent = null)
                 }
             }
         }
@@ -564,6 +597,7 @@ class AiAssistantViewModel @Inject constructor(
         contentSource: String,
         references: List<RagReference> = emptyList(),
         stage: SocraticStage? = null,
+        tokensUsed: Int? = null,
     ) {
         val msg = AiMessage(
             id = nextId(),
@@ -572,6 +606,7 @@ class AiAssistantViewModel @Inject constructor(
             contentSource = contentSource,
             references = references,
             stage = stage,
+            tokensUsed = tokensUsed,
         )
         _uiState.update { it.copy(messages = it.messages + msg) }
 
@@ -587,7 +622,7 @@ class AiAssistantViewModel @Inject constructor(
                 references = references,
                 contextScreen = null,
                 contextTitle = null,
-                tokensUsed = null,
+                tokensUsed = tokensUsed,
             )
         }
     }
@@ -626,6 +661,17 @@ class AiAssistantViewModel @Inject constructor(
     }
 
     /**
+     * 停止生成（v0.9.24 新增）。
+     *
+     * 取消当前 AI 流式任务：launchAiTask 的 Job.cancel() 会中断
+     * chatResultStream 的 collect（底层 OkHttp call 被取消），
+     * 已生成的部分内容在 sendMessage 的 CancellationException 分支保留为消息。
+     */
+    fun stopGeneration() {
+        aiJob?.cancel()
+    }
+
+    /**
      * 生成唯一消息 ID。
      *
      * P0-T1b 修正：原用 companion object var messageCounter 生成 "timestamp-counter" ID，
@@ -642,6 +688,15 @@ class AiAssistantViewModel @Inject constructor(
 
         /** 用户输入内容来源标识(NF-PP6) */
         private const val CONTENT_SOURCE_USER_INPUT = "USER_INPUT"
+
+        /**
+         * 多轮上下文最大注入条数（v0.9.24 新增）。
+         *
+         * 取最近 N 条历史消息注入 LLM messages 数组（system + history + 当前 query）。
+         * 20 条约等于 10 轮对话，足以承载连续追问场景；配合
+         * 单条 MAX_INPUT_LENGTH=2000 字约束，总 token 在可控范围。
+         */
+        private const val MAX_HISTORY_MESSAGES = 20
 
         /**
          * 用户输入最大长度（v0.8.16 P1-3）。
@@ -676,6 +731,7 @@ private fun ChatMessageEntity.toAiMessage(): AiMessage {
         contentSource = contentSource,
         references = ChatMessageMapper.deserializeReferences(referencesJson),
         stage = stage,
+        tokensUsed = tokensUsed,
     )
 }
 
@@ -689,6 +745,7 @@ private fun ChatMessageEntity.toAiMessage(): AiMessage {
  * @param errorMessage 错误提示（可清除）
  * @param roteWarning 死记硬背提示（可清除）
  * @param recallResult 主动回忆检测结果(P0 v0.7.2 新增,可清除)
+ * @param streamingContent 流式输出中的增量文本（v0.9.24 新增，非 null 表示 AI 正在逐字回复）
  */
 data class AiAssistantUiState(
     val messages: List<AiMessage> = emptyList(),
@@ -698,6 +755,7 @@ data class AiAssistantUiState(
     val errorMessage: String? = null,
     val roteWarning: String? = null,
     val recallResult: RecallResult? = null,
+    val streamingContent: String? = null,
 )
 
 /**
@@ -709,6 +767,7 @@ data class AiAssistantUiState(
  * @param contentSource 内容来源（AI_GENERATED / TEXTBOOK_NATIVE / TEXTBOOK_OCR），仅助手消息有
  * @param references RAG 引用来源列表（可溯源），仅助手消息有
  * @param stage 苏格拉底引导阶段（仅苏格拉底引导消息有）
+ * @param tokensUsed AI 回复消耗 token 数（v0.9.24 新增，仅助手消息有，可空）
  */
 @Immutable
 data class AiMessage(
@@ -718,6 +777,7 @@ data class AiMessage(
     val contentSource: String? = null,
     val references: List<RagReference> = emptyList(),
     val stage: SocraticStage? = null,
+    val tokensUsed: Int? = null,
 )
 
 /** 消息角色 */

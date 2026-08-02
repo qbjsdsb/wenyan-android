@@ -1,6 +1,7 @@
 package com.wenyan.app.core.ai
 
 import app.cash.turbine.test
+import com.wenyan.app.core.ai.network.ChatMessage
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -174,6 +175,14 @@ class FakeAiService(
 
     override fun chatResult(query: String): Flow<Result<String>> = flowOf(
         failureException?.let { Result.failure(it) } ?: Result.success(response),
+    )
+
+    override fun chatResultStream(
+        query: String,
+        history: List<ChatMessage>,
+    ): Flow<Result<AiStreamEvent>> = flowOf(
+        failureException?.let { Result.failure(it) }
+            ?: Result.success(AiStreamEvent.Complete(null)),
     )
 
     override fun isAvailable(): Flow<Boolean> = flowOf(true)

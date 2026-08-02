@@ -1,7 +1,10 @@
 package com.wenyan.app.feature.aiassistant
 
 import com.wenyan.app.core.ai.AiService
+import com.wenyan.app.core.ai.AiStreamEvent
 import com.wenyan.app.core.ai.RagReference
+import com.wenyan.app.core.ai.network.ChatMessage
+import com.wenyan.app.core.ai.network.ChatUsage
 import com.wenyan.app.core.data.repository.ChatRepository
 import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.dao.ReviewLogDao
@@ -31,11 +34,21 @@ class FakeAiService(
 ) : AiService {
 
     /**
-     * v0.9.23 测试用"回复闸门"：非 null 时 [chatResult] 先 await 闸门再 emit，
+     * v0.9.23 测试用"回复闸门"：非 null 时 [chatResult]/[chatResultStream] 先 await 闸门再 emit，
      * 模拟 AI 回复进行中（挂起）的状态，供竞态/取消测试使用。
      * 测试完成时 `replyGate?.complete(Unit)` 放行。
      */
     var replyGate: CompletableDeferred<Unit>? = null
+
+    /**
+     * v0.9.24 测试用：记录 chatResultStream 收到的 history（供多轮上下文断言）。
+     */
+    val receivedHistory: MutableList<ChatMessage> = mutableListOf()
+
+    /**
+     * v0.9.24 测试用：Complete 事件携带的 token 用量（null 表示不携带）。
+     */
+    var usageTotalTokens: Int? = null
 
     override fun chat(query: String): Flow<String> = flow {
         throwException?.let { throw it }
@@ -47,6 +60,26 @@ class FakeAiService(
         throwException?.let { emit(Result.failure(it)); return@flow }
         replyGate?.await()
         emit(Result.success(response))
+    }
+
+    override fun chatResultStream(
+        query: String,
+        history: List<ChatMessage>,
+    ): Flow<Result<AiStreamEvent>> = flow {
+        // 记录 history 供测试断言（多轮上下文）
+        receivedHistory.addAll(history)
+        throwException?.let { emit(Result.failure(it)); return@flow }
+        replyGate?.await()
+        // 模拟流式：按字符逐块 emit Delta，最后 Complete
+        response.forEachIndexed { index, ch ->
+            emit(Result.success(AiStreamEvent.Delta(ch.toString())))
+            if (index % 10 == 9) {
+                // 模拟真实 chunk 粒度，避免单字符过多事件
+                emit(Result.success(AiStreamEvent.Delta("")))
+            }
+        }
+        val usage = usageTotalTokens?.let { ChatUsage(totalTokens = it) }
+        emit(Result.success(AiStreamEvent.Complete(usage)))
     }
 
     override fun isAvailable(): Flow<Boolean> = flowOf(available)
@@ -257,6 +290,15 @@ class FakeChatRepository(
             _currentId.value = null
         }
     }
+
+    override suspend fun getRecentMessages(
+        conversationId: String,
+        limit: Int,
+    ): List<ChatMessageEntity> =
+        messagesByConv[conversationId]
+            ?.sortedBy { it.createdAt }
+            ?.takeLast(limit)
+            ?: emptyList()
 
     override suspend fun setCurrentConversation(id: String?) {
         setCurrentCalls.add(id)
