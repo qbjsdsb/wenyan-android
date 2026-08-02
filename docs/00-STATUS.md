@@ -1,13 +1,17 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-08-03（批一 AI 体验 + 批二工程质量完成，v0.9.24 待发布）
+> 最后更新：2026-08-03（v0.9.24 已发布，Release #53）
 
 ## ✅ 当前状态
 
+**v0.9.24 已发布**（2026-08-03，Release #53）：批一（AI 体验 4 项）+ 批二（工程质量 5 项）。
+
 **v0.9.23 已发布**（2026-08-02，Release #52）：论述题删年份 + Snackbar 常驻修复 + AI 审计修复 + 更新日志机制。
 
-**v0.9.24 待发布**：批一（AI 体验 4 项）+ 批二（工程质量 5 项）已完成并推送到 main（commit `178658b`），**尚未打 tag 发布**。
+### v0.9.24 发布内容（tag `9183ecc`，versionCode 49 / versionName "0.9.24"）
+- **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.24
+- **receipt**：`docs/release-receipts/v0.9.24-release-receipt.md`
 
 ### 批一：AI 体验（commit `b737f9f`）
 - **AI 真·流式输出**：OkHttp 原生 SSE 逐行解析（零新依赖），逐字显示
@@ -27,10 +31,9 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **178658b**（批二工程质量，2026-08-03） |
-| 最新 Release | **v0.9.23**（2026-08-02，正式签名）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.23 |
-| 待发布 | **v0.9.24**（versionCode 47 / versionName "0.9.22"→ 需提升） |
-| versionCode / versionName（当前） | **48 / "0.9.23"** |
+| 最新 commit | **9183ecc**（v0.9.24 版本号提升，2026-08-03） |
+| 最新 Release | **v0.9.24**（2026-08-03，正式签名 + R8 混淆）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.24 |
+| versionCode / versionName | **49 / "0.9.24"** |
 | 知识点 | **935 个** |
 | 真题 | **485 道** |
 | 论述题 | **134 道**（v0.9.23 起删年份显示，数据层 year 保留） |
@@ -41,26 +44,22 @@
 | AI 服务商 | DeepSeek/通义/智谱/月之暗面/自定义（v0.9.23 修复 URL 拼接） |
 | 更新日志机制 | **CHANGELOG.md** + release.yml 动态读取（v0.9.23 起） |
 | 单测 | **518 个 0 失败**（批一+批二后） |
-| R8 | **已启用**（v0.9.24，需 emulator 实测） |
+| R8 | **已启用并随 v0.9.24 发布**（APK 5.9MB，需 emulator 冒烟实测） |
 | 崩溃上报 | **未接入**（需 Firebase/Sentry 配置） |
 | 阻塞 | **无** |
 
-## 🚨 v0.9.24 发布前验证清单（严格，缺一不可）
+## ✅ v0.9.24 发布验证记录（2026-08-03，Release #53）
 
-> 批一+批二已推送 main 但**未打 tag**。R8 混淆 + 迁移测试 + 流式均需 emulator 实测后才可发布。
+> 发布核心验证已全部通过（详见 `docs/release-receipts/v0.9.24-release-receipt.md`）。
 
-1. **R8 混淆冒烟（最重要）**：安装 release 混淆 APK，重点验证：
-   - App 启动正常（Hilt 注入）
-   - 知识点/论述题列表加载正常（Room + serialization）
-   - AI 助手可调用（Retrofit + OkHttp + 流式 SSE）
-   - 设置页主题切换正常（DataStore）
-2. **数据库 9→10 迁移**：在装有 v0.9.23（数据库 9）的模拟器上覆盖安装 v0.9.24，确认升级成功（索引补齐）
-3. **迁移测试**：跑 `MigrationTest`（androidTest）确认 8→9、9→10 迁移通过
-4. **AI 流式**：AI 回复逐字显示 + 停止生成 + 多轮追问记住上文 + token 数显示
-5. **Tab 切换**：论述题/API 配置/设置页离开超 5s 返回不闪 loading
-6. 全量单测 518 个 0 失败（本地已验）+ assembleDebug/Release 通过（本地已验）
+1. **tag 与版本**：✅ v0.9.24 → 9183ecc = HEAD；versionCode 49 / versionName "0.9.24"
+2. **Release 页面**：✅ 文研App v0.9.24 已发布（2026-08-02T17:33:33Z UTC），正文"更新内容"来自 CHANGELOG v0.9.24（动态日志机制持续生效）
+3. **APK 资产**：✅ wenyan-v0.9.24.apk + wenyan-latest.apk 均 200（5,909,874 字节），sha256 完全一致
+4. **APK 版本**：✅ aapt2 校验 versionCode 49 / versionName "0.9.24" / targetSdk 35
+5. **APK 签名**：✅ apksigner v2 scheme 通过，CN=Wenyan App（RSA 2048）
+6. **单测/构建**：✅ 518 单测 0 失败 + assembleDebug + assembleRelease(R8) 全绿（本地已验）
 
-**验证通过后**：提升 versionCode 48→49、versionName "0.9.23"→"0.9.24"，CHANGELOG 已写好，打 tag v0.9.24 发布。
+> ⚠️ **唯一待人工验证**：emulator 安装 release 混淆 APK 冒烟（App 启动 / 列表加载 / AI 流式 / 主题切换）+ 数据库 9→10 覆盖安装升级。
 
 ## 📋 剩余待办（按优先级）
 
