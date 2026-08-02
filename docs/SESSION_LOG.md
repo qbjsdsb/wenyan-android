@@ -6413,3 +6413,28 @@ while (retryCount <= maxRetries) {
   - 停止生成保存部分内容：catch CancellationException 里调用 suspend 需 withContext(NonCancellable)（协程已取消直接 suspend 会再次抛 CancellationException）
   - 沙箱 gh CLI 不可用 → git-credentials 提取 token + curl 直连验证（ghfast.top 不支持 api.github.com，可访问 github.com 网页 + release 下载）
   - Release 页面 title 初始为 "Release v0.9.25"、构建完成后变 "文研App v0.9.25"——workflow 最后一步更新名称/正文
+
+
+## 2026-08-03 凌晨：v0.9.26 严谨发布完成（新图标 v7.4 + 批三，Release #55）
+
+- **完成**：
+  - **新图标 v7.4**（commit `38b9ddf`）：用户反馈 v5 难看要 Google 味 → 多轮打磨定稿「黑底白书」（Play Books 风格手工矢量，白书+文字线，墨黑 #1A1A1A）；纯 VectorDrawable 84KB→9.8KB；cairosvg 渲染各密度 webp 兜底
+  - **批三：性能与整洁**
+    - 详情页懒加载（`ad86909`）：KnowledgePointDetailScreen Column→LazyColumn
+    - RAG VERIFIED 过滤（`ad86909`）：searchByKeyword 加 ocr_status='VERIFIED'
+    - AI 成本控制（`ad86909`）：Retry-After 头 + callTimeout(90s) + Semaphore(3)
+    - i18n 资源化（`ace2e64`）：5 feature 模块 74 处 Text→stringResource（初版脚本括号错误→git 还原重写）
+    - convention plugin（`13631da`）：build-logic + android-library-convention，11 库模块共用配置 -130 行
+    - RAG 停用词剔除回退（`ba0a53f`）：LIKE '%苏轼贡献%' 不匹配原文，剔除有害（多词 OR 留后续）
+  - **验证**：518 单测 0 失败（初跑 1 失败→回退修复）+ assembleDebug + assembleRelease(R8) 全绿
+  - **v0.9.26 发布**（`5d7f3d9` 版本号 51/0.9.26）：tag v0.9.26 → 5d7f3d9 推送，Release #55（21:50 UTC）→ ~14 分钟资产就绪
+  - **发布后验证**：Release 页面"文研App v0.9.26" + 正文 11 关键词来自 CHANGELOG v0.9.26 + APK aapt2 51/0.9.26 + apksigner v2 + 两 APK sha256 一致（8a291432…）
+  - **receipt**：`docs/release-receipts/v0.9.26-release-receipt.md`
+- **进行中**：
+  - 批四（仓库卫生/合规）待做
+  - ⚠️ 唯一待人工验证：emulator 冒烟（新图标 / 详情页滚动 / AI 成本控制 / 主题切换）
+- **关键发现**：
+  - Kotlin 嵌套块注释坑：KDoc 里写 `core/* + feature/*` 触发 `/*` 嵌套未闭合 → 编译 "Unclosed comment"；注释内避免 `/*`
+  - 停用词剔除对中文 LIKE 有害：LIKE '%苏轼贡献%' 不匹配"苏轼的贡献"（中间有"的"）；正确方向是多关键词 OR
+  - i18n 正则替换坑：匹配 `Text("...")` 必须含右括号，否则 `Text("中文", color=...)` 变成 `Text(stringResource(...)), color=...)`；脚本必须匹配完整调用
+  - build-logic 独立 includeBuild，convention 只抽纯配置（compileSdk/minSdk/compileOptions），插件应用保留模块内（顺序差异大）

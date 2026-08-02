@@ -1,13 +1,26 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-08-03（v0.9.25 已发布，Release #54）
+> 最后更新：2026-08-03（v0.9.26 已发布，Release #55）
 
 ## ✅ 当前状态
 
+**v0.9.26 已发布**（2026-08-03，Release #55）：新启动图标 v7.4（Google Play Books 风格）+ 批三（性能与整洁 5 项）。
+
 **v0.9.25 已发布**（2026-08-03，Release #54）：AI 生成全新启动图标 + 整体界面审查修复 14 项。
 
-**v0.9.24 已发布**（2026-08-03，Release #53）：批一（AI 体验 4 项）+ 批二（工程质量 5 项）。
+### v0.9.26 发布内容（tag `5d7f3d9`，versionCode 51 / versionName "0.9.26"）
+- **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.26
+- **receipt**：`docs/release-receipts/v0.9.26-release-receipt.md`
+
+### 新图标 v7.4（commit `38b9ddf`）
+- Google Play Books 风格「黑底白书」：手工矢量白书 + 文字线，墨黑 #1A1A1A
+- 纯 VectorDrawable（84KB → 9.8KB），adaptive icon 三层 + Splash 同步
+
+### 批三（commit `ad86909` / `ace2e64` / `13631da` / `ba0a53f`）
+- 详情页懒加载（Column → LazyColumn）/ RAG VERIFIED 过滤 / AI 成本控制（Retry-After + callTimeout + Semaphore3）
+- i18n 资源化（5 模块 74 处）/ convention plugin 抽取（11 库模块共用配置）
+- RAG 停用词剔除回退（LIKE 匹配语义，多词 OR 留待后续）
 
 ### v0.9.25 发布内容（tag `760be63`，versionCode 50 / versionName "0.9.25"）
 - **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.25
@@ -39,9 +52,9 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **760be63**（v0.9.25 版本号提升，2026-08-03） |
-| 最新 Release | **v0.9.25**（2026-08-03，正式签名 + R8 混淆 + AI 生成图标）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.25 |
-| versionCode / versionName | **50 / "0.9.25"** |
+| 最新 commit | **5d7f3d9**（v0.9.26 版本号提升，2026-08-03） |
+| 最新 Release | **v0.9.26**（2026-08-03，正式签名 + R8 + Play Books 风格图标）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.26 |
+| versionCode / versionName | **51 / "0.9.26"** |
 | 知识点 | **935 个** |
 | 真题 | **485 道** |
 | 论述题 | **134 道**（v0.9.23 起删年份显示，数据层 year 保留） |
@@ -52,34 +65,38 @@
 | AI 服务商 | DeepSeek/通义/智谱/月之暗面/自定义（v0.9.23 修复 URL 拼接） |
 | 更新日志机制 | **CHANGELOG.md** + release.yml 动态读取（v0.9.23 起） |
 | 单测 | **518 个 0 失败**（批一+批二后） |
-| R8 | **已启用并随 v0.9.25 发布**（APK 5.99MB，需 emulator 冒烟实测） |
-| 启动图标 | **AI 生成「书堆+文」**（v0.9.25 起，5 密度 webp） |
+| R8 | **已启用并随 v0.9.26 发布**（APK 5.94MB，需 emulator 冒烟实测） |
+| 启动图标 | **v7.4 Google Play Books 风格「黑底白书」**（v0.9.26 起，纯矢量 9.8KB） |
 | 崩溃上报 | **未接入**（需 Firebase/Sentry 配置） |
 | 阻塞 | **无** |
 
-## ✅ v0.9.25 发布验证记录（2026-08-03，Release #54）
+## ✅ v0.9.26 发布验证记录（2026-08-03，Release #55）
 
-> 发布核心验证已全部通过（详见 `docs/release-receipts/v0.9.25-release-receipt.md`）。
+> 发布核心验证已全部通过（详见 `docs/release-receipts/v0.9.26-release-receipt.md`）。
 
-1. **tag 与版本**：✅ v0.9.25 → 760be63 = HEAD；versionCode 50 / versionName "0.9.25"
-2. **Release 页面**：✅ 文研App v0.9.25 已发布（2026-08-02T19:16:21Z UTC），正文"更新内容"来自 CHANGELOG v0.9.25（动态日志机制持续生效）
-3. **APK 资产**：✅ wenyan-v0.9.25.apk + wenyan-latest.apk 均 200（5,997,361 字节），sha256 完全一致（1be5bdae…）
-4. **APK 版本**：✅ aapt2 校验 versionCode 50 / versionName "0.9.25" / targetSdk 35
+1. **tag 与版本**：✅ v0.9.26 → 5d7f3d9 = HEAD；versionCode 51 / versionName "0.9.26"
+2. **Release 页面**：✅ 文研App v0.9.26 已发布（2026-08-02T21:50:04Z UTC），正文"更新内容"来自 CHANGELOG v0.9.26（动态日志机制持续生效）
+3. **APK 资产**：✅ wenyan-v0.9.26.apk + wenyan-latest.apk 均 200（5,937,261 字节），sha256 完全一致（8a291432…）
+4. **APK 版本**：✅ aapt2 校验 versionCode 51 / versionName "0.9.26" / targetSdk 35
 5. **APK 签名**：✅ apksigner v2 scheme 通过
 6. **单测/构建**：✅ 518 单测 0 失败 + assembleDebug + assembleRelease(R8) 全绿（本地已验）
 
-> ⚠️ **唯一待人工验证**：emulator 安装 release 混淆 APK 冒烟（App 启动 / 新图标桌面效果 / AI 流式+停止 / 状态栏图标色 / 主题切换）。
+> ⚠️ **唯一待人工验证**：emulator 安装 release 混淆 APK 冒烟（App 启动 / 新图标桌面效果 / 详情页滚动 / AI 流式+成本控制 / 主题切换）。
 
 ## 📋 剩余待办（按优先级）
 
-### 批三：性能与整洁
-- 详情页懒加载（KnowledgePointDetailScreen 5 处 forEach → LazyColumn）
-- convention plugin 抽取（11 模块 ~200 行重复）
+### 批四：仓库卫生与合规
+- release-assets 4 个旧 APK（77MB）git rm --cached
+- AGENTS.md/docs 过期更新（00-STATUS 已更新，AGENTS.md 混入 OCR 项目约束待清）
+- 隐私政策/用户协议（商业化前置）
+- 上架资质（软著/备案）
+
+### 批三余项（低优先）
+- 详情页懒加载已做；convention plugin 已做（仅 app 模块未抽）
 - 导航类型安全/深链
-- i18n 资源化
-- 依赖健康（material3 alpha 关注、retrofit 升级、CI 漏洞扫描）
-- RAG 检索质量（关键词提取增强 + 过滤 VERIFIED）
-- AI 成本控制（429 Retry-After、并发熔断）
+- i18n 全量（contentDescription/错误提示/模板串暂留硬编码）
+- RAG 多关键词 OR（LIKE 语义改进，需 DAO 改造）
+- 依赖健康（material3 alpha/retrofit 升级会破坏，保持锁定）
 
 ### 批四：仓库卫生与合规
 - release-assets 4 个旧 APK（77MB）git rm --cached
