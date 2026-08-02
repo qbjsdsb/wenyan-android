@@ -71,6 +71,8 @@ class StudyProgressRepository @Inject constructor(
      */
     suspend fun recordStudySession(pointId: String) {
         val now = System.currentTimeMillis()
+        // 注：读-算-写未包事务（v0.9.24 评估后保留）——并发丢失风险低（单用户本地，
+        // streak 计算本身为近似），且 Repository 注入 DAO 便于纯 JVM 单测。
         val current = studyProgressDao.getById(DEFAULT_ID)
         val currentStreak = current?.streakDays ?: 0
         val newStreak = calculateStreak(current?.lastCheckIn, now, currentStreak)
@@ -92,6 +94,7 @@ class StudyProgressRepository @Inject constructor(
      */
     suspend fun addStudyTime(additionalSeconds: Int) {
         if (additionalSeconds <= 0) return
+        // 注：读-算-写未包事务（同 recordStudySession 说明）
         val current = studyProgressDao.getById(DEFAULT_ID)
         val updated = (current ?: StudyProgressEntity(
             id = DEFAULT_ID,

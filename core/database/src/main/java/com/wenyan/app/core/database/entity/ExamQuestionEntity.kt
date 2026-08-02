@@ -32,6 +32,10 @@ import androidx.room.PrimaryKey
         Index("subject_id"),
         Index("year"),
         Index("exam_paper_code"),
+        // v0.9.24 新增：question_type（observeByQuestionType/observeAllEssays 筛选）、
+        // answer_status（observeByAnswerStatus 筛选）——数据量增长后避免全表扫描
+        Index("question_type"),
+        Index("answer_status"),
     ],
 )
 data class ExamQuestionEntity(

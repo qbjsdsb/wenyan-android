@@ -110,7 +110,8 @@ class ApiConfigViewModel @Inject constructor(
         }
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            // v0.9.24 修复：WhileSubscribed(5000) → Eagerly（Tab 返回不闪 loading）
+            started = SharingStarted.Eagerly,
             initialValue = ApiConfigUiState(isLoading = true),
         )
 

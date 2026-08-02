@@ -166,7 +166,12 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // v0.9.24：启用 R8 混淆 + 压缩。
+            // 此前 isMinifyEnabled=false，release APK 未压缩未混淆（可被反编译）。
+            // proguard-rules.pro（app）+ 各模块 consumer-rules.pro 已预置
+            // Hilt/Compose/serialization/Retrofit/OkHttp/Room 规则。
+            // ⚠️ 需 emulator 实测无崩溃后发布（重点：Room/Hilt/序列化/网络）。
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -203,6 +208,12 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    // v0.9.24：MigrationTestHelper 需要 schema JSON 在 androidTest assets 中可访问。
+    // 指向 core:database 的 room.schemaDirectory（含 2/4/5/6/7/8/9/10.json）。
+    sourceSets {
+        getByName("androidTest").assets.srcDir("$rootDir/core/database/schemas")
     }
 
     buildFeatures {
@@ -280,4 +291,6 @@ dependencies {
     androidTestImplementation(libs.androidx.test.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    // v0.9.24：Room 迁移测试（MigrationTestHelper）
+    androidTestImplementation(libs.androidx.room.testing)
 }

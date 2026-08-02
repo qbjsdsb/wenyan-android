@@ -4,8 +4,10 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.room.withTransaction
 import com.wenyan.app.core.ai.RagReference
 import com.wenyan.app.core.data.mapper.ChatMessageMapper
+import com.wenyan.app.core.database.WenyanDatabase
 import com.wenyan.app.core.database.dao.ChatConversationDao
 import com.wenyan.app.core.database.dao.ChatMessageDao
 import com.wenyan.app.core.database.entity.ChatConversationEntity
@@ -30,6 +32,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ChatRepositoryImpl @Inject constructor(
+    private val database: WenyanDatabase,
     private val conversationDao: ChatConversationDao,
     private val messageDao: ChatMessageDao,
     private val preferencesDataStore: DataStore<Preferences>,
@@ -87,23 +90,27 @@ class ChatRepositoryImpl @Inject constructor(
         val now = System.currentTimeMillis()
         val referencesJson = ChatMessageMapper.serializeReferences(references)
 
-        messageDao.insert(
-            ChatMessageEntity(
-                id = id,
-                conversationId = conversationId,
-                role = role,
-                content = content,
-                contentSource = contentSource,
-                stage = stage,
-                referencesJson = referencesJson,
-                contextScreen = contextScreen,
-                contextTitle = contextTitle,
-                tokensUsed = tokensUsed,
-                createdAt = now,
-            ),
-        )
-        // 更新对话计数与时间戳(touch 内部 message_count + 1, updated_at = now)
-        conversationDao.touch(conversationId, now)
+        // v0.9.24：insert + touch 合并为单个事务。
+        // 原实现两个独立事务，touch 失败/进程中断会导致 message_count 与实际消息数不一致。
+        database.withTransaction {
+            messageDao.insert(
+                ChatMessageEntity(
+                    id = id,
+                    conversationId = conversationId,
+                    role = role,
+                    content = content,
+                    contentSource = contentSource,
+                    stage = stage,
+                    referencesJson = referencesJson,
+                    contextScreen = contextScreen,
+                    contextTitle = contextTitle,
+                    tokensUsed = tokensUsed,
+                    createdAt = now,
+                ),
+            )
+            // 更新对话计数与时间戳(touch 内部 message_count + 1, updated_at = now)
+            conversationDao.touch(conversationId, now)
+        }
         return id
     }
 

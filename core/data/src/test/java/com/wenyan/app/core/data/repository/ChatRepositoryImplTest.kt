@@ -60,6 +60,7 @@ class ChatRepositoryImplTest {
         )
 
         repository = ChatRepositoryImpl(
+            database = db,
             conversationDao = db.chatConversationDao(),
             messageDao = db.chatMessageDao(),
             preferencesDataStore = dataStore,

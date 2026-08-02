@@ -38,6 +38,8 @@ import androidx.room.PrimaryKey
         Index("chapter_id"),
         Index("exam_frequency"),
         Index("ocr_status"),
+        // v0.9.24 新增：content_source（observeByContentSource 筛选）——数据量增长后避免全表扫描
+        Index("content_source"),
     ],
 )
 data class KnowledgePointEntity(

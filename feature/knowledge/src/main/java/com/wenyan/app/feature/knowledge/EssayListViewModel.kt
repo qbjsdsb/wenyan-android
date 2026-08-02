@@ -114,7 +114,11 @@ class EssayListViewModel @Inject constructor(
             }
             .stateIn(
                 scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
+                // v0.9.24 修复：WhileSubscribed(5000) → Eagerly。
+                // 原实现离开 Tab 超 5s 后内层流停止收集，返回时重新订阅导致先闪 loading。
+                // 数据源是 Room Flow（observeAllEssays/observeSubjects），Eagerly 长期收集
+                // 开销小（Room observer 复用），换取 Tab 切换不中断。
+                started = SharingStarted.Eagerly,
                 initialValue = EssayListUiState(isLoading = true),
             )
 
