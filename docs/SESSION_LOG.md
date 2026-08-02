@@ -6265,3 +6265,29 @@ while (retryCount <= maxRetries) {
 - **commit**：
   - `0adf20b` — docs: 记录沙箱推送通道配置（ghfast.top 镜像 + PAT 认证，不入仓库）
 
+
+
+
+## 2026-08-02 下午：底栏空白修复 + v0.9.21 发布
+
+- **完成**：
+  - **底栏/顶栏空白修复**（用户反馈底栏按钮上面大面积空白，不协调）：
+    - 反编译 material3 1.5.0-alpha18 NavigationBar 源码（自定义 NavigationBarItemLayout + placeLabelAndIcon 居中算法）+ Robolectric 探针实测（icon 上 6dp / label 下 6dp 居中）→ 确认空白不在底栏内部，而在容器层。
+    - 底部空白根因：内容区 bottomPadding = 80dp + 手势条，但底栏本体 80dp 未吃手势条 inset → 底栏上方多出 24-48dp 空白。
+    - 顶部空白根因：WenyanAdaptiveNavigation 外层 top padding + ExpressiveScaffold 内层 statusBars inset 双重消费 → 双倍状态栏空白。
+    - 修复（commit `fd772a8`）：WenyanNavigationBar 移除 .height(80.dp) 改 windowInsets=NavigationBarDefaults.windowInsets（底栏吃手势条）；WenyanAdaptiveNavigation 移除顶层 top padding、bottomHideDistance = 80dp+手势条。
+  - **v0.9.20 发布踩坑**：tag v0.9.20 先推（指向 834be6d）→ Release #48 用旧代码发布成功（07:39）→ force-update tag 到 fd772a8 触发新 run #49，但 softprops/action-gh-release 默认对已存在 tag 的 release **跳过创建**（无 update_release）→ 已发布的 v0.9.20 APK 是旧代码，修复进不去。
+  - **v0.9.21 发布决策**（用户确认）：空白修复作为 v0.9.21 发布。versionCode 45→46，versionName 0.9.20→0.9.21；settings BuildConfig.VERSION_NAME 0.9.15→0.9.21（顺带修复漏同步）；release.yml 加 `update_release: true`（防同 tag 重建不覆盖）。commit `68beaf7` + tag v0.9.21 已推送，Release run #50 构建中。
+  - **探针测试**：临时 NavBarLayoutProbeTest（Robolectric 渲染 NavigationBar 测 bounds）定位布局，验证后已删除，不留测试代码。
+- **进行中**：
+  - Release #50（v0.9.21）构建中，预计 10-15 分钟；完成后生成含空白修复的 APK
+- **阻塞**：
+  - 沙箱无法调用 GitHub API 写操作（ghfast.top 拒绝代理 api.github.com 返回 403，GitHub MCP 工具未暴露）→ 无法远程更新已发布 release/assets，只能通过新 tag 触发新 release
+- **关键发现**：
+  - material3 1.5.0-alpha18 NavigationBar 用自定义 NavigationBarItemLayout + NavigationBarVerticalItemTokens（icon 24dp / 指示器 56x32dp / ContainerHeight 64dp / TallContainerHeight 80dp），与稳定版布局不同；内容默认居中
+  - softprops/action-gh-release 对已存在 tag 默认 skip（不覆盖）；要支持同 tag 重建需 `update_release: true`
+  - app/build.gradle.kts 是 CRLF（或 mixed），Edit 工具编辑会转 LF 导致全文件 diff（v0.9.21 提交 331 行改动的 165 行是行尾变化，真实改动仅 versionCode/versionName 几行）；后续需二进制方式编辑
+- **commit**：
+  - `834be6d` — refactor(designsystem): 底栏回归规范 MD3 风格（surfaceContainer 实色 + 80dp + secondaryContainer 指示器）
+  - `fd772a8` — fix(designsystem): 修复底栏/顶栏 inset 双重消费导致的布局空白
+  - `68beaf7` — chore: v0.9.21 版本号提升 + release.yml 支持同 tag 重建覆盖
