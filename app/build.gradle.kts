@@ -229,7 +229,9 @@ dependencies {
 
     // AndroidX 基础
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
+    // v0.9.22 清理：移除 androidx-appcompat（死依赖）。
+    // MainActivity 用 ComponentActivity（androidx.activity），主题用 material 的 Theme.Material3，
+    // 全仓库无 androidx.appcompat 引用；material 传递依赖已覆盖所需。
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.material)

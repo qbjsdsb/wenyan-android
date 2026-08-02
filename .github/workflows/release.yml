@@ -82,6 +82,32 @@ jobs:
       - name: Run unit tests
         run: gradle testDebugUnitTest --no-daemon --stacktrace
 
+      # v0.9.22 新增：tag 与 app versionName 一致性校验（发布防呆）。
+      # 防止推 v1.0.0 却发布 versionName 0.9.21 的"错版 APK"（v0.9.20 踩坑延伸）。
+      # 校验在构建前执行，不一致立即 fail，避免浪费构建资源。
+      - name: Verify tag matches versionName
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/}"
+          echo "Tag: $TAG_VERSION"
+          # 防御：release.yml 触发条件是 tags:'v*'，但再校验一次 tag 格式
+          case "$TAG_VERSION" in
+            v*) ;;
+            *) echo "✗ ERROR: tag 必须以 v 开头（如 v0.9.21）"; exit 1 ;;
+          esac
+          TAG_VERSION="${TAG_VERSION#v}"
+          APP_VERSION="$(grep -oP '^\s*versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -1)"
+          echo "App versionName: $APP_VERSION"
+          if [ -z "$APP_VERSION" ]; then
+            echo "✗ ERROR: 无法从 app/build.gradle.kts 解析 versionName"
+            exit 1
+          fi
+          if [ "$TAG_VERSION" != "$APP_VERSION" ]; then
+            echo "✗ ERROR: tag v$TAG_VERSION 与 app versionName \"$APP_VERSION\" 不一致"
+            echo "  请先在 app/build.gradle.kts 提升 versionName 再打 tag"
+            exit 1
+          fi
+          echo "✓ tag v$TAG_VERSION 与 versionName 一致"
+
       - name: Build signed release APK
         env:
           KEYSTORE_PATH: ${{ runner.temp }}/wenyan-release.jks
@@ -120,11 +146,13 @@ jobs:
 
             ### 功能特性
 
-            - 知识点浏览（多教材对照 + 来源溯源）
+            - 知识点浏览（多教材对照 + 来源溯源 + 考频标识）
+            - 论述题板块（134 题三维筛选 + 苏格拉底式 AI 审题助手）
             - 真题练习（科目代码历史适配 + 答题框架/范文）
             - 记忆卡片（FSRS-6 算法 + 三层记忆调度）
-            - 知识图谱（R值可视化 + 薄弱节点高亮）
-            - AI助手（苏格拉底式引导 + RAG + 多服务商配置）
+            - 错题本（手动加入 + FSRS 间隔重复复习）
+            - AI助手（多服务商配置 + RAG 知识增强）
+            - 软件内更新（自动检测 + 下载安装）
             - 导师信息（外链南师大文学院官网）
 
             ### 系统要求

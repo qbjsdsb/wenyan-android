@@ -16,12 +16,11 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
 
-        // P1-M2：library 模块的 BuildConfig 不含 VERSION_NAME（那是 application 模块属性）。
-        // 显式注入 buildConfigField 供 SettingsScreen 显示版本号。
-        // 注意：发版时需与 app/build.gradle.kts 的 versionName 保持同步。
-        // v0.9.15：同步至 0.9.15（检查更新 Fix：使用 context.packageManager 获取真实版本号）
-        // v0.9.21：同步至 0.9.21（MD3 底栏回归 + inset 修复）
-        buildConfigField("String", "VERSION_NAME", "\"0.9.21\"")
+        // v0.9.22 清理：删除 VERSION_NAME buildConfigField（死代码）。
+        // SettingsScreen/UpdateCheckScreen 已用 context.packageManager.getPackageInfo()
+        // 读取真实 versionName（SettingsScreen.kt:95 / UpdateCheckScreen.kt:83），
+        // 全仓库无 BuildConfig.VERSION_NAME 引用。此前注释要求与 app 版号同步，
+        // 是过时的手动同步点（v0.9.21 曾因漏同步踩坑）。
     }
 
     compileOptions {
@@ -31,7 +30,7 @@ android {
 
     buildFeatures {
         compose = true
-        // P1-M2：SettingsScreen 版本号读取 BuildConfig.VERSION_NAME，需显式启用 buildConfig
+        // UpdateCheckScreen.kt:161 使用 BuildConfig.DEBUG（区分 Debug/Release 构建），需保留 buildConfig
         buildConfig = true
     }
 

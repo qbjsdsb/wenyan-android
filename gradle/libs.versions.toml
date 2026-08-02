@@ -20,7 +20,6 @@ navigationCompose = "2.7.7"
 # AndroidX 基础
 coreKtx = "1.13.1"
 lifecycle = "2.8.4"
-appcompat = "1.7.0"
 material = "1.12.0"
 # Splash Screen API（Android 12+ 系统支持 + 向后兼容）
 coreSplashscreen = "1.0.1"
@@ -96,7 +95,6 @@ androidx-compose-runtime = { group = "androidx.compose.runtime", name = "runtime
 
 # AndroidX 基础
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
-androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }
@@ -150,16 +148,10 @@ robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "
 turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
 
-# 项目模块（用于模块间依赖）
-wenyan-core-common = { group = "com.wenyan.app", name = "core-common" }
-wenyan-core-database = { group = "com.wenyan.app", name = "core-database" }
-wenyan-core-data = { group = "com.wenyan.app", name = "core-data" }
-wenyan-core-designsystem = { group = "com.wenyan.app", name = "core-designsystem" }
-wenyan-core-fsrs = { group = "com.wenyan.app", name = "core-fsrs" }
-wenyan-core-ai = { group = "com.wenyan.app", name = "core-ai" }
 # NF-B8 修复：移除 5 个 wenyan-feature-* 死声明。
 # 各模块用 project(":feature:xxx") 引用，从未用 libs.wenyan.feature.xxx 别名。
 # 死声明误导维护者以为有版本管理，实际从未被引用。
+# v0.9.22 补充：同步移除 6 个 wenyan-core-* 死声明（core 模块同样用 project() 引用）。
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 8,
-    "identityHash": "65e780fbb02e81dad05bf221f31e2a6f",
+    "identityHash": "763dbd056f2b0e85d7b7332c30ede735",
     "entities": [
       {
         "tableName": "subjects",
@@ -1804,6 +1804,26 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_wrong_answers_sched_next_review_at` ON `${TABLE_NAME}` (`sched_next_review_at`)"
+          },
+          {
+            "name": "index_wrong_answers_point_id_source",
+            "unique": false,
+            "columnNames": [
+              "point_id",
+              "source"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_wrong_answers_point_id_source` ON `${TABLE_NAME}` (`point_id`, `source`)"
+          },
+          {
+            "name": "index_wrong_answers_exam_question_id_source",
+            "unique": false,
+            "columnNames": [
+              "exam_question_id",
+              "source"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_wrong_answers_exam_question_id_source` ON `${TABLE_NAME}` (`exam_question_id`, `source`)"
           }
         ],
         "foreignKeys": [
@@ -1834,7 +1854,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '65e780fbb02e81dad05bf221f31e2a6f')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '763dbd056f2b0e85d7b7332c30ede735')"
     ]
   }
 }
