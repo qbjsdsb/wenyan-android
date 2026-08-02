@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
@@ -28,8 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -65,18 +61,19 @@ fun WenyanAdaptiveNavigation(
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
     when (windowSizeClass.windowWidthSizeClass) {
         WindowWidthSizeClass.COMPACT -> {
-            // 手机：沉浸式底部导航栏（v0.9.13 沉浸式改造，v0.9.14 修复底栏遮盖）
+            // 手机：Material 3 标准底部导航栏（v0.9.20 MD3 回归）
             //
             // 布局结构（Box 叠加）：
             //   1. 内容区：surfaceContainer 背景，底部显式 padding 避开导航栏
-            //   2. BottomGradientScrim：40dp 渐变遮罩，实现内容到导航栏的平滑过渡
-            //   3. 导航栏：全宽流体玻璃风格，贴底
+            //   2. 导航栏：全宽 80dp，surfaceContainer 底色，secondaryContainer 指示器，贴底
             //
-            // v0.9.20 流体玻璃改造：
-            //   - 导航栏全宽，仅顶部圆角，底部贴底
-            //   - 高度 72dp（5 项 Tab 舒适间距）
-            //   - 恢复 BottomGradientScrim（40dp），内容到导航栏平滑过渡
-            //   - 底部 padding = 72dp + 系统导航栏手势区
+            // v0.9.20 MD3 回归：
+            //   - 导航栏全宽，直角（无圆角），底部贴底
+            //   - 高度 80dp（MD3 NavigationBar 标准高度）
+            //   - containerColor = surfaceContainer，tonalElevation = 3dp
+            //   - 选中指示器 = secondaryContainer，选中色 = onSecondaryContainer
+            //   - 移除流体玻璃效果和 BottomGradientScrim（MD3 不透明底栏无需过渡）
+            //   - 底部 padding = 80dp + 系统导航栏手势区
             //
             // 关键修复：不再依赖 ExpressiveScaffold 的 contentWindowInsets 消费策略，
             // 直接用 Modifier.padding 为内容添加底部间距，确保可点击区域不被导航栏遮挡。
@@ -90,17 +87,16 @@ fun WenyanAdaptiveNavigation(
                 }
 
                 if (showNavigation) {
-                    // 有导航栏：沉浸式布局 + KSU 风格滚动感知显隐
+                    // 有导航栏：MD3 标准布局 + KSU 风格滚动感知显隐
                     //
                     // 布局结构（Box 叠加）：
                     //   1. 内容区：surfaceContainer 背景，底部显式 padding 避开导航栏
-                    //   2. 底部容器（scroll-aware 动画组）：渐变遮罩 + 导航栏
+                    //   2. 底部容器（scroll-aware 动画组）：导航栏
                     //      - 下滑内容 → 整体向下移出屏幕（spring 动画）
                     //      - 上滑内容 → 整体回到原位（spring 动画）
                     //
-                    // 底部间距 = 导航栏高度(72dp) + 系统导航栏手势区
-                    // v0.9.20 流体玻璃：导航栏全宽贴底，高度 72dp，无需底部留边
-                    val bottomPadding = 72.dp + systemNavBarBottomDp
+                    // 底部间距 = MD3 导航栏标准高度(80dp) + 系统导航栏手势区
+                    val bottomPadding = 80.dp + systemNavBarBottomDp
 
                     // KSU 风格滚动感知显隐：监听 LocalLazyListState 的滚动方向
                     val scrollState = LocalLazyListState.current
@@ -116,17 +112,16 @@ fun WenyanAdaptiveNavigation(
                                 scrollState.firstVisibleItemIndex to
                                     scrollState.firstVisibleItemScrollOffset
                             }.collect { (index, offset) ->
-                                // 下滑：index 增大，或同一 index 但 offset 增大（+10px 阈值防抖）
-                                val scrollingDown = index > previousIndex ||
-                                    (index == previousIndex && offset > previousOffset + 10)
-                                // 上滑：index 减小，或同一 index 但 offset 减小（-10px 阈值防抖）
-                                val scrollingUp = index < previousIndex ||
-                                    (index == previousIndex && offset < previousOffset - 10)
-
-                                if (scrollingDown) {
-                                    barVisible = false
-                                } else if (scrollingUp) {
-                                    barVisible = true
+                                val direction = detectScrollDirection(
+                                    index = index,
+                                    offset = offset,
+                                    previousIndex = previousIndex,
+                                    previousOffset = previousOffset,
+                                )
+                                when (direction) {
+                                    ScrollDirection.DOWN -> barVisible = false
+                                    ScrollDirection.UP -> barVisible = true
+                                    ScrollDirection.IDLE -> { /* no change */ }
                                 }
 
                                 previousIndex = index
@@ -135,9 +130,8 @@ fun WenyanAdaptiveNavigation(
                         }
                     }
 
-                    // 底部容器的总隐藏距离 = 导航栏高度(72dp)
-                    // 渐变遮罩(40dp)跟随导航栏一起移动
-                    val bottomHideDistance = 72.dp
+                    // 底部容器的总隐藏距离 = MD3 导航栏标准高度(80dp)
+                    val bottomHideDistance = 80.dp
                     val bottomOffset by animateDpAsState(
                         targetValue = if (barVisible) 0.dp else bottomHideDistance,
                         animationSpec = spring(
@@ -157,18 +151,14 @@ fun WenyanAdaptiveNavigation(
                         content(PaddingValues(0.dp))
                     }
 
-                    // 2. 底部容器（scroll-aware 动画组）：渐变遮罩 + 导航栏
-                    // 两者整体移动，下滑时一起移出屏幕，上滑时一起回到原位
+                    // 2. 底部容器（scroll-aware 动画组）：导航栏
+                    // 下滑时一起移出屏幕，上滑时一起回到原位
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .offset { IntOffset(0, bottomOffset.roundToPx()) },
                     ) {
-                        // 2a. 渐变遮罩：内容到底栏的平滑过渡
-                        // v0.9.20 恢复 BottomGradientScrim（40dp），导航栏半透明时需要过渡
-                        BottomGradientScrim()
-
-                        // 2b. 底部导航栏（全宽流体玻璃，贴底）
+                        // 底部导航栏（MD3 标准，全宽贴底）
                         WenyanNavigationBar(
                             items = items,
                             currentRoute = currentRoute,
@@ -250,30 +240,52 @@ private fun AdaptiveRailScaffold(
 }
 
 /**
- * 底部渐变遮罩。
+ * 滚动方向枚举。
  *
- * 在内容区与半透明导航栏之间提供平滑过渡，避免内容直接截断在导航栏顶部。
- * v0.9.20：40dp 高度，与 72dp 导航栏配合，过渡区域约为导航栏高度的一半。
- *
- * 颜色从 transparent 渐变到 surfaceContainer（与内容区背景一致），
- * 视觉上"内容逐渐沉入底部"的效果。
+ * 用于 [detectScrollDirection] 的返回值，表示本次滚动帧的方向。
  */
-@Composable
-private fun BottomGradientScrim() {
-    val surfaceContainer = MaterialTheme.colorScheme.surfaceContainer
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(40.dp)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        surfaceContainer.copy(alpha = 0.50f),
-                        surfaceContainer.copy(alpha = 0.85f),
-                        surfaceContainer,
-                    ),
-                ),
-            ),
-    )
+enum class ScrollDirection {
+    /** 向下滚动（内容向屏幕上方移动） */
+    DOWN,
+    /** 向上滚动（内容向屏幕下方移动） */
+    UP,
+    /** 无明显方向变化（偏移量在防抖阈值内） */
+    IDLE,
+}
+
+/**
+ * 检测滚动方向（纯函数，可独立测试）。
+ *
+ * 通过比较当前帧与上一帧的 [LazyListState] 快照来判断滚动方向。
+ *
+ * 判定逻辑：
+ * - [ScrollDirection.DOWN]：firstVisibleItemIndex 增大，或同一 index 但 offset 增量 > [threshold]
+ * - [ScrollDirection.UP]：firstVisibleItemIndex 减小，或同一 index 但 offset 减量 > [threshold]
+ * - [ScrollDirection.IDLE]：未满足上述条件（变化在防抖阈值内，或到达列表边界）
+ *
+ * @param index 当前帧的 firstVisibleItemIndex
+ * @param offset 当前帧的 firstVisibleItemScrollOffset
+ * @param previousIndex 上一帧的 firstVisibleItemIndex
+ * @param previousOffset 上一帧的 firstVisibleItemScrollOffset
+ * @param threshold 防抖阈值（像素），默认 10px。偏移变化小于此值时判定为 IDLE。
+ * @return 滚动方向
+ */
+fun detectScrollDirection(
+    index: Int,
+    offset: Int,
+    previousIndex: Int,
+    previousOffset: Int,
+    threshold: Int = 10,
+): ScrollDirection {
+    // index 优先：跨 item 的滚动方向由 index 决定
+    if (index > previousIndex) return ScrollDirection.DOWN
+    if (index < previousIndex) return ScrollDirection.UP
+
+    // 同一 index 内：由 offset 变化量决定，带防抖阈值
+    val delta = offset - previousOffset
+    return when {
+        delta > threshold -> ScrollDirection.DOWN
+        delta < -threshold -> ScrollDirection.UP
+        else -> ScrollDirection.IDLE
+    }
 }

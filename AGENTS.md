@@ -151,6 +151,30 @@ git tag vX.Y.Z && git push origin vX.Y.Z   # 打 tag 触发 Release
 
 **安全**：PAT 只存沙箱本地（~/.git-credentials 权限 600），绝不写入仓库。
 
+### 沙箱构建环境（2026-08-02 新增，CodeBuddy 环境）
+
+**背景**：沙箱无法直连任何 Google 官方源（services.gradle.org / dl.google.com / repo1 / maven.google.com，TLS 全部被中间设备掐断）。构建必须全链路走国内镜像。已配置完成，新会话直接用：
+
+```bash
+# JDK 17（项目 compileOptions 17，环境 JDK 20 会导致 JVM target 不一致）
+export JAVA_HOME=/opt/jdk17          # Temurin 17.0.20（清华 TUNA Adoptium 镜像安装）
+export PATH=/opt/jdk17/bin:$PATH
+
+# 构建（镜像已由 ~/.gradle/init.gradle 全局配置）
+./gradlew :app:assembleDebug
+./gradlew :core:designsystem:testDebugUnitTest
+```
+
+**关键配置（沙箱本地，不入仓库）**：
+- `~/.gradle/init.gradle`：`pluginManagement` + `dependencyResolutionManagement` 全部 `clear()` 后替换为腾讯 maven-public（聚合 google+central）→ Aliyun。**不要保留官方仓库**，回退直连会挂起（fake-ip 连接 Recv-Q=0 无数据）
+- `~/.gradle/gradle.properties`：`org.gradle.internal.http.connectionTimeout/socketTimeout=30000` 防挂起
+- Android SDK：`/opt/android-sdk`（local.properties 指向它）。注意 zip 内部带 `android-14/`/`android-35/` 前缀目录，解压时要上移一层；组件必须有 `source.properties` 否则 AGP 判定无效
+- Gradle 发行版：腾讯 `mirrors.cloud.tencent.com/gradle/gradle-8.14.4-bin.zip`
+- Robolectric android-all jar：预下载到 `~/.m2/repository/org/robolectric/android-all-instrumented/<ver>/`（腾讯 maven-public 有），否则测试时 MavenArtifactFetcher 联网下载被 TLS 拦截
+
+**已验证**（2026-08-02）：`:core:designsystem:assembleDebug` + `testDebugUnitTest` **42 tests / 0 failures** 全绿。
+
+
 ## 6. AI 协作规则
 
 - **每次会话结束前**更新 [docs/SESSION_LOG.md](docs/SESSION_LOG.md) 并 commit

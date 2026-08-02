@@ -6228,3 +6228,40 @@ while (retryCount <= maxRetries) {
 1. **P0**：emulator 实测 v0.9.19 — 验证玻璃导航栏 8 项效果 + 种子加载正常
 2. **P0**：emulator 实测启动图标 v4 — 验证书+文负空间图标显示
 3. **P0**：emulator 实测 v2.16.0 — 验证 935 知识点正确导入
+
+---
+
+## 2026-08-02 会话：沙箱推送通道打通 + 构建环境搭建
+
+- **完成**：
+  - **打通沙箱 → GitHub 推送通道**：沙箱无法直连 github.com（TLS 被中间设备掐断）、api.github.com / SSH 亦不可达。经排查确认 **ghfast.top 镜像可透传 git 协议（含 git-receive-pack 写操作）**，配合 GitHub PAT 完成 clone / push / 打 tag 全链路验证。
+  - **AGENTS.md 新增「沙箱推送通道」章节**（commit `0adf20b`，已 push）：记录镜像通道用法、PAT 认证机制（存于沙箱 ~/.git-credentials + GITHUB_PAT 环境变量，90 天有效期至 2026-10-31）、安全约束（PAT 不入仓库）。中途发现编辑工具 CRLF→LF 转换导致 diff 混乱（143+/120-），已修复为 18 行最小改动并 force-push 清理。
+  - **沙箱构建环境搭建**（腾讯/阿里云镜像）：Gradle 8.14.4（/opt/gradle-8.14.4，腾讯镜像）+ Android SDK（platform-tools r37 / platforms android-35 / build-tools 34.0.0+35.0.0，腾讯 AndroidSDK 镜像）+ ~/.gradle/init.gradle 重写（原文件有语法错误：url 缺引号 + mavelCentral 拼写错误，已修复为 pluginManagement 镜像配置）。
+  - **v0.9.20 测试缺口识别**：滚动感知判定逻辑（WenyanAdaptiveNavigation.kt snapshotFlow 方向判定）无单测覆盖，已起草 `detectScrollDirection` 纯函数提取 + 14 个测试用例（/tmp/ScrollDirectionDetectorTest.kt 草稿，待构建验证后应用）。
+  - **底栏 MD3 规范改造**（用户要求：不要毛玻璃，要规范 MD3 风格；保留滚动感知显隐 + 80dp 标准高度）：
+    - `WenyanNavigationBar.kt`：移除流体玻璃（渐变遮罩/半透明层/圆角），改为 MD3 标准 —— `containerColor = surfaceContainer` 实色、`height = 80.dp`、直角全宽、`tonalElevation = 3.dp`；选中指示器 `secondaryContainer` / 选中色 `onSecondaryContainer` / 未选中 `onSurfaceVariant`（对齐 docs/design/m3-expressive-redesign.md §5.1）。
+    - `WenyanAdaptiveNavigation.kt`：删除 `BottomGradientScrim` 渐变遮罩（MD3 不透明底栏无需过渡），内容底部 padding 72dp→80dp，隐藏距离同步 72dp→80dp，清理 4 个无用 import。
+    - 提取 `detectScrollDirection()` 纯函数 + `ScrollDirection` 枚举，新增 `ScrollDirectionDetectorTest`（16 用例全绿）。
+  - **沙箱构建全链路打通 + 验证全绿**：
+    - 修复 Gradle 依赖下载卡死：init.gradle 只配了 pluginManagement，依赖仓库回退 google()/mavenCentral() 直连被 fake-ip 卡死（Recv-Q=0 无数据）→ 重写 init.gradle，`dependencyResolutionManagement` 清空并全部替换为腾讯 maven-public / Aliyun 镜像；加 `org.gradle.internal.http.*Timeout=30000` 防挂起。
+    - 修复 Android SDK 布局错误：`/tmp/sdk-setup.sh` 解压时未去掉 zip 内层前缀目录，导致 build-tools/34.0.0/android-14/（缺 source.properties、aapt2 层级错误）→ 从腾讯 AndroidSDK 镜像重新下载 build-tools_r34-linux.zip + platform-35_r02.zip，正确解压到 build-tools/34.0.0/ 与 platforms/android-35/，补齐 source.properties。
+    - 修复 JVM target 不一致：环境 JDK 20 vs 项目 compileOptions 17（`compileDebugJavaWithJavac`(17) vs `compileDebugKotlin`(20)）→ 从清华 TUNA Adoptium 镜像安装 JDK 17.0.20（Temurin，/opt/jdk17），以 `JAVA_HOME=/opt/jdk17` 构建。
+    - 修复 Robolectric 联网下载失败：`MavenArtifactFetcher` 尝试下载 `org.robolectric:android-all-instrumented:14-robolectric-10818077-i6`（约 144MB）被 TLS 拦截 → 手动预下载 jar+pom 到 `~/.m2/repository/org/robolectric/`（腾讯 maven-public 有该 artifact），Robolectric 直接本地读取。
+    - **验证结果**：`:core:designsystem:assembleDebug` ✅ + `:core:designsystem:testDebugUnitTest` ✅（42 tests / 0 failures，含 ScrollDirectionDetectorTest 16 用例、Robolectric 14 用例）。
+- **进行中**：
+  - v0.9.20 发布收尾：更新文档 → commit → push（ghfast.top）→ 打 tag v0.9.20
+- **阻塞**：
+  - 无（推送通道 + 构建环境 + 测试均已打通）
+- **下次继续**：
+  - v0.9.20 发布（versionCode 45）：提交 + push + 打 tag 触发 Release
+  - emulator 实测项（v0.9.20 / 图标 v4 / v2.16.0）仍需真机
+- **关键发现**：
+  - 沙箱外网被 DNS 劫持到 198.18.0.0/15 fake-ip 网段，github.com TLS 握手被掐断，但国内镜像（ghfast.top / 腾讯 / 阿里云 / 清华 TUNA）全部可用
+  - ghfast.top 透传 git-receive-pack POST 请求，是沙箱唯一 GitHub 写通道
+  - CodeBuddy 连接器颁发的 `ghu_` OAuth token 无法用于 git 协议 Basic Auth（GitHub 2020 年后要求 PAT），用户需自行提供 `ghp_` classic PAT
+  - 项目文件多为 CRLF 行尾（Windows 环境产物），编辑工具会转 LF 导致 git 全文件 diff，需用二进制方式编辑
+  - Gradle 官方源（services.gradle.org / dl.google.com / repo1 / maven.google.com）在沙箱全部 TLS 拦截，依赖必须走镜像；Gradle 发行版可从腾讯 `mirrors.cloud.tencent.com/gradle/` 下载
+  - Robolectric android-all 系列 jar 在腾讯 maven-public 有镜像，可预下载到 ~/.m2 离线使用
+- **commit**：
+  - `0adf20b` — docs: 记录沙箱推送通道配置（ghfast.top 镜像 + PAT 认证，不入仓库）
+

@@ -515,7 +515,37 @@ v0.9.19 的"紧凑玻璃风格"收到用户强烈负面反馈："底栏还是非
 - Android Compose CompositionLocal: [developer.android.com](https://developer.android.com/develop/ui/compose/compositionlocal)
 - Compose Animation Spring: [developer.android.com](https://developer.android.com/reference/kotlin/androidx/compose/animation/core/Spring)
 
-## 13. 参考
+## 13. v0.9.20 MD3 规范回归（2026-08-02）
+
+**背景**：v0.9.19/v0.9.20 的"流体玻璃"风格（§11）是仿 iOS Tab Bar 的毛玻璃方案。用户明确要求回归**规范 Material 3 风格**（"不是说是毛玻璃，我现在想比较规范的md3的风格"），同时保留 KSU 风格滚动感知显隐（§12）与 80dp 标准高度。
+
+**目标**：底栏视觉完全对齐 [m3-expressive-redesign.md §5.1](../design/m3-expressive-redesign.md)：`surfaceContainer` 实色容器、80dp 标准高度、直角全宽、`tonalElevation` 3dp、选中 `secondaryContainer` 药丸指示器。
+
+**方案**：
+
+| 方面 | v0.9.20 流体玻璃（§11） | v0.9.20 MD3 规范回归 |
+|------|------------------------|----------------------|
+| 容器色 | surfaceContainerHigh alpha=0.75f 半透明 | `surfaceContainer` 实色 |
+| 高度 | 72dp | **80dp**（MD3 标准 NavigationBar 高度） |
+| 形状 | 全宽 + 顶部圆角 | 全宽直角（MD3 无圆角） |
+| 阴影 | 无（半透明需过渡） | `tonalElevation = 3.dp` |
+| 光泽渐变 | 有（光泽 overlay） | 移除 |
+| 渐变遮罩 | 40dp BottomGradientScrim | **移除**（实色底栏无需过渡） |
+| 选中指示器 | secondaryContainer | secondaryContainer（不变） |
+| 滚动感知 | scroll-aware 显隐（spring） | 保留（不变） |
+| 内容 padding | 72dp + sysNav | **80dp + sysNav** |
+
+**改动文件**：
+- `WenyanNavigationBar.kt`：`containerColor = surfaceContainer`、`height = 80.dp`、`tonalElevation = 3.dp`；移除 glass overlay（Build.VERSION 条件 + 渐变）
+- `WenyanAdaptiveNavigation.kt`：删除 `BottomGradientScrim` composable 及调用；`bottomPadding` 72dp→80dp；`bottomHideDistance` 72dp→80dp
+- 提取 `detectScrollDirection()` 纯函数 + `ScrollDirection` 枚举（可单测）
+- 新增 `ScrollDirectionDetectorTest`（16 用例）：index 优先 / ±10px 阈值 / 边界 / 自定义阈值
+
+**验证**：沙箱 JDK 17 全量构建，`:core:designsystem:assembleDebug` + `testDebugUnitTest` **42 tests / 0 failures**（含 ScrollDirectionDetectorTest 16 + Robolectric 14）。
+
+**待 emulator 实测**：MD3 配色观感 + 滚动感知流畅度 + CardsScreen 保持可见 + 子路由无影响。
+
+## 14. 参考
 
 - Apple HIG Tab Bar: [developer.apple.com](https://developer.apple.com/design/human-interface-guidelines/tab-bars)
 - KSUNext BottomBar: [deepwiki.com](https://deepwiki.com/KernelSU-Next/KernelSU-Next/4.1-application-structure-and-navigation)
