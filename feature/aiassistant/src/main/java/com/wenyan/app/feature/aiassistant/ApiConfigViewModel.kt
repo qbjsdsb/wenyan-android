@@ -334,6 +334,10 @@ data class ApiConfigFormState(
  * 预定义 LLM 服务商（OpenAI 兼容协议）。
  *
  * 选择预设后自动填充 baseUrl 和 model，用户可手动修改。
+ *
+ * v0.9.23 修复（P1-1）：baseUrl 统一为"版本前缀"，接口层 `chat/completions`
+ * 负责拼接路径。此前 QWEN/ZHIPU/MOONSHOT 的 baseUrl 已含版本段而接口又加一次
+ * `v1/chat/completions`，拼出 `.../v1/v1/chat/completions` 等错误 URL（3/4 服务商 404）。
  */
 enum class LlmProvider(
     val key: String,
@@ -341,7 +345,7 @@ enum class LlmProvider(
     val defaultBaseUrl: String,
     val defaultModel: String,
 ) {
-    DEEPSEEK("deepseek", "DeepSeek", "https://api.deepseek.com", "deepseek-chat"),
+    DEEPSEEK("deepseek", "DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat"),
     QWEN("qwen", "通义千问", "https://dashscope.aliyuncs.com/compatible-mode/v1", "qwen-turbo"),
     ZHIPU("zhipu", "智谱清言", "https://open.bigmodel.cn/api/paas/v4", "glm-4-flash"),
     MOONSHOT("moonshot", "月之暗面", "https://api.moonshot.cn/v1", "moonshot-v1-8k"),
