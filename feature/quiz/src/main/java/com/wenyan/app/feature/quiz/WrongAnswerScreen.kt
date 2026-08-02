@@ -36,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -55,6 +56,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -75,6 +77,7 @@ import com.wenyan.app.core.fsrs.Rating
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.withTimeout
 
 /**
  * 错题本界面。
@@ -101,6 +104,12 @@ import java.util.Locale
  * 数据来源:[WrongAnswerViewModel.uiState] 订阅 [WrongAnswerRepository.observeUnresolved] /
  * [WrongAnswerRepository.observeAll] / [WrongAnswerRepository.observeDueWrongAnswers]。
  */
+
+// v0.9.25 新增：用于 Snackbar 的 withTimeout 保护（对齐 CardsScreen v0.9.23 模式）。
+// material3 1.5.0-alpha18 的 duration 计时若异常导致 showSnackbar 挂起不返回，
+// 状态永远清不掉、Snackbar 永远显示。withTimeout(5s) 兜底即使挂起也强制返回。
+private const val SNACKBAR_TIMEOUT_MS = 5_000L
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WrongAnswerScreen(
@@ -117,10 +126,18 @@ fun WrongAnswerScreen(
     )
 
     // v0.8.4 修复：errorMessage 非 null 时弹 Snackbar，展示后立即 clearError 避免重组重复弹
+    // v0.9.25 修复：对齐 CardsScreen v0.9.23 模式——先 clear 再 show + withTimeout(5s) 兜底。
+    // 原实现 clearError 在 showSnackbar 之后，若 material3 1.5.0-alpha18 的 duration
+    // 计时异常导致 showSnackbar 挂起不返回，错误提示会常驻不消失。
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
-            snackbarHostState.showSnackbar(it)
             viewModel.clearError()
+            withTimeout(SNACKBAR_TIMEOUT_MS) {
+                snackbarHostState.showSnackbar(
+                    message = it,
+                    duration = SnackbarDuration.Short,
+                )
+            }
         }
     }
 
@@ -589,6 +606,11 @@ private fun WrongAnswerSchedulingInfo(
                         text = "下次复习：$nextReviewText",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        // v0.9.25 修复：窄屏/大字号下日期文本可被挤压换行错乱，
+                        // 给日期 Text weight(1f) 占满剩余空间 + 单行省略
+                        modifier = Modifier.weight(1f, fill = false),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = "·",

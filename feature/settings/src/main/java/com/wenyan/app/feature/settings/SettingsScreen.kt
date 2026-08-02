@@ -6,6 +6,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -80,6 +82,16 @@ private val SeedColors = listOf(
     SeedColorPreset(Color(0xFF7C5800), "棕色"),
 )
 
+/**
+ * v0.9.25 新增：暗色模式下把种子色亮化为适合图标展示的浅色变体。
+ * 原固定深色种子色在暗色/AMOLED 背景下作为 Icon tint 对比度低。
+ * 通过向白色混合（lerp）提高亮度，保留色相、饱和度略降。
+ */
+private fun Color.forTheme(isDark: Boolean): Color {
+    if (!isDark) return this
+    return lerp(this, Color.White, 0.45f)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -89,6 +101,12 @@ fun SettingsScreen(
     viewModel: ThemeViewModel = hiltViewModel(),
 ) {
     val themeConfig by viewModel.themeConfig.collectAsStateWithLifecycle()
+    // v0.9.25 修复：根据主题模式计算是否暗色（种子色图标需亮化变体）
+    val isDarkTheme = when (themeConfig.colorMode) {
+        ColorMode.SYSTEM -> isSystemInDarkTheme()
+        ColorMode.LIGHT -> false
+        ColorMode.DARK -> true
+    }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
     )
@@ -251,7 +269,9 @@ fun SettingsScreen(
                                             Icon(
                                                 imageVector = Icons.Default.Palette,
                                                 contentDescription = null,
-                                                tint = preset.color,
+                                                // v0.9.25 修复：暗色模式下种子色加深、对比度低，
+                                                // 用亮化变体保证图标在暗色/AMOLED 背景下可见
+                                                tint = preset.color.forTheme(isDarkTheme),
                                             )
                                         },
                                     )

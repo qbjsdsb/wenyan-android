@@ -111,6 +111,14 @@ fun WenyanAdaptiveNavigation(
                         var previousOffset by remember { mutableStateOf(0) }
 
                         LaunchedEffect(scrollState) {
+                            // v0.9.25 修复：Tab 切换时 scrollState 变化（LocalLazyListState
+                            // 提供新 Tab 的列表），重置导航栏可见与滚动方向基线。
+                            // 原实现 previousIndex/previousOffset/barVisible 跨 Tab 保留：
+                            // A Tab 下滑隐藏导航栏后切到 B Tab，B 列表在顶部但导航栏仍隐藏；
+                            // 且首帧滚动方向会用 A 的旧位置误判。
+                            previousIndex = 0
+                            previousOffset = 0
+                            barVisible = true
                             snapshotFlow {
                                 scrollState.firstVisibleItemIndex to
                                     scrollState.firstVisibleItemScrollOffset

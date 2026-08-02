@@ -15,7 +15,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import timber.log.Timber
 import javax.inject.Inject
@@ -67,50 +69,59 @@ class EssayListViewModel @Inject constructor(
     val uiState: StateFlow<EssayListUiState> =
         retryTrigger
             .flatMapLatest {
-                // 内层 combine:4 个数据/筛选源合并 → EssayListUiState
-                // retryTrigger++ 时 flatMapLatest 取消旧内层流、重建新内层流,
-                // 实现真正重新订阅(observeAllEssays / observeSubjects 重新查询)。
-                combine(
-                    knowledgeRepository.observeAllEssays(),
-                    chapterRepository.observeSubjects(),
-                    _selectedSubjectId,
-                    _onlyWithAngle,
-                ) { essays, subjects, subjectId, onlyWithAngle ->
-                    val subjectMap = subjects.associate { it.id to it.name }
-                    val filtered = essays.filter { essay ->
-                        (subjectId == null || essay.subjectId == subjectId) &&
-                            (!onlyWithAngle || !essay.angle.isNullOrBlank())
-                    }
-                    val items = filtered.map { essay ->
-                        EssayListItem(
-                            id = essay.id,
-                            subjectName = subjectMap[essay.subjectId] ?: "未知科目",
-                            score = essay.score,
-                            contentPreview = ExamContentCleaner.stripQuestionNumber(essay.content).take(MAX_PREVIEW_LENGTH),
-                            hasAngle = !essay.angle.isNullOrBlank(),
-                            hasNotes = !essay.notes.isNullOrBlank(),
-                            relatedPointCount = essay.relatedPointIds?.size ?: 0,
-                        )
-                    }
-                    EssayListUiState(
-                        isLoading = false,
-                        essays = items,
-                        totalCount = essays.size,
-                        filteredCount = filtered.size,
-                        subjects = subjects,
-                    )
-                }
-                    // catch 必须在 flatMapLatest 内层:仅终止本次内层流,
-                    // 外层 retryTrigger 流仍存活,retry() 可重新触发订阅。
-                    .catch { e ->
-                        Timber.e(e, "EssayListViewModel combine failed")
-                        emit(
+                // v0.9.25 修复：内层 flow 先 emit isLoading=true 再 emitAll 数据。
+                // 原实现 combine 首个 emit 即 isLoading=false 的数据结果，
+                // retry() 后 UI 保持 error 直到数据到达，无 loading 反馈。
+                // 现在每次重订阅（含 retry）都会先显示 loading。
+                flow {
+                    emit(EssayListUiState(isLoading = true))
+                    // 内层 combine:4 个数据/筛选源合并 → EssayListUiState
+                    // retryTrigger++ 时 flatMapLatest 取消旧内层流、重建新内层流,
+                    // 实现真正重新订阅(observeAllEssays / observeSubjects 重新查询)。
+                    emitAll(
+                        combine(
+                            knowledgeRepository.observeAllEssays(),
+                            chapterRepository.observeSubjects(),
+                            _selectedSubjectId,
+                            _onlyWithAngle,
+                        ) { essays, subjects, subjectId, onlyWithAngle ->
+                            val subjectMap = subjects.associate { it.id to it.name }
+                            val filtered = essays.filter { essay ->
+                                (subjectId == null || essay.subjectId == subjectId) &&
+                                    (!onlyWithAngle || !essay.angle.isNullOrBlank())
+                            }
+                            val items = filtered.map { essay ->
+                                EssayListItem(
+                                    id = essay.id,
+                                    subjectName = subjectMap[essay.subjectId] ?: "未知科目",
+                                    score = essay.score,
+                                    contentPreview = ExamContentCleaner.stripQuestionNumber(essay.content).take(MAX_PREVIEW_LENGTH),
+                                    hasAngle = !essay.angle.isNullOrBlank(),
+                                    hasNotes = !essay.notes.isNullOrBlank(),
+                                    relatedPointCount = essay.relatedPointIds?.size ?: 0,
+                                )
+                            }
                             EssayListUiState(
                                 isLoading = false,
-                                error = friendlyErrorMessage(e),
-                            ),
-                        )
-                    }
+                                essays = items,
+                                totalCount = essays.size,
+                                filteredCount = filtered.size,
+                                subjects = subjects,
+                            )
+                        }
+                            // catch 必须在 flatMapLatest 内层:仅终止本次内层流,
+                            // 外层 retryTrigger 流仍存活,retry() 可重新触发订阅。
+                            .catch { e ->
+                                Timber.e(e, "EssayListViewModel combine failed")
+                                emit(
+                                    EssayListUiState(
+                                        isLoading = false,
+                                        error = friendlyErrorMessage(e),
+                                    ),
+                                )
+                            },
+                    )
+                }
             }
             .stateIn(
                 scope = viewModelScope,

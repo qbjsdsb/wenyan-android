@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 /**
@@ -147,6 +148,9 @@ fun GroupedCardItem(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
+                // v0.9.25 修复：长标题（如论述题正文摘要）最多 2 行省略，避免单条撑高卡片
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
             if (description != null) {
                 Text(

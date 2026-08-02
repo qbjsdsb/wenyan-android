@@ -117,16 +117,20 @@ fun KnowledgeScreen(
                 .padding(innerPadding),
         ) {
             // v0.8.19 P1-UI-1: 搜索框
+            // v0.9.25 修复：错误态下禁用搜索/分类（原实现可输入/点击高亮，但数据流已终止不重载）
+            val filterEnabled = uiState.error == null
             SearchBar(
                 query = searchQuery,
                 onQueryChange = viewModel::updateSearchQuery,
                 onClear = viewModel::clearSearch,
+                enabled = filterEnabled,
             )
 
             // 分类标签行
             // v0.8.17 修复 M1:用独立 selectedCategory StateFlow,error/loading 态下也有反馈
             CategoryChips(
                 selectedCategory = selectedCategory,
+                enabled = filterEnabled,
                 onCategorySelected = viewModel::selectCategory,
             )
 
@@ -215,6 +219,7 @@ private fun SearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     onClear: () -> Unit,
+    enabled: Boolean = true,
 ) {
     // v0.8.20 P0-1 修复:原注释声称 imeAction=Done 但代码未实现,
     // 用户按键盘 Done 键无法收起键盘。现补齐 keyboardOptions + keyboardActions。
@@ -222,6 +227,7 @@ private fun SearchBar(
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
+        enabled = enabled,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
@@ -253,6 +259,7 @@ private fun SearchBar(
 @Composable
 private fun CategoryChips(
     selectedCategory: KnowledgeCategory,
+    enabled: Boolean = true,
     onCategorySelected: (KnowledgeCategory) -> Unit,
 ) {
     LazyRow(
@@ -266,6 +273,7 @@ private fun CategoryChips(
             FilterChip(
                 selected = selectedCategory == category,
                 onClick = { onCategorySelected(category) },
+                enabled = enabled,
                 label = { Text(category.label) },
             )
         }

@@ -172,6 +172,19 @@ class UpdateViewModel @Inject constructor(
     }
 
     /**
+     * 安装已下载完成的 APK（DownloadComplete 态）。
+     *
+     * v0.9.25 修复：此前"安装更新"按钮调用 downloadAndInstallApk() 会重新联网下载，
+     * 已下载的包无法直接安装（离线时点击直接进 Error）。
+     */
+    fun installDownloadedApk() {
+        val state = _uiState.value
+        if (state is UpdateUiState.DownloadComplete) {
+            installApk(state.apkFile)
+        }
+    }
+
+    /**
      * 使用 OkHttp 下载 APK 到缓存目录。
      *
      * @param url APK 下载 URL

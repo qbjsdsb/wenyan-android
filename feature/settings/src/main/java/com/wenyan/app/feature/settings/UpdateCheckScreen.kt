@@ -185,35 +185,41 @@ fun UpdateCheckScreen(
                         fadeIn(tween(300)) togetherWith fadeOut(tween(300))
                     },
                     label = "update_state",
-                ) {
-                    val s = uiState
-                    when (s) {
-                        is UpdateUiState.Idle -> IdleContent(onCheck = viewModel::checkForUpdate)
-                        is UpdateUiState.Checking -> CheckingContent()
-                        is UpdateUiState.Latest -> LatestContent(
-                            currentVersion = s.currentVersion,
-                        )
-                        is UpdateUiState.UpdateAvailable -> UpdateAvailableContent(
-                            latestVersion = s.latestVersion,
-                            releaseNotes = s.releaseNotes,
-                            // 软件内下载
-                            onDownload = viewModel::downloadAndInstallApk,
-                            // 备用：浏览器下载
-                            onOpenInBrowser = { viewModel.openDownloadPage(s.downloadUrl) },
-                        )
-                        is UpdateUiState.Downloading -> DownloadingContent(
-                            progress = s.progress,
-                        )
-                        is UpdateUiState.DownloadComplete -> DownloadCompleteContent(
-                            onInstall = { viewModel.downloadAndInstallApk() },
-                        )
-                        is UpdateUiState.Error -> ErrorContent(
-                            message = s.message,
-                            onRetry = {
-                                viewModel.resetState()
-                                viewModel.checkForUpdate()
-                            },
-                        )
+                ) { key ->
+                    // v0.9.25 修复：content lambda 使用参数 key 分发，而非闭包直接读 uiState。
+                    // 原实现两帧过渡时都渲染"最新状态"（crossfade 失效），
+                    // 且 Downloading→DownloadComplete 等状态转换时旧帧会读错状态。
+                    // 用 as? 安全 cast，过渡期间旧帧数据不可用时渲染空（300ms 内可接受）。
+                    when (key) {
+                        "idle" -> IdleContent(onCheck = viewModel::checkForUpdate)
+                        "checking" -> CheckingContent()
+                        "latest" -> (uiState as? UpdateUiState.Latest)?.let {
+                            LatestContent(currentVersion = it.currentVersion)
+                        }
+                        "update_available" -> (uiState as? UpdateUiState.UpdateAvailable)?.let {
+                            UpdateAvailableContent(
+                                latestVersion = it.latestVersion,
+                                releaseNotes = it.releaseNotes,
+                                onDownload = viewModel::downloadAndInstallApk,
+                                onOpenInBrowser = { viewModel.openDownloadPage(it.downloadUrl) },
+                            )
+                        }
+                        "downloading" -> (uiState as? UpdateUiState.Downloading)?.let {
+                            DownloadingContent(progress = it.progress)
+                        }
+                        "download_complete" -> (uiState as? UpdateUiState.DownloadComplete)?.let {
+                            DownloadCompleteContent(onInstall = viewModel::installDownloadedApk)
+                        }
+                        "error" -> (uiState as? UpdateUiState.Error)?.let {
+                            ErrorContent(
+                                message = it.message,
+                                onRetry = {
+                                    viewModel.resetState()
+                                    viewModel.checkForUpdate()
+                                },
+                            )
+                        }
+                        else -> IdleContent(onCheck = viewModel::checkForUpdate)
                     }
                 }
             }

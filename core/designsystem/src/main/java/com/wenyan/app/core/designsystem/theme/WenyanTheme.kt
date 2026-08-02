@@ -1,5 +1,8 @@
 package com.wenyan.app.core.designsystem.theme
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.os.Build
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -11,10 +14,13 @@ import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.rememberDynamicColorScheme
 
@@ -106,6 +112,18 @@ fun WenyanTheme(
     // 用户感觉迟钝。改为 NoBouncy(1.0) 无过冲 + StiffnessMediumLow(400f) ~300ms，
     // 符合 M3 DurationMedium4 推荐时长，过渡更干脆。
     val animatedScheme = animateColorScheme(finalScheme)
+
+    // v0.9.25 修复：状态栏图标颜色跟随手动主题，而非仅跟随系统深色模式。
+    // MainActivity 的 enableEdgeToEdge() 默认 SystemBarStyle.auto 只跟随系统深色模式；
+    // 当用户手动选择深色但系统为浅色时，深色状态栏图标会压在深色背景上看不见（反之亦然）。
+    // 在主题内根据实际 isDark 同步状态栏图标明暗。
+    val view = LocalView.current
+    SideEffect {
+        if (!view.isInEditMode) {
+            val window = view.context.findActivity()?.window ?: return@SideEffect
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !isDark
+        }
+    }
 
     MaterialExpressiveTheme(
         colorScheme = animatedScheme,
@@ -205,4 +223,17 @@ private fun animateColorScheme(scheme: ColorScheme): ColorScheme {
         surfaceContainerHigh = surfaceContainerHigh,
         surfaceContainerHighest = surfaceContainerHighest,
     )
+}
+
+/**
+ * 从任意 Context 解包到宿主 [Activity]（处理 ContextThemeWrapper 等包装）。
+ * v0.9.25 新增：状态栏图标明暗同步需要 Activity.window。
+ */
+private fun Context.findActivity(): Activity? {
+    var ctx: Context? = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }

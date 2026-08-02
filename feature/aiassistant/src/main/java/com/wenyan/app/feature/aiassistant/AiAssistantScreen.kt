@@ -133,15 +133,27 @@ fun AiAssistantScreen(
     // NF-UC3 修复：原 LaunchedEffect(messages.size) 无条件滚动到底部，
     // 用户上滑阅读历史消息时被新消息强制拉回底部，打断阅读。
     // 改为：仅当用户已在底部附近（最后一个可见 item 索引 >= 总数-2）时才自动滚动。
+    // v0.9.25 修复：流式输出时 streamingContent 逐字更新但 messages.size 不变，
+    // 原 LaunchedEffect 不会触发滚动，AI 长回复在可视区外增长看不到。
+    // 加入 streamingContent 作为 key，并在流式时滚动到 streaming 项。
     val isAtBottom by remember {
         derivedStateOf {
+            val hasStreaming = uiState.isLoading && uiState.streamingContent != null
+            val lastItemIndex = uiState.messages.size - 1 + if (hasStreaming) 1 else 0
             val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
-            lastVisible >= uiState.messages.size - 2
+            lastVisible >= lastItemIndex - 1
         }
     }
-    LaunchedEffect(uiState.messages.size, isAtBottom) {
+    LaunchedEffect(uiState.messages.size, isAtBottom, uiState.streamingContent) {
         if (uiState.messages.isNotEmpty() && isAtBottom) {
-            listState.animateScrollToItem(uiState.messages.size - 1)
+            val hasStreaming = uiState.isLoading && uiState.streamingContent != null
+            val target = uiState.messages.size - 1 + if (hasStreaming) 1 else 0
+            if (hasStreaming) {
+                // 流式高频更新：瞬时滚动避免动画频繁重启抖动
+                listState.scrollToItem(target)
+            } else {
+                listState.animateScrollToItem(uiState.messages.size - 1)
+            }
         }
     }
 
@@ -311,7 +323,8 @@ fun AiAssistantScreen(
                                 StreamingBubble(content = uiState.streamingContent ?: "")
                             }
                         }
-                        if (uiState.isLoading) {
+                        // v0.9.25 修复：流式时不再同时显示 loading 转圈（原条件 isLoading 与上面重叠）
+                        if (uiState.isLoading && uiState.streamingContent == null) {
                             item(key = "loading", contentType = "loading") {
                                 Box(
                                     modifier = Modifier.fillMaxWidth(),

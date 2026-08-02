@@ -952,8 +952,10 @@ private fun FlipCard(
     // 原实现用 rememberScrollState() 内联,翻转前后共享同一 scrollState,
     // 用户在正面滚到底部后翻转,背面也滚到底部(但背面内容不同,应从顶部开始)。
     // 现提升 scrollState 到变量,LaunchedEffect 监听 isFlipped 变化时 scrollTo(0)。
+    // v0.9.25 修复:加入 card.id——点"跳过"切新卡时 isFlipped 不变(仍 false),
+    // 原实现不会重置滚动,新卡会从上一张滚过的中段开始显示。
     val scrollState = rememberScrollState()
-    LaunchedEffect(isFlipped) {
+    LaunchedEffect(isFlipped, card.id) {
         scrollState.scrollTo(0)
     }
 

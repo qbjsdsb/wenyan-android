@@ -116,10 +116,13 @@ fun EssayListScreen(
                 .padding(innerPadding),
         ) {
             // ── 筛选区 ──
+            // v0.9.25 修复：错误态下禁用筛选交互（原实现 chips 可点击高亮，
+            // 但数据流已因 catch 终止，点击只改高亮不重载，误导用户）
             EssayFilterBar(
                 subjects = uiState.subjects,
                 selectedSubjectId = selectedSubjectId,
                 onlyWithAngle = onlyWithAngle,
+                enabled = uiState.error == null,
                 onSubjectSelected = viewModel::selectSubject,
                 onToggleOnlyWithAngle = viewModel::toggleOnlyWithAngle,
             )
@@ -181,6 +184,7 @@ private fun EssayFilterBar(
     subjects: List<com.wenyan.app.core.database.entity.SubjectEntity>,
     selectedSubjectId: String?,
     onlyWithAngle: Boolean,
+    enabled: Boolean = true,
     onSubjectSelected: (String?) -> Unit,
     onToggleOnlyWithAngle: () -> Unit,
 ) {
@@ -200,12 +204,14 @@ private fun EssayFilterBar(
             FilterChip(
                 selected = selectedSubjectId == null,
                 onClick = { onSubjectSelected(null) },
+                enabled = enabled,
                 label = { Text("全部科目") },
             )
             subjects.forEach { subject ->
                 FilterChip(
                     selected = selectedSubjectId == subject.id,
                     onClick = { onSubjectSelected(subject.id) },
+                    enabled = enabled,
                     label = { Text(subject.name) },
                 )
             }
@@ -213,6 +219,7 @@ private fun EssayFilterBar(
             FilterChip(
                 selected = onlyWithAngle,
                 onClick = onToggleOnlyWithAngle,
+                enabled = enabled,
                 label = { Text("仅有审题思路") },
                 leadingIcon = if (onlyWithAngle) {
                     {

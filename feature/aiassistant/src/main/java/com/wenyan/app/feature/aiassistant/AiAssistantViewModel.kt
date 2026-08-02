@@ -24,12 +24,14 @@ import com.wenyan.app.core.database.entity.ChatMessageEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -174,6 +176,8 @@ class AiAssistantViewModel @Inject constructor(
 
         // v0.9.23 P0-1/P1-3：统一走 launchAiTask（防重入 + 可取消）
         launchAiTask {
+            // v0.9.25 修复：sb 提升到 try 外——停止生成（CancellationException）时需要保留已生成的部分内容
+            val sb = StringBuilder()
             try {
                 // NF-PP6: 确保当前对话存在,持久化用户消息
                 ensureConversation()
@@ -219,7 +223,6 @@ class AiAssistantViewModel @Inject constructor(
                         }
                     }
                 val prompt = PromptTemplates.buildChatPrompt(text, ragResult.references)
-                val sb = StringBuilder()
                 var tokensUsed: Int? = null
 
                 aiService.chatResultStream(prompt, history).collect { result ->
@@ -255,6 +258,19 @@ class AiAssistantViewModel @Inject constructor(
                 _uiState.update { it.copy(streamingContent = null) }
             } catch (e: CancellationException) {
                 // v0.9.24 停止生成：用户取消时保留已生成的部分内容
+                // v0.9.25 修复：此前只清 streamingContent，未保存部分内容到消息
+                val partial = sb.toString().trim()
+                if (partial.isNotBlank()) {
+                    // 协程已取消，suspend 调用需在 NonCancellable 上下文执行才能完成（UI 更新 + 持久化）
+                    withContext(NonCancellable) {
+                        addAssistantMessage(
+                            content = partial,
+                            contentSource = CONTENT_SOURCE_AI,
+                            references = emptyList(), // 取消时引用可能未就绪，保持简单
+                            tokensUsed = null,
+                        )
+                    }
+                }
                 _uiState.update { it.copy(streamingContent = null) }
                 throw e
             } catch (e: Exception) {
