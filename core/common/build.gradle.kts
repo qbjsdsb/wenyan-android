@@ -1,24 +1,10 @@
 // core:common 模块 —— 通用工具类与基础组件
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    id("com.wenyan.buildlogic.android-library")
 }
 
 android {
     namespace = "com.wenyan.app.core.common"
-    compileSdk = 35
-
-    defaultConfig {
-        minSdk = 26
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
 }
 
 dependencies {

@@ -41,6 +41,9 @@ dependencyResolutionManagement {
 
 rootProject.name = "wenyan"
 
+// v0.9.26 批三：convention plugins（抽取模块重复配置）
+includeBuild("build-logic")
+
 // 应用入口模块
 include(":app")
 

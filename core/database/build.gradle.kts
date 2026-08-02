@@ -1,7 +1,6 @@
 // core:database 模块 —— Room 数据库层（Entity / DAO / Converter）
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    id("com.wenyan.buildlogic.android-library")
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
@@ -10,18 +9,7 @@ plugins {
 
 android {
     namespace = "com.wenyan.app.core.database"
-    compileSdk = 35
 
-    defaultConfig {
-        minSdk = 26
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
 
 }
 

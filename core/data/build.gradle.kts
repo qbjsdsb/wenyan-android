@@ -1,7 +1,6 @@
 // core:data 模块 —— 数据仓库层（Repository 模式），协调 Room / 网络 / 本地资源
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    id("com.wenyan.buildlogic.android-library")
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
@@ -9,18 +8,7 @@ plugins {
 
 android {
     namespace = "com.wenyan.app.core.data"
-    compileSdk = 35
 
-    defaultConfig {
-        minSdk = 26
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
 
     // P1-AUDIT-2 修复：ClockGuard 在时钟回拨时调用 android.util.Log.w()，
     // 单元测试 JVM 环境不 mock Log，默认抛 RuntimeException。

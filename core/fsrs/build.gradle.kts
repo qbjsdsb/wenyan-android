@@ -1,23 +1,11 @@
 // core:fsrs 模块 —— FSRS-Kotlin 算法封装（间隔重复调度）
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    id("com.wenyan.buildlogic.android-library")
 }
 
 android {
     namespace = "com.wenyan.app.core.fsrs"
-    compileSdk = 35
 
-    defaultConfig {
-        minSdk = 26
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
 
 }
 

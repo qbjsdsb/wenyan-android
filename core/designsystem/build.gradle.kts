@@ -1,7 +1,6 @@
 // core:designsystem 模块 —— 设计系统（颜色 / 字体 / 通用组件 / 主题状态）
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    id("com.wenyan.buildlogic.android-library")
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
@@ -9,18 +8,7 @@ plugins {
 
 android {
     namespace = "com.wenyan.app.core.designsystem"
-    compileSdk = 35
 
-    defaultConfig {
-        minSdk = 26
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
 
     buildFeatures {
         compose = true

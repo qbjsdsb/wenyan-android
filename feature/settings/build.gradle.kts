@@ -1,7 +1,6 @@
 // feature:settings 模块 —— 设置页面（主题模式/AMOLED/调色板风格/关于）
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    id("com.wenyan.buildlogic.android-library")
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
@@ -9,23 +8,14 @@ plugins {
 
 android {
     namespace = "com.wenyan.app.feature.settings"
-    compileSdk = 35
 
     defaultConfig {
-        minSdk = 26
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
 
         // v0.9.22 清理：删除 VERSION_NAME buildConfigField（死代码）。
         // SettingsScreen/UpdateCheckScreen 已用 context.packageManager.getPackageInfo()
         // 读取真实 versionName（SettingsScreen.kt:95 / UpdateCheckScreen.kt:83），
         // 全仓库无 BuildConfig.VERSION_NAME 引用。此前注释要求与 app 版号同步，
         // 是过时的手动同步点（v0.9.21 曾因漏同步踩坑）。
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
     }
 
     buildFeatures {

@@ -1,7 +1,6 @@
 // core:ai 模块 —— AI 助手 RAG 架构封装（LLM API 客户端 / 提示词 / 批改 / 加密）
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    id("com.wenyan.buildlogic.android-library")
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
@@ -9,23 +8,12 @@ plugins {
 
 android {
     namespace = "com.wenyan.app.core.ai"
-    compileSdk = 35
 
-    defaultConfig {
-        minSdk = 26
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
-    }
 
     // P1-H2 修正：启用 BuildConfig 以区分 Debug/Release 日志级别
     // （AGP 8.0+ 库模块默认不生成 BuildConfig）
     buildFeatures {
         buildConfig = true
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
     }
 
 }
