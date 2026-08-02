@@ -105,6 +105,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.VERSION }}
+          # v0.9.21 修正：tag force-update 后同一 tag 重建时覆盖已有 release/APK，
+          # 避免"已发布旧代码但新构建无法更新"（v0.9.20 踩坑：softprops 默认 skip）
+          update_release: true
           name: 文研App ${{ steps.version.outputs.VERSION }}
           body: |
             ## 文研App ${{ steps.version.outputs.VERSION }}
