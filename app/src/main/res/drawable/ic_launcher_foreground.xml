@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 启动图标前景 v7（2026-08-03）：Google Play Books 风格手工矢量
+     设计语言：bold silhouette + simple geometry + distinctive identity
+     主体：白色双页书（中央 4px 书脊缝隙透出墨黑背景）+ 8 条文字线（每页 4 条，最后一条短暗示段落结尾）
+     颜色：白色 #FFFFFF（前景区）+ 黑色 #1A1A1A 文字线（55% 透明度，模拟印刷）
+     几何：圆角 8，书占画布高 44%、宽 60%，safe zone 充足
+     相比 v4 矢量：单字符号 → 整本书，更 Google，更具产品类型识别 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 左页：圆角矩形（外圆角 8，书脊侧平） -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M30,30 L52,30 L52,78 L30,78 Q22,78 22,70 L22,38 Q22,30 30,30 Z" />
+
+    <!-- 右页：对称 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M56,30 L78,30 Q86,30 86,38 L86,70 Q86,78 78,78 L56,78 Z" />
+
+    <!-- 左页文字线（4 条，55% 透明度） -->
+    <path
+        android:strokeColor="#1A1A1A"
+        android:strokeAlpha="0.55"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M28,42 L48,42" />
+    <path
+        android:strokeColor="#1A1A1A"
+        android:strokeAlpha="0.55"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M28,50 L48,50" />
+    <path
+        android:strokeColor="#1A1A1A"
+        android:strokeAlpha="0.55"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M28,58 L48,58" />
+    <path
+        android:strokeColor="#1A1A1A"
+        android:strokeAlpha="0.55"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M28,66 L40,66" />
+
+    <!-- 右页文字线（4 条，55% 透明度） -->
+    <path
+        android:strokeColor="#1A1A1A"
+        android:strokeAlpha="0.55"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M60,42 L80,42" />
+    <path
+        android:strokeColor="#1A1A1A"
+        android:strokeAlpha="0.55"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M60,50 L80,50" />
+    <path
+        android:strokeColor="#1A1A1A"
+        android:strokeAlpha="0.55"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M60,58 L80,58" />
+    <path
+        android:strokeColor="#1A1A1A"
+        android:strokeAlpha="0.55"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M60,66 L72,66" />
+</vector>
