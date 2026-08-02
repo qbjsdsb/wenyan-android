@@ -79,7 +79,7 @@ import androidx.compose.ui.tooling.preview.Preview
  * 论述题详情界面（v0.9.8 新增，对应 docs/design/essay-module-design.md）。
  *
  * 10 区块结构：
- * 1. 题目信息区（年份/科目/分值/试卷代码）
+ * 1. 题目信息区（分值/试卷代码）— v0.9.23：年份已删除
  * 2. 题目正文
  * 3. 审题思路区（题型/关键词/任务/突破角度/角度理由）— angle JSON 有数据时显示
  * 4. 论证路径区（总论点/分论点/结论）— angle.argumentPath 有数据时显示
@@ -112,8 +112,9 @@ fun EssayDetailScreen(
         topBar = {
             WenyanLargeTopAppBar(
                 title = "论述题详情",
+                // v0.9.23：年份已删除（用户需求"论述题不要年份"），subtitle 只显示分值
                 subtitle = uiState.essay?.let { e ->
-                    if (e.score > 0) "${e.year}年 · ${e.score}分" else "${e.year}年"
+                    if (e.score > 0) "${e.score}分" else null
                 },
                 onBack = onBack,
                 scrollBehavior = scrollBehavior,
@@ -173,9 +174,8 @@ fun EssayDetailScreen(
                                         .padding(Spacing.lg),
                                     verticalArrangement = Arrangement.spacedBy(Spacing.lg),
                                 ) {
-                                    // 1. 题目信息区
+                                    // 1. 题目信息区（v0.9.23：年份已删除）
                                     EssayHeaderSection(
-                                        year = essay.year,
                                         score = essay.score,
                                         examPaperCode = essay.examPaperCode,
                                     )
@@ -255,7 +255,6 @@ fun EssayDetailScreen(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EssayHeaderSection(
-    year: Int,
     score: Int,
     examPaperCode: String?,
 ) {
@@ -263,7 +262,7 @@ private fun EssayHeaderSection(
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        WenyanInfoChip(text = "${year}年", variant = ChipVariant.PRIMARY)
+        // v0.9.23：年份 chip 已删除（用户需求"论述题不要年份"）
         if (score > 0) {
             WenyanInfoChip(text = "${score}分", variant = ChipVariant.SECONDARY)
         }
@@ -1140,7 +1139,7 @@ private fun EssayDetailLightPreview() {
                 modifier = Modifier.padding(Spacing.lg),
                 verticalArrangement = Arrangement.spacedBy(Spacing.lg),
             ) {
-                EssayHeaderSection(year = 2008, score = 30, examPaperCode = "604")
+                EssayHeaderSection(score = 30, examPaperCode = "604")
                 EssayContentSection(content = "试述冰心，丁玲，萧红，张爱玲，王安忆五位女作家创作的异同，并梳理她们在不同时期的创作演变。")
             }
         }

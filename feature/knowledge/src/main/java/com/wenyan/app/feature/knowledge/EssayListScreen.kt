@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.CompositionLocalProvider
@@ -66,11 +65,13 @@ import com.wenyan.app.core.designsystem.theme.WenyanTheme
  * 入口：知识点列表页顶部"论述题练习"入口卡片 → 本页。
  *
  * 功能：
- * - 三维筛选：年份（LazyRow FilterChip）/ 科目（LazyRow FilterChip）/ 仅显示有审题思路（toggle chip）
- * - 列表卡片：年份 + 科目 + 分值 chip + 题目预览 + 审题思路/依据/关联知识点标记
+ * - 二维筛选：科目（LazyRow FilterChip）/ 仅显示有审题思路（toggle chip）
+ * - 列表卡片：科目 + 分值 chip + 题目预览 + 审题思路/依据/关联知识点标记
  * - 点击进入论述题详情页（10 区块结构）
  *
- * 数据流：[EssayListViewModel] combine(observeAllEssays, observeSubjects, 3个筛选StateFlow)
+ * v0.9.23：删除年份显示与年份筛选（用户需求"论述题不要年份"）。
+ *
+ * 数据流：[EssayListViewModel] combine(observeAllEssays, observeSubjects, 2个筛选StateFlow)
  * 筛选在内存完成（134 题规模 < 5ms）。
  *
  * 设计依据：用户需求"增加论述题板块融合在知识点板块"，入口放在知识点 Tab，
@@ -84,7 +85,6 @@ fun EssayListScreen(
     viewModel: EssayListViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val selectedYear by viewModel.selectedYear.collectAsStateWithLifecycle()
     val selectedSubjectId by viewModel.selectedSubjectId.collectAsStateWithLifecycle()
     val onlyWithAngle by viewModel.onlyWithAngle.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
@@ -117,12 +117,9 @@ fun EssayListScreen(
         ) {
             // ── 筛选区 ──
             EssayFilterBar(
-                availableYears = uiState.availableYears,
                 subjects = uiState.subjects,
-                selectedYear = selectedYear,
                 selectedSubjectId = selectedSubjectId,
                 onlyWithAngle = onlyWithAngle,
-                onYearSelected = viewModel::selectYear,
                 onSubjectSelected = viewModel::selectSubject,
                 onToggleOnlyWithAngle = viewModel::toggleOnlyWithAngle,
             )
@@ -155,7 +152,8 @@ fun EssayListScreen(
                         }
                     }
                     isEmpty -> {
-                        val hasFilter = selectedYear != null || selectedSubjectId != null || onlyWithAngle
+                        // v0.9.23：年份筛选已删除，hasFilter 只含科目 + 审题思路
+                        val hasFilter = selectedSubjectId != null || onlyWithAngle
                         EmptyState(
                             icon = Icons.Default.Inbox,
                             title = if (hasFilter) "当前筛选无匹配论述题" else "暂无论述题",
@@ -180,12 +178,9 @@ fun EssayListScreen(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EssayFilterBar(
-    availableYears: List<Int>,
     subjects: List<com.wenyan.app.core.database.entity.SubjectEntity>,
-    selectedYear: Int?,
     selectedSubjectId: String?,
     onlyWithAngle: Boolean,
-    onYearSelected: (Int?) -> Unit,
     onSubjectSelected: (String?) -> Unit,
     onToggleOnlyWithAngle: () -> Unit,
 ) {
@@ -193,31 +188,8 @@ private fun EssayFilterBar(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        // 年份筛选
-        if (availableYears.isNotEmpty()) {
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = Spacing.lg),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                item(key = "year_all", contentType = "yearChip") {
-                    FilterChip(
-                        selected = selectedYear == null,
-                        onClick = { onYearSelected(null) },
-                        label = { Text("全部年份") },
-                    )
-                }
-                items(items = availableYears, key = { it }, contentType = { "yearChip" }) { year ->
-                    FilterChip(
-                        selected = selectedYear == year,
-                        onClick = { onYearSelected(year) },
-                        label = { Text("${year}年") },
-                    )
-                }
-            }
-        }
-
         // 科目筛选 + 审题思路开关（FlowRow 自动换行）
+        // v0.9.23：年份筛选已删除（用户需求"论述题不要年份"）
         FlowRow(
             modifier = Modifier
                 .fillMaxWidth()
@@ -309,12 +281,11 @@ private fun EssayListItemCard(
             modifier = Modifier.padding(Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            // 第一行：年份 + 科目 + 分值 chip
+            // 第一行：科目 + 分值 chip（v0.9.23：年份已删除）
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
-                WenyanInfoChip(text = "${item.year}年", variant = ChipVariant.PRIMARY)
                 WenyanInfoChip(text = item.subjectName, variant = ChipVariant.SECONDARY)
                 if (item.score > 0) {
                     WenyanInfoChip(text = "${item.score}分", variant = ChipVariant.NEUTRAL)
@@ -373,7 +344,6 @@ private fun EssayListLightPreview() {
                 EssayListItemCard(
                     item = EssayListItem(
                         id = "eq_0038",
-                        year = 2008,
                         subjectName = "中国现当代文学",
                         score = 30,
                         contentPreview = "试述冰心，丁玲，萧红，张爱玲，王安忆五位女作家创作的异同，并梳理她们在不同时期的创作演变。",
@@ -386,7 +356,6 @@ private fun EssayListLightPreview() {
                 EssayListItemCard(
                     item = EssayListItem(
                         id = "eq_0182",
-                        year = 2015,
                         subjectName = "中国现当代文学",
                         score = 25,
                         contentPreview = "结合具体作品，论述寻根文学的代表作家及其文学史意义。",

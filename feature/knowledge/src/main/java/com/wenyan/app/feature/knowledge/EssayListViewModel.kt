@@ -26,7 +26,7 @@ import javax.inject.Inject
  * 职责：
  * - 从 [KnowledgeRepository.observeAllEssays] 获取全部论述题（134 道）
  * - 从 [ChapterRepository.observeSubjects] 获取科目列表（subj_xx → 科目名映射）
- * - 提供三维筛选：年份 / 科目 / 仅显示有审题思路的题
+ * - 提供二维筛选：科目 / 仅显示有审题思路的题（v0.9.23：年份筛选已删除）
  * - 筛选在内存完成（134 题规模 < 5ms，与 observeRelatedEssays 策略一致）
  *
  * 筛选状态独立 StateFlow，UI 可即时响应筛选切换（与 KnowledgeViewModel.selectedCategory
@@ -34,7 +34,7 @@ import javax.inject.Inject
  *
  * 数据流：
  * ```
- * observeAllEssays + observeSubjects + selectedYear + selectedSubjectId + onlyWithAngle
+ * observeAllEssays + observeSubjects + selectedSubjectId + onlyWithAngle
  *     → combine → 内存筛选 + 科目名映射 → EssayListUiState
  * ```
  */
@@ -46,9 +46,6 @@ class EssayListViewModel @Inject constructor(
 ) : ViewModel() {
 
     // ── 筛选状态（独立 StateFlow，error/loading 态下也可切换）──
-
-    private val _selectedYear = MutableStateFlow<Int?>(null)
-    val selectedYear: StateFlow<Int?> = _selectedYear.asStateFlow()
 
     private val _selectedSubjectId = MutableStateFlow<String?>(null)
     val selectedSubjectId: StateFlow<String?> = _selectedSubjectId.asStateFlow()
@@ -70,26 +67,23 @@ class EssayListViewModel @Inject constructor(
     val uiState: StateFlow<EssayListUiState> =
         retryTrigger
             .flatMapLatest {
-                // 内层 combine:5 个数据/筛选源合并 → EssayListUiState
+                // 内层 combine:4 个数据/筛选源合并 → EssayListUiState
                 // retryTrigger++ 时 flatMapLatest 取消旧内层流、重建新内层流,
                 // 实现真正重新订阅(observeAllEssays / observeSubjects 重新查询)。
                 combine(
                     knowledgeRepository.observeAllEssays(),
                     chapterRepository.observeSubjects(),
-                    _selectedYear,
                     _selectedSubjectId,
                     _onlyWithAngle,
-                ) { essays, subjects, year, subjectId, onlyWithAngle ->
+                ) { essays, subjects, subjectId, onlyWithAngle ->
                     val subjectMap = subjects.associate { it.id to it.name }
                     val filtered = essays.filter { essay ->
-                        (year == null || essay.year == year) &&
-                            (subjectId == null || essay.subjectId == subjectId) &&
+                        (subjectId == null || essay.subjectId == subjectId) &&
                             (!onlyWithAngle || !essay.angle.isNullOrBlank())
                     }
                     val items = filtered.map { essay ->
                         EssayListItem(
                             id = essay.id,
-                            year = essay.year,
                             subjectName = subjectMap[essay.subjectId] ?: "未知科目",
                             score = essay.score,
                             contentPreview = ExamContentCleaner.stripQuestionNumber(essay.content).take(MAX_PREVIEW_LENGTH),
@@ -98,14 +92,11 @@ class EssayListViewModel @Inject constructor(
                             relatedPointCount = essay.relatedPointIds?.size ?: 0,
                         )
                     }
-                    // 可用年份（从全量数据提取，不受筛选影响，确保切换筛选后年份选项不变）
-                    val availableYears = essays.map { it.year }.distinct().sortedDescending()
                     EssayListUiState(
                         isLoading = false,
                         essays = items,
                         totalCount = essays.size,
                         filteredCount = filtered.size,
-                        availableYears = availableYears,
                         subjects = subjects,
                     )
                 }
@@ -129,10 +120,6 @@ class EssayListViewModel @Inject constructor(
 
     // ── 筛选操作 ──
 
-    fun selectYear(year: Int?) {
-        _selectedYear.value = year
-    }
-
     fun selectSubject(subjectId: String?) {
         _selectedSubjectId.value = subjectId
     }
@@ -142,7 +129,6 @@ class EssayListViewModel @Inject constructor(
     }
 
     fun clearFilters() {
-        _selectedYear.value = null
         _selectedSubjectId.value = null
         _onlyWithAngle.value = false
     }
@@ -171,7 +157,6 @@ class EssayListViewModel @Inject constructor(
  * 论述题列表项（UI 层精简模型，避免把完整 ExamQuestionEntity 暴露给 UI）。
  *
  * @param id 真题 ID（如 eq_0038）
- * @param year 年份
  * @param subjectName 科目名（从 subjectId 映射，如"中国现当代文学"）
  * @param score 分值
  * @param contentPreview 题目正文预览（前 80 字）
@@ -182,7 +167,6 @@ class EssayListViewModel @Inject constructor(
 @Immutable
 data class EssayListItem(
     val id: String,
-    val year: Int,
     val subjectName: String,
     val score: Int,
     val contentPreview: String,
@@ -199,7 +183,6 @@ data class EssayListItem(
  * @param essays 筛选后的论述题列表项
  * @param totalCount 总题数（不受筛选影响）
  * @param filteredCount 筛选后题数
- * @param availableYears 可用年份列表（倒序，从全量数据提取）
  * @param subjects 科目列表（供科目筛选 chip 渲染）
  */
 @Immutable
@@ -209,6 +192,5 @@ data class EssayListUiState(
     val essays: List<EssayListItem> = emptyList(),
     val totalCount: Int = 0,
     val filteredCount: Int = 0,
-    val availableYears: List<Int> = emptyList(),
     val subjects: List<SubjectEntity> = emptyList(),
 )

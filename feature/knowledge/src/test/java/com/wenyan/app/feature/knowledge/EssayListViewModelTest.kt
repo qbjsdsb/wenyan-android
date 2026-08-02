@@ -25,14 +25,12 @@ import org.junit.Test
  * 覆盖范围:
  * - 初始加载:essays + subjects 合并到 uiState,isLoading=false
  * - 科目名映射:subjectId → subjectName(未知 subjectId 回退"未知科目")
- * - 年份筛选:只返回匹配年份的论述题
  * - 科目筛选:只返回匹配 subjectId 的论述题
  * - 仅显示有审题思路筛选:angle 非空的论述题
- * - 三维筛选叠加:年份 + 科目 + onlyWithAngle
- * - availableYears 从全量数据提取(不受筛选影响)
+ * - 二维筛选叠加:科目 + onlyWithAngle（v0.9.23：年份筛选已删除）
  * - totalCount(全量) vs filteredCount(筛选后)
  * - 筛选无匹配:essays=emptyList,filteredCount=0
- * - 筛选状态独立 StateFlow:selectYear/selectSubject/toggleOnlyWithAngle/clearFilters
+ * - 筛选状态独立 StateFlow:selectSubject/toggleOnlyWithAngle/clearFilters
  * - contentPreview 截断到 MAX_PREVIEW_LENGTH(80)
  * - hasAngle/hasNotes/relatedPointCount 字段正确填充
  *
@@ -126,53 +124,6 @@ class EssayListViewModelTest {
         assertEquals("未知科目", viewModel.uiState.value.essays[0].subjectName)
     }
 
-    // ── 年份筛选 ──────────────────────────────────────────────
-
-    @Test
-    fun selectYear_filtersToMatchingYearOnly() = runTest(testDispatcher) {
-        examQuestionDao.setEssays(
-            listOf(
-                makeEssay(id = "eq_2020", year = 2020),
-                makeEssay(id = "eq_2019", year = 2019),
-                makeEssay(id = "eq_2018", year = 2018),
-            ),
-        )
-
-        val viewModel = createViewModel()
-        backgroundScope.launch { viewModel.uiState.collect { } }
-        advanceUntilIdle()
-
-        viewModel.selectYear(2019)
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        assertEquals(3, state.totalCount)
-        assertEquals(1, state.filteredCount)
-        assertEquals("eq_2019", state.essays[0].id)
-    }
-
-    @Test
-    fun selectYear_null_clearsYearFilter() = runTest(testDispatcher) {
-        examQuestionDao.setEssays(
-            listOf(
-                makeEssay(id = "eq_2020", year = 2020),
-                makeEssay(id = "eq_2019", year = 2019),
-            ),
-        )
-
-        val viewModel = createViewModel()
-        backgroundScope.launch { viewModel.uiState.collect { } }
-        advanceUntilIdle()
-
-        viewModel.selectYear(2020)
-        advanceUntilIdle()
-        assertEquals(1, viewModel.uiState.value.filteredCount)
-
-        viewModel.selectYear(null)
-        advanceUntilIdle()
-        assertEquals(2, viewModel.uiState.value.filteredCount)
-    }
-
     // ── 科目筛选 ──────────────────────────────────────────────
 
     @Test
@@ -231,21 +182,19 @@ class EssayListViewModelTest {
         assertTrue(state.essays[0].hasAngle)
     }
 
-    // ── 三维筛选叠加 ──────────────────────────────────────────
+    // ── 二维筛选叠加（v0.9.23：年份筛选已删除） ─────────────────
 
     @Test
-    fun filters_combined_yearSubjectAngle_allApplied() = runTest(testDispatcher) {
+    fun filters_combined_subjectAngle_allApplied() = runTest(testDispatcher) {
         chapterRepository.subjects = listOf(makeSubject("subj_xd", "现当代"))
         examQuestionDao.setEssays(
             listOf(
-                // 匹配全部三维
-                makeEssay(id = "hit", year = 2020, subjectId = "subj_xd", angle = """{"questionType":"比较型"}"""),
-                // 年份不匹配
-                makeEssay(id = "miss_year", year = 2019, subjectId = "subj_xd", angle = """{"questionType":"比较型"}"""),
+                // 匹配全部二维
+                makeEssay(id = "hit", subjectId = "subj_xd", angle = """{"questionType":"比较型"}"""),
                 // 科目不匹配
-                makeEssay(id = "miss_subj", year = 2020, subjectId = "subj_gd", angle = """{"questionType":"比较型"}"""),
+                makeEssay(id = "miss_subj", subjectId = "subj_gd", angle = """{"questionType":"比较型"}"""),
                 // 无审题思路
-                makeEssay(id = "miss_angle", year = 2020, subjectId = "subj_xd", angle = null),
+                makeEssay(id = "miss_angle", subjectId = "subj_xd", angle = null),
             ),
         )
 
@@ -253,74 +202,28 @@ class EssayListViewModelTest {
         backgroundScope.launch { viewModel.uiState.collect { } }
         advanceUntilIdle()
 
-        viewModel.selectYear(2020)
         viewModel.selectSubject("subj_xd")
         viewModel.toggleOnlyWithAngle()
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals(4, state.totalCount)
+        assertEquals(3, state.totalCount)
         assertEquals(1, state.filteredCount)
         assertEquals("hit", state.essays[0].id)
-    }
-
-    // ── availableYears ────────────────────────────────────────
-
-    @Test
-    fun availableYears_extractedFromAllEssays_descendingDistinct() = runTest(testDispatcher) {
-        examQuestionDao.setEssays(
-            listOf(
-                makeEssay(id = "eq_1", year = 2018),
-                makeEssay(id = "eq_2", year = 2020),
-                makeEssay(id = "eq_3", year = 2019),
-                makeEssay(id = "eq_4", year = 2020), // 重复年份
-            ),
-        )
-
-        val viewModel = createViewModel()
-        backgroundScope.launch { viewModel.uiState.collect { } }
-        advanceUntilIdle()
-
-        val years = viewModel.uiState.value.availableYears
-        assertEquals(listOf(2020, 2019, 2018), years)
-    }
-
-    /**
-     * availableYears 不受筛选影响:即使筛选后只剩一道题,
-     * 年份选项仍包含全部年份(用户可随时切换筛选,不会丢失选项)。
-     */
-    @Test
-    fun availableYears_notAffectedByFilter() = runTest(testDispatcher) {
-        examQuestionDao.setEssays(
-            listOf(
-                makeEssay(id = "eq_2020", year = 2020),
-                makeEssay(id = "eq_2019", year = 2019),
-            ),
-        )
-
-        val viewModel = createViewModel()
-        backgroundScope.launch { viewModel.uiState.collect { } }
-        advanceUntilIdle()
-
-        viewModel.selectYear(2020)
-        advanceUntilIdle()
-
-        // 筛选后 filteredCount=1,但 availableYears 仍是 2 个年份
-        assertEquals(1, viewModel.uiState.value.filteredCount)
-        assertEquals(2, viewModel.uiState.value.availableYears.size)
     }
 
     // ── 筛选无匹配 ────────────────────────────────────────────
 
     @Test
     fun filters_noMatch_emptyEssays_nonZeroTotal() = runTest(testDispatcher) {
-        examQuestionDao.setEssays(listOf(makeEssay(id = "eq_1", year = 2020)))
+        chapterRepository.subjects = listOf(makeSubject("subj_xd", "现当代"))
+        examQuestionDao.setEssays(listOf(makeEssay(id = "eq_1", subjectId = "subj_xd")))
 
         val viewModel = createViewModel()
         backgroundScope.launch { viewModel.uiState.collect { } }
         advanceUntilIdle()
 
-        viewModel.selectYear(1999) // 不存在的年份
+        viewModel.selectSubject("subj_gd") // 不存在的科目
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -332,12 +235,12 @@ class EssayListViewModelTest {
     // ── clearFilters ──────────────────────────────────────────
 
     @Test
-    fun clearFilters_resetsAllThreeFilters() = runTest(testDispatcher) {
+    fun clearFilters_resetsAllFilters() = runTest(testDispatcher) {
         chapterRepository.subjects = listOf(makeSubject("subj_xd", "现当代"))
         examQuestionDao.setEssays(
             listOf(
-                makeEssay(id = "eq_1", year = 2020, subjectId = "subj_xd", angle = """{"questionType":"比较型"}"""),
-                makeEssay(id = "eq_2", year = 2019, subjectId = "subj_gd", angle = null),
+                makeEssay(id = "eq_1", subjectId = "subj_xd", angle = """{"questionType":"比较型"}"""),
+                makeEssay(id = "eq_2", subjectId = "subj_gd", angle = null),
             ),
         )
 
@@ -345,7 +248,6 @@ class EssayListViewModelTest {
         backgroundScope.launch { viewModel.uiState.collect { } }
         advanceUntilIdle()
 
-        viewModel.selectYear(2020)
         viewModel.selectSubject("subj_xd")
         viewModel.toggleOnlyWithAngle()
         advanceUntilIdle()
@@ -354,7 +256,6 @@ class EssayListViewModelTest {
         viewModel.clearFilters()
         advanceUntilIdle()
 
-        assertNull(viewModel.selectedYear.value)
         assertNull(viewModel.selectedSubjectId.value)
         assertFalse(viewModel.onlyWithAngle.value)
         assertEquals(2, viewModel.uiState.value.filteredCount)

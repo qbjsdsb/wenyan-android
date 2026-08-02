@@ -699,10 +699,7 @@ private fun EssayItem(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                WenyanInfoChip(
-                    text = "${essay.year}年",
-                    variant = ChipVariant.SECONDARY,
-                )
+                // v0.9.23：论述题年份已删除（用户需求），只保留分值
                 if (essay.score > 0) {
                     WenyanInfoChip(
                         text = "${essay.score}分",
