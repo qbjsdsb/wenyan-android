@@ -6291,3 +6291,34 @@ while (retryCount <= maxRetries) {
   - `834be6d` — refactor(designsystem): 底栏回归规范 MD3 风格（surfaceContainer 实色 + 80dp + secondaryContainer 指示器）
   - `fd772a8` — fix(designsystem): 修复底栏/顶栏 inset 双重消费导致的布局空白
   - `68beaf7` — chore: v0.9.21 版本号提升 + release.yml 支持同 tag 重建覆盖
+
+
+## 2026-08-02 晚上：深度审查 + v0.9.22 发布
+
+- **完成**：
+  - **全仓库深度审查**（用户要求"深入检查，给改进计划，反复打磨"）：3 路并行 agent 审查（core/database+data+fsrs / feature 模块 / 构建 CI）+ 关键问题人工复验。发现 2 P1 + 8 P2 + 10 P3；改进计划存档 `docs/plans/deep-review-improvement-plan.md`。
+  - **批 A（P1）**：
+    - 底栏 double inset 修复（`WenyanAdaptiveNavigation` 外层只 pad 80dp，手势区由内层 Scaffold 消费，与顶部对称）——用户反馈"底栏上方大面积空白"残留根因（v0.9.21 只修了顶部）
+    - SettingsScreen 消费 `ThemeViewModel.errorEvents`（主题保存失败弹 Snackbar，此前零订阅者静默丢失）
+    - 版本号 46→47 / "0.9.21"→"0.9.22"
+  - **批 B（P2）**：
+    - FSRS `nextRecallStability` stability<=0 防御（v1 老数据 stability=0 → NaN 污染调度）；新增复现测试先红后绿
+    - MIGRATION_7_8 补 2 复合索引 + 新增 MIGRATION_8_9（数据库 8→9）为存量 v8 用户补索引；SQLite 实测 6 索引齐全 + 幂等
+    - recordWrongAnswer 查找+递增/插入合并为单个 DAO @Transaction（并发重复插入窗口）
+    - recordWrongAnswer/markResolved 改用 ClockGuard 时间源（与 FSRS 调度对齐）
+    - WrongAnswerViewModel 加 isRating 防重入锁（DUE 连点防重复 FSRS 调度）
+  - **验证**：510 单测 0 失败 + assembleDebug 通过 + 9.json schema 一致 + 8.json vs 9.json 无列增删（迁移安全）
+  - **commit**：`5e5c78c`（批 A+B 8 项修复）
+  - **v0.9.22 发布**（用户确认"反复检查没问题就打 tag 发布"）：tag v0.9.22 → 5e5c78c 推送，Release #51 触发（11:12 UTC）→ 完成 11:22:48（10m48s）
+  - **发布后验证**：
+    - Release 页面存在（文研App v0.9.22）
+    - wenyan-v0.9.22.apk + wenyan-latest.apk 均可下载（19,491,856 字节）
+    - aapt2 校验 APK 内部版本：versionCode 47 / versionName "0.9.22"（防 v0.9.20 错版覆辙）
+  - **receipt**：`docs/release-receipts/v0.9.22-release-receipt.md`
+- **进行中**：
+  - 批 C（仓库卫生）：release-assets 4 个旧 APK 入库 77MB 待清理、AGENTS.md/docs 多处过期待更新、EssayList/ApiConfig stateIn(WhileSubscribed) Tab 返回闪烁待修
+  - 批 D（长期）：R8/ProGuard 启用、convention plugin 抽取、历史 schema 1/3.json 补齐 + 迁移测试等
+- **关键发现**：
+  - 8.json vs 9.json 对比确认：数据库 8→9 仅新增 2 个复合索引，无列增删，存量用户升级绝对安全
+  - aapt2 从 gradle 缓存可找到，可用于 APK 版本校验（发布防呆补充手段）
+  - 沙箱无法访问 api.github.com（ghfast.top 拒绝代理 API），但 curl 走镜像可访问 github.com 网页 + release 下载
