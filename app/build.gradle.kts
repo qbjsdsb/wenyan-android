@@ -63,7 +63,9 @@ android {
         // v0.9.20=45（KSU 风格滚动感知导航栏：LocalScrollState + WenyanNavigationBar scroll-aware + 5 Screen 提供 LazyListState。versionName "0.9.20"）
         // v0.9.21=46（MD3 规范底栏回归 + inset 双重消费修复：surfaceContainer 实色 + 80dp + secondaryContainer 指示器；
         //   底栏吃手势条 inset、移除顶栏双倍 padding，消除布局空白。versionName "0.9.21"）
-        versionCode = 46
+        // v0.9.22=47（深度审查改进批 A+B：底栏 double inset 修复 / 主题保存错误提示 /
+        //   FSRS stability=0 防御 / MIGRATION_7_8 补复合索引 / recordWrongAnswer 事务+时间源 / 评分防重入。versionName "0.9.22"）
+        versionCode = 47
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         //   数据一致性修复（B1/B2/B3）：
@@ -124,7 +126,8 @@ android {
         // v0.9.16：真题→论述题迁移（底部导航 Tab 替换 + 代码清理 + AboutTutorialScreen 修复）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         // v0.9.21：MD3 规范底栏回归 + inset 双重消费修复
-        versionName = "0.9.21"
+        // v0.9.22：深度审查改进批 A+B（见 versionCode 注释）
+        versionName = "0.9.22"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

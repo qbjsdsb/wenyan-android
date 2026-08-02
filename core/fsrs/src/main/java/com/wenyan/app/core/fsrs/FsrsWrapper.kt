@@ -366,6 +366,13 @@ class FsrsWrapper(
      *   改槽位会让公式近乎失效,需同步更新 weights 数组,风险高,不在本次修复范围
      */
     fun nextRecallStability(d: Float, s: Float, r: Float, rating: Rating): Float {
+        // P2-1 (v0.9.22): stability <= 0 防御。
+        // 背景：v1 时代老数据可能 state=LEARNING/REVIEW 但 stability=0（2.json 中
+        // stability NOT NULL DEFAULT 0.0）。此时 s.pow(-w[9]) = 0.pow(-0.1752) = +Infinity，
+        // 最终 s*(1+growth) = 0*Infinity = NaN；NaN 写回 stability 污染后续全部调度，
+        // 且 nextInterval(NaN) 中 NaN.roundToInt() 会抛异常。
+        // 与 nextForgetStability 的 maxOf(0.1f, ...) 防御对齐：退化到初始稳定性。
+        if (s <= 0f) return initStability(rating)
         val hardPenalty = if (rating == Rating.HARD) w[15] else 1f
         // F-02 修正：w[16]=0.2316 < 1，直接用作乘子会让 EASY stability < GOOD stability（语义反转）。
         // 官方 FSRS-6 公式：easyBonus = 1 + w[16]，确保 EASY 增长 > GOOD 增长。

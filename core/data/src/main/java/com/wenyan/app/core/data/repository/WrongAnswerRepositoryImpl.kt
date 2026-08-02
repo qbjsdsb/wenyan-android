@@ -4,7 +4,6 @@ import com.wenyan.app.core.database.dao.WrongAnswerDao
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
 import com.wenyan.app.core.database.entity.WrongAnswerWithDetails
 import kotlinx.coroutines.flow.Flow
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,11 +16,17 @@ import javax.inject.Singleton
  * v0.9.2：observeAll/observeUnresolved 返回 [WrongAnswerWithDetails]（JOIN 关联表
  * 获取题目文本），供 UI 渲染题目区。
  *
+ * v0.9.22（P2-5）：recordWrongAnswer 改用 [ClockGuard] 时间源，与 FSRS 调度
+ * （SchedulingRepository.rateWrongAnswer 用 ClockGuard.effectiveNowMillis）对齐，
+ * 避免时钟回拨时错题时间戳与调度时间源不一致。
+ *
  * @property wrongAnswerDao 错题 DAO
+ * @property clockGuard 时钟守卫（检测回拨，返回单调不减的有效时间戳）
  */
 @Singleton
 class WrongAnswerRepositoryImpl @Inject constructor(
     private val wrongAnswerDao: WrongAnswerDao,
+    private val clockGuard: ClockGuard,
 ) : WrongAnswerRepository {
 
     override fun observeAll(): Flow<List<WrongAnswerWithDetails>> =
@@ -46,39 +51,25 @@ class WrongAnswerRepositoryImpl @Inject constructor(
         correctAnswer: String?,
         source: String,
     ): String {
-        val now = System.currentTimeMillis()
+        // v0.9.22 P2-5：时间源改用 ClockGuard（原 System.currentTimeMillis）。
+        // recordWrongAnswer 与 rateWrongAnswer（FSRS 调度）现在使用同一时间源，
+        // 时钟回拨时错题时间戳与调度 DUE 过滤一致。
+        val now = clockGuard.effectiveNowMillis()
 
-        // 1. 使用 Room @Transaction 事务性查找已有记录并递增（v0.9.18 新增，防并发竞争）
-        val existingId = wrongAnswerDao.recordWrongAnswerTransaction(
+        // v0.9.22 P2-4：查找 + 递增/插入整体放入一个 DAO @Transaction，
+        // 杜绝并发下两个线程都查到 null 后各自 insert 的重复插入窗口。
+        return wrongAnswerDao.recordWrongAnswer(
             pointId = pointId,
             examQuestionId = examQuestionId,
+            userAnswer = userAnswer,
+            correctAnswer = correctAnswer,
             source = source,
-            lastWrongAt = now,
+            now = now,
         )
-        if (existingId != null) return existingId
-
-        // 2. 无已有记录 → upsert 新 WrongAnswerEntity
-        val id = UUID.randomUUID().toString()
-        wrongAnswerDao.upsert(
-            WrongAnswerEntity(
-                id = id,
-                pointId = pointId,
-                examQuestionId = examQuestionId,
-                userAnswer = userAnswer,
-                correctAnswer = correctAnswer,
-                source = source,
-                wrongCount = 1,
-                lastWrongAt = now,
-                resolvedAt = null,
-                aiExplanation = null,
-                createdAt = now,
-            ),
-        )
-        return id
     }
 
     override suspend fun markResolved(id: String) {
-        wrongAnswerDao.markResolved(id, System.currentTimeMillis())
+        wrongAnswerDao.markResolved(id, clockGuard.effectiveNowMillis())
     }
 
     override suspend fun deleteById(id: String) {

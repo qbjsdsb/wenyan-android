@@ -51,7 +51,11 @@ class WrongAnswerRepositoryImplTest {
             .allowMainThreadQueries()
             .build()
 
-        repository = WrongAnswerRepositoryImpl(db.wrongAnswerDao())
+        // v0.9.22（P2-5）：构造参数新增 ClockGuard（与 SchedulingRepositoryImpl 一致用真实实现）
+        repository = WrongAnswerRepositoryImpl(
+            db.wrongAnswerDao(),
+            ClockGuardImpl(db.appMetaDao()),
+        )
 
         // 插入 FK 依赖链:Subject → Chapter → KnowledgePoint(供 WrongAnswer FK→KnowledgePoint)
         db.subjectDao().insert(

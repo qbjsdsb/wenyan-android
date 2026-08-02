@@ -28,11 +28,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -97,6 +100,15 @@ fun SettingsScreen(
             "0.0.0"
         }
     }
+    // v0.9.22 P1-2 修复：消费 ThemeViewModel.errorEvents（主题保存失败提示）。
+    // 此前 errorEvents 无任何订阅者，DataStore IOException 时错误被静默丢弃，
+    // 用户改主题失败无感知（ThemeViewModel.kt 注释声称"UI 可订阅展示 Snackbar"但从未实现）。
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(viewModel) {
+        viewModel.errorEvents.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
 
     ExpressiveScaffold(
         topBar = {
@@ -105,6 +117,7 @@ fun SettingsScreen(
                 scrollBehavior = scrollBehavior,
             )
         },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { padding ->
         // v0.8.15 Stage 1: 横屏/平板下限制内容最大宽度并居中，避免设置项行宽过宽阅读疲劳。
         // 竖屏（<600dp）下 widthIn(max=600) 不生效（屏幕宽 < max），不影响竖屏布局。

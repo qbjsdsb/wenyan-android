@@ -93,10 +93,13 @@ fun WenyanAdaptiveNavigation(
                     //      - 下滑内容 → 整体向下移出屏幕（spring 动画）
                     //      - 上滑内容 → 整体回到原位（spring 动画）
                     //
-                    // 底部间距 = MD3 导航栏内容高度(80dp) + 系统手势条区域。
-                    // 导航栏自身通过 windowInsets 吃手势条（总高 = 80dp + 手势条），
-                    // 与 bottomPadding 对齐 → 卡片贴底栏顶，无多余空白。
-                    val bottomPadding = 80.dp + systemNavBarBottomDp
+                    // 底部间距 = MD3 导航栏内容高度(80dp)。
+                    // v0.9.22 修复 double inset：系统手势条区域由内层 ExpressiveScaffold
+                    // 的 contentWindowInsets 消费（与顶部 statusBars 处理对称），外层只避让
+                    // 导航栏 80dp。此前外层加 80dp + 手势区、内层 Scaffold 又消费一次手势区，
+                    // 导致底部多出一个手势条高度的空白（用户反馈"底栏上方大面积空白"根因）。
+                    // 导航栏自身通过 windowInsets 吃手势条（总高 = 80dp + 手势条）。
+                    val bottomPadding = 80.dp
 
                     // KSU 风格滚动感知显隐：监听 LocalLazyListState 的滚动方向
                     val scrollState = LocalLazyListState.current

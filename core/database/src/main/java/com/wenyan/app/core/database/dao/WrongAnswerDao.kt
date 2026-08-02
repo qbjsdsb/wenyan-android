@@ -86,34 +86,61 @@ interface WrongAnswerDao {
     ): WrongAnswerEntity?
 
     /**
-     * 事务性写入错题记录（v0.9.18 新增）。
+     * 事务性记录错题（v0.9.22 重构，P2-4 修复并发重复插入窗口）。
      *
-     * 在一个 Room 事务内完成"查找已有记录 → 递增或创建"，避免并发竞争。
-     * 返回已有记录 ID（递增后）或 null（表示需要新插入）。
+     * 在一个 Room 事务内完成"查找已有记录 → 递增 wrongCount 或插入新记录"，
+     * 杜绝并发竞争：
+     * - v0.9.18 的 recordWrongAnswerTransaction 只把"查找+递增"放入事务，
+     *   插入新记录（upsert）在事务外由 Repository 单独执行（独立事务 B）。
+     *   两个线程并发对同一 pointId+source 答错时，可能都从事务 A 得到 null，
+     *   然后各自 insert，产生两条未解决错题（重复记录）。
+     * - 本方法把"查找 + 递增/插入"整体放入一个事务，并发下只有第一个线程
+     *   能插入成功，第二个线程在事务内查到已有记录后走递增路径。
      *
-     * @param pointId        关联知识点 ID
-     * @param examQuestionId 关联真题 ID
-     * @param source         来源
-     * @param lastWrongAt    最后答错时间戳
-     * @return 已有记录 ID（若已存在且递增），null 表示需要新插入
+     * @param pointId        关联知识点 ID（卡片来源时非空）
+     * @param examQuestionId 关联真题 ID（真题来源时非空）
+     * @param userAnswer     用户错误答案
+     * @param correctAnswer  正确答案（可为空）
+     * @param source         来源 CARD_AGAIN / QUIZ_WRONG / ESSAY_PRACTICE / CARD_MANUAL
+     * @param now            当前有效时间戳（由 Repository 传入 ClockGuard 时间源，
+     *                       保证与 FSRS 调度时间一致）
+     * @return 错题 ID（已有记录递增后返回原 ID，新记录返回新生成的 UUID）
      */
     @Transaction
-    suspend fun recordWrongAnswerTransaction(
+    suspend fun recordWrongAnswer(
         pointId: String?,
         examQuestionId: String?,
+        userAnswer: String,
+        correctAnswer: String?,
         source: String,
-        lastWrongAt: Long,
-    ): String? {
+        now: Long,
+    ): String {
         val existing: WrongAnswerEntity? = when {
             pointId != null -> findUnresolvedByPointAndSource(pointId, source)
             examQuestionId != null -> findUnresolvedByExamQuestionAndSource(examQuestionId, source)
             else -> null
         }
         if (existing != null) {
-            incrementWrongCount(existing.id, lastWrongAt)
+            incrementWrongCount(existing.id, now)
             return existing.id
         }
-        return null
+        val id = java.util.UUID.randomUUID().toString()
+        upsert(
+            WrongAnswerEntity(
+                id = id,
+                pointId = pointId,
+                examQuestionId = examQuestionId,
+                userAnswer = userAnswer,
+                correctAnswer = correctAnswer,
+                source = source,
+                wrongCount = 1,
+                lastWrongAt = now,
+                resolvedAt = null,
+                aiExplanation = null,
+                createdAt = now,
+            ),
+        )
+        return id
     }
 
     /**

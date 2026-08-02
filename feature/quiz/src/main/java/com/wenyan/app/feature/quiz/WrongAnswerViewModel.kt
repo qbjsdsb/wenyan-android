@@ -79,6 +79,18 @@ class WrongAnswerViewModel @Inject constructor(
     private val _retryTrigger = MutableStateFlow(0)
 
     /**
+     * 评分防重入锁（v0.9.22 P2-3 新增）。
+     *
+     * 背景：DUE 模式下评分后 DB 流刷新前卡片仍停留在原地，用户快速连点两个
+     * 评分按钮会对同一错题调用两次 rateWrongAnswer，导致 FSRS 重复调度、
+     * 间隔异常。CardsScreen 评分后立即推进索引天然防重，错题本 DUE 模式无此保护。
+     *
+     * viewModelScope 默认 Main dispatcher，isRating 读写均在主线程串行执行，
+     * 无需 Mutex/@Volatile。
+     */
+    private var isRating = false
+
+    /**
      * 错题列表 UI 状态(v0.8.21 重构为 MutableStateFlow + collect)。
      *
      * 合并 [retryTrigger] + [filter] 触发 [flatMapLatest] 订阅对应的 observe 流。
@@ -182,12 +194,18 @@ class WrongAnswerViewModel @Inject constructor(
      * 调用 [SchedulingRepository.rateWrongAnswer] 更新错题的 sched_* 字段。
      * 评分后错题的 sched_next_review_at 更新,从 DUE 列表移除（若已不再到期）。
      *
+     * v0.9.22 P2-3：增加防重入锁 [isRating]。DUE 模式下 DB 流刷新前卡片停留原地，
+     * 连点两个评分按钮会对同一错题重复调用本方法（FSRS 重复调度）。锁在
+     * viewModelScope.launch 期间保持，finally 中释放（异常也不卡死）。
+     *
      * 失败时设置 errorMessage,不阻塞 UI。
      *
      * @param id     错题 ID
      * @param rating FSRS 评分（AGAIN/HARD/GOOD/EASY）
      */
     fun rateWrongAnswer(id: String, rating: Rating) {
+        if (isRating) return
+        isRating = true
         viewModelScope.launch {
             try {
                 schedulingRepository.rateWrongAnswer(id, rating)
@@ -196,6 +214,8 @@ class WrongAnswerViewModel @Inject constructor(
             } catch (e: Exception) {
                 Timber.e(e, "rateWrongAnswer failed: id=$id, rating=$rating")
                 _errorMessage.value = "评分失败：${e.message ?: "未知错误"}"
+            } finally {
+                isRating = false
             }
         }
     }

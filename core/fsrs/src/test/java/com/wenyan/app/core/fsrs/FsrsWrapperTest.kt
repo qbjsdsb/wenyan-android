@@ -653,4 +653,42 @@ class FsrsWrapperTest {
                 scheduled.stability > 0f)
         }
     }
+
+    /**
+     * P2-1 (v0.9.22): LEARNING/REVIEW 状态 + stability=0 不应产生 NaN。
+     *
+     * 背景：v1 时代老数据的 memo_records 可能 state=LEARNING/REVIEW 但 stability=0
+     * （2.json 中 stability NOT NULL DEFAULT 0.0）。此时 nextRecallStability 中
+     * s.pow(-w[9]) = 0.pow(-0.1752) = +Infinity，最终 s*(1+growth) = 0*Infinity = NaN，
+     * NaN 写回 stability 会污染后续全部调度，且 nextInterval(NaN) 中 NaN.roundToInt() 会抛异常。
+     */
+    @Test
+    fun schedule_learningOrReview_withZeroStability_doesNotProduceNaN() {
+        val wrapper = FsrsWrapper(requestRetention = 0.9f, maximumInterval = 365, enableFuzz = false)
+        val now = LocalDateTime.of(2026, 7, 10, 12, 0)
+        for (state in listOf(State.LEARNING, State.REVIEW, State.RELEARNING)) {
+            val zeroStabilityCard = FlashCard(
+                state = state,
+                stability = 0f,
+                difficulty = 5f,
+                lastReview = now.minusDays(1),
+            )
+            for (rating in Rating.entries) {
+                val scheduled = wrapper.schedule(zeroStabilityCard, rating, now)
+                assertNotNull("state=$state rating=$rating 调度后卡片非空", scheduled)
+                assertTrue(
+                    "state=$state rating=$rating stability 不应为 NaN: ${scheduled.stability}",
+                    !scheduled.stability.isNaN(),
+                )
+                assertTrue(
+                    "state=$state rating=$rating stability 不应为 Infinity: ${scheduled.stability}",
+                    !scheduled.stability.isInfinite(),
+                )
+                assertTrue(
+                    "state=$state rating=$rating stability 应 > 0: ${scheduled.stability}",
+                    scheduled.stability > 0f,
+                )
+            }
+        }
+    }
 }
