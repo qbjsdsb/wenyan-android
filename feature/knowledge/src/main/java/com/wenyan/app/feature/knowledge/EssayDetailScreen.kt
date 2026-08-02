@@ -1,5 +1,8 @@
 package com.wenyan.app.feature.knowledge
 
+import androidx.compose.ui.res.stringResource
+import com.wenyan.app.feature.knowledge.R
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
@@ -771,8 +774,8 @@ private fun EssayAnswerInputSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 200.dp),
-            label = { Text("你的答案") },
-            placeholder = { Text("在此输入你的论述…") },
+            label = { Text(stringResource(R.string.text_01)) },
+            placeholder = { Text(stringResource(R.string.text_02)) },
             enabled = !isAiGuiding,
             supportingText = {
                 Row(

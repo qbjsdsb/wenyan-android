@@ -1,5 +1,8 @@
 package com.wenyan.app.feature.knowledge
 
+import androidx.compose.ui.res.stringResource
+import com.wenyan.app.feature.knowledge.R
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
@@ -183,7 +186,7 @@ fun KnowledgeScreen(
                             action = {
                                 if (searchQuery.isNotBlank() && isFiltered) {
                                     TextButton(onClick = { viewModel.selectCategory(KnowledgeCategory.ALL) }) {
-                                        Text("查看全部分类")
+                                        Text(stringResource(R.string.text_06))
                                     }
                                 }
                             },
@@ -231,7 +234,7 @@ private fun SearchBar(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-        placeholder = { Text("搜索知识点（标题 / 结论 / 全文 / 教材原文）") },
+        placeholder = { Text(stringResource(R.string.text_07)) },
         leadingIcon = {
             Icon(
                 imageVector = Icons.Default.Search,

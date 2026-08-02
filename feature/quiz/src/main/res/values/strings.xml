@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 答题/错题本 UI 文本 -->
+    <string name="text_01">问AI</string>
+    <string name="text_02">你的答案</string>
+    <string name="text_03">在此输入答案，提交后对照参考答案自评</string>
+    <string name="text_04">提交答案</string>
+    <string name="text_05">答对了</string>
+    <string name="text_06">答错了</string>
+    <string name="text_07">删除错题</string>
+    <string name="text_08">确定删除此错题吗？此操作不可撤销。</string>
+    <string name="text_09">删除</string>
+    <string name="text_10">取消</string>
+    <string name="text_11">标记已解决</string>
+</resources>

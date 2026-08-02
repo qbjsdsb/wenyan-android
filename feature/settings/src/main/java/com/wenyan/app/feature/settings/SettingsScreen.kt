@@ -1,5 +1,8 @@
 package com.wenyan.app.feature.settings
 
+import androidx.compose.ui.res.stringResource
+import com.wenyan.app.feature.settings.R
+
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically

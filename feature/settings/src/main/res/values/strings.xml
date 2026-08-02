@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 更新检查界面 -->
+    <string name="update_check_title">检查更新</string>
+    <string name="update_check_button">检查更新</string>
+    <string name="update_download_in_app">软件内更新</string>
+    <string name="update_download_browser">在浏览器中下载</string>
+    <string name="update_install">安装更新</string>
+    <string name="update_retry">重试</string>
+    <!-- 设置/关于界面（SettingsScreen / AboutTutorialScreen 模板串暂留硬编码） -->
+</resources>

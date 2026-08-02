@@ -1,5 +1,8 @@
 package com.wenyan.app.feature.settings
 
+import androidx.compose.ui.res.stringResource
+import com.wenyan.app.feature.settings.R
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -94,7 +97,7 @@ fun UpdateCheckScreen(
     ExpressiveScaffold(
         topBar = {
             TopAppBar(
-                title = { Text("检查更新") },
+                title = { Text(stringResource(R.string.update_check_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -252,7 +255,7 @@ private fun IdleContent(onCheck: () -> Unit) {
                 modifier = Modifier.size(ButtonDefaults.IconSize),
             )
             Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
-            Text("检查更新")
+            Text(stringResource(R.string.update_check_button))
         }
     }
 }
@@ -390,7 +393,7 @@ private fun UpdateAvailableContent(
                 modifier = Modifier.size(ButtonDefaults.IconSize),
             )
             Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
-            Text("软件内更新")
+            Text(stringResource(R.string.update_download_in_app))
         }
 
         // 浏览器下载（备用链接）
@@ -404,7 +407,7 @@ private fun UpdateAvailableContent(
                 modifier = Modifier.size(ButtonDefaults.IconSize),
             )
             Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
-            Text("在浏览器中下载")
+            Text(stringResource(R.string.update_download_browser))
         }
     }
 }
@@ -513,7 +516,7 @@ private fun DownloadCompleteContent(onInstall: () -> Unit) {
                 modifier = Modifier.size(ButtonDefaults.IconSize),
             )
             Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
-            Text("安装更新")
+            Text(stringResource(R.string.update_install))
         }
     }
 }
@@ -557,7 +560,7 @@ private fun ErrorContent(
                 modifier = Modifier.size(ButtonDefaults.IconSize),
             )
             Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
-            Text("重试")
+            Text(stringResource(R.string.update_retry))
         }
     }
 }

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 知识卡片 UI 文本 -->
+    <string name="text_01">需要重点关注</string>
+    <string name="text_02">问 AI 助手</string>
+    <string name="text_03">查看知识点</string>
+    <string name="text_04">知道了</string>
+    <string name="text_05">去学习</string>
+    <string name="text_06">再复习一轮</string>
+    <string name="text_07">撤销最后一张</string>
+    <string name="text_08">返回知识点列表</string>
+    <string name="text_09">撤销</string>
+    <string name="text_10">跳过</string>
+</resources>

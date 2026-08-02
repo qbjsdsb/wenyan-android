@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AI 助手 UI 文本 -->
+    <string name="text_01">API 配置</string>
+    <string name="text_02">论述题引导</string>
+    <string name="text_03">错题解释</string>
+    <string name="text_04">回忆检测</string>
+    <string name="text_05">死记硬背检测</string>
+    <string name="text_06">清空对话</string>
+    <string name="text_07">确定清空所有对话记录吗？此操作不可撤销。</string>
+    <string name="text_08">清空</string>
+    <string name="text_09">取消</string>
+    <string name="text_10">输入论述题和你的答案，AI 会以苏格拉底式三阶段引导改进</string>
+    <string name="text_11">论述题</string>
+    <string name="text_12">你的答案</string>
+    <string name="text_13">开始引导</string>
+    <string name="text_14">输入题目、你的错误答案和正确答案，AI 会分析错误思路</string>
+    <string name="text_15">题目</string>
+    <string name="text_16">你的答案（错误）</string>
+    <string name="text_17">正确答案</string>
+    <string name="text_18">请求解释</string>
+    <string name="text_19">输入你的答案和标准答案，系统会检测回忆质量（三层渐进式）</string>
+    <string name="text_20">标准答案</string>
+    <string name="text_21">名词解释</string>
+    <string name="text_22">开始检测</string>
+    <string name="text_23">输入知识点 ID 和关联知识点 ID（逗号分隔），检测是否疑似死记硬背</string>
+    <string name="text_24">知识点 ID</string>
+    <string name="text_25">关联知识点 ID（逗号分隔）</string>
+    <string name="text_26">回忆检测结果</string>
+    <string name="text_27">知道了</string>
+    <string name="text_28">输入你的问题……</string>
+    <string name="text_29">删除配置</string>
+    <string name="text_30">删除</string>
+    <string name="text_31">编辑</string>
+    <string name="text_32">保存</string>
+</resources>

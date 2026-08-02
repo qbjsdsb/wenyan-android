@@ -1,5 +1,8 @@
 package com.wenyan.app.feature.quiz
 
+import androidx.compose.ui.res.stringResource
+import com.wenyan.app.feature.quiz.R
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
@@ -421,7 +424,7 @@ private fun QuestionCard(
                         contentDescription = null,
                         modifier = Modifier.padding(end = Spacing.xs),
                     )
-                    Text("问AI")
+                    Text(stringResource(R.string.text_01))
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = null,
@@ -495,8 +498,8 @@ private fun AnswerSection(
                 value = answerState.userAnswer,
                 onValueChange = onUpdateAnswer,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("你的答案") },
-                placeholder = { Text("在此输入答案，提交后对照参考答案自评") },
+                label = { Text(stringResource(R.string.text_02)) },
+                placeholder = { Text(stringResource(R.string.text_03)) },
                 minLines = 3,
                 maxLines = 8,
             )
@@ -507,7 +510,7 @@ private fun AnswerSection(
                     .padding(top = Spacing.xs)
                     .align(Alignment.End),
             ) {
-                Text("提交答案")
+                Text(stringResource(R.string.text_04))
             }
         } else {
             // ── 状态 2/3: 已提交 → 展示用户答案(锁定) ──
@@ -600,14 +603,14 @@ private fun AnswerSection(
                         enabled = !answerState.isSelfEvaluated,
                         modifier = Modifier.weight(1f),
                     ) {
-                        Text("答对了")
+                        Text(stringResource(R.string.text_05))
                     }
                     FilledTonalButton(
                         onClick = { onSelfEvaluate(false) },
                         enabled = !answerState.isSelfEvaluated,
                         modifier = Modifier.weight(1f),
                     ) {
-                        Text("答错了")
+                        Text(stringResource(R.string.text_06))
                     }
                 }
             } else {

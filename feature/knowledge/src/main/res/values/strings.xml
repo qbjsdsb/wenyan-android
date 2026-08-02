@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 知识点/论述题 UI 文本 -->
+    <string name="text_01">你的答案</string>
+    <string name="text_02">在此输入你的论述…</string>
+    <string name="text_03">全部科目</string>
+    <string name="text_04">仅有审题思路</string>
+    <string name="text_05">标记已解决</string>
+    <string name="text_06">查看全部分类</string>
+    <string name="text_07">搜索知识点（标题 / 结论 / 全文 / 教材原文）</string>
+</resources>

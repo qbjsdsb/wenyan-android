@@ -1,5 +1,8 @@
 package com.wenyan.app.feature.knowledge
 
+import androidx.compose.ui.res.stringResource
+import com.wenyan.app.feature.knowledge.R
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
@@ -859,7 +862,7 @@ private fun WrongAnswerRow(
                 contentDescription = null,
                 modifier = Modifier.padding(end = Spacing.sm),
             )
-            Text("标记已解决")
+            Text(stringResource(R.string.text_05))
         }
     }
 }

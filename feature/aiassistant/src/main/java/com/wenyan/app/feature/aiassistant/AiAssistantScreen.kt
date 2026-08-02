@@ -1,5 +1,8 @@
 package com.wenyan.app.feature.aiassistant
 
+import androidx.compose.ui.res.stringResource
+import com.wenyan.app.feature.aiassistant.R
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
@@ -209,7 +212,7 @@ fun AiAssistantScreen(
                             onDismissRequest = { showOverflowMenu = false },
                         ) {
                             DropdownMenuItem(
-                                text = { Text("API 配置") },
+                                text = { Text(stringResource(R.string.text_01)) },
                                 onClick = {
                                     showOverflowMenu = false
                                     onNavigateToApiConfig()
@@ -224,28 +227,28 @@ fun AiAssistantScreen(
                             HorizontalDivider()
                             // P0 v0.7.2: 4 个学习工具入口,接通 ViewModel 已有但未接 UI 的方法
                             DropdownMenuItem(
-                                text = { Text("论述题引导") },
+                                text = { Text(stringResource(R.string.text_02)) },
                                 onClick = {
                                     showOverflowMenu = false
                                     showLearningToolDialog = LearningToolMode.ESSAY_GUIDE
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("错题解释") },
+                                text = { Text(stringResource(R.string.text_03)) },
                                 onClick = {
                                     showOverflowMenu = false
                                     showLearningToolDialog = LearningToolMode.WRONG_ANSWER
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("回忆检测") },
+                                text = { Text(stringResource(R.string.text_04)) },
                                 onClick = {
                                     showOverflowMenu = false
                                     showLearningToolDialog = LearningToolMode.RECALL_CHECK
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("死记硬背检测") },
+                                text = { Text(stringResource(R.string.text_05)) },
                                 onClick = {
                                     showOverflowMenu = false
                                     showLearningToolDialog = LearningToolMode.ROTE_CHECK
@@ -347,8 +350,8 @@ fun AiAssistantScreen(
             onDismissRequest = { showClearConfirmDialog = false },
             shape = MaterialTheme.shapes.extraLarge,
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            title = { Text("清空对话") },
-            text = { Text("确定清空所有对话记录吗？此操作不可撤销。") },
+            title = { Text(stringResource(R.string.text_06)) },
+            text = { Text(stringResource(R.string.text_07)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -356,12 +359,12 @@ fun AiAssistantScreen(
                         showClearConfirmDialog = false
                     },
                 ) {
-                    Text("清空", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.text_08), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearConfirmDialog = false }) {
-                    Text("取消")
+                    Text(stringResource(R.string.text_09))
                 }
             },
         )
@@ -447,7 +450,7 @@ private fun LearningToolDialog(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.text_09)) }
         },
     )
 }
@@ -456,14 +459,14 @@ private fun LearningToolDialog(
 private fun EssayGuideFields(onSubmit: (String, String) -> Unit) {
     var question by remember { mutableStateOf("") }
     var answer by remember { mutableStateOf("") }
-    Text("输入论述题和你的答案，AI 会以苏格拉底式三阶段引导改进", style = MaterialTheme.typography.bodySmall)
-    OutlinedTextField(value = question, onValueChange = { question = it }, label = { Text("论述题") }, modifier = Modifier.fillMaxWidth())
-    OutlinedTextField(value = answer, onValueChange = { answer = it }, label = { Text("你的答案") }, modifier = Modifier.fillMaxWidth())
+    Text(stringResource(R.string.text_10), style = MaterialTheme.typography.bodySmall)
+    OutlinedTextField(value = question, onValueChange = { question = it }, label = { Text(stringResource(R.string.text_11)) }, modifier = Modifier.fillMaxWidth())
+    OutlinedTextField(value = answer, onValueChange = { answer = it }, label = { Text(stringResource(R.string.text_12)) }, modifier = Modifier.fillMaxWidth())
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         TextButton(
             onClick = { onSubmit(question, answer) },
             enabled = question.isNotBlank() && answer.isNotBlank(),
-        ) { Text("开始引导") }
+        ) { Text(stringResource(R.string.text_13)) }
     }
 }
 
@@ -472,15 +475,15 @@ private fun WrongAnswerFields(onSubmit: (String, String, String) -> Unit) {
     var question by remember { mutableStateOf("") }
     var userAnswer by remember { mutableStateOf("") }
     var correctAnswer by remember { mutableStateOf("") }
-    Text("输入题目、你的错误答案和正确答案，AI 会分析错误思路", style = MaterialTheme.typography.bodySmall)
-    OutlinedTextField(value = question, onValueChange = { question = it }, label = { Text("题目") }, modifier = Modifier.fillMaxWidth())
-    OutlinedTextField(value = userAnswer, onValueChange = { userAnswer = it }, label = { Text("你的答案（错误）") }, modifier = Modifier.fillMaxWidth())
-    OutlinedTextField(value = correctAnswer, onValueChange = { correctAnswer = it }, label = { Text("正确答案") }, modifier = Modifier.fillMaxWidth())
+    Text(stringResource(R.string.text_14), style = MaterialTheme.typography.bodySmall)
+    OutlinedTextField(value = question, onValueChange = { question = it }, label = { Text(stringResource(R.string.text_15)) }, modifier = Modifier.fillMaxWidth())
+    OutlinedTextField(value = userAnswer, onValueChange = { userAnswer = it }, label = { Text(stringResource(R.string.text_16)) }, modifier = Modifier.fillMaxWidth())
+    OutlinedTextField(value = correctAnswer, onValueChange = { correctAnswer = it }, label = { Text(stringResource(R.string.text_17)) }, modifier = Modifier.fillMaxWidth())
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         TextButton(
             onClick = { onSubmit(question, userAnswer, correctAnswer) },
             enabled = question.isNotBlank() && userAnswer.isNotBlank() && correctAnswer.isNotBlank(),
-        ) { Text("请求解释") }
+        ) { Text(stringResource(R.string.text_18)) }
     }
 }
 
@@ -489,19 +492,19 @@ private fun RecallCheckFields(onSubmit: (String, String, QuestionType) -> Unit) 
     var userAnswer by remember { mutableStateOf("") }
     var correctAnswer by remember { mutableStateOf("") }
     var questionType by remember { mutableStateOf(QuestionType.TERM_EXPLANATION) }
-    Text("输入你的答案和标准答案，系统会检测回忆质量（三层渐进式）", style = MaterialTheme.typography.bodySmall)
-    OutlinedTextField(value = userAnswer, onValueChange = { userAnswer = it }, label = { Text("你的答案") }, modifier = Modifier.fillMaxWidth())
-    OutlinedTextField(value = correctAnswer, onValueChange = { correctAnswer = it }, label = { Text("标准答案") }, modifier = Modifier.fillMaxWidth())
+    Text(stringResource(R.string.text_19), style = MaterialTheme.typography.bodySmall)
+    OutlinedTextField(value = userAnswer, onValueChange = { userAnswer = it }, label = { Text(stringResource(R.string.text_12)) }, modifier = Modifier.fillMaxWidth())
+    OutlinedTextField(value = correctAnswer, onValueChange = { correctAnswer = it }, label = { Text(stringResource(R.string.text_20)) }, modifier = Modifier.fillMaxWidth())
     Row(verticalAlignment = Alignment.CenterVertically) {
-        FilterChip(selected = questionType == QuestionType.TERM_EXPLANATION, onClick = { questionType = QuestionType.TERM_EXPLANATION }, label = { Text("名词解释") })
+        FilterChip(selected = questionType == QuestionType.TERM_EXPLANATION, onClick = { questionType = QuestionType.TERM_EXPLANATION }, label = { Text(stringResource(R.string.text_21)) })
         Spacer(modifier = Modifier.size(Spacing.sm))
-        FilterChip(selected = questionType == QuestionType.ESSAY, onClick = { questionType = QuestionType.ESSAY }, label = { Text("论述题") })
+        FilterChip(selected = questionType == QuestionType.ESSAY, onClick = { questionType = QuestionType.ESSAY }, label = { Text(stringResource(R.string.text_11)) })
     }
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         TextButton(
             onClick = { onSubmit(userAnswer, correctAnswer, questionType) },
             enabled = userAnswer.isNotBlank() && correctAnswer.isNotBlank(),
-        ) { Text("开始检测") }
+        ) { Text(stringResource(R.string.text_22)) }
     }
 }
 
@@ -509,9 +512,9 @@ private fun RecallCheckFields(onSubmit: (String, String, QuestionType) -> Unit) 
 private fun RoteCheckFields(onSubmit: (String, List<String>) -> Unit) {
     var pointId by remember { mutableStateOf("") }
     var relatedIdsText by remember { mutableStateOf("") }
-    Text("输入知识点 ID 和关联知识点 ID（逗号分隔），检测是否疑似死记硬背", style = MaterialTheme.typography.bodySmall)
-    OutlinedTextField(value = pointId, onValueChange = { pointId = it }, label = { Text("知识点 ID") }, modifier = Modifier.fillMaxWidth())
-    OutlinedTextField(value = relatedIdsText, onValueChange = { relatedIdsText = it }, label = { Text("关联知识点 ID（逗号分隔）") }, modifier = Modifier.fillMaxWidth())
+    Text(stringResource(R.string.text_23), style = MaterialTheme.typography.bodySmall)
+    OutlinedTextField(value = pointId, onValueChange = { pointId = it }, label = { Text(stringResource(R.string.text_24)) }, modifier = Modifier.fillMaxWidth())
+    OutlinedTextField(value = relatedIdsText, onValueChange = { relatedIdsText = it }, label = { Text(stringResource(R.string.text_25)) }, modifier = Modifier.fillMaxWidth())
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         TextButton(
             onClick = {
@@ -519,7 +522,7 @@ private fun RoteCheckFields(onSubmit: (String, List<String>) -> Unit) {
                 onSubmit(pointId, ids)
             },
             enabled = pointId.isNotBlank(),
-        ) { Text("开始检测") }
+        ) { Text(stringResource(R.string.text_22)) }
     }
 }
 
@@ -535,7 +538,7 @@ private fun RecallResultDialog(result: RecallResult, onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.extraLarge,
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        title = { Text("回忆检测结果") },
+        title = { Text(stringResource(R.string.text_26)) },
         text = {
             Column {
                 Text("检测层级：${result.level}")
@@ -546,7 +549,7 @@ private fun RecallResultDialog(result: RecallResult, onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("知道了") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.text_27)) }
         },
     )
 }
@@ -576,7 +579,7 @@ private fun InputBar(
             value = text,
             onValueChange = onTextChanged,
             modifier = Modifier.weight(1f),
-            placeholder = { Text("输入你的问题……") },
+            placeholder = { Text(stringResource(R.string.text_28)) },
             maxLines = 3,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,

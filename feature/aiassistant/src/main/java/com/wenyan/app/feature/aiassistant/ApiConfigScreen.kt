@@ -1,5 +1,8 @@
 package com.wenyan.app.feature.aiassistant
 
+import androidx.compose.ui.res.stringResource
+import com.wenyan.app.feature.aiassistant.R
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
@@ -214,7 +217,7 @@ fun ApiConfigScreen(
     deletingConfig?.let { config ->
         AlertDialog(
             onDismissRequest = { deletingConfig = null },
-            title = { Text("删除配置") },
+            title = { Text(stringResource(R.string.text_29)) },
             text = { Text("确定删除「${config.displayName}」吗？此操作不可撤销。") },
             shape = MaterialTheme.shapes.extraLarge,
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -225,12 +228,12 @@ fun ApiConfigScreen(
                         deletingConfig = null
                     },
                 ) {
-                    Text("删除", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.text_30), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { deletingConfig = null }) {
-                    Text("取消")
+                    Text(stringResource(R.string.text_09))
                 }
             },
         )
@@ -362,7 +365,7 @@ private fun ConfigCard(
                         contentDescription = null,
                         modifier = Modifier.padding(end = Spacing.xs),
                     )
-                    Text("编辑")
+                    Text(stringResource(R.string.text_31))
                 }
                 TextButton(onClick = onDelete) {
                     Icon(
@@ -371,7 +374,7 @@ private fun ConfigCard(
                         modifier = Modifier.padding(end = Spacing.xs),
                         tint = MaterialTheme.colorScheme.error,
                     )
-                    Text("删除", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.text_30), color = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -549,7 +552,7 @@ private fun ApiConfigFormDialog(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 TextButton(onClick = onDismiss) {
-                    Text("取消")
+                    Text(stringResource(R.string.text_09))
                 }
                 // v0.8.3 修复（P2-A-3）：保存是主要操作，改用 FilledTonalButton 提升视觉权重
                 // 有输入错误时禁用保存，防止用户保存非法值
@@ -572,7 +575,7 @@ private fun ApiConfigFormDialog(
                     },
                     enabled = temperatureError == null && maxTokensError == null,
                 ) {
-                    Text("保存")
+                    Text(stringResource(R.string.text_32))
                 }
             }
         }

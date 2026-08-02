@@ -1,5 +1,8 @@
 package com.wenyan.app.feature.quiz
 
+import androidx.compose.ui.res.stringResource
+import com.wenyan.app.feature.quiz.R
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
@@ -317,10 +320,10 @@ private fun WrongAnswerList(
     deletingItem?.let { item ->
         AlertDialog(
             onDismissRequest = { deletingItem = null },
-            title = { Text("删除错题") },
+            title = { Text(stringResource(R.string.text_07)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    Text("确定删除此错题吗？此操作不可撤销。")
+                    Text(stringResource(R.string.text_08))
                     // v0.9.2：Dialog 也显示题目，多条时用户可确认删哪条
                     item.questionTitle?.takeIf { it.isNotBlank() }?.let { title ->
                         Text(
@@ -343,12 +346,12 @@ private fun WrongAnswerList(
                         deletingItem = null
                     },
                 ) {
-                    Text("删除", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.text_09), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { deletingItem = null }) {
-                    Text("取消")
+                    Text(stringResource(R.string.text_10))
                 }
             },
         )
@@ -527,7 +530,7 @@ private fun WrongAnswerCard(
                                 contentDescription = null,
                                 modifier = Modifier.padding(end = Spacing.xs),
                             )
-                            Text("标记已解决")
+                            Text(stringResource(R.string.text_11))
                         }
                     }
                     // v0.8.4 修复：删除是破坏性操作，按钮用 error 色传达危险语义
@@ -538,7 +541,7 @@ private fun WrongAnswerCard(
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.padding(end = Spacing.xs),
                         )
-                        Text("删除", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.text_09), color = MaterialTheme.colorScheme.error)
                     }
                 }
             }

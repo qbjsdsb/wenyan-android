@@ -1,5 +1,8 @@
 package com.wenyan.app.feature.cards
 
+import androidx.compose.ui.res.stringResource
+import com.wenyan.app.feature.cards.R
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
@@ -190,7 +193,7 @@ fun CardsScreen(
         // 原实现 Row 内两个 TextButton 紧贴,视觉拥挤且触控目标易误触
         AlertDialog(
             onDismissRequest = viewModel::clearLeechWarning,
-            title = { Text("需要重点关注") },
+            title = { Text(stringResource(R.string.text_01)) },
             text = { Text(warning.message) },
             confirmButton = {
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
@@ -198,20 +201,20 @@ fun CardsScreen(
                         viewModel.clearLeechWarning()
                         onNavigateToAiAssistant()
                     }) {
-                        Text("问 AI 助手")
+                        Text(stringResource(R.string.text_02))
                     }
                     TextButton(onClick = {
                         val pid = warning.pointId
                         viewModel.clearLeechWarning()
                         if (pid.isNotBlank()) onNavigateToDetail(pid)
                     }) {
-                        Text("查看知识点")
+                        Text(stringResource(R.string.text_03))
                     }
                 }
             },
             dismissButton = {
                 TextButton(onClick = viewModel::clearLeechWarning) {
-                    Text("知道了")
+                    Text(stringResource(R.string.text_04))
                 }
             },
         )
@@ -306,7 +309,7 @@ fun CardsScreen(
                                     contentDescription = null,
                                     modifier = Modifier.padding(end = Spacing.xs),
                                 )
-                                Text("去学习")
+                                Text(stringResource(R.string.text_05))
                             }
                         },
                     )
@@ -719,7 +722,7 @@ private fun SessionCompleteState(
                 contentDescription = null,
                 modifier = Modifier.padding(end = Spacing.sm),
             )
-            Text("再复习一轮")
+            Text(stringResource(R.string.text_06))
         }
         // v0.9.7 M5:撤销最后一张卡评分,回退到 CardReviewContent 重新评分。
         // 适用场景:用户评完最后一张才发现评错了(如本想评 GOOD 却点了 AGAIN),
@@ -736,7 +739,7 @@ private fun SessionCompleteState(
                     contentDescription = null,
                     modifier = Modifier.padding(end = Spacing.sm),
                 )
-                Text("撤销最后一张")
+                Text(stringResource(R.string.text_07))
             }
         }
         // v0.8.7：退出按钮,让用户明确离开复习(导航到知识点列表)
@@ -746,7 +749,7 @@ private fun SessionCompleteState(
             onClick = onExit,
             modifier = Modifier.heightIn(min = 48.dp),
         ) {
-            Text("返回知识点列表")
+            Text(stringResource(R.string.text_08))
         }
     }
 }
@@ -805,7 +808,7 @@ private fun UndoButton(
             contentDescription = null,
             modifier = Modifier.padding(end = Spacing.xs),
         )
-        Text("撤销")
+        Text(stringResource(R.string.text_09))
     }
 }
 
@@ -833,7 +836,7 @@ private fun SkipButton(
             contentDescription = null,
             modifier = Modifier.padding(end = Spacing.xs),
         )
-        Text("跳过")
+        Text(stringResource(R.string.text_10))
     }
 }
 

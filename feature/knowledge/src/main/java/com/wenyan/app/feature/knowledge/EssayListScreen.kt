@@ -1,5 +1,8 @@
 package com.wenyan.app.feature.knowledge
 
+import androidx.compose.ui.res.stringResource
+import com.wenyan.app.feature.knowledge.R
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
@@ -205,7 +208,7 @@ private fun EssayFilterBar(
                 selected = selectedSubjectId == null,
                 onClick = { onSubjectSelected(null) },
                 enabled = enabled,
-                label = { Text("全部科目") },
+                label = { Text(stringResource(R.string.text_03)) },
             )
             subjects.forEach { subject ->
                 FilterChip(
@@ -220,7 +223,7 @@ private fun EssayFilterBar(
                 selected = onlyWithAngle,
                 onClick = onToggleOnlyWithAngle,
                 enabled = enabled,
-                label = { Text("仅有审题思路") },
+                label = { Text(stringResource(R.string.text_04)) },
                 leadingIcon = if (onlyWithAngle) {
                     {
                         Icon(
