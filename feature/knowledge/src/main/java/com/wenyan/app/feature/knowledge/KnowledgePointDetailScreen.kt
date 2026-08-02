@@ -8,14 +8,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.semantics
@@ -113,7 +114,8 @@ fun KnowledgePointDetailScreen(
     ) { innerPadding ->
         // NF-UC1 修复：scrollState 移出 Crossfade lambda，避免状态切换（loading→content）
         // 时 Composable 重建导致 scrollState 丢失，滚动位置归零。
-        val scrollState = rememberScrollState()
+        // v0.9.26 性能：Column+verticalScroll → LazyColumn（懒加载，长详情页不一次布局全部）
+        val listState = rememberLazyListState()
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -164,58 +166,71 @@ fun KnowledgePointDetailScreen(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.TopCenter,
                             ) {
-                                Column(
+                                LazyColumn(
+                                    state = listState,
                                     modifier = Modifier
-                                        .widthIn(max = MaxContentWidth.comfortable)
-                                        .verticalScroll(scrollState)
-                                        .padding(Spacing.lg),
+                                        .widthIn(max = MaxContentWidth.comfortable),
+                                    contentPadding = PaddingValues(Spacing.lg),
                                     verticalArrangement = Arrangement.spacedBy(Spacing.lg),
                                 ) {
-                                // ── 标题区 ──
-                                HeaderSection(point)
+                                    item(key = "header", contentType = "header") {
+                                        HeaderSection(point)
+                                    }
 
-                                // ── 摘要 ──
-                                point.summary?.takeIf { it.isNotBlank() }?.let { summary ->
-                                    GroupedCard(title = "摘要") {
-                                        Text(
-                                            text = summary,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            modifier = Modifier.padding(
-                                                start = Spacing.lg,
-                                                end = Spacing.lg,
-                                                top = Spacing.md,
-                                                bottom = Spacing.md,
-                                            ),
+                                    // ── 摘要 ──
+                                    if (point.summary?.isNotBlank() == true) {
+                                        item(key = "summary", contentType = "summary") {
+                                            GroupedCard(title = "摘要") {
+                                                Text(
+                                                    text = point.summary.orEmpty(),
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    modifier = Modifier.padding(
+                                                        start = Spacing.lg,
+                                                        end = Spacing.lg,
+                                                        top = Spacing.md,
+                                                        bottom = Spacing.md,
+                                                    ),
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    // ── 多教材对照 ──
+                                    item(key = "multi_perspective", contentType = "multi_perspective") {
+                                        MultiPerspectiveSection(point)
+                                    }
+
+                                    // ── 来源溯源 ──
+                                    if (uiState.sources.isNotEmpty()) {
+                                        item(key = "sources", contentType = "sources") {
+                                            SourcesSection(uiState.sources)
+                                        }
+                                    }
+
+                                    // ── 关联知识点 ──
+                                    item(key = "related_points", contentType = "related_points") {
+                                        RelatedPointsSection(
+                                            detail = uiState.detail,
+                                            onNavigateToDetail = onNavigateToDetail,
                                         )
                                     }
-                                }
 
-                                // ── 多教材对照 ──
-                                MultiPerspectiveSection(point)
+                                    // ── 相关论述题(v0.9.8 知识点串联器) ──
+                                    item(key = "related_essays", contentType = "related_essays") {
+                                        RelatedEssaysSection(
+                                            essays = uiState.relatedEssays,
+                                            onNavigateToEssay = onNavigateToEssay,
+                                        )
+                                    }
 
-                                // ── 来源溯源 ──
-                                if (uiState.sources.isNotEmpty()) {
-                                    SourcesSection(uiState.sources)
-                                }
-
-                                // ── 关联知识点 ──
-                                RelatedPointsSection(
-                                    detail = uiState.detail,
-                                    onNavigateToDetail = onNavigateToDetail,
-                                )
-
-                                // ── 相关论述题(v0.9.8 知识点串联器) ──
-                                RelatedEssaysSection(
-                                    essays = uiState.relatedEssays,
-                                    onNavigateToEssay = onNavigateToEssay,
-                                )
-
-                                // ── 错题记录(v0.8.19 P1-REL-1) ──
-                                WrongAnswersSection(
-                                    wrongAnswers = uiState.wrongAnswers,
-                                    onMarkResolved = viewModel::markWrongAnswerResolved,
-                                )
-                                } // Column end
+                                    // ── 错题记录(v0.8.19 P1-REL-1) ──
+                                    item(key = "wrong_answers", contentType = "wrong_answers") {
+                                        WrongAnswersSection(
+                                            wrongAnswers = uiState.wrongAnswers,
+                                            onMarkResolved = viewModel::markWrongAnswerResolved,
+                                        )
+                                    }
+                                } // LazyColumn end
                             } // Box end
                         }
                     }

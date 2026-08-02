@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -48,6 +50,11 @@ class AiServiceImpl @Inject constructor(
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    // v0.9.26 成本控制：全局并发限制（跨页面共享，防多页面同时打 API 撞限流）。
+    // Semaphore(3) 允许 3 个并发 AI 调用（含 SSE 长连接占槽），
+    // 超出的请求等待——比"无限制并发 + 429 重试"更省 token、更稳定。
+    private val aiSemaphore = Semaphore(MAX_CONCURRENT_AI_CALLS)
+
     /**
      * 发送对话消息，返回 AI 回复。
      *
@@ -81,7 +88,10 @@ class AiServiceImpl @Inject constructor(
                 stream = false,
             )
             val authorization = "Bearer ${config.apiKey}"
-            val response = service.chatCompletion(authorization, request)
+            // v0.9.26：全局并发限制（Semaphore）
+            val response = aiSemaphore.withPermit {
+                service.chatCompletion(authorization, request)
+            }
 
             if (response.isSuccessful) {
                 val body = response.body()
@@ -145,7 +155,10 @@ class AiServiceImpl @Inject constructor(
                 stream = false,
             )
             val authorization = "Bearer ${config.apiKey}"
-            val response = service.chatCompletion(authorization, request)
+            // v0.9.26：全局并发限制（Semaphore）
+            val response = aiSemaphore.withPermit {
+                service.chatCompletion(authorization, request)
+            }
 
             if (response.isSuccessful) {
                 val body = response.body()
@@ -221,8 +234,10 @@ class AiServiceImpl @Inject constructor(
                 stream = true,
             )
             val authorization = "Bearer ${config.apiKey}"
-            // 逐 chunk 读取 SSE，真正的流式 emit
-            emitAll(readSseStream(config, authorization, request))
+            // v0.9.26：全局并发限制（Semaphore）——包住整个流式读取（SSE 长连接占槽）
+            aiSemaphore.withPermit {
+                emitAll(readSseStream(config, authorization, request))
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: SocketTimeoutException) {
@@ -369,5 +384,8 @@ class AiServiceImpl @Inject constructor(
 
         /** API 返回空响应时的提示 */
         private const val EMPTY_RESPONSE_MESSAGE = "AI 返回了空回复，请重试。"
+
+        /** v0.9.26：AI 全局并发上限（含 SSE 长连接占槽） */
+        private const val MAX_CONCURRENT_AI_CALLS = 3
     }
 }

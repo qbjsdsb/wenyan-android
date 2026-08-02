@@ -121,6 +121,14 @@ class RagEngine @Inject constructor(
             }
         }
 
+        // v0.9.26 增强：剔除中文停用词（的/了/在/与/和/及/以及/关于/对于 等），
+        // 避免"苏轼的诗词风格"这类整句关键词导致 LIKE 全串匹配失败。
+        // 注意只剔除"独立停用词"，不拆字——保持单关键词语义，不引入多词 OR 复杂度。
+        val stopWords = listOf("的", "了", "在", "与", "和", "及", "以及", "关于", "对于", "之", "其", "所")
+        for (stop in stopWords) {
+            keyword = keyword.replace(stop, "")
+        }
+
         return keyword.trim()
     }
 

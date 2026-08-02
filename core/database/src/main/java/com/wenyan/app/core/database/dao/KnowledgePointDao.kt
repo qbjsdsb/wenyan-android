@@ -86,12 +86,15 @@ interface KnowledgePointDao {
      * @return 匹配的知识点列表，按 updated_at DESC 排序
      */
     @Query(
+        // v0.9.26 修复：RAG 检索过滤 ocr_status='VERIFIED'（未校对知识点不进 AI 上下文）。
+        // 原实现无过滤，PENDING 未校对数据可能被喂给 LLM；与 observeSearchWithSubject 一致。
         "SELECT * FROM knowledge_points WHERE " +
+            "ocr_status = 'VERIFIED' AND (" +
             "title LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
             "core_conclusion LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
             "full_content LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
             "study_text LIKE '%' || :keyword || '%' ESCAPE '\\' " +
-            "ORDER BY updated_at DESC LIMIT :limit",
+            ") ORDER BY updated_at DESC LIMIT :limit",
     )
     suspend fun searchByKeyword(keyword: String, limit: Int = 5): List<KnowledgePointEntity>
 

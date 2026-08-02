@@ -71,6 +71,9 @@ abstract class AiModule {
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(60, TimeUnit.SECONDS)
                 .writeTimeout(30, TimeUnit.SECONDS)
+                // v0.9.26 成本控制：callTimeout 覆盖整个调用（含 SSE 长连接读取），
+                // 防止流式响应卡死导致 token/电量空耗；上限 90s 足够长回答（逐字流式）。
+                .callTimeout(90, TimeUnit.SECONDS)
                 .addInterceptor(RetryInterceptor())
                 .addInterceptor(loggingInterceptor)
                 .build()
@@ -120,8 +123,16 @@ class RetryInterceptor(
                 val response = chain.proceed(chain.request())
                 // 检查是否为可重试的 HTTP 状态码
                 if (response.code in RETRYABLE_STATUS_CODES && attempt < maxRetries) {
+                    // v0.9.26 成本控制：429/5xx 时优先读取 Retry-After 头（服务商明确告知
+                    // 限流秒数），有则按其等待，避免请求过频再次撞限流；无则回退指数退避。
+                    // 注：Retry-After 可能为 HTTP-date 格式，此处仅解析纯秒数，解析失败回退。
+                    val retryAfterMs = response.header("Retry-After")
+                        ?.trim()
+                        ?.toLongOrNull()
+                        ?.takeIf { it > 0 }
+                        ?.let { it * 1000 }
                     response.close()
-                    val backoffMs = computeBackoff(attempt)
+                    val backoffMs = retryAfterMs ?: computeBackoff(attempt)
                     Thread.sleep(backoffMs)
                     attempt++
                     continue
