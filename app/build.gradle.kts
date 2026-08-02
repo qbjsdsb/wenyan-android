@@ -69,7 +69,11 @@ android {
         //   更新日志机制 CHANGELOG。versionName "0.9.23"）
         // v0.9.24=49（批一 AI 体验：流式+停止+多轮上下文+token 统计 / 批二工程质量：R8 混淆+迁移测试+
         //   Tab 闪烁+补索引(DB 9→10)+事务化。versionName "0.9.24"）
-        versionCode = 49
+        // v0.9.25=50（AI 生成全新启动图标「书堆+文」 / 整体界面审查修复 14 项：AI 停止保留内容+
+        //   流式自动滚动+状态栏图标色+更新安装已下载 APK+重试 loading+错误态禁用筛选+
+        //   长标题截断+种子色暗色适配+卡片滚动重置+错题本 Snackbar+日期行省略+底栏跨 Tab 重置。
+        //   versionName "0.9.25"）
+        versionCode = 50
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         //   数据一致性修复（B1/B2/B3）：
@@ -133,7 +137,8 @@ android {
         // v0.9.22：深度审查改进批 A+B（见 versionCode 注释）
         // v0.9.23：论述题删年份 + Snackbar 修复 + AI 审计修复 + 更新日志机制（见 versionCode 注释）
         // v0.9.24：批一 AI 体验 + 批二工程质量（见 versionCode 注释）
-        versionName = "0.9.24"
+        // v0.9.25：AI 生成全新启动图标 + 整体界面审查修复（见 versionCode 注释）
+        versionName = "0.9.25"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
