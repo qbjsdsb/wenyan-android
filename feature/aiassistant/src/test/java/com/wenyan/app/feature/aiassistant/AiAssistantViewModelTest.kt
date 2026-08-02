@@ -12,10 +12,12 @@ import com.wenyan.app.core.database.entity.ChatConversationEntity
 import com.wenyan.app.core.database.entity.ChatMessageEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.ReviewLogEntity
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -420,6 +422,136 @@ class AiAssistantViewModelTest {
         assertTrue("deleteConversation 应被调用", convId in chatRepository.deletedConversationIds)
         // setCurrentConversation(null) 被调用
         assertTrue("setCurrentConversation(null) 应被调用", null in chatRepository.setCurrentCalls)
+    }
+
+    /**
+     * v0.9.23 P1-3 回归：AI 回复中再次发送消息应被忽略（launchAiTask 防重入）。
+     *
+     * 用 FakeAiService.replyGate 让第一条消息的 AI 回复挂起，模拟"回复进行中"，
+     * 此时再 sendMessage 应被 aiJob.isActive 拦截，不产生第二条用户消息/额外 AI 调用。
+     */
+    @Test
+    fun `AI回复中再次发送消息被忽略`() = runTest {
+        aiService.replyGate = CompletableDeferred()
+        viewModel.sendMessage("第一条")
+        // 第一条在 AI 回复中（chatResult 挂起）
+        assertTrue("发送中 isLoading 应为 true", viewModel.uiState.value.isLoading)
+        val messagesAfterFirst = viewModel.uiState.value.messages.size
+        // 第一条用户消息已加入
+        assertEquals(1, messagesAfterFirst)
+
+        // AI 回复中再次发送 → 应被忽略
+        viewModel.sendMessage("第二条")
+        assertEquals("第二条应被忽略，消息数不变", messagesAfterFirst, viewModel.uiState.value.messages.size)
+
+        // 放行第一条的 AI 回复
+        aiService.replyGate?.complete(Unit)
+        aiService.replyGate = null
+        // UnconfinedTestDispatcher 同步恢复，直接验证最终状态
+        val state = viewModel.uiState.value
+        assertFalse("任务完成后 isLoading 应为 false", state.isLoading)
+        // 只有第一条用户消息 + 第一条 AI 回复，无第二条
+        assertEquals(messagesAfterFirst + 1, state.messages.size)
+        assertEquals("第一条", state.messages[0].content)
+    }
+
+    /**
+     * v0.9.23 P0-1 回归：发送中清空对话应取消在途任务，
+     * 避免 currentConversationId!! NPE / 消息写入已删除会话 / 消息丢失。
+     */
+    @Test
+    fun `发送中清空对话取消在途任务`() = runTest {
+        aiService.replyGate = CompletableDeferred()
+        viewModel.sendMessage("测试问题")
+        assertTrue("发送中 isLoading 应为 true", viewModel.uiState.value.isLoading)
+
+        // 发送中清空对话
+        viewModel.clearMessages()
+        assertTrue("清空后消息应为空", viewModel.uiState.value.messages.isEmpty())
+        assertFalse("清空后 isLoading 应为 false（在途任务已取消）", viewModel.uiState.value.isLoading)
+
+        // 放行 gate —— 已取消的协程不应再把 AI 回复加回 UI
+        aiService.replyGate?.complete(Unit)
+        aiService.replyGate = null
+        // 让取消传播完成（UnconfinedTestDispatcher 下取消同步传播）
+        runCurrent()
+        assertTrue("取消的任务不应把消息加回来", viewModel.uiState.value.messages.isEmpty())
+    }
+
+    /**
+     * v0.9.23 P0-1 回归：发送中新建对话应取消在途任务（同 clearMessages）。
+     */
+    @Test
+    fun `发送中新建对话取消在途任务`() = runTest {
+        aiService.replyGate = CompletableDeferred()
+        viewModel.sendMessage("测试问题")
+        assertTrue("发送中 isLoading 应为 true", viewModel.uiState.value.isLoading)
+
+        viewModel.startNewConversation()
+        assertTrue("新建后消息应为空", viewModel.uiState.value.messages.isEmpty())
+        assertFalse("新建后 isLoading 应为 false（在途任务已取消）", viewModel.uiState.value.isLoading)
+
+        aiService.replyGate?.complete(Unit)
+        aiService.replyGate = null
+        runCurrent()
+        assertTrue("取消的任务不应把消息加回来", viewModel.uiState.value.messages.isEmpty())
+    }
+
+    /**
+     * v0.9.23 P0-2 回归：init 恢复对话完成前用户已发消息，
+     * 恢复不应覆盖用户当前会话（避免用户消息从 UI 消失）。
+     *
+     * 用 FakeChatRepository.loadOrInitGate 让恢复挂起（模拟真实 DataStore 异步），
+     * 用户先 sendMessage 创建新会话 → 放行 gate 完成恢复 → 旧历史不应覆盖用户消息。
+     */
+    @Test
+    fun `init恢复完成前用户已发消息不覆盖`() = runTest {
+        val convId = "conv_old"
+        val initialConv = ChatConversationEntity(
+            id = convId,
+            title = "旧对话",
+            apiConfigId = null,
+            model = null,
+            messageCount = 1,
+            createdAt = 1000L,
+            updatedAt = 2000L,
+        )
+        val initialMsgs = listOf(
+            ChatMessageEntity(
+                id = "msg_old", conversationId = convId, role = "USER",
+                content = "旧消息", contentSource = "USER_INPUT", stage = null,
+                referencesJson = null, contextScreen = null, contextTitle = null,
+                tokensUsed = null, createdAt = 1000L,
+            ),
+        )
+        // 预设旧对话 + 恢复闸门挂起（模拟 DataStore 异步读取中）
+        chatRepository = FakeChatRepository(
+            initialConversations = listOf(initialConv),
+            initialMessages = initialMsgs,
+        ).also { it.loadOrInitGate = CompletableDeferred() }
+        viewModel = AiAssistantViewModel(
+            aiService = aiService,
+            socraticTutor = socraticTutor,
+            ragEngine = ragEngine,
+            recallChecker = recallChecker,
+            antiRoteMemorization = antiRoteMemorization,
+            chatRepository = chatRepository,
+        )
+
+        // 恢复挂起中，用户已发消息（创建新会话）
+        aiService.response = "AI 回复"
+        viewModel.sendMessage("用户新消息")
+
+        // 放行恢复
+        chatRepository.loadOrInitGate?.complete(Unit)
+        chatRepository.loadOrInitGate = null
+        runCurrent()
+
+        // 用户消息 + AI 回复 保留，未被旧历史覆盖
+        val state = viewModel.uiState.value
+        assertEquals("不应覆盖用户新消息", 2, state.messages.size)
+        assertEquals("用户新消息", state.messages[0].content)
+        assertTrue("不应包含旧消息", state.messages.none { it.content == "旧消息" })
     }
 
     /**

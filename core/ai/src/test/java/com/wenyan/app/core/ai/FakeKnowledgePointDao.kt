@@ -15,6 +15,12 @@ class FakeKnowledgePointDao(
     private val searchResults: List<KnowledgePointEntity> = emptyList(),
 ) : KnowledgePointDao {
 
+    /**
+     * v0.9.23 P2-1 测试用：true 时 [searchByKeyword] 抛异常，
+     * 验证 RagEngine 异常降级（不阻断主流程）。
+     */
+    var throwOnSearch: Boolean = false
+
     override suspend fun insert(entity: KnowledgePointEntity) {}
     override suspend fun insertAll(entities: List<KnowledgePointEntity>) {}
     override suspend fun update(entity: KnowledgePointEntity) {}
@@ -34,6 +40,7 @@ class FakeKnowledgePointDao(
     override suspend fun updateOcrStatus(id: String, status: String) {}
 
     override suspend fun searchByKeyword(keyword: String, limit: Int): List<KnowledgePointEntity> {
+        if (throwOnSearch) throw IllegalStateException("simulated DB failure")
         // 模拟 LIKE 搜索：返回包含关键词的结果
         return searchResults.filter { entity ->
             entity.title.contains(keyword, ignoreCase = true) ||

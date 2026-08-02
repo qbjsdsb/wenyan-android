@@ -6,6 +6,7 @@ import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.Serializable
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -54,7 +55,15 @@ class RagEngine @Inject constructor(
             return@flow
         }
 
-        val results = knowledgePointDao.searchByKeyword(escapeLikeWildcards(keyword), limit = MAX_RESULTS)
+        // v0.9.23 P2-1 修复：RAG 检索失败不应阻断主流程（AI 调用）。
+        // 原实现 DAO 异常会沿 flow 抛出，导致 sendMessage/SocraticTutor 整个失败；
+        // 现在 catch 降级为"无检索结果"，由调用方决定是否继续（无 RAG 也能回答）。
+        val results = try {
+            knowledgePointDao.searchByKeyword(escapeLikeWildcards(keyword), limit = MAX_RESULTS)
+        } catch (e: Exception) {
+            Timber.w(e, "RAG searchByKeyword failed, degrade to no-results: ${e.message}")
+            emptyList()
+        }
         if (results.isEmpty()) {
             emit(RagResult(
                 hasResults = false,

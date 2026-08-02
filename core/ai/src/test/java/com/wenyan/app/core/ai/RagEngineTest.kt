@@ -59,6 +59,23 @@ class RagEngineTest {
         }
     }
 
+    /**
+     * v0.9.23 P2-1 回归：DAO 抛异常时 RAG 检索降级为"无结果"，
+     * 不沿 flow 抛出导致主流程（AI 调用）失败。
+     */
+    @Test
+    fun `search DAO异常时降级为无结果不崩溃`() = runTest {
+        val dao = FakeKnowledgePointDao(searchResults = emptyList()).apply { throwOnSearch = true }
+        val engine = RagEngine(dao)
+
+        engine.search("苏轼").test {
+            val result = awaitItem()
+            assertFalse("DAO 异常应降级为无结果", result.hasResults)
+            assertEquals(RagEngine.NO_RESULT_MESSAGE, result.message)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
     @Test
     fun `search 疑问句式正确提取关键词`() = runTest {
         val entity = sampleEntity(

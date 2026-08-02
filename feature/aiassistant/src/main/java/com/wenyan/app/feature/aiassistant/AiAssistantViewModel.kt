@@ -21,12 +21,14 @@ import com.wenyan.app.core.data.repository.ChatRepository
 import com.wenyan.app.core.database.entity.ChatMessageEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 /**
@@ -74,6 +76,48 @@ class AiAssistantViewModel @Inject constructor(
      */
     private var currentConversationId: String? = null
 
+    /**
+     * 当前 AI 任务 Job（v0.9.23 P0-1/P1-3 修复）。
+     *
+     * - **防重入（P1-3）**：AI 回复中用户又触发学习工具（论述题引导/错题解释/回忆检测）
+     *   时，[launchAiTask] 会拒绝新任务，避免多个 AI 协程并发写 _uiState / 重复计费。
+     * - **可取消（P0-1）**：清空/新建对话时 [clearMessages]/[startNewConversation]
+     *   调用 [Job.cancel]，取消在途任务，避免"发送中清空"竞态导致
+     *   `currentConversationId!!` NPE / 用户消息丢失。
+     */
+    private var aiJob: Job? = null
+
+    /**
+     * 统一启动 AI 任务（v0.9.23 新增）。
+     *
+     * @param showLoading 是否在任务期间置 isLoading=true（false 用于静默检测类任务）
+     * @param block 任务体（内部自行 catch 并设置具体 errorMessage；本方法兜底）
+     */
+    private fun launchAiTask(
+        showLoading: Boolean = true,
+        block: suspend () -> Unit,
+    ) {
+        // P1-3 防重入：已有 AI 任务在跑时忽略新任务
+        if (aiJob?.isActive == true) {
+            Timber.d("launchAiTask skipped: aiJob is active")
+            return
+        }
+        aiJob = viewModelScope.launch {
+            if (showLoading) _uiState.update { it.copy(isLoading = true) }
+            try {
+                block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // 兜底：block 内部已 catch 的不会到这里；这里是双保险
+                Timber.w(e, "AI 任务异常: ${e.message}")
+            } finally {
+                if (showLoading) _uiState.update { it.copy(isLoading = false) }
+                aiJob = null
+            }
+        }
+    }
+
     init {
         checkAvailability()
         // NF-PP6: 加载或初始化当前对话,恢复历史消息
@@ -97,6 +141,9 @@ class AiAssistantViewModel @Inject constructor(
      */
     fun sendMessage(text: String) {
         if (text.isBlank()) return
+        // v0.9.23 P1-3 修复：AI 回复中拒绝新消息。
+        // 必须在添加用户消息到 UI 之前检查，否则会出现"消息显示了但 AI 不处理"的错乱。
+        if (aiJob?.isActive == true) return
         // v0.8.16 P1-3 修复：限制输入长度，防止用户粘贴超长文本导致：
         // - LLM prompt token 超限（多数模型 context window 8k-32k tokens）
         // - LLM API 报 400/413 错误
@@ -123,13 +170,21 @@ class AiAssistantViewModel @Inject constructor(
             )
         }
 
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+        // v0.9.23 P0-1/P1-3：统一走 launchAiTask（防重入 + 可取消）
+        launchAiTask {
             try {
                 // NF-PP6: 确保当前对话存在,持久化用户消息
                 ensureConversation()
+                val convId = currentConversationId
+                // P0-1 安全空判断：清空/新建对话取消了任务后，这里不应 NPE
+                if (convId == null) {
+                    _uiState.update {
+                        it.copy(errorMessage = "对话创建失败，请重试")
+                    }
+                    return@launchAiTask
+                }
                 chatRepository.appendMessage(
-                    conversationId = currentConversationId!!,
+                    conversationId = convId,
                     role = AiRole.USER.name,
                     content = text,
                     contentSource = CONTENT_SOURCE_USER_INPUT,
@@ -140,14 +195,14 @@ class AiAssistantViewModel @Inject constructor(
                     tokensUsed = null,
                 )
 
-                // 1. RAG 检索
+                // 1. RAG 检索（v0.9.23 P2-1：RagEngine 内部已降级，不会抛异常阻断主流程）
                 val ragResult = ragEngine.search(text).first()
 
                 // 2. 检查 AI 可用性
                 val available = aiService.isAvailable().first()
                 if (!available) {
                     addOfflineMessage(ragResult.references)
-                    return@launch
+                    return@launchAiTask
                 }
 
                 // 3. 构建 prompt 并调用 AI（P1-5 改用 chatResult 区分成功/失败）
@@ -158,7 +213,7 @@ class AiAssistantViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(errorMessage = "请求失败：${result.exceptionOrNull()?.message ?: "未知错误"}")
                     }
-                    return@launch
+                    return@launchAiTask
                 }
 
                 // 4. 添加 AI 回复（标注引用来源）
@@ -173,8 +228,6 @@ class AiAssistantViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(errorMessage = "请求失败：${e.message ?: "未知错误"}")
                 }
-            } finally {
-                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -188,6 +241,8 @@ class AiAssistantViewModel @Inject constructor(
      */
     fun guideEssayAnswer(question: String, userAnswer: String) {
         if (question.isBlank() || userAnswer.isBlank()) return
+        // v0.9.23 P1-3：AI 回复中拒绝新任务（在添加用户消息前检查）
+        if (aiJob?.isActive == true) return
 
         val userMsg = AiMessage(
             id = nextId(),
@@ -198,13 +253,18 @@ class AiAssistantViewModel @Inject constructor(
             it.copy(messages = it.messages + userMsg, errorMessage = null)
         }
 
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+        // v0.9.23 P0-1/P1-3：统一走 launchAiTask（防重入 + 可取消）
+        launchAiTask {
             try {
                 // P1-AUDIT-5 修复：持久化用户消息（原实现只更新 UI 未入库，重启后上下文丢失）
                 ensureConversation()
+                val convId = currentConversationId
+                if (convId == null) {
+                    _uiState.update { it.copy(errorMessage = "对话创建失败，请重试") }
+                    return@launchAiTask
+                }
                 chatRepository.appendMessage(
-                    conversationId = currentConversationId!!,
+                    conversationId = convId,
                     role = AiRole.USER.name,
                     content = "【论述题】$question\n\n我的答案：$userAnswer",
                     contentSource = CONTENT_SOURCE_USER_INPUT,
@@ -223,8 +283,6 @@ class AiAssistantViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(errorMessage = "引导失败：${e.message ?: "未知错误"}")
                 }
-            } finally {
-                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -236,6 +294,8 @@ class AiAssistantViewModel @Inject constructor(
      */
     fun explainWrongAnswer(question: String, userAnswer: String, correctAnswer: String) {
         if (question.isBlank() || userAnswer.isBlank() || correctAnswer.isBlank()) return
+        // v0.9.23 P1-3：AI 回复中拒绝新任务（在添加用户消息前检查）
+        if (aiJob?.isActive == true) return
 
         val userMsg = AiMessage(
             id = nextId(),
@@ -246,13 +306,18 @@ class AiAssistantViewModel @Inject constructor(
             it.copy(messages = it.messages + userMsg, errorMessage = null)
         }
 
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+        // v0.9.23 P0-1/P1-3：统一走 launchAiTask（防重入 + 可取消）
+        launchAiTask {
             try {
                 // P1-AUDIT-5 修复：持久化用户消息（原实现只更新 UI 未入库，重启后上下文丢失）
                 ensureConversation()
+                val convId = currentConversationId
+                if (convId == null) {
+                    _uiState.update { it.copy(errorMessage = "对话创建失败，请重试") }
+                    return@launchAiTask
+                }
                 chatRepository.appendMessage(
-                    conversationId = currentConversationId!!,
+                    conversationId = convId,
                     role = AiRole.USER.name,
                     content = "【错题解释】$question\n\n我的答案：$userAnswer\n正确答案：$correctAnswer",
                     contentSource = CONTENT_SOURCE_USER_INPUT,
@@ -281,8 +346,6 @@ class AiAssistantViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(errorMessage = "解释失败：${e.message ?: "未知错误"}")
                 }
-            } finally {
-                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -315,8 +378,10 @@ class AiAssistantViewModel @Inject constructor(
         questionType: QuestionType,
     ) {
         if (userAnswer.isBlank() || correctAnswer.isBlank()) return
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+        // v0.9.23 P1-3：AI 任务进行中拒绝新任务
+        if (aiJob?.isActive == true) return
+        // v0.9.23 P1-3：统一走 launchAiTask（防重入 + 可取消）
+        launchAiTask {
             try {
                 val result = checkRecall(userAnswer, correctAnswer, questionType)
                 _uiState.update { it.copy(recallResult = result) }
@@ -326,8 +391,6 @@ class AiAssistantViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(errorMessage = "回忆检测失败：${e.message ?: "未知错误"}")
                 }
-            } finally {
-                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -348,7 +411,11 @@ class AiAssistantViewModel @Inject constructor(
      * 与 AntiRoteMemorization 和 DAO 命名对齐。
      */
     fun checkRoteMemorization(pointId: String, relatedPointIds: List<String>) {
-        viewModelScope.launch {
+        // v0.9.23 P1-3：AI 任务进行中拒绝新任务
+        if (aiJob?.isActive == true) return
+        // v0.9.23 P1-3：统一走 launchAiTask（防重入 + 可取消）。
+        // 检测不置 isLoading（静默检测，不干扰对话 UI）。
+        launchAiTask(showLoading = false) {
             try {
                 val result: RoteCheckResult = antiRoteMemorization
                     .checkRoteMemorization(pointId, relatedPointIds)
@@ -378,6 +445,9 @@ class AiAssistantViewModel @Inject constructor(
 
     /** 清空对话消息(NF-PP6: 同时删除当前对话 + 清空 DataStore currentId) */
     fun clearMessages() {
+        // v0.9.23 P0-1 修复：先取消在途 AI 任务，避免 sendMessage 协程在
+        // currentConversationId 置 null 后读到 null（NPE）或把消息写入已删除会话。
+        aiJob?.cancel()
         val convId = currentConversationId
         if (convId != null) {
             viewModelScope.launch {
@@ -403,6 +473,8 @@ class AiAssistantViewModel @Inject constructor(
      * - startNewConversation:保留当前对话历史,仅切换到新对话(下一次 sendMessage 时创建)
      */
     fun startNewConversation() {
+        // v0.9.23 P0-1 修复：先取消在途 AI 任务（同 clearMessages）
+        aiJob?.cancel()
         currentConversationId = null
         viewModelScope.launch {
             chatRepository.setCurrentConversation(null)
@@ -469,9 +541,13 @@ class AiAssistantViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val convId = chatRepository.loadOrInitCurrent() ?: return@launch
+                // v0.9.23 P0-2 修复：若用户已通过 sendMessage 创建了新会话
+                // （currentConversationId 非 null），不覆盖用户当前会话，
+                // 避免恢复完成时把旧历史灌入并让用户刚发的消息从 UI 消失。
+                if (currentConversationId != null) return@launch
                 currentConversationId = convId
                 val messages = chatRepository.observeMessages(convId).first()
-                if (messages.isNotEmpty()) {
+                if (messages.isNotEmpty() && currentConversationId == convId) {
                     _uiState.update { it.copy(messages = messages.map { it.toAiMessage() }) }
                 }
             } catch (e: CancellationException) {

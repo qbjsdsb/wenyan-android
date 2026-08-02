@@ -10,6 +10,7 @@ import com.wenyan.app.core.database.entity.ChatMessageEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import com.wenyan.app.core.database.entity.ReviewLogEntity
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,13 +30,22 @@ class FakeAiService(
     var throwException: Throwable? = null,
 ) : AiService {
 
+    /**
+     * v0.9.23 测试用"回复闸门"：非 null 时 [chatResult] 先 await 闸门再 emit，
+     * 模拟 AI 回复进行中（挂起）的状态，供竞态/取消测试使用。
+     * 测试完成时 `replyGate?.complete(Unit)` 放行。
+     */
+    var replyGate: CompletableDeferred<Unit>? = null
+
     override fun chat(query: String): Flow<String> = flow {
         throwException?.let { throw it }
+        replyGate?.await()
         emit(response)
     }
 
     override fun chatResult(query: String): Flow<Result<String>> = flow {
         throwException?.let { emit(Result.failure(it)); return@flow }
+        replyGate?.await()
         emit(Result.success(response))
     }
 
@@ -157,6 +167,12 @@ class FakeChatRepository(
     val setCurrentCalls: MutableList<String?> = mutableListOf()
     val currentId: String? get() = _currentId.value
 
+    /**
+     * v0.9.23 测试用闸门：非 null 时 [loadOrInitCurrent] 先 await 再返回，
+     * 模拟真实 DataStore 异步恢复延迟（供 P0-2 init 恢复竞态测试使用）。
+     */
+    var loadOrInitGate: CompletableDeferred<Unit>? = null
+
     init {
         for (conv in initialConversations) {
             conversations[conv.id] = conv
@@ -248,6 +264,8 @@ class FakeChatRepository(
     }
 
     override suspend fun loadOrInitCurrent(): String? {
+        // v0.9.23 测试用闸门：非 null 时先 await，模拟真实 DataStore 异步恢复延迟
+        loadOrInitGate?.await()
         // 如果已有 currentId 且存在,返回
         val cur = _currentId.value
         if (cur != null && conversations.containsKey(cur)) return cur
