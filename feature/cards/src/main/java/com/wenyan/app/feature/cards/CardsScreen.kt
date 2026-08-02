@@ -49,6 +49,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -86,10 +87,21 @@ import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
+import kotlinx.coroutines.withTimeout
 import com.wenyan.app.core.designsystem.theme.ColorMode
 import com.wenyan.app.core.designsystem.theme.ThemeConfig
 import com.wenyan.app.core.designsystem.theme.WenyanTheme
 import com.wenyan.app.core.fsrs.Rating
+
+/**
+ * Snackbar 显示超时兜底（v0.9.23 新增）。
+ *
+ * 用于 [SnackbarHostState.showSnackbar] 的 withTimeout 保护：
+ * material3 1.5.0-alpha18 的 duration 计时若异常导致 showSnackbar 挂起不返回，
+ * 5 秒后协程超时取消、Snackbar 被 dismiss，保证提示最多显示 5 秒不常驻。
+ * 正常流程下 SnackbarDuration.Short（约 4 秒）先于超时结束。
+ */
+private const val SNACKBAR_TIMEOUT_MS = 5_000L
 
 /**
  * 记忆卡片界面。
@@ -142,20 +154,31 @@ fun CardsScreen(
     // 弹出造成用户注意力分散 + AlertDialog 导航走后 Snackbar 未消费被销毁。
     // 修复策略:leechWarning 非空时暂存 errorMessage 不弹,leechWarning 清除后
     // errorMessage 仍存在(未 clearError),LaunchedEffect 重新触发弹 Snackbar。
+    //
+    // v0.9.23 修复:先 clear 再 show + withTimeout 超时兜底。
+    // 原实现 clearXxx 在 showSnackbar 之后,若 material3 1.5.0-alpha18 的 duration
+    // 计时异常导致 showSnackbar 挂起不返回,状态永远清不掉、Snackbar 永远显示。
+    // 修复后:1) 先 clear 立即清状态不残留; 2) withTimeout(5s) 兜底,即使挂起
+    // 5 秒后协程取消、Snackbar 被 dismiss,最多显示 5 秒。
     LaunchedEffect(errorMessage, leechWarning) {
         val error = errorMessage
         if (error != null && leechWarning == null) {
-            snackbarHostState.showSnackbar(error)
             viewModel.clearError()
+            withTimeout(SNACKBAR_TIMEOUT_MS) {
+                snackbarHostState.showSnackbar(error, duration = SnackbarDuration.Short)
+            }
         }
     }
 
     // v0.9.18: 成功消息（加入错题本）弹 Snackbar
+    // v0.9.23 修复:同上（先 clear 再 show + withTimeout 兜底）,见 errorMessage 注释。
     LaunchedEffect(successMessage) {
         val msg = successMessage
         if (msg != null) {
-            snackbarHostState.showSnackbar(msg)
             viewModel.clearSuccessMessage()
+            withTimeout(SNACKBAR_TIMEOUT_MS) {
+                snackbarHostState.showSnackbar(msg, duration = SnackbarDuration.Short)
+            }
         }
     }
 
