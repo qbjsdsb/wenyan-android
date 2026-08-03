@@ -993,6 +993,10 @@ private fun FlipCard(
 
     Card(
         modifier = modifier
+            // v0.9.30 打磨：正反面内容高度差异平滑过渡（此前翻转时高度突变）
+            .animateContentSize(
+                animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.EmphasizedEasing),
+            )
             .graphicsLayer {
                 rotationY = rotation
                 cameraDistance = 12 * density

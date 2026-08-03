@@ -86,7 +86,7 @@ class AiServiceImplTest {
 
         service.chat("什么是唐宋八大家？").test {
             val reply = awaitItem()
-            assertTrue("应包含离线提示", reply.contains("未配置") || reply.contains("API"))
+            assertTrue("应包含离线提示", reply.contains("未配置 API 服务商"))
             awaitComplete()
         }
     }
@@ -99,7 +99,7 @@ class AiServiceImplTest {
 
         service.chat("测试问题").test {
             val reply = awaitItem()
-            assertTrue("应返回错误提示", reply.contains("网络错误") || reply.contains("失败") || reply.contains("错误"))
+            assertTrue("应返回错误提示", reply.contains("网络错误"))
             awaitComplete()
         }
     }

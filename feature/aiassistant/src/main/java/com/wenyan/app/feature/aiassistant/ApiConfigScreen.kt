@@ -431,7 +431,9 @@ private fun ApiConfigFormDialog(
         val parsed = temperatureText.toDoubleOrNull()
         when {
             temperatureText.isBlank() -> null // 空值允许，保存时用默认值
-            parsed == null -> "请输入有效数字"
+            // v0.9.30 打磨：输入"0."、"."、"-"等中间态不报错（合法数字格式，可继续输入）
+            parsed == null ->
+                if (temperatureText.matches(NUMERIC_PATTERN)) null else "请输入有效数字"
             parsed < 0.0 || parsed > 2.0 -> "范围 0-2"
             else -> null
         }
@@ -440,10 +442,30 @@ private fun ApiConfigFormDialog(
         val parsed = maxTokensText.toIntOrNull()
         when {
             maxTokensText.isBlank() -> null
-            parsed == null -> "请输入有效整数"
+            parsed == null ->
+                if (maxTokensText.matches(INTEGER_PATTERN)) null else "请输入有效整数"
             parsed < 1 || parsed > 32000 -> "范围 1-32000"
             else -> null
         }
+    }
+
+    // v0.9.30 打磨：必填校验（此前空名称/URL/key 也可保存）
+    val displayNameError = remember(formState.displayName) {
+        if (formState.displayName.isBlank()) "请输入显示名称" else null
+    }
+    val baseUrlError = remember(formState.baseUrl) {
+        when {
+            formState.baseUrl.isBlank() -> "请输入接口地址"
+            !formState.baseUrl.startsWith("http://") && !formState.baseUrl.startsWith("https://") ->
+                "需以 http(s):// 开头"
+            else -> null
+        }
+    }
+    val apiKeyError = remember(formState.apiKey) {
+        if (formState.apiKey.isBlank()) "请输入 API 密钥" else null
+    }
+    val modelError = remember(formState.model) {
+        if (formState.model.isBlank()) "请输入模型名称" else null
     }
 
     val sheetState = rememberModalBottomSheetState()
@@ -494,12 +516,18 @@ private fun ApiConfigFormDialog(
                 value = formState.displayName,
                 onValueChange = onDisplayNameChange,
                 placeholder = "如：我的 DeepSeek",
+                // v0.9.30 打磨：必填校验
+                isError = displayNameError != null,
+                supportingText = displayNameError,
             )
             FormTextField(
                 label = "接口地址",
                 value = formState.baseUrl,
                 onValueChange = onBaseUrlChange,
                 placeholder = "https://api.deepseek.com",
+                // v0.9.30 打磨：必填 + URL 格式校验
+                isError = baseUrlError != null,
+                supportingText = baseUrlError,
             )
             FormTextField(
                 label = "API 密钥",
@@ -507,12 +535,18 @@ private fun ApiConfigFormDialog(
                 onValueChange = onApiKeyChange,
                 placeholder = "sk-...",
                 isPassword = true,
+                // v0.9.30 打磨：必填校验
+                isError = apiKeyError != null,
+                supportingText = apiKeyError,
             )
             FormTextField(
                 label = "模型名称",
                 value = formState.model,
                 onValueChange = onModelChange,
                 placeholder = "deepseek-chat",
+                // v0.9.30 打磨：必填校验
+                isError = modelError != null,
+                supportingText = modelError,
             )
             FormTextField(
                 label = "温度（0-2）",
@@ -573,7 +607,13 @@ private fun ApiConfigFormDialog(
                         }
                         onSave()
                     },
-                    enabled = temperatureError == null && maxTokensError == null,
+                    // v0.9.30 打磨：保存按钮禁用条件加入必填校验（此前只查温度/Token）
+                    enabled = temperatureError == null &&
+                        maxTokensError == null &&
+                        displayNameError == null &&
+                        baseUrlError == null &&
+                        apiKeyError == null &&
+                        modelError == null,
                 ) {
                     Text(stringResource(R.string.text_32))
                 }
@@ -621,3 +661,9 @@ private fun FormTextField(
         modifier = Modifier.fillMaxWidth(),
     )
 }
+
+/** 合法十进制数中间态（允许 "0."、"."、"-" 等继续输入，v0.9.30）。 */
+private val NUMERIC_PATTERN = Regex("-?[0-9]*\\.?[0-9]*")
+
+/** 合法整数中间态（允许 "-" 等继续输入，v0.9.30）。 */
+private val INTEGER_PATTERN = Regex("-?[0-9]*")
