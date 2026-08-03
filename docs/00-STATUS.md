@@ -68,9 +68,9 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **d8695c2**（v0.9.29 版本号提升，2026-08-04） |
-| 最新 Release | **v0.9.29**（2026-08-04，卡片备考系统）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.29 |
-| versionCode / versionName | **54 / "0.9.29"** |
+| 最新 commit | **133efe8**（v0.9.30 版本号提升，2026-08-04） |
+| 最新 Release | **v0.9.30**（2026-08-04，卡片打磨+UI/UX+i18n+仓库卫生）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.30 |
+| versionCode / versionName | **55 / "0.9.30"** |
 | 知识点 | **960 个** |
 | 真题 | **485 道** |
 | 论述题 | **134 道**（v0.9.23 起删年份显示，数据层 year 保留） |
@@ -80,11 +80,22 @@
 | 图谱 | **已移除**（v0.9.3） |
 | AI 服务商 | DeepSeek/通义/智谱/月之暗面/自定义（v0.9.23 修复 URL 拼接） |
 | 更新日志机制 | **CHANGELOG.md** + release.yml 动态读取（v0.9.23 起） |
-| 单测 | **556 个 0 失败**（v0.9.29 验证：新增卡片备考 27） |
-| R8 | **已启用并随 v0.9.29 发布**（APK 6.04MB，需 emulator 冒烟实测） |
+| 单测 | **551 个 0 失败**（v0.9.30 验证：删 Quiz 死代码测试 9 后 551） |
+| R8 | **已启用并随 v0.9.30 发布**（APK 6.10MB，需 emulator 冒烟实测） |
 | 启动图标 | **v7.5 双色页精进**（v0.9.27 起：米色右页+页脚厚度+缩进+主题镂空，纯矢量） |
 | 崩溃上报 | **未接入**（需 Firebase/Sentry 配置） |
 | 阻塞 | **无** |
+
+## ✅ v0.9.30 发布验证记录（2026-08-04，Release #60）
+
+> 发布核心验证已全部通过（详见 `docs/release-receipts/v0.9.30-release-receipt.md`）。
+
+1. **tag 与版本**：✅ v0.9.30 → 133efe8 = HEAD；versionCode 55 / versionName "0.9.30"
+2. **Release 页面**：✅ 文研App v0.9.30，正文来自 CHANGELOG v0.9.30（知识卡片打磨/复习新卡比例保护/UI-UX/i18n 资源化/仓库卫生/551 单测 全部出现）
+3. **APK 资产**：✅ wenyan-v0.9.30.apk + wenyan-latest.apk 均 200（6,101,989 字节），sha256 完全一致（4a4207e4…）
+4. **APK 版本**：✅ aapt2 校验 versionCode 55 / versionName "0.9.30" / targetSdk 35
+5. **APK 签名**：✅ apksigner v2 scheme 通过
+6. **单测/构建**：✅ 551 单测 0 失败 + assembleDebug + assembleRelease(R8) 本地预验全绿
 
 ## ✅ v0.9.29 发布验证记录（2026-08-04，Release #59）
 

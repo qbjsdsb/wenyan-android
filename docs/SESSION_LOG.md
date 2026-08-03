@@ -6512,3 +6512,27 @@ while (retryCount <= maxRetries) {
     getTodayStudyQueue/getStudyProgress 委托，测试只需扩展 FakeCardRepository + FakeCardSettingsRepository
   - Hilt 新 Repository 需在 DataModule 加 @Binds（漏了会 MissingBinding 编译失败）
   - 60 张/天 ≈ 103 天背完 6200 张，8 月初 → 12 月下旬约 140 天，考前留 40 天二轮，量合理
+
+## 2026-08-04 凌晨：v0.9.30 严谨发布完成（卡片打磨 + UI/UX 14 项 + i18n + 仓库卫生，Release #60）
+
+- **完成**：
+  - **知识卡片打磨**（`636aff4`）：复习/新卡比例保护（复习≤10 全量/11-20 减半/>20 暂停）+ 今日任务显示优化
+  - **批次 C UI/UX 4 轮 14 项**（`da32226`/`e34ab9f`/`ef5d1e5`/`34ca268`）：AI 光标动画/停止方块/幽灵留白/Snackbar、
+    触控目标 48dp 统一、FlowRow/常驻图标/撤销恒占位/翻转动画、ApiConfig 必填校验、空 item 条件化、
+    TopBar 统一、弱断言加强
+  - **i18n 资源化 6 commit 约 130 资源**（knowledge/cards/settings/quiz/aiassistant）：考频统一、
+    标题/按钮/表单/计数 format、semantics 非 Composable 场景外部变量、main 剩余硬编码 = 0
+  - **仓库卫生部分**（`fb18e3c`）：release-assets 74MB 出库、临时文件、kotlin.jvm、Quiz 死代码（-1814 行）
+  - **v0.9.30 发布**（`133efe8` 版本 55/0.9.30 + CHANGELOG）：tag → Release #60（14 分钟就绪）
+  - **发布后验证**：APK sha256 4a4207e4…（两 APK 一致，6,101,989 字节）+ aapt2 55/0.9.30 + apksigner v2
+    + body 关键词全命中（知识卡片打磨×8/比例保护×4/UI-UX×5/i18n×5/仓库卫生×5/551 单测）
+  - **receipt**：`docs/release-receipts/v0.9.30-release-receipt.md`；00-STATUS 更新
+- **进行中**：
+  - 批次 B 剩余：docs/plans 归档 + SESSION_LOG 截断 + AGENTS.md 清理
+  - 批次 D：合规（隐私政策/用户协议）、validateBaseUrl 强制 https
+  - ⚠️ 待人工验证：v0.9.30 真机冒烟（i18n 后各页文字正常、UI/UX 改进效果）
+- **关键发现**：
+  - i18n 自动化要点：Text("纯文本") 直接换 stringResource；title/label/placeholder/contentDescription 均可；
+    含变量用 format（%1$s/%1$d）；semantics lambda 非 Composable 需外部取变量；枚举 displayName/教程正文/
+    ViewModel 错误消息/相对时间格式保留硬编码（合理）
+  - R8 release 本地预验（assembleRelease）与 CI 产物一致（6,101,989 字节），发布前本地跑 release 构建可提前发现 R8 问题
