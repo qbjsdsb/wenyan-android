@@ -87,7 +87,10 @@ android {
         //   versionName "0.9.28"）
         // v0.9.29=54（卡片备考系统：每日新卡限额默认 60 可设 + 考频筛选 + 科目筛选 + 考试倒计时；
         //   今日任务横幅 + 设置页配置。versionName "0.9.29"）
-        versionCode = 54
+        // v0.9.30=55（知识卡片打磨：复习/新卡比例保护 + 今日任务显示优化 / 批次 C UI/UX 14 项：
+        //   AI 光标动画/触控目标 48dp/布局稳定/空 item 条件化等 / 仓库卫生部分 /
+        //   i18n 全量补全约 130 资源（5 模块 UI 文本，剩余硬编码 0）。versionName "0.9.30"）
+        versionCode = 55
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         //   数据一致性修复（B1/B2/B3）：
@@ -156,7 +159,8 @@ android {
         // v0.9.27：图标 v7.5 精进 + 全面检查 P1-1/2 + 内容补齐 25 个（见 versionCode 注释）
         // v0.9.28：App 内更新下载修复（见 versionCode 注释）
         // v0.9.29：卡片备考系统（见 versionCode 注释）
-        versionName = "0.9.29"
+        // v0.9.30：卡片打磨 + UI/UX + 仓库卫生 + i18n（见 versionCode 注释）
+        versionName = "0.9.30"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
