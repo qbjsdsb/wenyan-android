@@ -548,11 +548,11 @@ private fun RecallResultDialog(result: RecallResult, onDismiss: () -> Unit) {
         title = { Text(stringResource(R.string.text_26)) },
         text = {
             Column {
-                Text("检测层级：${result.level}")
-                Text("覆盖率：${"%.0f".format(result.coverage * 100)}%")
-                Text("评分：$ratingText")
-                result.score?.let { Text("LLM 评分：$it / 100") }
-                result.reason?.let { Text("理由：$it") }
+                Text(stringResource(R.string.ai_score_level, result.level))
+                Text(stringResource(R.string.ai_score_coverage, "%.0f".format(result.coverage * 100)))
+                Text(stringResource(R.string.ai_score_rating, ratingText))
+                result.score?.let { Text(stringResource(R.string.ai_score_llm, it)) }
+                result.reason?.let { Text(stringResource(R.string.ai_score_reason, it)) }
             }
         },
         confirmButton = {

@@ -51,4 +51,10 @@
     <string name="api_model">模型名称</string>
     <string name="api_temperature">温度（0-2）</string>
     <string name="api_max_tokens">最大 Token 数</string>
+    <string name="ai_score_level">检测层级：%1$s</string>
+    <string name="ai_score_coverage">覆盖率：%1$s%%</string>
+    <string name="ai_score_rating">评分：%1$s</string>
+    <string name="ai_score_llm">LLM 评分：%1$d / 100</string>
+    <string name="ai_score_reason">理由：%1$s</string>
+    <string name="api_delete_confirm">确定删除「%1$s」吗？此操作不可撤销。</string>
 </resources>

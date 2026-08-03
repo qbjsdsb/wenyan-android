@@ -218,7 +218,7 @@ fun ApiConfigScreen(
         AlertDialog(
             onDismissRequest = { deletingConfig = null },
             title = { Text(stringResource(R.string.text_29)) },
-            text = { Text("确定删除「${config.displayName}」吗？此操作不可撤销。") },
+            text = { Text(stringResource(R.string.api_delete_confirm, config.displayName)) },
             shape = MaterialTheme.shapes.extraLarge,
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             confirmButton = {
