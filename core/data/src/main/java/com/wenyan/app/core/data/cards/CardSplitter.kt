@@ -17,6 +17,16 @@ object CardSplitter {
     private const val TARGET_SPLIT_MIN = 5
     private const val TARGET_SPLIT_MAX = 6
 
+    /** 结构化标签充分阈值（v0.9.28 P2 修复）。
+     *
+     * 此前 `dimensions.isNotEmpty()` 只要有 1 个"标签："命中就按维度拆，
+     * 导致全文仅一处"不同：""特色："的段落式知识点（如"古代神话的产生与意义"
+     * 279 字 6 句）被误判为结构化，整段压成 1 张卡，违背最小信息原则。
+     * 现要求命中维度 >= 3 才按维度拆（真正的结构化内容），不足时走句子拆分，
+     * 保证每个知识点至少按分句拆出多张卡。
+     */
+    private const val MIN_STRUCTURED_DIMENSIONS = 3
+
     /** 集合枚举卡每组最大成员数（避免单卡信息过载） */
     private const val COLLECTION_GROUP_SIZE = 3
 
@@ -45,20 +55,21 @@ object CardSplitter {
     ): List<CardTemplate> {
         val dimensions = parseStructuredDimensions(term, definition)
 
-        // 解析到结构化维度时，推断类别并构建结构化字段
-        val category = if (dimensions.isNotEmpty()) determineCategory(dimensions) else TermCategory.SOCIETY
-        val societyFields = if (dimensions.isNotEmpty() && category == TermCategory.SOCIETY) {
+        // 解析到结构化维度且标签充分（>= MIN_STRUCTURED_DIMENSIONS）时，推断类别并构建结构化字段
+        val hasSufficientDimensions = dimensions.size >= MIN_STRUCTURED_DIMENSIONS
+        val category = if (hasSufficientDimensions) determineCategory(dimensions) else TermCategory.SOCIETY
+        val societyFields = if (hasSufficientDimensions && category == TermCategory.SOCIETY) {
             buildSocietyFields(dimensions)
         } else {
             null
         }
-        val workFields = if (dimensions.isNotEmpty() && category == TermCategory.WORK) {
+        val workFields = if (hasSufficientDimensions && category == TermCategory.WORK) {
             buildWorkFields(dimensions)
         } else {
             null
         }
 
-        val cards = if (dimensions.isNotEmpty()) {
+        val cards = if (hasSufficientDimensions) {
             // 结构化标签命中：每个维度一张卡
             // v0.8.9 P2-8 修复:sibling 卡冗余展示完整字段
             // 原实现每张 sibling 卡都附带完整 society/work/fullExplanation/studyText,
