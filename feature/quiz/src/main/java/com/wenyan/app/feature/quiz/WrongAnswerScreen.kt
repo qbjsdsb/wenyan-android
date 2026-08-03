@@ -149,7 +149,7 @@ fun WrongAnswerScreen(
     ExpressiveScaffold(
         topBar = {
             WenyanLargeTopAppBar(
-                title = "错题本",
+                title = stringResource(R.string.wrong_title),
                 onBack = onBack,
                 scrollBehavior = scrollBehavior,
             )
@@ -191,7 +191,7 @@ fun WrongAnswerScreen(
                         ) {
                             ErrorState(
                                 icon = Icons.Default.CloudOff,
-                                title = "加载失败",
+                                title = stringResource(R.string.wrong_load_failed),
                                 message = error,
                                 onRetry = viewModel::retry,
                             )
@@ -683,7 +683,7 @@ private fun WrongAnswerRatingButtons(
     ) {
         // AGAIN：红色警示（"完全不会"）— 重置到学习阶段
         WrongAnswerRatingButton(
-            label = "不会",
+            label = stringResource(R.string.wrong_rating_again),
             onClick = { onRate(Rating.AGAIN) },
             containerColor = MaterialTheme.colorScheme.errorContainer,
             contentColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -693,7 +693,7 @@ private fun WrongAnswerRatingButtons(
 
         // HARD：黄/橙色（"有难度"）— 短间隔复习
         WrongAnswerRatingButton(
-            label = "困难",
+            label = stringResource(R.string.wrong_rating_hard),
             onClick = { onRate(Rating.HARD) },
             containerColor = MaterialTheme.colorScheme.tertiaryContainer,
             contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -703,7 +703,7 @@ private fun WrongAnswerRatingButtons(
 
         // GOOD：绿色（"掌握了"，FSRS 标准间隔）— 默认推荐评分
         WrongAnswerRatingButton(
-            label = "良好",
+            label = stringResource(R.string.wrong_rating_good),
             onClick = { onRate(Rating.GOOD) },
             containerColor = MaterialTheme.colorScheme.secondaryContainer,
             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -713,7 +713,7 @@ private fun WrongAnswerRatingButtons(
 
         // EASY：蓝色（"很简单"，加成间隔）
         WrongAnswerRatingButton(
-            label = "简单",
+            label = stringResource(R.string.wrong_rating_easy),
             onClick = { onRate(Rating.EASY) },
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,

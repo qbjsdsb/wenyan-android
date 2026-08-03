@@ -116,7 +116,7 @@ fun ApiConfigScreen(
     ExpressiveScaffold(
         topBar = {
             WenyanLargeTopAppBar(
-                title = "API 配置",
+                title = stringResource(R.string.api_title),
                 onBack = onBack,
                 scrollBehavior = scrollBehavior,
             )
@@ -126,7 +126,7 @@ fun ApiConfigScreen(
             // v0.8.3 修复：表单弹出时隐藏 FAB，避免被 scrim 遮挡但仍可点击的歧义
             if (!isFormVisible) {
                 FloatingActionButton(onClick = viewModel::showAddForm) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "添加配置")
+                    Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(R.string.api_add_config))
                 }
             }
         },
@@ -164,7 +164,7 @@ fun ApiConfigScreen(
                         ) {
                             ErrorState(
                                 icon = Icons.Default.CloudOff,
-                                title = "加载失败",
+                                title = stringResource(R.string.api_load_failed),
                                 message = error,
                                 onRetry = viewModel::retry,
                             )
@@ -177,7 +177,7 @@ fun ApiConfigScreen(
                         ) {
                             EmptyState(
                                 icon = Icons.Default.Inbox,
-                                title = "暂无 API 配置",
+                                title = stringResource(R.string.api_empty),
                                 description = "点击右下角 + 添加服务商配置\n支持 DeepSeek / 通义 / 智谱 / 月之暗面",
                             )
                         }
@@ -512,16 +512,16 @@ private fun ApiConfigFormDialog(
             }
 
             FormTextField(
-                label = "显示名称",
+                label = stringResource(R.string.api_display_name),
                 value = formState.displayName,
                 onValueChange = onDisplayNameChange,
-                placeholder = "如：我的 DeepSeek",
+                placeholder = stringResource(R.string.api_display_name_placeholder),
                 // v0.9.30 打磨：必填校验
                 isError = displayNameError != null,
                 supportingText = displayNameError,
             )
             FormTextField(
-                label = "接口地址",
+                label = stringResource(R.string.api_base_url),
                 value = formState.baseUrl,
                 onValueChange = onBaseUrlChange,
                 placeholder = "https://api.deepseek.com",
@@ -530,7 +530,7 @@ private fun ApiConfigFormDialog(
                 supportingText = baseUrlError,
             )
             FormTextField(
-                label = "API 密钥",
+                label = stringResource(R.string.api_key),
                 value = formState.apiKey,
                 onValueChange = onApiKeyChange,
                 placeholder = "sk-...",
@@ -540,7 +540,7 @@ private fun ApiConfigFormDialog(
                 supportingText = apiKeyError,
             )
             FormTextField(
-                label = "模型名称",
+                label = stringResource(R.string.api_model),
                 value = formState.model,
                 onValueChange = onModelChange,
                 placeholder = "deepseek-chat",
@@ -549,7 +549,7 @@ private fun ApiConfigFormDialog(
                 supportingText = modelError,
             )
             FormTextField(
-                label = "温度（0-2）",
+                label = stringResource(R.string.api_temperature),
                 value = temperatureText,
                 onValueChange = { v ->
                     // P0-3 修复：本地 state 自由接收输入，不立即解析
@@ -564,7 +564,7 @@ private fun ApiConfigFormDialog(
                 supportingText = temperatureError,
             )
             FormTextField(
-                label = "最大 Token 数",
+                label = stringResource(R.string.api_max_tokens),
                 value = maxTokensText,
                 onValueChange = { v ->
                     // P0-3 修复：本地 state 自由接收输入，不立即解析

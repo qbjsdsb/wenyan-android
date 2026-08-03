@@ -12,4 +12,11 @@
     <string name="text_09">删除</string>
     <string name="text_10">取消</string>
     <string name="text_11">标记已解决</string>
+    <!-- 错题本 UI 文本（v0.9.30 i18n 补全） -->
+    <string name="wrong_title">错题本</string>
+    <string name="wrong_load_failed">加载失败</string>
+    <string name="wrong_rating_again">不会</string>
+    <string name="wrong_rating_hard">困难</string>
+    <string name="wrong_rating_good">良好</string>
+    <string name="wrong_rating_easy">简单</string>
 </resources>

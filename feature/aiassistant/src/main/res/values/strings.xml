@@ -33,4 +33,22 @@
     <string name="text_30">删除</string>
     <string name="text_31">编辑</string>
     <string name="text_32">保存</string>
+    <!-- AI 助手/API 配置 UI 文本（v0.9.30 i18n 补全） -->
+    <string name="ai_title">AI助手</string>
+    <string name="ai_unavailable">AI 服务不可用，点击配置</string>
+    <string name="ai_clear_chat">清空对话</string>
+    <string name="ai_new_chat">新建对话</string>
+    <string name="ai_more">更多</string>
+    <string name="ai_send">发送</string>
+    <string name="api_title">API 配置</string>
+    <string name="api_add_config">添加配置</string>
+    <string name="api_load_failed">加载失败</string>
+    <string name="api_empty">暂无 API 配置</string>
+    <string name="api_display_name">显示名称</string>
+    <string name="api_display_name_placeholder">如：我的 DeepSeek</string>
+    <string name="api_base_url">接口地址</string>
+    <string name="api_key">API 密钥</string>
+    <string name="api_model">模型名称</string>
+    <string name="api_temperature">温度（0-2）</string>
+    <string name="api_max_tokens">最大 Token 数</string>
 </resources>

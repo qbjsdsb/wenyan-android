@@ -170,7 +170,7 @@ fun AiAssistantScreen(
     ExpressiveScaffold(
         topBar = {
             WenyanLargeTopAppBar(
-                title = "AI助手",
+                title = stringResource(R.string.ai_title),
                 // P0-4 修复：子路由加 onBack，与其他子路由（ApiConfig/KnowledgePointDetail）契约一致
                 onBack = onBack,
                 actions = {
@@ -179,7 +179,7 @@ fun AiAssistantScreen(
                         IconButton(onClick = onNavigateToApiConfig) {
                             Icon(
                                 imageVector = Icons.Default.CloudOff,
-                                contentDescription = "AI 服务不可用，点击配置",
+                                contentDescription = stringResource(R.string.ai_unavailable),
                                 tint = MaterialTheme.colorScheme.error,
                             )
                         }
@@ -191,7 +191,7 @@ fun AiAssistantScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "清空对话",
+                            contentDescription = stringResource(R.string.ai_clear_chat),
                         )
                     }
                     // NF-PP6 Wave 3.1: 新建对话按钮(切换到新对话,保留历史)
@@ -203,7 +203,7 @@ fun AiAssistantScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "新建对话",
+                            contentDescription = stringResource(R.string.ai_new_chat),
                         )
                     }
                     // v0.6：MoreVert 改为 DropdownMenu 溢出菜单
@@ -211,7 +211,7 @@ fun AiAssistantScreen(
                         IconButton(onClick = { showOverflowMenu = true }) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
-                                contentDescription = "更多",
+                                contentDescription = stringResource(R.string.ai_more),
                             )
                         }
                         DropdownMenu(
@@ -609,7 +609,7 @@ private fun InputBar(
             } else {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "发送",
+                    contentDescription = stringResource(R.string.ai_send),
                 )
             }
         }
