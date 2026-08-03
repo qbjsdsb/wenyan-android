@@ -149,12 +149,12 @@ fun UpdateCheckScreen(
                         Spacer(modifier = Modifier.height(Spacing.sm))
 
                         Text(
-                            text = "文研 App",
+                            text = stringResource(R.string.update_app_name),
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            text = "当前版本 v$currentVersionName",
+                            text = stringResource(R.string.update_current_version, currentVersionName),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -238,7 +238,7 @@ private fun IdleContent(onCheck: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         Text(
-            text = "点击下方按钮检查是否有新版本可用",
+            text = stringResource(R.string.update_check_prompt),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -270,7 +270,7 @@ private fun CheckingContent() {
             strokeWidth = 4.dp,
         )
         Text(
-            text = "正在检查更新…",
+            text = stringResource(R.string.update_checking),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -290,7 +290,7 @@ private fun LatestContent(currentVersion: String) {
             tint = MaterialTheme.colorScheme.primary,
         )
         Text(
-            text = "已是最新版本",
+            text = stringResource(R.string.update_latest),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -339,7 +339,7 @@ private fun UpdateAvailableContent(
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "新版本可用",
+                        text = stringResource(R.string.update_available_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -354,7 +354,8 @@ private fun UpdateAvailableContent(
         }
 
         // 更新说明
-        if (releaseNotes.isNotBlank() && releaseNotes != "暂无更新说明") {
+        val noNotesText = stringResource(R.string.update_no_notes)
+        if (releaseNotes.isNotBlank() && releaseNotes != noNotesText) {
             TonalCard(
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -365,7 +366,7 @@ private fun UpdateAvailableContent(
                     verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     Text(
-                        text = "更新说明",
+                        text = stringResource(R.string.update_notes_title),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -435,7 +436,7 @@ private fun DownloadingContent(progress: Int) {
                     tint = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    text = "正在下载更新…",
+                    text = stringResource(R.string.update_downloading),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -458,7 +459,7 @@ private fun DownloadingContent(progress: Int) {
                 )
 
                 Text(
-                    text = "下载完成后将自动安装，请勿离开此页面",
+                    text = stringResource(R.string.update_auto_install_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -491,13 +492,13 @@ private fun DownloadCompleteContent(onInstall: () -> Unit) {
                     tint = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    text = "下载完成！",
+                    text = stringResource(R.string.update_download_done),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = "点击下方按钮开始安装",
+                    text = stringResource(R.string.update_install_prompt),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -536,7 +537,7 @@ private fun ErrorContent(
             tint = MaterialTheme.colorScheme.error,
         )
         Text(
-            text = "检查更新失败",
+            text = stringResource(R.string.update_check_failed),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,

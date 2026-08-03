@@ -84,8 +84,8 @@ fun AboutTutorialScreen(
     ExpressiveScaffold(
         topBar = {
             WenyanLargeTopAppBar(
-                title = "关于与教程",
-                subtitle = "理解原理 · 高效备考",
+                title = stringResource(R.string.about_title),
+                subtitle = stringResource(R.string.about_subtitle),
                 onBack = onBack,
                 scrollBehavior = scrollBehavior,
             )
@@ -187,24 +187,24 @@ private fun PrincipleRow(title: String, desc: String) {
 
 @Composable
 private fun SectionQuickStart() {
-    GroupedCard(title = "快速上手") {
+    GroupedCard(title = stringResource(R.string.about_quick_start)) {
         GroupedCardItem(
-            title = "1. 配置 AI 服务",
-            subtitle = "设置 → AI 服务",
+            title = stringResource(R.string.about_step1),
+            subtitle = stringResource(R.string.about_step1_desc),
             leadingIcon = Icons.Filled.Psychology,
             description = "推荐 DeepSeek。填入 API key 即可，不配置也能正常学习。",
         )
         GroupedCardDivider()
         GroupedCardItem(
-            title = "2. 浏览知识点",
-            subtitle = "知识点 Tab",
+            title = stringResource(R.string.about_step2),
+            subtitle = stringResource(R.string.about_step2_desc),
             leadingIcon = Icons.Filled.AutoStories,
             description = "按科目 → 时段章节浏览，先读核心结论建立框架。",
         )
         GroupedCardDivider()
         GroupedCardItem(
-            title = "3. 每天复习卡片",
-            subtitle = "卡片 Tab · 15-30 分钟",
+            title = stringResource(R.string.about_step3),
+            subtitle = stringResource(R.string.about_step3_desc),
             leadingIcon = Icons.Filled.Style,
             description = "完成当天到期卡片，诚实评分，算法自动安排下次复习。",
         )
@@ -217,38 +217,38 @@ private fun SectionQuickStart() {
 
 @Composable
 private fun SectionModules() {
-    GroupedCard(title = "功能模块") {
+    GroupedCard(title = stringResource(R.string.about_modules)) {
         GroupedCardItem(
-            title = "知识点",
-            subtitle = "四科文学史",
+            title = stringResource(R.string.about_mod_knowledge),
+            subtitle = stringResource(R.string.about_mod_knowledge_desc),
             leadingIcon = Icons.Filled.AutoStories,
             description = "古代 / 现当代 / 外国 / 理论，章节树 + 三层内容。",
         )
         GroupedCardDivider()
         GroupedCardItem(
-            title = "论述题",
-            subtitle = "真题论述题",
+            title = stringResource(R.string.about_mod_essay),
+            subtitle = stringResource(R.string.about_mod_essay_desc),
             leadingIcon = Icons.AutoMirrored.Filled.MenuBook,
             description = "历年真题论述题 · 审题思路 + 依据 + 知识点串联",
         )
         GroupedCardDivider()
         GroupedCardItem(
-            title = "卡片",
-            subtitle = "FSRS 调度",
+            title = stringResource(R.string.about_mod_cards),
+            subtitle = stringResource(R.string.about_mod_cards_desc),
             leadingIcon = Icons.Filled.Style,
             description = "6 种模板，间隔重复复习，Leech 警告防死记硬背。",
         )
         GroupedCardDivider()
         GroupedCardItem(
-            title = "错题本",
-            subtitle = "间隔重复",
+            title = stringResource(R.string.about_mod_wrong),
+            subtitle = stringResource(R.string.about_mod_wrong_desc),
             leadingIcon = Icons.Filled.ErrorOutline,
             description = "卡片与真题错题统一复习，四档评分调度下次时间。",
         )
         GroupedCardDivider()
         GroupedCardItem(
-            title = "AI 助手",
-            subtitle = "苏格拉底式引导",
+            title = stringResource(R.string.about_mod_ai),
+            subtitle = stringResource(R.string.about_mod_ai_desc),
             leadingIcon = Icons.Filled.Psychology,
             description = "不直接给答案，引导你找到答案。基于资料库检索，不编造。",
         )
@@ -261,9 +261,9 @@ private fun SectionModules() {
 
 @Composable
 private fun SectionPrinciples() {
-    GroupedCard(title = "学习原理") {
+    GroupedCard(title = stringResource(R.string.about_principles)) {
         ExpandableInfoItem(
-            title = "FSRS-6 间隔重复",
+            title = stringResource(R.string.about_principle_fsrs),
             summary = "基于遗忘曲线的智能复习调度",
             icon = Icons.Filled.Biotech,
             detail = "FSRS（Free Spaced Repetition Scheduler）在即将遗忘的临界点安排复习，" +
@@ -274,7 +274,7 @@ private fun SectionPrinciples() {
         )
         GroupedCardDivider()
         ExpandableInfoItem(
-            title = "三档记忆机制",
+            title = stringResource(R.string.about_principle_tiers),
             summary = "按内容类型差异化复习强度",
             icon = Icons.AutoMirrored.Filled.MenuBook,
             detail = "不同内容对记忆精度要求不同，三档机制精准投放复习资源：" +
@@ -364,21 +364,21 @@ private fun ExpandableInfoItem(
 
 @Composable
 private fun SectionAbout() {
-    GroupedCard(title = "关于") {
+    GroupedCard(title = stringResource(R.string.about_about)) {
         GroupedCardItem(
-            title = "技术栈",
+            title = stringResource(R.string.about_stack),
             leadingIcon = Icons.Filled.Code,
             description = "Kotlin / Jetpack Compose / Material 3 Expressive / Room / FSRS-6 自实现。",
         )
         GroupedCardDivider()
         GroupedCardItem(
-            title = "FSRS 算法致谢",
+            title = stringResource(R.string.about_fsrs_thanks),
             leadingIcon = Icons.Filled.School,
             description = "FSRS 由 Jarrett Ye 开源，已被 Anki 官方推荐为默认调度器。",
         )
         GroupedCardDivider()
         GroupedCardItem(
-            title = "免责声明",
+            title = stringResource(R.string.about_disclaimer),
             leadingIcon = Icons.Filled.Verified,
             description = "题目来自公开真题，版权归原命题方。AI 生成内容仅供参考，以官方参考书为准。",
         )
