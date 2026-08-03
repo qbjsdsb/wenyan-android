@@ -69,6 +69,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -468,9 +469,12 @@ private fun CardReviewContent(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
-                    if (uiState.currentIndex > 0) {
-                        UndoButton(onUndo = onUndo, modifier = Modifier.weight(1f))
-                    }
+                    // v0.9.30 打磨：撤销按钮恒占位（索引 0 时透明禁用），避免布局跳动
+                    UndoButton(
+                        onUndo = onUndo,
+                        enabled = uiState.currentIndex > 0,
+                        modifier = Modifier.weight(1f),
+                    )
                     SkipButton(onSkip = onSkip, modifier = Modifier.weight(1f))
                 }
             }
@@ -504,9 +508,12 @@ private fun CardReviewContent(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
-                    if (uiState.currentIndex > 0) {
-                        UndoButton(onUndo = onUndo, modifier = Modifier.weight(1f))
-                    }
+                    // v0.9.30 打磨：撤销按钮恒占位（索引 0 时透明禁用），避免布局跳动
+                    UndoButton(
+                        onUndo = onUndo,
+                        enabled = uiState.currentIndex > 0,
+                        modifier = Modifier.weight(1f),
+                    )
                     SkipButton(onSkip = onSkip, modifier = Modifier.weight(1f))
                 }
             }
@@ -814,11 +821,15 @@ private fun StatCard(
 private fun UndoButton(
     onUndo: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     TextButton(
         onClick = onUndo,
+        enabled = enabled,
         modifier = modifier
             .heightIn(min = 48.dp)
+            // v0.9.30 打磨：不可用时透明但恒占位（避免 1↔2 按钮切换布局跳动）
+            .alpha(if (enabled) 1f else 0f)
             .semantics { contentDescription = "撤销上一张" },
     ) {
         Icon(

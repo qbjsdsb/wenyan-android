@@ -725,7 +725,9 @@ private fun EssayAnswerEntry(onStartAnswering: () -> Unit) {
         )
         FilledTonalButton(
             onClick = onStartAnswering,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp),
         ) {
             Icon(
                 imageVector = Icons.Default.Start,
@@ -797,7 +799,9 @@ private fun EssayAnswerInputSection(
             OutlinedButton(
                 onClick = onCancelAnswering,
                 enabled = !isAiGuiding,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 48.dp),
             ) {
                 Icon(
                     imageVector = Icons.Default.Cancel,
@@ -810,7 +814,9 @@ private fun EssayAnswerInputSection(
             Button(
                 onClick = onSubmitAnswer,
                 enabled = canSubmit,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 48.dp),
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,
@@ -899,6 +905,7 @@ private fun EssayAiGuideStagesSection(
                     FilledTonalButton(
                         onClick = onRetry,
                         enabled = !isAiGuiding,
+                        modifier = Modifier.heightIn(min = 48.dp),
                     ) {
                         Text(text = "重试")
                     }
@@ -910,7 +917,9 @@ private fun EssayAiGuideStagesSection(
         if (guides.isNotEmpty() && !isAiGuiding) {
             OutlinedButton(
                 onClick = onClear,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp),
             ) {
                 Text(text = "清空引导结果")
             }
