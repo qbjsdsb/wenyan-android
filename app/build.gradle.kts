@@ -76,7 +76,11 @@ android {
         // v0.9.26=51（新启动图标 v7.4 Google Play Books 风格黑底白书 / 批三：详情页懒加载+
         //   RAG VERIFIED 过滤+AI 成本控制(Retry-After+callTimeout+Semaphore)+i18n 资源化+
         //   convention plugin 抽取。versionName "0.9.26"）
-        versionCode = 51
+        // v0.9.27=52（启动图标 v7.5 精进：双色页+页脚厚度+排版缩进+主题图标 evenOdd 镂空 /
+        //   全面检查 P1-1/2：aiJob 竞态条件清空 + Retry-After 上限 5s /
+        //   内容补齐 25 个知识点：真题硬缺口 10+教材缺口 10+台港澳 4+敦煌变文，
+        //   seed 2.16.0→2.18.0，935→960。versionName "0.9.27"）
+        versionCode = 52
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         //   数据一致性修复（B1/B2/B3）：
@@ -142,7 +146,8 @@ android {
         // v0.9.24：批一 AI 体验 + 批二工程质量（见 versionCode 注释）
         // v0.9.25：AI 生成全新启动图标 + 整体界面审查修复（见 versionCode 注释）
         // v0.9.26：新启动图标 v7.4 + 批三（见 versionCode 注释）
-        versionName = "0.9.26"
+        // v0.9.27：图标 v7.5 精进 + 全面检查 P1-1/2 + 内容补齐 25 个（见 versionCode 注释）
+        versionName = "0.9.27"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
