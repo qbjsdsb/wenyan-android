@@ -8,8 +8,13 @@ import com.wenyan.app.core.data.cards.SocietyTermFields
 import com.wenyan.app.core.data.cards.TermCategory
 import com.wenyan.app.core.data.cards.TermExplanationCard
 import com.wenyan.app.core.data.repository.CardRepository
+import com.wenyan.app.core.data.repository.CardFrequencyFilter
+import com.wenyan.app.core.data.repository.CardSettings
+import com.wenyan.app.core.data.repository.CardSettingsRepository
 import com.wenyan.app.core.data.repository.IntervalPreview
 import com.wenyan.app.core.data.repository.SchedulingRepository
+import com.wenyan.app.core.data.repository.StudyProgress
+import com.wenyan.app.core.data.repository.TodayStudyQueue
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.database.entity.CardTemplateType
 import com.wenyan.app.core.database.entity.MemoRecordEntity
@@ -47,6 +52,44 @@ class FakeCardRepository(
         throwOnGetCards?.let { e ->
             flow { throw e }
         } ?: _cards.asStateFlow()
+
+    // v0.9.29：今日任务数据（默认空，测试可按需覆写 todayQueue/progress）
+    private val _todayQueue = MutableStateFlow(TodayStudyQueue(emptyList(), emptyList()))
+    private val _progress = MutableStateFlow(StudyProgress(0, 0))
+    val todayQueue: MutableStateFlow<TodayStudyQueue> = _todayQueue
+    val progress: MutableStateFlow<StudyProgress> = _progress
+
+    override fun getTodayStudyQueue(): Flow<TodayStudyQueue> = _todayQueue
+
+    override fun getStudyProgress(): Flow<StudyProgress> = _progress
+}
+
+/**
+ * [CardSettingsRepository] 的 Fake 实现（v0.9.29）。
+ *
+ * 内存 StateFlow，测试可注入初始 [CardSettings] 或调用 setter 更新。
+ */
+class FakeCardSettingsRepository(
+    initial: CardSettings = CardSettings(),
+) : CardSettingsRepository {
+    private val _settings = MutableStateFlow(initial)
+    override val cardSettings = _settings
+
+    override suspend fun setDailyNewLimit(limit: Int) {
+        _settings.value = _settings.value.copy(dailyNewLimit = limit)
+    }
+
+    override suspend fun setFrequencyFilter(filter: CardFrequencyFilter) {
+        _settings.value = _settings.value.copy(frequencyFilter = filter)
+    }
+
+    override suspend fun setSubjectFilters(subjects: Set<String>) {
+        _settings.value = _settings.value.copy(subjectFilters = subjects)
+    }
+
+    override suspend fun setExamDate(millis: Long?) {
+        _settings.value = _settings.value.copy(examDateMillis = millis)
+    }
 }
 
 /**

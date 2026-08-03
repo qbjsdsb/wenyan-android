@@ -3,6 +3,8 @@ package com.wenyan.app.core.data.di
 import com.wenyan.app.core.ai.LlmConfigProvider
 import com.wenyan.app.core.data.repository.CardRepository
 import com.wenyan.app.core.data.repository.CardRepositoryImpl
+import com.wenyan.app.core.data.repository.CardSettingsRepository
+import com.wenyan.app.core.data.repository.CardSettingsRepositoryImpl
 import com.wenyan.app.core.data.repository.ChapterRepository
 import com.wenyan.app.core.data.repository.ChapterRepositoryImpl
 import com.wenyan.app.core.data.repository.ChatRepository
@@ -57,6 +59,11 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindChatRepository(impl: ChatRepositoryImpl): ChatRepository
+
+    /** v0.9.29：卡片备考设置仓库绑定。 */
+    @Binds
+    @Singleton
+    abstract fun bindCardSettingsRepository(impl: CardSettingsRepositoryImpl): CardSettingsRepository
 
     /**
      * 绑定 [WrongAnswerRepository] 到 [WrongAnswerRepositoryImpl](NF-PP5 Wave 2.4)。

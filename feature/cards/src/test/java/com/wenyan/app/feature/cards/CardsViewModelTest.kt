@@ -66,6 +66,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
 
         advanceUntilIdle()
@@ -147,6 +148,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -193,6 +195,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -224,6 +227,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -260,6 +264,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -315,6 +320,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -350,6 +356,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -400,6 +407,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -474,6 +482,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -518,6 +527,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -577,6 +587,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -619,6 +630,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -655,6 +667,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -697,6 +710,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -746,6 +760,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -789,6 +804,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -834,6 +850,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -897,6 +914,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -954,6 +972,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -998,6 +1017,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -1036,6 +1056,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -1083,6 +1104,7 @@ class CardsViewModelTest {
                 schedulingRepository = schedulingRepository,
                 wrongAnswerRepository = wrongAnswerRepository,
                 studyProgressRepository = studyProgressRepository,
+                cardSettingsRepository = FakeCardSettingsRepository(),
             )
             advanceUntilIdle()
 
@@ -1124,6 +1146,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -1165,6 +1188,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -1206,6 +1230,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -1251,6 +1276,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -1297,6 +1323,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -1347,6 +1374,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -1394,6 +1422,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -1458,6 +1487,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -1549,6 +1579,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -1586,6 +1617,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -1755,6 +1787,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -1792,6 +1825,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -1829,6 +1863,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -1865,6 +1900,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -1898,6 +1934,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -1946,6 +1983,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -2012,6 +2050,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -2076,6 +2115,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 
@@ -2125,6 +2165,7 @@ class CardsViewModelTest {
             schedulingRepository = schedulingRepository,
             wrongAnswerRepository = wrongAnswerRepository,
             studyProgressRepository = studyProgressRepository,
+            cardSettingsRepository = FakeCardSettingsRepository(),
         )
         advanceUntilIdle()
 

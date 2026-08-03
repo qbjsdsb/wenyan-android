@@ -12,9 +12,11 @@ import com.wenyan.app.core.data.cards.SchoolComparisonCard
 import com.wenyan.app.core.data.cards.TermExplanationCard
 import com.wenyan.app.core.data.cards.WorkAuthorBidirectionalCard
 import com.wenyan.app.core.data.repository.CardRepository
+import com.wenyan.app.core.data.repository.CardSettingsRepository
 import com.wenyan.app.core.data.repository.IntervalPreview
 import com.wenyan.app.core.data.repository.SchedulingRepository
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
+import com.wenyan.app.core.data.repository.daysUntilExam
 import com.wenyan.app.core.database.entity.CardTemplateType
 import com.wenyan.app.core.fsrs.Rating
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -80,7 +82,30 @@ class CardsViewModel @Inject constructor(
     private val schedulingRepository: SchedulingRepository,
     private val wrongAnswerRepository: WrongAnswerRepository,
     private val studyProgressRepository: com.wenyan.app.core.data.repository.StudyProgressRepository,
+    private val cardSettingsRepository: CardSettingsRepository,
 ) : ViewModel() {
+
+    /**
+     * 今日任务（v0.9.29 卡片备考系统）。
+     *
+     * 卡片页顶部展示：今日新卡/复习数量、距考试天数、学习进度。
+     * 数据来自 [CardRepository.getTodayStudyQueue]（到期复习 ∪ 每日新卡）
+     * 与 [CardSettingsRepository]（每日限额 / 考试日期）。
+     */
+    val todayPlan: StateFlow<TodayPlanUi> = combine(
+        cardRepository.getTodayStudyQueue(),
+        cardRepository.getStudyProgress(),
+        cardSettingsRepository.cardSettings,
+    ) { queue, progress, settings ->
+        TodayPlanUi(
+            newCardLimit = settings.dailyNewLimit,
+            newPointCount = queue.newPoints.size,
+            duePointCount = queue.duePoints.size,
+            learnedPoints = progress.learnedPoints,
+            totalVerifiedPoints = progress.totalVerifiedPoints,
+            daysUntilExam = settings.examDateMillis?.let { daysUntilExam(it) },
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TodayPlanUi())
 
     // 翻转状态（UI 交互层，持久化到 SavedStateHandle）
     private val _isFlipped = savedStateHandle.getStateFlow("isFlipped", false)
@@ -1023,6 +1048,44 @@ data class CardsUiState(
     val error: String? = null,
 ) {
     val currentCard: CardItem? get() = cards.getOrNull(currentIndex)
+}
+
+/**
+ * 今日任务（v0.9.29 卡片备考系统）。
+ *
+ * 卡片页顶部展示：今日新卡/复习数量、距考试天数、学习进度。
+ */
+@Immutable
+data class TodayPlanUi(
+    /** 设置中的每日新卡限额（张，默认 60） */
+    val newCardLimit: Int = 60,
+    /** 今日新知识点数（按限额取整） */
+    val newPointCount: Int = 0,
+    /** 今日复习知识点数（FSRS 到期） */
+    val duePointCount: Int = 0,
+    /** 已学知识点数 */
+    val learnedPoints: Int = 0,
+    /** 总 VERIFIED 知识点数 */
+    val totalVerifiedPoints: Int = 0,
+    /** 距考试天数（未设置考试日期为 null） */
+    val daysUntilExam: Int? = null,
+) {
+    /** 今日新卡估算张数（知识点 × 6，与每日限额显示一致） */
+    val newCardEstimate: Int get() = newPointCount * CARDS_PER_POINT
+    /** 今日复习估算张数 */
+    val dueCardEstimate: Int get() = duePointCount * CARDS_PER_POINT
+    /** 学习进度（0-1），无数据时为 0 */
+    val progress: Float
+        get() = if (totalVerifiedPoints > 0) {
+            (learnedPoints.toFloat() / totalVerifiedPoints.toFloat()).coerceIn(0f, 1f)
+        } else {
+            0f
+        }
+
+    private companion object {
+        /** 每个知识点约 6 张卡的估算值（与数据层 CARDS_PER_POINT_ESTIMATE 一致） */
+        const val CARDS_PER_POINT = 6
+    }
 }
 
 // 卡片项（UI 层模型，与 core:data 的 CardTemplate 解耦）

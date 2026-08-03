@@ -16,15 +16,23 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.CompositionLocalProvider
 import com.wenyan.app.core.designsystem.component.LocalLazyListState
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -32,16 +40,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -51,6 +64,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wenyan.app.core.data.repository.CardFrequencyFilter
+import com.wenyan.app.core.data.repository.CardSettings
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.GroupedCard
 import com.wenyan.app.core.designsystem.component.GroupedCardDivider
@@ -58,6 +73,10 @@ import com.wenyan.app.core.designsystem.component.GroupedCardItem
 import com.wenyan.app.core.designsystem.component.MaxContentWidth
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
 import com.wenyan.app.core.designsystem.theme.ColorMode
 import com.wenyan.app.core.designsystem.theme.ThemeViewModel
 import com.wenyan.app.core.designsystem.theme.WenyanPaletteStyle
@@ -102,8 +121,10 @@ fun SettingsScreen(
     onNavigateToAbout: () -> Unit,
     onNavigateToUpdateCheck: () -> Unit,
     viewModel: ThemeViewModel = hiltViewModel(),
+    cardSettingsViewModel: CardSettingsViewModel = hiltViewModel(),
 ) {
     val themeConfig by viewModel.themeConfig.collectAsStateWithLifecycle()
+    val cardSettings by cardSettingsViewModel.cardSettings.collectAsStateWithLifecycle()
     // v0.9.25 修复：根据主题模式计算是否暗色（种子色图标需亮化变体）
     val isDarkTheme = when (themeConfig.colorMode) {
         ColorMode.SYSTEM -> isSystemInDarkTheme()
@@ -214,6 +235,17 @@ fun SettingsScreen(
                         },
                     )
                 }
+            }
+
+            // 卡片备考（v0.9.29）
+            item {
+                CardStudySettingsCard(
+                    settings = cardSettings,
+                    onDailyNewLimitChange = cardSettingsViewModel::setDailyNewLimit,
+                    onFrequencyFilterChange = cardSettingsViewModel::setFrequencyFilter,
+                    onSubjectToggle = cardSettingsViewModel::setSubjectFilters,
+                    onExamDateChange = cardSettingsViewModel::setExamDate,
+                )
             }
 
             // 动态色彩
@@ -369,6 +401,156 @@ fun SettingsScreen(
             } // CompositionLocalProvider end
         } // Box end
     }
+}
+
+// ── 卡片备考设置卡片（v0.9.29）────────────────────────────────
+
+/**
+ * 卡片备考设置卡片（v0.9.29）。
+ *
+ * 包含：每日新卡数（滑杆 10-200）、考频筛选（三档）、复习科目（四科多选）、考试日期。
+ * 数据由 [CardSettingsViewModel] 提供，变更实时写入 [CardSettingsRepository]。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CardStudySettingsCard(
+    settings: CardSettings,
+    onDailyNewLimitChange: (Int) -> Unit,
+    onFrequencyFilterChange: (CardFrequencyFilter) -> Unit,
+    onSubjectToggle: (Set<String>) -> Unit,
+    onExamDateChange: (Long?) -> Unit,
+) {
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    GroupedCard(title = "卡片备考") {
+        // 每日新卡数
+        GroupedCardItem(
+            title = "每日新卡数",
+            subtitle = "${settings.dailyNewLimit} 张/天",
+            description = "每天最多学习的新卡数量（含复习由 FSRS 自动安排）",
+        )
+        Slider(
+            value = settings.dailyNewLimit.toFloat(),
+            onValueChange = { onDailyNewLimitChange(it.roundToInt()) },
+            valueRange = 10f..200f,
+            steps = 18, // 10-200 步进 10
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+        )
+        GroupedCardDivider()
+
+        // 考频筛选
+        Text(
+            text = "考频筛选",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(
+                start = Spacing.lg,
+                end = Spacing.lg,
+                top = Spacing.md,
+                bottom = Spacing.sm,
+            ),
+        )
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg),
+        ) {
+            CardFrequencyFilter.entries.forEachIndexed { index, filter ->
+                SegmentedButton(
+                    selected = settings.frequencyFilter == filter,
+                    onClick = { onFrequencyFilterChange(filter) },
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = CardFrequencyFilter.entries.size,
+                    ),
+                ) {
+                    Text(filter.displayName)
+                }
+            }
+        }
+        GroupedCardDivider()
+
+        // 复习科目（四科多选）
+        Text(
+            text = "复习科目",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(
+                start = Spacing.lg,
+                end = Spacing.lg,
+                top = Spacing.md,
+                bottom = Spacing.xs,
+            ),
+        )
+        CardSettings.DEFAULT_SUBJECTS.forEach { subject ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 44.dp)
+                    .padding(horizontal = Spacing.lg),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(
+                    checked = subject in settings.subjectFilters,
+                    onCheckedChange = { checked ->
+                        onSubjectToggle(
+                            if (checked) {
+                                settings.subjectFilters + subject
+                            } else {
+                                settings.subjectFilters - subject
+                            },
+                        )
+                    },
+                )
+                Text(
+                    text = subject,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(start = Spacing.xs),
+                )
+            }
+        }
+        GroupedCardDivider()
+
+        // 考试日期
+        GroupedCardItem(
+            title = "考试日期",
+            subtitle = settings.examDateMillis?.let { formatExamDate(it) } ?: "未设置（默认 12 月下旬）",
+            description = "用于计算距离考试的剩余天数",
+            onClick = { showDatePicker = true },
+        )
+
+        if (showDatePicker) {
+            val datePickerState = rememberDatePickerState(
+                initialSelectedDateMillis = settings.examDateMillis,
+            )
+            DatePickerDialog(
+                onDismissRequest = { showDatePicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        onExamDateChange(datePickerState.selectedDateMillis)
+                        showDatePicker = false
+                    }) {
+                        Text("确定")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDatePicker = false }) {
+                        Text("取消")
+                    }
+                },
+            ) {
+                DatePicker(state = datePickerState)
+            }
+        }
+    }
+}
+
+/** 格式化考试日期为"yyyy年M月d日"。 */
+private fun formatExamDate(millis: Long): String {
+    val date = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+    return DateTimeFormatter.ofPattern("yyyy年M月d日").format(date)
 }
 
 // ── 考研倒计时卡片(P0 v0.7.2:接通 ExamCountdownManager) ──────────

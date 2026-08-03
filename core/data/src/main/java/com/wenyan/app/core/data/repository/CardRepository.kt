@@ -31,10 +31,24 @@ interface CardRepository {
      *
      * 取 ocr_status='VERIFIED' 的知识点(PENDING 不进复习队列,防背错字),
      * 逐个调用 [CardRepositoryImpl.generateCardsFromKnowledgePoint] 生成卡片后展平。
+     * v0.9.29：内部使用"今日学习队列"（到期复习 ∪ 每日新卡，按考频/科目筛选 + 每日限额）。
      *
      * @return 今日待复习卡片流(已按最小信息原则拆分)
      */
     fun getCardsForReview(): Flow<List<CardTemplate>>
+
+    /**
+     * 今日学习队列（v0.9.29 卡片备考系统）。
+     *
+     * 到期复习知识点 + 每日新卡知识点（按考频/科目筛选 + 每日限额）。
+     * 供"今日任务"横幅展示（新卡/复习张数）。
+     */
+    fun getTodayStudyQueue(): Flow<TodayStudyQueue>
+
+    /**
+     * 学习进度（v0.9.29）：已学 / 总 VERIFIED 知识点数。
+     */
+    fun getStudyProgress(): Flow<StudyProgress>
 }
 
 /**
@@ -83,11 +97,20 @@ class CardRepositoryImpl @Inject constructor(
      * @return 今日待复习卡片流(已按最小信息原则拆分 + sibling 打散)
      */
     override fun getCardsForReview(): Flow<List<CardTemplate>> =
-        reviewRepository.getReviewQueue().map { duePoints ->
+        reviewRepository.getTodayStudyQueue().map { queue ->
+            // v0.9.29：今日学习队列 = 到期复习 ∪ 每日新卡（按考频/科目筛选 + 每日限额 60 张）
+            val points = queue.duePoints + queue.newPoints
             // Iterable.map 是 inline 函数,其 lambda 在 suspend 上下文中可调用 suspend 函数
-            val cardsByPoint = duePoints.map { generateCardsFromKnowledgePoint(it) }
+            val cardsByPoint = points.map { generateCardsFromKnowledgePoint(it) }
             interleaveSiblingCards(cardsByPoint)
         }.catchAndLog(TAG, "getCardsForReview") { emptyList() }
+
+    // v0.9.29：今日任务数据委托给 ReviewRepository
+    override fun getTodayStudyQueue(): Flow<TodayStudyQueue> =
+        reviewRepository.getTodayStudyQueue()
+
+    override fun getStudyProgress(): Flow<StudyProgress> =
+        reviewRepository.getStudyProgress()
 
     /**
      * 按知识点分组交错排列 sibling 卡(v0.9.7 M2)。

@@ -147,6 +147,8 @@ fun CardsScreen(
     val successMessage by viewModel.successMessage.collectAsStateWithLifecycle()
     val isAddingBookmark by viewModel.isAddingBookmark.collectAsStateWithLifecycle()
     val manualAddedPointIds by viewModel.manualAddedPointIds.collectAsStateWithLifecycle()
+    // v0.9.29: 今日任务（新卡/复习/距考试天数/进度）
+    val todayPlan by viewModel.todayPlan.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
@@ -245,91 +247,107 @@ fun CardsScreen(
             isFinished = uiState.isFinished,
             hasCards = uiState.currentCard != null,
         )
-        Crossfade(
-            targetState = stateKey,
-            animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
-            label = "cards_state",
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .padding(innerPadding)
                 .padding(Spacing.lg),
-        ) { key ->
-            when {
-                key.isLoading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        WenyanLoadingIndicator()
-                    }
-                }
-                key.error != null -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        ErrorState(
-                            icon = Icons.Default.CloudOff,
-                            title = "加载失败",
-                            message = key.error,
-                            onRetry = viewModel::retry,
-                        )
-                    }
-                }
-                key.isFinished -> {
-                    // 会话完成态：展示本次复习统计 + 会话时长 + 鼓励继续 / 返回
-                    // v0.8.17 P1:sessionDurationMinutes 改为 collect StateFlow,
-                    // 避免在 Composable 函数体中直接调用 viewModel.getSessionDurationMinutes()
-                    // 破坏重组稳定性(每次重组返回不同值,SessionCompleteState 无谓重组)
-                    // v0.9.7 M5:新增 onUndo 参数,允许用户撤销最后一张卡的评分(回退到 CardReviewContent)
-                    SessionCompleteState(
-                        reviewedCount = sessionReviewed,
-                        againCount = sessionAgain,
-                        sessionDurationMinutes = sessionDurationMinutes,
-                        onRetry = viewModel::retry,
-                        onUndo = viewModel::undo,
-                        onExit = onNavigateToKnowledge,
-                    )
-                }
-                !key.hasCards -> {
-                    // 今日无到期卡（首次进入就没卡，与"刚完成一轮"区分）
-                    // v0.8.8：加"去学习"按钮引导用户到知识点列表
-                    EmptyState(
-                        icon = Icons.Default.CheckCircle,
-                        title = "今天没有到期卡片",
-                        description = "已全部复习完毕，可去知识点列表预习新内容",
-                        action = {
-                            FilledTonalButton(
-                                onClick = onNavigateToKnowledge,
-                                modifier = Modifier.heightIn(min = 48.dp),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.MenuBook,
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(end = Spacing.xs),
-                                )
-                                Text(stringResource(R.string.text_05))
-                            }
-                        },
-                    )
-                }
-                else -> {
-                    uiState.currentCard?.let { card ->
-                        CardReviewContent(
-                            card = card,
-                            uiState = uiState,
-                            previews = currentPreviews,
-                            isSiblingAlreadyRated = isSiblingAlreadyRated,
-                            isInWrongBook = card.pointId in manualAddedPointIds,
-                            isAddingBookmark = isAddingBookmark,
-                            onFlip = viewModel::flipCard,
-                            onRate = viewModel::rateCard,
-                            onUndo = viewModel::undo,
-                            onSkip = viewModel::skipCard,
-                            onAddToWrongAnswerBook = viewModel::addToWrongAnswerBook,
+        ) {
+            // v0.9.29: 今日任务横幅（加载/错误时隐藏，避免数据未就绪闪烁）
+            if (!stateKey.isLoading && stateKey.error == null) {
+                TodayPlanBanner(
+                    plan = todayPlan,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = Spacing.md),
+                )
+            }
+            Crossfade(
+                targetState = stateKey,
+                animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
+                label = "cards_state",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+            ) { key ->
+                when {
+                    key.isLoading -> {
+                        Box(
                             modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            WenyanLoadingIndicator()
+                        }
+                    }
+                    key.error != null -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            ErrorState(
+                                icon = Icons.Default.CloudOff,
+                                title = "加载失败",
+                                message = key.error,
+                                onRetry = viewModel::retry,
+                            )
+                        }
+                    }
+                    key.isFinished -> {
+                        // 会话完成态：展示本次复习统计 + 会话时长 + 鼓励继续 / 返回
+                        // v0.8.17 P1:sessionDurationMinutes 改为 collect StateFlow,
+                        // 避免在 Composable 函数体中直接调用 viewModel.getSessionDurationMinutes()
+                        // 破坏重组稳定性(每次重组返回不同值,SessionCompleteState 无谓重组)
+                        // v0.9.7 M5:新增 onUndo 参数,允许用户撤销最后一张卡的评分(回退到 CardReviewContent)
+                        SessionCompleteState(
+                            reviewedCount = sessionReviewed,
+                            againCount = sessionAgain,
+                            sessionDurationMinutes = sessionDurationMinutes,
+                            onRetry = viewModel::retry,
+                            onUndo = viewModel::undo,
+                            onExit = onNavigateToKnowledge,
                         )
+                    }
+                    !key.hasCards -> {
+                        // 今日无到期卡（首次进入就没卡，与"刚完成一轮"区分）
+                        // v0.8.8：加"去学习"按钮引导用户到知识点列表
+                        // v0.9.29：今日任务横幅已在上方展示（新卡/复习/距考试/进度）
+                        EmptyState(
+                            icon = Icons.Default.CheckCircle,
+                            title = "今天没有到期卡片",
+                            description = "今日新卡与复习任务见上方，可去知识点列表预习新内容",
+                            action = {
+                                FilledTonalButton(
+                                    onClick = onNavigateToKnowledge,
+                                    modifier = Modifier.heightIn(min = 48.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(end = Spacing.xs),
+                                    )
+                                    Text(stringResource(R.string.text_05))
+                                }
+                            },
+                        )
+                    }
+                    else -> {
+                        uiState.currentCard?.let { card ->
+                            CardReviewContent(
+                                card = card,
+                                uiState = uiState,
+                                previews = currentPreviews,
+                                isSiblingAlreadyRated = isSiblingAlreadyRated,
+                                isInWrongBook = card.pointId in manualAddedPointIds,
+                                isAddingBookmark = isAddingBookmark,
+                                onFlip = viewModel::flipCard,
+                                onRate = viewModel::rateCard,
+                                onUndo = viewModel::undo,
+                                onSkip = viewModel::skipCard,
+                                onAddToWrongAnswerBook = viewModel::addToWrongAnswerBook,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
                     }
                 }
             }
@@ -1258,6 +1276,59 @@ private fun CardsNormalReviewPreview() {
                 onSkip = {},
                 onAddToWrongAnswerBook = {},
                 modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
+/**
+ * 今日任务横幅（v0.9.29 卡片备考系统）。
+ *
+ * 展示：
+ * - 距考试天数（未设置考试日期显示提示）
+ * - 今日：新卡 X 张 · 复习 Y 张（估算，每知识点约 6 张卡）
+ * - 学习进度条（已学知识点 / 总 VERIFIED 知识点）
+ */
+@Composable
+private fun TodayPlanBanner(
+    plan: TodayPlanUi,
+    modifier: Modifier = Modifier,
+) {
+    val examLabel = plan.daysUntilExam?.let { "距考试 $it 天" } ?: "未设置考试日期"
+    val progressPercent = (plan.progress * 100).toInt()
+
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+    ) {
+        Column(modifier = Modifier.padding(Spacing.md)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = examLabel,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = "已学 $progressPercent%",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(modifier = Modifier.padding(top = Spacing.xs))
+            Text(
+                text = "今日：新卡 ${plan.newCardEstimate} 张 · 复习 ${plan.dueCardEstimate} 张",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(modifier = Modifier.padding(top = Spacing.sm))
+            LinearProgressIndicator(
+                progress = { plan.progress },
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

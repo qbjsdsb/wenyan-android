@@ -4,6 +4,7 @@ import com.wenyan.app.core.data.util.catchAndLog
 import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.dao.MemoRecordDao
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -16,15 +17,123 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
+ * 今日学习队列（v0.9.29 卡片备考系统）。
+ *
+ * 由两部分组成：
+ * - [duePoints]：到期复习知识点（FSRS 调度，现有逻辑）
+ * - [newPoints]：每日新卡知识点（VERIFIED 且从未学习，按考频/科目筛选 + 每日限额）
+ *
+ * UI 据此展示"今日任务"：新卡 X 张 · 复习 Y 张。
+ */
+data class TodayStudyQueue(
+    val duePoints: List<KnowledgePointEntity>,
+    val newPoints: List<KnowledgePointEntity>,
+) {
+    val totalPoints: Int get() = duePoints.size + newPoints.size
+}
+
+/** 学习进度（v0.9.29 卡片备考系统）：已学/总知识点数。 */
+data class StudyProgress(
+    val learnedPoints: Int,
+    val totalVerifiedPoints: Int,
+)
+
+/**
+ * 距考试天数（v0.9.29，纯函数可测）。
+ *
+ * @param examDateMillis 考试日期（毫秒时间戳）
+ * @param nowMillis 当前时间（默认系统时间；测试可注入）
+ * @return 剩余天数（不足 1 天按 0，已过按 0）
+ */
+fun daysUntilExam(
+    examDateMillis: Long,
+    nowMillis: Long = System.currentTimeMillis(),
+): Int {
+    val millis = examDateMillis - nowMillis
+    return (millis / 86_400_000L).toInt().coerceAtLeast(0)
+}
+
+/**
+ * 从全部 VERIFIED 知识点中挑选每日新卡（v0.9.29，纯函数可测）。
+ *
+ * 规则：
+ * 1. 排除已学（有 memo_record）的知识点
+ * 2. 按科目筛选（subject_name 为 null 时保留，避免漏卡）
+ * 3. 按考频筛选（HIGH / HIGH+MEDIUM / ALL）
+ * 4. 排序：考频 HIGH → MEDIUM → LOW，同频按 updated_at（新内容优先）
+ * 5. 按卡片数限额取整到知识点（默认 60 张 ≈ 10 个知识点），保证 sibling 完整
+ */
+internal fun selectNewPoints(
+    verifiedWithSubject: List<KnowledgePointWithSubject>,
+    learnedIds: Set<String>,
+    settings: CardSettings,
+    dailyNewLimit: Int,
+): List<KnowledgePointEntity> {
+    val candidates = verifiedWithSubject
+        .filter { it.point.id !in learnedIds }
+        .filter { it.subjectName == null || it.subjectName in settings.subjectFilters }
+        .filter { matchesFrequency(it.point.examFrequency, settings.frequencyFilter) }
+        .sortedWith(
+            compareBy<KnowledgePointWithSubject>(
+                { frequencyRank(it.point.examFrequency) },
+                { it.point.updatedAt },
+            ),
+        )
+    return takeNewPointsByCardLimit(candidates.map { it.point }, dailyNewLimit)
+}
+
+/** 考频匹配（纯函数）。 */
+internal fun matchesFrequency(frequency: String, filter: CardFrequencyFilter): Boolean =
+    when (filter) {
+        CardFrequencyFilter.HIGH -> frequency == "HIGH"
+        CardFrequencyFilter.HIGH_MEDIUM -> frequency == "HIGH" || frequency == "MEDIUM"
+        CardFrequencyFilter.ALL -> true
+    }
+
+/** 考频排序权重（HIGH=0 优先）。 */
+internal fun frequencyRank(frequency: String): Int = when (frequency) {
+    "HIGH" -> 0
+    "MEDIUM" -> 1
+    else -> 2
+}
+
+/**
+ * 按卡片数限额取整到知识点（纯函数）。
+ *
+ * 每取一个知识点累加 [cardsPerPoint] 张卡，累计达到限额即停止。
+ * 60 张 ≈ 10 个知识点（每个约 6 张卡），保证 sibling 卡完整不拆散。
+ */
+internal fun takeNewPointsByCardLimit(
+    candidates: List<KnowledgePointEntity>,
+    dailyNewLimit: Int,
+    cardsPerPoint: Int = CARDS_PER_POINT_ESTIMATE,
+): List<KnowledgePointEntity> {
+    if (dailyNewLimit <= 0) return emptyList()
+    var count = 0
+    val result = mutableListOf<KnowledgePointEntity>()
+    for (point in candidates) {
+        result.add(point)
+        count += cardsPerPoint
+        if (count >= dailyNewLimit) break
+    }
+    return result
+}
+
+/** 每个知识点约生成 6 张卡（名词解释 5-6 + 论述要点 1）的估算值。 */
+internal const val CARDS_PER_POINT_ESTIMATE = 6
+
+/**
  * 复习仓库（Task 16）。
  *
  * 职责：
  * - 提供 FSRS 复习队列，仅包含 ocr_status='VERIFIED' 的知识点（PENDING 不进复习队列）
  * - 提供今日待复习数量（已 VERIFIED 且到期）
+ * - v0.9.29：提供"今日学习队列"（到期复习 ∪ 每日新卡，按考频/科目筛选 + 每日限额）
  * - 提供"待校对"区数据：所有 ocr_status='PENDING' 的知识点及其数量
  * - 提供用户校对后标记 VERIFIED 激活的能力
  *
  * 通过构造函数注入 [KnowledgePointDao] 和 [MemoRecordDao]（Hilt @Inject）。
+ * v0.9.29 新增 [CardSettingsRepository]（每日新卡限额/考频/科目/考试日期）。
  *
  * P1 审计修复：combine/map 链加 .catchAndLog，DAO 异常时降级为空列表/0，
  * 避免 ViewModel collect 崩溃导致 UI 永久 failed。
@@ -39,6 +148,7 @@ import javax.inject.Singleton
 class ReviewRepository @Inject constructor(
     private val knowledgePointDao: KnowledgePointDao,
     private val memoRecordDao: MemoRecordDao,
+    private val cardSettingsRepository: CardSettingsRepository,
 ) {
 
     private companion object {
@@ -102,6 +212,66 @@ class ReviewRepository @Inject constructor(
         }
         .distinctUntilChanged()
         .catchAndLog(TAG, "getReviewQueue") { emptyList() }
+
+    /**
+     * 今日学习队列（v0.9.29 卡片备考系统）。
+     *
+     * = 到期复习知识点 ∪ 每日新卡知识点（按考频/科目筛选 + 每日限额）。
+     *
+     * - [TodayStudyQueue.duePoints]：现有 FSRS 到期复习队列
+     * - [TodayStudyQueue.newPoints]：新卡候选按 [CardSettings] 筛选后，按卡片数限额取整到知识点
+     *   （默认 60 张 ≈ 10 个知识点；新卡首次评分仍走 FSRS，与到期复习行为一致）
+     *
+     * 依赖数据源：
+     * - [KnowledgePointDao.observeVerifiedForReview]：VERIFIED 知识点（到期判断用）
+     * - [KnowledgePointDao.observeVerifiedWithSubject]：VERIFIED 知识点 + 科目名（新卡候选用）
+     * - [MemoRecordDao.observeDue]：到期记忆记录
+     * - [MemoRecordDao.observeAll]：已学记录（新卡 = 未学）
+     * - [CardSettingsRepository.cardSettings]：考频/科目/每日限额
+     *
+     * 全部用 tickFlow + flatMapLatest 周期刷新，保证 60s 内新到期/新卡自动进入。
+     */
+    fun getTodayStudyQueue(): Flow<TodayStudyQueue> = tickFlow
+        .flatMapLatest {
+            combine(
+                knowledgePointDao.observeVerifiedForReview(),
+                memoRecordDao.observeDue(),
+                memoRecordDao.observeAll(),
+                knowledgePointDao.observeVerifiedWithSubject(),
+                cardSettingsRepository.cardSettings,
+            ) { verifiedPoints, dueRecords, allRecords, verifiedWithSubject, settings ->
+                val dueIds = dueRecords.map { it.pointId }.toSet()
+                val duePoints = verifiedPoints.filter { it.id in dueIds }
+                val learnedIds = allRecords.map { it.pointId }.toSet()
+                val newPoints = selectNewPoints(
+                    verifiedWithSubject = verifiedWithSubject,
+                    learnedIds = learnedIds,
+                    settings = settings,
+                    dailyNewLimit = settings.dailyNewLimit,
+                )
+                TodayStudyQueue(duePoints = duePoints, newPoints = newPoints)
+            }
+        }
+        .distinctUntilChanged()
+        .catchAndLog(TAG, "getTodayStudyQueue") { TodayStudyQueue(emptyList(), emptyList()) }
+
+    /**
+     * 学习进度（v0.9.29）：已学知识点数 / 总 VERIFIED 知识点数。
+     *
+     * 用于卡片页"今日任务"进度条：
+     * - [StudyProgress.learnedPoints]：有 memo_record 的知识点（已学过）
+     * - [StudyProgress.totalVerifiedPoints]：VERIFIED 总数
+     */
+    fun getStudyProgress(): Flow<StudyProgress> = combine(
+        memoRecordDao.observeAll(),
+        knowledgePointDao.observeVerifiedForReview(),
+    ) { records, verifiedPoints ->
+        StudyProgress(
+            learnedPoints = records.map { it.pointId }.distinct().size,
+            totalVerifiedPoints = verifiedPoints.size,
+        )
+    }.distinctUntilChanged()
+        .catchAndLog(TAG, "getStudyProgress") { StudyProgress(0, 0) }
 
     /**
      * 今日待复习数量：已 VERIFIED 且到期（next_review_at <= 当前时间）的知识点数。
