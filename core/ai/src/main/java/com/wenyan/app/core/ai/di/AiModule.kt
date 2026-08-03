@@ -126,11 +126,15 @@ class RetryInterceptor(
                     // v0.9.26 成本控制：429/5xx 时优先读取 Retry-After 头（服务商明确告知
                     // 限流秒数），有则按其等待，避免请求过频再次撞限流；无则回退指数退避。
                     // 注：Retry-After 可能为 HTTP-date 格式，此处仅解析纯秒数，解析失败回退。
+                    // v0.9.27 修复：clamp 到 MAX_BACKOFF_MS(5s)——服务商若返回大值（60s+），
+                    // 不设上限会长时间阻塞 IO 线程且占住全局 Semaphore 槽位（3 槽可能被睡死），
+                    // 用户"停止生成"也无法中断 Thread.sleep。上限后最长阻塞 5s，可接受。
                     val retryAfterMs = response.header("Retry-After")
                         ?.trim()
                         ?.toLongOrNull()
                         ?.takeIf { it > 0 }
                         ?.let { it * 1000 }
+                        ?.coerceAtMost(MAX_BACKOFF_MS)
                     response.close()
                     val backoffMs = retryAfterMs ?: computeBackoff(attempt)
                     Thread.sleep(backoffMs)

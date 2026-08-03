@@ -117,7 +117,15 @@ class AiAssistantViewModel @Inject constructor(
                 Timber.w(e, "AI 任务异常: ${e.message}")
             } finally {
                 if (showLoading) _uiState.update { it.copy(isLoading = false) }
-                aiJob = null
+                // v0.9.27 修复（并发竞态）：仅当自己是当前 aiJob 时才清空引用。
+                // 原实现无条件 aiJob = null：任务 A 停止中（CancellationException 分支的
+                // withContext(NonCancellable) DB 写入延迟）isActive 已 false，用户快速发新消息
+                // 会启动任务 B 赋给 aiJob，随后 A 的 finally 执行 aiJob = null 抹掉 B 的引用，
+                // 导致：停止按钮对新任务失效、可并发启动多个 AI 任务（重复计费）、
+                // 取消任务的半截回复写进新会话（数据污染）。
+                if (coroutineContext[Job] == aiJob) {
+                    aiJob = null
+                }
             }
         }
     }
