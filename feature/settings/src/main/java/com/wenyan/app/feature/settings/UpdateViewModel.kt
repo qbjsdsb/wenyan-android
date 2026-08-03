@@ -20,6 +20,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
+import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -72,6 +73,9 @@ class UpdateViewModel @Inject constructor(
     /** 下载 URL（在 UpdateAvailable 时保存，供下载用） */
     private var pendingDownloadUrl: String = ""
 
+    /** 期望 APK sha256（来自 GitHub API 资产 digest；null 时跳过哈希校验） */
+    private var pendingSha256: String? = null
+
     /** OkHttp 客户端（超时 30s，流式下载） */
     private val okHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -109,6 +113,7 @@ class UpdateViewModel @Inject constructor(
                         UpdateUiState.Latest(currentVersion = result.currentVersion)
                     is UpdateCheckResult.UpdateAvailable -> {
                         pendingDownloadUrl = result.downloadUrl
+                        pendingSha256 = result.expectedSha256
                         UpdateUiState.UpdateAvailable(
                             latestVersion = result.latestVersion,
                             downloadUrl = result.downloadUrl,
@@ -144,7 +149,13 @@ class UpdateViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val file = withContext(Dispatchers.IO) {
-                    downloadApk(pendingDownloadUrl)
+                    // P1 修复（v0.9.28）：下载失败自动重试 1 次，
+                    // 避免国内网络单次中断直接报错（重试前 downloadApk 会清空旧文件）。
+                    try {
+                        downloadApk(pendingDownloadUrl, pendingSha256)
+                    } catch (first: Exception) {
+                        downloadApk(pendingDownloadUrl, pendingSha256)
+                    }
                 }
                 _uiState.value = UpdateUiState.DownloadComplete(apkFile = file)
                 // 下载完成后自动触发安装
@@ -161,6 +172,10 @@ class UpdateViewModel @Inject constructor(
 
                     e.message?.contains("No space left") == true ->
                         "存储空间不足，请清理后重试"
+
+                    e.message?.contains("下载不完整") == true ||
+                        e.message?.contains("校验失败") == true ->
+                        "下载文件不完整，请重试"
 
                     else -> "下载失败：${e.message ?: "未知错误"}"
                 }
@@ -191,12 +206,12 @@ class UpdateViewModel @Inject constructor(
      * @return 下载完成的 File 对象
      */
     @Throws(Exception::class)
-    private fun downloadApk(url: String): File {
+    private fun downloadApk(url: String, expectedSha256: String?): File {
         // 确保缓存目录存在
         val cacheDir = File(context.cacheDir, "apk")
         if (!cacheDir.exists()) cacheDir.mkdirs()
 
-        // 清理旧文件
+        // 清理旧文件（含上次重试可能残留的不完整文件）
         cacheDir.listFiles()?.forEach { it.delete() }
 
         val file = File(cacheDir, "wenyan-update.apk")
@@ -215,10 +230,11 @@ class UpdateViewModel @Inject constructor(
         val contentLength = body.contentLength()
         val inputStream = body.byteStream()
 
+        var totalBytesRead = 0L
+
         FileOutputStream(file).use { outputStream ->
             val buffer = ByteArray(8192)
             var bytesRead: Int
-            var totalBytesRead = 0L
             var lastProgress = -1
 
             while (inputStream.read(buffer).also { bytesRead = it } != -1) {
@@ -237,7 +253,32 @@ class UpdateViewModel @Inject constructor(
             outputStream.flush()
         }
 
+        // P1 修复（v0.9.28）：下载完整性校验。
+        // 此前无任何校验，下载中断/串内容时把损坏文件直接交给安装器 → "应用文件存在问题"。
+        // 校验 1：Content-Length 字节数对比（服务端声明了长度时必须一致）。
+        if (contentLength > 0 && totalBytesRead != contentLength) {
+            file.delete()
+            throw RuntimeException(
+                "下载不完整：预期 $contentLength 字节，实际 $totalBytesRead 字节",
+            )
+        }
+
+        // 校验 2：sha256 摘要（GitHub API 资产 digest；降级路径无 digest 时跳过）。
+        if (expectedSha256 != null) {
+            val actual = file.sha256Hex()
+            if (!actual.equals(expectedSha256, ignoreCase = true)) {
+                file.delete()
+                throw RuntimeException("下载校验失败：文件哈希不匹配")
+            }
+        }
+
         return file
+    }
+
+    /** 计算文件 SHA-256 十六进制摘要（用于 APK 完整性校验）。 */
+    private fun File.sha256Hex(): String {
+        val digest = MessageDigest.getInstance("SHA-256").digest(readBytes())
+        return digest.joinToString("") { "%02x".format(it) }
     }
 
     /**

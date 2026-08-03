@@ -21,6 +21,8 @@ sealed class UpdateCheckResult {
         val latestVersion: String,
         val downloadUrl: String,
         val releaseNotes: String,
+        /** 期望 APK sha256（GitHub API 资产 digest；降级路径为 null 时跳过校验） */
+        val expectedSha256: String? = null,
     ) : UpdateCheckResult()
 
     /** 检查失败 */
@@ -57,8 +59,12 @@ class UpdateRepositoryImpl @Inject constructor() : UpdateRepository {
         /** GitHub Releases 页面（备用）— 国内通常可访问，通过重定向获取版本号 */
         private const val GITHUB_RELEASES_URL =
             "https://github.com/qbjsdsb/wenyan-android/releases/latest"
+        /** Release tag 页面（旧 fallback，仅作兜底） */
         private const val GITHUB_DOWNLOAD_BASE =
             "https://github.com/qbjsdsb/wenyan-android/releases/tag"
+        /** Release 资产下载根路径（releases/download/{tag}/wenyan-{tag}.apk） */
+        private const val GITHUB_DOWNLOAD_URL_BASE =
+            "https://github.com/qbjsdsb/wenyan-android/releases/download"
         /** 请求超时（毫秒） */
         private const val CONNECT_TIMEOUT = 8_000
         private const val READ_TIMEOUT = 8_000
@@ -75,10 +81,12 @@ class UpdateRepositoryImpl @Inject constructor() : UpdateRepository {
     )
 
     @Serializable
-    private data class GitHubAsset(
+    internal data class GitHubAsset(
         val name: String = "",
         val browser_download_url: String = "",
         val content_type: String = "",
+        /** GitHub API 资产摘要，形如 "sha256:1843e1a9..."（v0.9.27 起可用） */
+        val digest: String? = null,
     )
 
     override suspend fun checkForUpdate(currentVersion: String): UpdateCheckResult {
@@ -100,18 +108,25 @@ class UpdateRepositoryImpl @Inject constructor() : UpdateRepository {
 
             when {
                 comparison > 0 -> {
-                    val apkAsset = release.assets.firstOrNull { asset ->
-                        asset.name.endsWith(".apk", ignoreCase = true) &&
-                            asset.content_type == "application/vnd.android.package-archive"
-                    }
-                    val downloadUrl = apkAsset?.browser_download_url
-                        .takeIf { !it.isNullOrBlank() }
-                        ?: "$GITHUB_DOWNLOAD_BASE/${release.tag_name}"
+                    // P1 修复（v0.9.28）：降级路径（api.github.com 不可达）assets 为空，
+                    // 旧逻辑 fallback 到 release tag 页面（HTML），App 下载网页当 APK 导致
+                    // "应用文件存在问题"。统一走 resolveDownloadUrl：有资产用资产 URL，
+                    // 无资产按 release.yml 固定命名规则构造真实 APK 下载 URL。
+                    val downloadUrl = resolveDownloadUrl(release.assets, release.tag_name)
+                    val expectedSha256 = release.assets
+                        .firstOrNull { asset ->
+                            asset.name.endsWith(".apk", ignoreCase = true) &&
+                                asset.content_type == "application/vnd.android.package-archive"
+                        }
+                        ?.digest
+                        ?.removePrefix("sha256:")
+                        ?.takeIf { it.isNotBlank() && it.length == 64 }
 
                     UpdateCheckResult.UpdateAvailable(
                         latestVersion = release.tag_name,
                         downloadUrl = downloadUrl,
                         releaseNotes = release.body ?: "暂无更新说明",
+                        expectedSha256 = expectedSha256,
                     )
                 }
 
@@ -218,6 +233,39 @@ class UpdateRepositoryImpl @Inject constructor() : UpdateRepository {
         } finally {
             connection.disconnect()
         }
+    }
+
+    /**
+     * 从 release 资产中解析 APK 下载 URL。
+     *
+     * - 资产列表含有效 APK（.apk 且 content_type 正确）→ 返回其 browser_download_url；
+     * - 否则按 release.yml 固定命名规则构造真实 APK 下载 URL
+     *   （P1 修复：旧逻辑 fallback 到 tag 页面 HTML，App 下载网页当 APK 导致安装失败）。
+     *
+     * @param assets release 资产列表（降级路径为空）
+     * @param tagName release tag（如 "v0.9.27"）
+     */
+    internal fun resolveDownloadUrl(assets: List<GitHubAsset>, tagName: String): String {
+        val apkAsset = assets.firstOrNull { asset ->
+            asset.name.endsWith(".apk", ignoreCase = true) &&
+                asset.content_type == "application/vnd.android.package-archive"
+        }
+        return apkAsset?.browser_download_url
+            .takeIf { !it.isNullOrBlank() }
+            ?: buildApkDownloadUrl(tagName)
+    }
+
+    /**
+     * 构造 Release APK 资产下载 URL。
+     *
+     * 与 release.yml 固定命名规则一致：`releases/download/vX.Y.Z/wenyan-vX.Y.Z.apk`。
+     * 在 API 降级路径（assets 为空）时使用，避免 fallback 到 HTML 页面导致下载损坏。
+     *
+     * @param tagName release tag（如 "v0.9.27" 或 "0.9.27"）
+     */
+    internal fun buildApkDownloadUrl(tagName: String): String {
+        val tag = tagName.removePrefix("v")
+        return "$GITHUB_DOWNLOAD_URL_BASE/v$tag/wenyan-v$tag.apk"
     }
 
     /**

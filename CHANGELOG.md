@@ -8,6 +8,22 @@
 > release.yml 会自动读取当前 tag 对应的日志作为 GitHub Release 正文，
 > App 内"检查更新"界面展示的更新日志即来源于此。**务必随版本更新，不要遗漏。**
 
+## [v0.9.28] - 2026-08-04
+
+修复软件内"检查更新"下载安装失败（安装时提示"应用文件存在问题"）。
+
+### 修复（P1 hotfix）
+
+- **软件内更新下载失败**：国内网络下 `api.github.com` 不可达时 App 走降级路径，旧逻辑把下载地址指向了 Release **网页页面（HTML）**而非 APK 文件——App 下载了一个网页当安装包，安装器自然报"应用文件存在问题"。现已修复：降级路径按 `releases/download/vX.Y.Z/wenyan-vX.Y.Z.apk` 固定命名规则直接构造**真实 APK 下载地址**，不再指向网页
+- **下载完整性校验**：下载完成后对比 `Content-Length` 实际字节数，并校验 sha256（GitHub API 资产 digest）——不完整/被篡改的安装包会被丢弃并提示重试，不再把损坏文件交给安装器
+- **下载失败自动重试 1 次**：国内网络单次中断会自动重新下载，减少手动重试
+
+### 技术
+
+- `UpdateRepository`：新增 `resolveDownloadUrl` / `buildApkDownloadUrl`（internal，可测）；GitHubAsset 解析 `digest` 字段
+- `UpdateViewModel`：下载链路加 Content-Length + sha256 双重校验、失败重试 1 次
+- 新增 10 个单测覆盖（资产为空→构造真实 APK URL / content_type 不匹配 / 版本比较）；全量 **528 单测 0 失败**
+
 ## [v0.9.27] - 2026-08-04
 
 启动图标 v7.5 精进 + 全面检查 P1 修复 + 四科内容补齐 25 个知识点。
