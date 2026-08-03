@@ -55,3 +55,6 @@ wenyanziliao/
 # === 图标生成临时产物（AI 生成候选/中间文件，不入仓库） ===
 .icon-gen/
 
+
+# 发布资产（CI 构建时自动生成，不入库）
+release-assets/
