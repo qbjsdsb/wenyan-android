@@ -224,16 +224,13 @@ private fun EssayFilterBar(
                 onClick = onToggleOnlyWithAngle,
                 enabled = enabled,
                 label = { Text(stringResource(R.string.text_04)) },
-                leadingIcon = if (onlyWithAngle) {
-                    {
-                        Icon(
-                            imageVector = Icons.Default.Lightbulb,
-                            contentDescription = null,
-                            modifier = Modifier.padding(end = 4.dp),
-                        )
-                    }
-                } else {
-                    null
+                // v0.9.30 打磨：常驻灯泡图标（此前仅选中时显示，chip 宽度突变致 FlowRow 重排跳动）
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Lightbulb,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 4.dp),
+                    )
                 },
             )
         }

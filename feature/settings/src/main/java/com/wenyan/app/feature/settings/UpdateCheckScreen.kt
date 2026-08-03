@@ -41,13 +41,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
+import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -94,29 +97,25 @@ fun UpdateCheckScreen(
         viewModel.checkForUpdate()
     }
 
+    // v0.9.30 打磨：与其他屏一致用 WenyanLargeTopAppBar（带滚动收缩），此前普通 TopAppBar 不一致
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+        state = rememberTopAppBarState(),
+    )
+
     ExpressiveScaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.update_check_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回",
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                ),
+            WenyanLargeTopAppBar(
+                title = stringResource(R.string.update_check_title),
+                onBack = onBack,
+                scrollBehavior = scrollBehavior,
             )
         },
     ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
             contentAlignment = Alignment.TopCenter,
         ) {
             Column(
