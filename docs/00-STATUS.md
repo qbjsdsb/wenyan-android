@@ -1,13 +1,29 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-08-03（v0.9.26 已发布，Release #55）
+> 最后更新：2026-08-04（v0.9.27 已发布，Release #56）
 
 ## ✅ 当前状态
 
+**v0.9.27 已发布**（2026-08-04，Release #56）：启动图标 v7.5 精进 + 全面检查 P1-1/2 修复 + 四科内容补齐 25 个知识点。
+
 **v0.9.26 已发布**（2026-08-03，Release #55）：新启动图标 v7.4（Google Play Books 风格）+ 批三（性能与整洁 5 项）。
 
-**v0.9.25 已发布**（2026-08-03，Release #54）：AI 生成全新启动图标 + 整体界面审查修复 14 项。
+### v0.9.27 发布内容（tag `baa178a`，versionCode 52 / versionName "0.9.27"）
+- **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.27
+- **receipt**：`docs/release-receipts/v0.9.27-release-receipt.md`
+
+### 启动图标 v7.5 精进（commit `6935b5f`）
+- v7.4 基础上精进：右页米色 #F2E9D8 双色页、页脚双色厚度、右页首行缩进/末行短收
+- Android 13+ 主题图标改 evenOdd 镂空文字线，纯色单层也清晰
+
+### 全面检查 P1-1/2 修复（commit `5b7267f`）
+- aiJob 竞态：finally 条件清空 `if (coroutineContext[Job] == aiJob)`（旧任务不抹新任务引用）
+- Retry-After 上限：`coerceAtMost(5000L)` clamp 服务商限流秒数
+
+### 内容补齐（commit `ba3fc68` + `ef3d932`，seed 2.16.0→2.18.0，935→960）
+- 真题硬缺口 10 + 杨朔模式（第一批 11 个）/ 教材缺口 9 + 台港澳 4 + 敦煌变文（第二批 14 个）
+- 四科 25 个缺口全部补齐，三路交叉验证（教材/真题/结构）
 
 ### v0.9.26 发布内容（tag `5d7f3d9`，versionCode 51 / versionName "0.9.26"）
 - **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.26
@@ -52,30 +68,34 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **5d7f3d9**（v0.9.26 版本号提升，2026-08-03） |
-| 最新 Release | **v0.9.26**（2026-08-03，正式签名 + R8 + Play Books 风格图标）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.26 |
-| versionCode / versionName | **51 / "0.9.26"** |
-| 知识点 | **935 个** |
+| 最新 commit | **baa178a**（v0.9.27 版本号提升，2026-08-04） |
+| 最新 Release | **v0.9.27**（2026-08-04，正式签名 + R8 + 图标 v7.5 + 内容补齐 25 个）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.27 |
+| versionCode / versionName | **52 / "0.9.27"** |
+| 知识点 | **960 个** |
 | 真题 | **485 道** |
 | 论述题 | **134 道**（v0.9.23 起删年份显示，数据层 year 保留） |
-| seed 版本 | **2.16.0** |
+| seed 版本 | **2.18.0** |
 | 数据库版本 | **10**（v0.9.24 补 3 个筛选索引） |
 | 底部导航 | **5 Tab**（知识点/论述题/卡片/错题本/设置），MD3 规范 + scroll-aware 显隐 |
 | 图谱 | **已移除**（v0.9.3） |
 | AI 服务商 | DeepSeek/通义/智谱/月之暗面/自定义（v0.9.23 修复 URL 拼接） |
 | 更新日志机制 | **CHANGELOG.md** + release.yml 动态读取（v0.9.23 起） |
-| 单测 | **518 个 0 失败**（批一+批二后） |
-| R8 | **已启用并随 v0.9.26 发布**（APK 5.94MB，需 emulator 冒烟实测） |
-| 启动图标 | **v7.4 Google Play Books 风格「黑底白书」**（v0.9.26 起，纯矢量 9.8KB） |
+| 单测 | **518 个 0 失败**（批一+批二后，v0.9.27 验证仍 0 失败） |
+| R8 | **已启用并随 v0.9.27 发布**（APK 5.96MB，需 emulator 冒烟实测） |
+| 启动图标 | **v7.5 双色页精进**（v0.9.27 起：米色右页+页脚厚度+缩进+主题镂空，纯矢量） |
 | 崩溃上报 | **未接入**（需 Firebase/Sentry 配置） |
 | 阻塞 | **无** |
 
-## ✅ v0.9.26 发布验证记录（2026-08-03，Release #55）
+## ✅ v0.9.27 发布验证记录（2026-08-04，Release #56）
 
-> 发布核心验证已全部通过（详见 `docs/release-receipts/v0.9.26-release-receipt.md`）。
+> 发布核心验证已全部通过（详见 `docs/release-receipts/v0.9.27-release-receipt.md`）。
 
-1. **tag 与版本**：✅ v0.9.26 → 5d7f3d9 = HEAD；versionCode 51 / versionName "0.9.26"
-2. **Release 页面**：✅ 文研App v0.9.26 已发布（2026-08-02T21:50:04Z UTC），正文"更新内容"来自 CHANGELOG v0.9.26（动态日志机制持续生效）
+1. **tag 与版本**：✅ v0.9.27 → baa178a = HEAD；versionCode 52 / versionName "0.9.27"
+2. **Release 页面**：✅ 文研App v0.9.27 已发布（2026-08-03T16:49:48Z UTC），正文"更新内容"来自 CHANGELOG v0.9.27（动态日志机制持续生效）
+3. **APK 资产**：✅ wenyan-v0.9.27.apk + wenyan-latest.apk 均 200（5,959,265 字节），sha256 完全一致（1843e1a9…，与 GitHub API digest 一致）
+4. **APK 版本**：✅ aapt2 校验 versionCode 52 / versionName "0.9.27" / targetSdk 35
+5. **APK 签名**：✅ apksigner v2 scheme 通过
+6. **单测/构建**：✅ 518 单测 0 失败 + assembleDebug + assembleRelease(R8) 全绿（本地已验）
 3. **APK 资产**：✅ wenyan-v0.9.26.apk + wenyan-latest.apk 均 200（5,937,261 字节），sha256 完全一致（8a291432…）
 4. **APK 版本**：✅ aapt2 校验 versionCode 51 / versionName "0.9.26" / targetSdk 35
 5. **APK 签名**：✅ apksigner v2 scheme 通过

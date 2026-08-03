@@ -6438,3 +6438,28 @@ while (retryCount <= maxRetries) {
   - 停用词剔除对中文 LIKE 有害：LIKE '%苏轼贡献%' 不匹配"苏轼的贡献"（中间有"的"）；正确方向是多关键词 OR
   - i18n 正则替换坑：匹配 `Text("...")` 必须含右括号，否则 `Text("中文", color=...)` 变成 `Text(stringResource(...)), color=...)`；脚本必须匹配完整调用
   - build-logic 独立 includeBuild，convention 只抽纯配置（compileSdk/minSdk/compileOptions），插件应用保留模块内（顺序差异大）
+
+
+## 2026-08-04 凌晨：v0.9.27 严谨发布完成（图标 v7.5 + P1-1/2 + 内容补齐 25 个，Release #56）
+
+- **完成**：
+  - **启动图标 v7.5 精进**（`6935b5f`）：用户反馈 v7.4 太简单/主题图标不好看 → 双色页（左白 #FFFFFF / 右米 #F2E9D8）+ 页脚双色厚度（#D8CFC0/#C9BFA8）+ 右页首行缩进 4/末行短收 10；monochrome 改 evenOdd 镂空文字线（8 条矩形），纯色单层也清晰
+  - **全面检查 P1-1/2 修复**（`5b7267f`）：
+    - aiJob 竞态：`finally { aiJob = null }` → `if (coroutineContext[Job] == aiJob) aiJob = null` 条件清空，旧任务不抹新任务引用
+    - Retry-After 无上限：拦截器 `?let { it * 1000 }?.coerceAtMost(5000L)` clamp 到 5s，防阻塞 IO 线程 + 占 Semaphore 槽位
+  - **内容补齐 25 个**（`ba3fc68` + `ef3d932`，seed 2.16.0→2.18.0，935→960）：
+    - 第一批 11 个：真题硬缺口 10（史铁生/学衡派/寒夜/茅盾三部曲/芙蓉镇/男人的一半是女人/神鞭那五/现代杂志/观堂集林/希腊希伯来）+ 杨朔模式
+    - 第二批 14 个：教材缺口 9（艾青/山药蛋派/荷花淀派/解放区文学/重写文学史/探索戏剧/茅盾文艺思想/鸳鸯蝴蝶派/丁帆新文学史观）+ 台港澳 4（台湾概述/白先勇/香港概述/金庸）+ 敦煌变文
+    - 图谱补强：茅盾文艺思想/台湾概述/香港概述/敦煌变文 entities≥3、relations≥1（relation 引用一致性全库校验通过）
+  - **验证**：960 条数据校验（id 唯一/subject 合法/字段完整/relation 引用一致）+ 518 单测 0 失败 + assembleDebug + APK 内 seed 2.18.0/960 抽查
+  - **v0.9.27 发布**（`baa178a` 版本号 52/0.9.27 + CHANGELOG [v0.9.27] 段）：tag v0.9.27 → baa178a 推送，Release #56（16:49 UTC）→ ~13 分钟资产就绪
+  - **发布后验证**：Release 页面"文研App v0.9.27" + 正文关键词来自 CHANGELOG v0.9.27 + APK aapt2 52/0.9.27/targetSdk35 + apksigner v2 + 两 APK sha256 一致（1843e1a9…，与 GitHub API digest 一致）
+  - **receipt**：`docs/release-receipts/v0.9.27-release-receipt.md`；00-STATUS 版本矩阵更新（960/2.18.0/52）
+- **进行中**：
+  - 全面检查批次 B（仓库卫生：release-assets 74MB git rm --cached + build 产物清理）、C（UI 体验）、D（合规长期）待执行
+  - ⚠️ 唯一待人工验证：emulator 冒烟（图标 v7.5 桌面/主题图标 / 搜索新增知识点 / AI 停止重发 / 更新日志界面显示 v0.9.27 内容）
+- **关键发现**：
+  - App 内"检查更新"日志 = GitHub Releases API body = release.yml 从 CHANGELOG.md 提取 `## [vX.Y.Z]` 段；**CHANGELOG 必须随版本更新**，否则更新界面日志不变（用户痛点根因）
+  - App 更新下载取 `assets.firstOrNull { name.endsWith(".apk") }`（最新 release 第一个 .apk = 带版本号的），删历史 release 资产不影响更新
+  - 项目本地磁盘 831MB：82% 是 Gradle build 产物（app/build 456MB + 模块 build ~170MB），74MB 是 git 追踪的 release-assets 旧 APK；可 `./gradlew clean` + `git rm -r --cached release-assets/` 清理
+  - 沙箱 api.github.com 直连 TLS 拦截（exit 35），ghfast.top 代理只支持 github.com 网页不支持 api.github.com；WebFetch 可访问 api.github.com（备用验证通道）
