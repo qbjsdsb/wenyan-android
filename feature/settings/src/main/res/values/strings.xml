@@ -8,4 +8,33 @@
     <string name="update_install">安装更新</string>
     <string name="update_retry">重试</string>
     <!-- 设置/关于界面（SettingsScreen / AboutTutorialScreen 模板串暂留硬编码） -->
+    <!-- 设置页 UI 文本（v0.9.30 i18n 补全） -->
+    <string name="settings_title">设置</string>
+    <string name="settings_appearance">外观</string>
+    <string name="settings_theme_mode">主题模式</string>
+    <string name="settings_amoled">AMOLED 纯黑模式</string>
+    <string name="settings_dynamic_color">动态色彩</string>
+    <string name="settings_ai_services">AI 服务</string>
+    <string name="settings_api_config">API 配置</string>
+    <string name="settings_api_providers">DeepSeek / 通义 / 智谱 / 月之暗面</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_version">版本</string>
+    <string name="settings_check_update">检查更新</string>
+    <string name="settings_check_update_desc">查看是否有新版本可用</string>
+    <string name="settings_about_tutorial">关于与教程</string>
+    <string name="settings_about_tutorial_desc">软件介绍与使用指南</string>
+    <string name="settings_cards">卡片备考</string>
+    <string name="settings_daily_new_limit">每日新卡数</string>
+    <string name="settings_exam_date">考试日期</string>
+    <string name="settings_confirm">确定</string>
+    <string name="settings_cancel">取消</string>
+    <string name="settings_countdown">考研倒计时</string>
+    <string name="settings_countdown_days">距考研还有 %1$d 天</string>
+    <string name="settings_retention">目标保持率</string>
+    <string name="settings_progress">学习进度</string>
+    <string name="settings_loading">加载中…</string>
+    <string name="settings_loading_desc">正在获取学习进度</string>
+    <string name="settings_streak">连续学习 %1$d 天</string>
+    <string name="settings_duration">累计学习时长</string>
+    <string name="settings_last_study">上次学习</string>
 </resources>

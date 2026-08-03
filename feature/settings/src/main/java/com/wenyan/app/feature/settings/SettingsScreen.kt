@@ -155,7 +155,7 @@ fun SettingsScreen(
     ExpressiveScaffold(
         topBar = {
             WenyanLargeTopAppBar(
-                title = "设置",
+                title = stringResource(R.string.settings_title),
                 scrollBehavior = scrollBehavior,
             )
         },
@@ -185,10 +185,10 @@ fun SettingsScreen(
 
             // 外观
             item {
-                GroupedCard(title = "外观") {
+                GroupedCard(title = stringResource(R.string.settings_appearance)) {
                     // 主题模式
                     GroupedCardItem(
-                        title = "主题模式",
+                        title = stringResource(R.string.settings_theme_mode),
                         subtitle = when (themeConfig.colorMode) {
                             ColorMode.SYSTEM -> "跟随系统"
                             ColorMode.LIGHT -> "浅色"
@@ -225,7 +225,7 @@ fun SettingsScreen(
                     GroupedCardDivider()
                     // AMOLED 开关
                     GroupedCardItem(
-                        title = "AMOLED 纯黑模式",
+                        title = stringResource(R.string.settings_amoled),
                         description = "深色模式下使用纯黑背景，节省 OLED 电量",
                         trailing = {
                             Switch(
@@ -250,7 +250,7 @@ fun SettingsScreen(
 
             // 动态色彩
             item {
-                GroupedCard(title = "动态色彩") {
+                GroupedCard(title = stringResource(R.string.settings_dynamic_color)) {
                     GroupedCardItem(
                         title = "动态色彩",
                         description = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -363,10 +363,10 @@ fun SettingsScreen(
 
             // AI 服务
             item {
-                GroupedCard(title = "AI 服务") {
+                GroupedCard(title = stringResource(R.string.settings_ai_services)) {
                     GroupedCardItem(
-                        title = "API 配置",
-                        subtitle = "DeepSeek / 通义 / 智谱 / 月之暗面",
+                        title = stringResource(R.string.settings_api_config),
+                        subtitle = stringResource(R.string.settings_api_providers),
                         onClick = onNavigateToApiConfig,
                     )
                 }
@@ -374,25 +374,25 @@ fun SettingsScreen(
 
             // 关于
             item {
-                GroupedCard(title = "关于") {
+                GroupedCard(title = stringResource(R.string.settings_about)) {
                     GroupedCardItem(
-                        title = "版本",
+                        title = stringResource(R.string.settings_version),
                         // P1-M2 修正：原硬编码 "v0.1.0" 与实际版本脱节，改读系统 packageManager
                         subtitle = "v$currentVersionName",
                     )
                     GroupedCardDivider()
                     // v0.9.11 新增：检查更新入口
                     GroupedCardItem(
-                        title = "检查更新",
-                        subtitle = "查看是否有新版本可用",
+                        title = stringResource(R.string.settings_check_update),
+                        subtitle = stringResource(R.string.settings_check_update_desc),
                         onClick = onNavigateToUpdateCheck,
                     )
                     GroupedCardDivider()
                     // v0.9.5 新增：教程入口（v0.9.6 精简重构：5 节简洁版）
                     // 欢迎卡 / 快速上手 / 功能模块 / 学习原理（可折叠） / 关于
                     GroupedCardItem(
-                        title = "关于与教程",
-                        subtitle = "软件介绍与使用指南",
+                        title = stringResource(R.string.settings_about_tutorial),
+                        subtitle = stringResource(R.string.settings_about_tutorial_desc),
                         onClick = onNavigateToAbout,
                     )
                 }
@@ -422,10 +422,10 @@ private fun CardStudySettingsCard(
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
 
-    GroupedCard(title = "卡片备考") {
+    GroupedCard(title = stringResource(R.string.settings_cards)) {
         // 每日新卡数
         GroupedCardItem(
-            title = "每日新卡数",
+            title = stringResource(R.string.settings_daily_new_limit),
             subtitle = "${settings.dailyNewLimit} 张/天",
             description = "每天最多学习的新卡数量（含复习由 FSRS 自动安排）",
         )
@@ -515,7 +515,7 @@ private fun CardStudySettingsCard(
 
         // 考试日期
         GroupedCardItem(
-            title = "考试日期",
+            title = stringResource(R.string.settings_exam_date),
             subtitle = settings.examDateMillis?.let { formatExamDate(it) } ?: "未设置（默认 12 月下旬）",
             description = "用于计算距离考试的剩余天数",
             onClick = { showDatePicker = true },
@@ -532,12 +532,12 @@ private fun CardStudySettingsCard(
                         onExamDateChange(datePickerState.selectedDateMillis)
                         showDatePicker = false
                     }) {
-                        Text("确定")
+                        Text(stringResource(R.string.settings_confirm))
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showDatePicker = false }) {
-                        Text("取消")
+                        Text(stringResource(R.string.settings_cancel))
                     }
                 },
             ) {
@@ -587,9 +587,9 @@ private fun ExamCountdownCard() {
         StudyPhase.SPRINT -> "最后冲刺，查漏补缺"
     }
 
-    GroupedCard(title = "考研倒计时") {
+    GroupedCard(title = stringResource(R.string.settings_countdown)) {
         GroupedCardItem(
-            title = "距考研还有 $daysToExam 天",
+            title = stringResource(R.string.settings_countdown_days, daysToExam),
             subtitle = "考试日期：${examDate.year}年${examDate.monthValue}月${examDate.dayOfMonth}日",
         )
         GroupedCardDivider()
@@ -599,7 +599,7 @@ private fun ExamCountdownCard() {
         )
         GroupedCardDivider()
         GroupedCardItem(
-            title = "目标保持率",
+            title = stringResource(R.string.settings_retention),
             subtitle = "${"%.0f".format(retention * 100)}%（FSRS 调度依据此值动态调整复习间隔）",
         )
     }
@@ -624,12 +624,12 @@ private fun StudyProgressCard(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    GroupedCard(title = "学习进度") {
+    GroupedCard(title = stringResource(R.string.settings_progress)) {
         when (val state = uiState) {
             StudyProgressUiState.Loading -> {
                 GroupedCardItem(
-                    title = "加载中…",
-                    subtitle = "正在获取学习进度",
+                    title = stringResource(R.string.settings_loading),
+                    subtitle = stringResource(R.string.settings_loading_desc),
                 )
             }
 
@@ -647,18 +647,18 @@ private fun StudyProgressCard(
                 val lastVisited = entity.lastVisitedAt
 
                 GroupedCardItem(
-                    title = "连续学习 $streak 天",
+                    title = stringResource(R.string.settings_streak, streak),
                     subtitle = if (streak == 0) "开始今天的学习吧" else "保持下去！",
                 )
                 GroupedCardDivider()
                 GroupedCardItem(
-                    title = "累计学习时长",
+                    title = stringResource(R.string.settings_duration),
                     subtitle = timeText,
                 )
                 if (lastVisited != null) {
                     GroupedCardDivider()
                     GroupedCardItem(
-                        title = "上次学习",
+                        title = stringResource(R.string.settings_last_study),
                         subtitle = formatRelativeTime(lastVisited),
                     )
                 }
