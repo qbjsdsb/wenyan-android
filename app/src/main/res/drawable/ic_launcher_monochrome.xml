@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 启动图标 monochrome 层 v7（Android 13+ themed icon）。
-     系统根据用户壁纸/主题自动着色此矢量图。
-     v7 monochrome 与 v7 foreground 主体一致（白书双页），但保留书脊缝隙（系统染色后形成自然书脊）。
-     文字线在此层省略——单色 themed icon 主体越简越好，文字线在主题色下会与小书页混淆。
+<!-- 启动图标 monochrome 层 v7.5（Android 13+ themed icon）。
+     系统根据用户壁纸/主题自动着色此矢量图（非透明像素染成主题色）。
+     v7.5 重做：evenOdd 镂空文字线——外环双页 + 内环 8 条文字线矩形，
+     系统染色后形成"主题色书页 + 壁纸色文字线"，有细节有识别度
+     （v7.4 仅双页无文字线，主题色下退化为两个方块，辨识度差）。
      参见 docs/design/icon-redesign.md -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -10,13 +11,19 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- 左页 -->
+    <!-- evenOdd 填充：外环（双页）+ 内环（文字线矩形镂空） -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M30,30 L52,30 L52,78 L30,78 Q22,78 22,70 L22,38 Q22,30 30,30 Z" />
-
-    <!-- 右页 -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M56,30 L78,30 Q86,30 86,38 L86,70 Q86,78 78,78 L56,78 Z" />
+        android:fillType="evenOdd"
+        android:pathData="
+            M30,30 L52,30 L52,78 L30,78 Q22,78 22,70 L22,38 Q22,30 30,30 Z
+            M56,30 L78,30 Q86,30 86,38 L86,70 Q86,78 78,78 L56,78 Z
+            M28,42 L48,42 L48,44.5 L28,44.5 Z
+            M28,50 L48,50 L48,52.5 L28,52.5 Z
+            M28,58 L48,58 L48,60.5 L28,60.5 Z
+            M28,66 L38,66 L38,68.5 L28,68.5 Z
+            M60,42 L80,42 L80,44.5 L60,44.5 Z
+            M60,50 L80,50 L80,52.5 L60,52.5 Z
+            M60,58 L80,58 L80,60.5 L60,60.5 Z
+            M70,66 L80,66 L80,68.5 L70,68.5 Z" />
 </vector>

@@ -1,83 +1,93 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 启动图标前景 v7（2026-08-03）：Google Play Books 风格手工矢量
-     设计语言：bold silhouette + simple geometry + distinctive identity
-     主体：白色双页书（中央 4px 书脊缝隙透出墨黑背景）+ 8 条文字线（每页 4 条，最后一条短暗示段落结尾）
-     颜色：白色 #FFFFFF（前景区）+ 黑色 #1A1A1A 文字线（55% 透明度，模拟印刷）
-     几何：圆角 8，书占画布高 44%、宽 60%，safe zone 充足
-     相比 v4 矢量：单字符号 → 整本书，更 Google，更具产品类型识别 -->
+<!-- 启动图标前景 v7.5（2026-08-03）：Google Play Books 风格精进版
+     相比 v7.4：书页双色层次（左白 #FFFFFF / 右米 #F2E9D8）+ 底部 2px 页脚厚度
+     （左 #D8CFC0 / 右 #C9BFA8，书本质感）+ 文字线排版细节（右页首行缩进 4、
+     末行短 10，模拟真实排版）+ 中央 4px 书脊缝隙透出墨黑背景 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- 左页：圆角矩形（外圆角 8，书脊侧平） -->
+    <!-- 左页：白（前景主色） -->
     <path
         android:fillColor="#FFFFFF"
         android:pathData="M30,30 L52,30 L52,78 L30,78 Q22,78 22,70 L22,38 Q22,30 30,30 Z" />
 
-    <!-- 右页：对称 -->
+    <!-- 右页：米色（层次，Google Play Books 双色页风格） -->
     <path
-        android:fillColor="#FFFFFF"
+        android:fillColor="#F2E9D8"
         android:pathData="M56,30 L78,30 Q86,30 86,38 L86,70 Q86,78 78,78 L56,78 Z" />
 
-    <!-- 左页文字线（4 条，55% 透明度） -->
+    <!-- 页脚厚度：左页底部 2px（避开底部圆角区 x=22-26） -->
+    <path
+        android:fillColor="#D8CFC0"
+        android:fillAlpha="0.9"
+        android:pathData="M26,76 L52,76 L52,78 L26,78 Z" />
+
+    <!-- 页脚厚度：右页底部 2px（避开底部圆角区 x=82-86） -->
+    <path
+        android:fillColor="#C9BFA8"
+        android:fillAlpha="0.9"
+        android:pathData="M56,76 L82,76 L82,78 L56,78 Z" />
+
+    <!-- 左页文字线（4 条，50% 透明度；末行短 10 暗示段落结尾） -->
     <path
         android:strokeColor="#1A1A1A"
-        android:strokeAlpha="0.55"
+        android:strokeAlpha="0.5"
         android:strokeWidth="2.5"
         android:strokeLineCap="round"
         android:fillColor="#00000000"
         android:pathData="M28,42 L48,42" />
     <path
         android:strokeColor="#1A1A1A"
-        android:strokeAlpha="0.55"
+        android:strokeAlpha="0.5"
         android:strokeWidth="2.5"
         android:strokeLineCap="round"
         android:fillColor="#00000000"
         android:pathData="M28,50 L48,50" />
     <path
         android:strokeColor="#1A1A1A"
-        android:strokeAlpha="0.55"
+        android:strokeAlpha="0.5"
         android:strokeWidth="2.5"
         android:strokeLineCap="round"
         android:fillColor="#00000000"
         android:pathData="M28,58 L48,58" />
     <path
         android:strokeColor="#1A1A1A"
-        android:strokeAlpha="0.55"
+        android:strokeAlpha="0.5"
         android:strokeWidth="2.5"
         android:strokeLineCap="round"
         android:fillColor="#00000000"
-        android:pathData="M28,66 L40,66" />
+        android:pathData="M28,66 L38,66" />
 
-    <!-- 右页文字线（4 条，55% 透明度） -->
+    <!-- 右页文字线（4 条；首行缩进 4 从 x=60，末行短 10 70-80） -->
     <path
         android:strokeColor="#1A1A1A"
-        android:strokeAlpha="0.55"
+        android:strokeAlpha="0.5"
         android:strokeWidth="2.5"
         android:strokeLineCap="round"
         android:fillColor="#00000000"
         android:pathData="M60,42 L80,42" />
     <path
         android:strokeColor="#1A1A1A"
-        android:strokeAlpha="0.55"
+        android:strokeAlpha="0.5"
         android:strokeWidth="2.5"
         android:strokeLineCap="round"
         android:fillColor="#00000000"
         android:pathData="M60,50 L80,50" />
     <path
         android:strokeColor="#1A1A1A"
-        android:strokeAlpha="0.55"
+        android:strokeAlpha="0.5"
         android:strokeWidth="2.5"
         android:strokeLineCap="round"
         android:fillColor="#00000000"
         android:pathData="M60,58 L80,58" />
     <path
         android:strokeColor="#1A1A1A"
-        android:strokeAlpha="0.55"
+        android:strokeAlpha="0.5"
         android:strokeWidth="2.5"
         android:strokeLineCap="round"
         android:fillColor="#00000000"
-        android:pathData="M60,66 L72,66" />
+        android:pathData="M70,66 L80,66" />
 </vector>
