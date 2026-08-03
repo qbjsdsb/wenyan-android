@@ -1320,8 +1320,13 @@ private fun TodayPlanBanner(
                 )
             }
             Spacer(modifier = Modifier.padding(top = Spacing.xs))
+            // v0.9.29 打磨：显示"约"（每知识点拆 4-7 张，按 6 估算）且补充知识点数更直观
             Text(
-                text = "今日：新卡 ${plan.newCardEstimate} 张 · 复习 ${plan.dueCardEstimate} 张",
+                text = if (plan.duePointCount > 0) {
+                    "今日：新卡约 ${plan.newCardEstimate} 张（${plan.newPointCount} 个知识点）· 复习约 ${plan.dueCardEstimate} 张"
+                } else {
+                    "今日：新卡约 ${plan.newCardEstimate} 张（${plan.newPointCount} 个知识点）"
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )

@@ -207,4 +207,32 @@ class NewCardSelectionTest {
         assertEquals(2, frequencyRank("LOW"))
         assertEquals(2, frequencyRank("UNKNOWN"))
     }
+
+    // ============ 复习/新卡比例保护（v0.9.29 打磨） ============
+
+    @Test
+    fun `复习知识点少时新卡按限额`() {
+        assertEquals(60, computeEffectiveNewLimit(duePointCount = 0, dailyNewLimit = 60))
+        assertEquals(60, computeEffectiveNewLimit(duePointCount = 10, dailyNewLimit = 60))
+    }
+
+    @Test
+    fun `复习知识点中等时新卡减半`() {
+        assertEquals(30, computeEffectiveNewLimit(duePointCount = 15, dailyNewLimit = 60))
+        assertEquals(15, computeEffectiveNewLimit(duePointCount = 20, dailyNewLimit = 30))
+    }
+
+    @Test
+    fun `复习知识点过多时暂停新卡`() {
+        assertEquals(0, computeEffectiveNewLimit(duePointCount = 21, dailyNewLimit = 60))
+        assertEquals(0, computeEffectiveNewLimit(duePointCount = 100, dailyNewLimit = 60))
+    }
+
+    @Test
+    fun `比例保护后限额为 0 不取新卡`() {
+        val candidates = (1..5).map { kp("p$it", "HIGH") }
+        // 模拟复习过多：effectiveLimit = 0
+        val result = takeNewPointsByCardLimit(candidates.map { it.point }, 0)
+        assertTrue(result.isEmpty())
+    }
 }

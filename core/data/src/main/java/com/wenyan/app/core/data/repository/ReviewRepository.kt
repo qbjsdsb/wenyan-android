@@ -54,6 +54,23 @@ fun daysUntilExam(
 }
 
 /**
+ * 复习/新卡比例保护（v0.9.29 打磨，纯函数可测）。
+ *
+ * 当今日复习知识点较多时减少新卡，避免"复习 + 新卡"总量过大导致堆积焦虑：
+ * - duePointCount ≤ 10（约 60 张复习）：新卡按用户限额（默认 60）
+ * - duePointCount ≤ 20（约 60-120 张复习）：新卡减半（30）
+ * - duePointCount > 20（超过 120 张复习）：暂停新卡（0）
+ *
+ * @param duePointCount 今日到期复习知识点数
+ * @param dailyNewLimit 用户设置的每日新卡限额
+ */
+internal fun computeEffectiveNewLimit(duePointCount: Int, dailyNewLimit: Int): Int = when {
+    duePointCount <= 10 -> dailyNewLimit
+    duePointCount <= 20 -> dailyNewLimit / 2
+    else -> 0
+}
+
+/**
  * 从全部 VERIFIED 知识点中挑选每日新卡（v0.9.29，纯函数可测）。
  *
  * 规则：
@@ -243,11 +260,16 @@ class ReviewRepository @Inject constructor(
                 val dueIds = dueRecords.map { it.pointId }.toSet()
                 val duePoints = verifiedPoints.filter { it.id in dueIds }
                 val learnedIds = allRecords.map { it.pointId }.toSet()
+                // v0.9.29 打磨：复习/新卡比例保护——复习量大时自动减少/暂停新卡
+                val effectiveNewLimit = computeEffectiveNewLimit(
+                    duePointCount = duePoints.size,
+                    dailyNewLimit = settings.dailyNewLimit,
+                )
                 val newPoints = selectNewPoints(
                     verifiedWithSubject = verifiedWithSubject,
                     learnedIds = learnedIds,
                     settings = settings,
-                    dailyNewLimit = settings.dailyNewLimit,
+                    dailyNewLimit = effectiveNewLimit,
                 )
                 TodayStudyQueue(duePoints = duePoints, newPoints = newPoints)
             }
