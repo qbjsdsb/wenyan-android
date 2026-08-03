@@ -83,8 +83,11 @@ android {
         // v0.9.28=53（P1 hotfix：App 内更新下载失败——降级路径 assets 为空时旧逻辑 fallback
         //   到 release tag 页面 HTML，App 下载网页当 APK 导致"应用文件存在问题"；修复为按
         //   release.yml 命名规则构造真实 APK URL + 下载完整性校验(Content-Length/sha256) +
-        //   失败重试。versionName "0.9.28"）
-        versionCode = 53
+        //   失败重试。P2：卡片拆分 MIN_STRUCTURED_DIMENSIONS=3 消除 35 个只拆 1 张超长卡。
+        //   versionName "0.9.28"）
+        // v0.9.29=54（卡片备考系统：每日新卡限额默认 60 可设 + 考频筛选 + 科目筛选 + 考试倒计时；
+        //   今日任务横幅 + 设置页配置。versionName "0.9.29"）
+        versionCode = 54
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         //   数据一致性修复（B1/B2/B3）：
@@ -152,7 +155,8 @@ android {
         // v0.9.26：新启动图标 v7.4 + 批三（见 versionCode 注释）
         // v0.9.27：图标 v7.5 精进 + 全面检查 P1-1/2 + 内容补齐 25 个（见 versionCode 注释）
         // v0.9.28：App 内更新下载修复（见 versionCode 注释）
-        versionName = "0.9.28"
+        // v0.9.29：卡片备考系统（见 versionCode 注释）
+        versionName = "0.9.29"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
