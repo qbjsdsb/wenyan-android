@@ -97,7 +97,7 @@ fun EssayListScreen(
     ExpressiveScaffold(
         topBar = {
             WenyanLargeTopAppBar(
-                title = "论述题",
+                title = stringResource(R.string.kp_essay_list_title),
                 subtitle = if (uiState.totalCount > 0) {
                     if (uiState.filteredCount != uiState.totalCount) {
                         "${uiState.filteredCount} / ${uiState.totalCount} 题"
@@ -151,7 +151,7 @@ fun EssayListScreen(
                         ) {
                             ErrorState(
                                 icon = Icons.Default.CloudOff,
-                                title = "加载失败",
+                                title = stringResource(R.string.kp_load_failed),
                                 onRetry = viewModel::retry,
                                 message = error,
                             )

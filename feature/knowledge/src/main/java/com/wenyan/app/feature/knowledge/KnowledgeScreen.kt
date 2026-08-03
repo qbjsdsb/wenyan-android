@@ -100,12 +100,12 @@ fun KnowledgeScreen(
     ExpressiveScaffold(
         topBar = {
             WenyanLargeTopAppBar(
-                title = "知识点",
+                title = stringResource(R.string.kp_list_title),
                 actions = {
                     IconButton(onClick = onNavigateToAiAssistant) {
                         Icon(
                             imageVector = Icons.Default.SmartToy,
-                            contentDescription = "AI助手",
+                            contentDescription = stringResource(R.string.kp_ai_assistant),
                         )
                     }
                 },
@@ -160,7 +160,7 @@ fun KnowledgeScreen(
                         ) {
                             ErrorState(
                                 icon = Icons.Default.CloudOff,
-                                title = "加载失败",
+                                title = stringResource(R.string.kp_load_failed),
                                 message = error,
                                 onRetry = viewModel::retry,
                             )
@@ -246,7 +246,7 @@ private fun SearchBar(
                 IconButton(onClick = onClear) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "清除搜索",
+                        contentDescription = stringResource(R.string.kp_clear_search),
                     )
                 }
             }

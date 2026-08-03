@@ -97,10 +97,10 @@ fun KnowledgePointDetailScreen(
     // 副标题：考频 + 难度组合（point 为 null 时不显示）
     val subtitle = uiState.point?.let { point ->
         val freqLabel = when (point.examFrequency) {
-            "HIGH" -> "高频"
-            "MEDIUM" -> "中频"
-            "LOW" -> "低频"
-            else -> "未考"
+            "HIGH" -> stringResource(R.string.kp_freq_high)
+            "MEDIUM" -> stringResource(R.string.kp_freq_medium)
+            "LOW" -> stringResource(R.string.kp_freq_low)
+            else -> stringResource(R.string.kp_freq_none)
         }
         "$freqLabel · 难度${point.difficulty}/5"
     }
@@ -108,7 +108,7 @@ fun KnowledgePointDetailScreen(
     ExpressiveScaffold(
         topBar = {
             WenyanLargeTopAppBar(
-                title = uiState.point?.title ?: "知识点详情",
+                title = uiState.point?.title ?: stringResource(R.string.kp_detail_title),
                 subtitle = subtitle,
                 onBack = onBack,
                 scrollBehavior = scrollBehavior,
@@ -148,7 +148,7 @@ fun KnowledgePointDetailScreen(
                         ) {
                             ErrorState(
                                 icon = Icons.Default.CloudOff,
-                                title = "加载失败",
+                                title = stringResource(R.string.kp_load_failed),
                                 message = error,
                                 onRetry = viewModel::retry,
                             )
@@ -158,7 +158,7 @@ fun KnowledgePointDetailScreen(
                         // v0.8.3 优化：用 EmptyState 组件替代裸 Text，与全 App 一致
                         EmptyState(
                             icon = Icons.Default.Inbox,
-                            title = "知识点不存在",
+                            title = stringResource(R.string.kp_not_found),
                             description = "该知识点可能已被删除或 ID 错误",
                         )
                     }
@@ -183,7 +183,7 @@ fun KnowledgePointDetailScreen(
                                     // ── 摘要 ──
                                     if (point.summary?.isNotBlank() == true) {
                                         item(key = "summary", contentType = "summary") {
-                                            GroupedCard(title = "摘要") {
+                                            GroupedCard(title = stringResource(R.string.kp_summary)) {
                                                 Text(
                                                     text = point.summary.orEmpty(),
                                                     style = MaterialTheme.typography.bodyMedium,
@@ -288,10 +288,10 @@ private fun HeaderSection(point: KnowledgePointEntity) {
 
             // 考频标签（高频/中频/低频用 PRIMARY 突出）
             val (freqLabel, freqVariant) = when (point.examFrequency) {
-                "HIGH" -> "高频" to ChipVariant.PRIMARY
-                "MEDIUM" -> "中频" to ChipVariant.SECONDARY
-                "LOW" -> "低频" to ChipVariant.TERTIARY
-                else -> "未考" to ChipVariant.NEUTRAL
+                "HIGH" -> stringResource(R.string.kp_freq_high) to ChipVariant.PRIMARY
+                "MEDIUM" -> stringResource(R.string.kp_freq_medium) to ChipVariant.SECONDARY
+                "LOW" -> stringResource(R.string.kp_freq_low) to ChipVariant.TERTIARY
+                else -> stringResource(R.string.kp_freq_none) to ChipVariant.NEUTRAL
             }
             WenyanInfoChip(text = freqLabel, variant = freqVariant)
 
@@ -336,12 +336,12 @@ private fun MultiPerspectiveSection(point: KnowledgePointEntity) {
 
     if (!hasCoreConclusion && !hasStudyText && !hasMultiPerspectives) return
 
-    InfoSection(title = "多教材对照") {
+    InfoSection(title = stringResource(R.string.kp_multi_perspective)) {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
             // 答题基准（马工程版）
             if (hasCoreConclusion) {
                 PerspectiveCard(
-                    label = "答题基准（马工程）",
+                    label = stringResource(R.string.kp_source_magongcheng),
                     content = point.coreConclusion,
                     isOfficial = true,
                 )
@@ -350,7 +350,7 @@ private fun MultiPerspectiveSection(point: KnowledgePointEntity) {
             // 学习理解（袁行霈版）
             if (hasStudyText) {
                 PerspectiveCard(
-                    label = "学习理解（袁行霈）",
+                    label = stringResource(R.string.kp_source_yuanxingpei),
                     content = point.studyText.orEmpty(),
                     isOfficial = false,
                 )
@@ -428,7 +428,7 @@ private fun PerspectiveCard(
 
 @Composable
 private fun SourcesSection(sources: List<DataSourceEntity>) {
-    GroupedCard(title = "资料来源（${sources.size}）") {
+    GroupedCard(title = stringResource(R.string.kp_sources_count, sources.size)) {
         sources.forEachIndexed { index, source ->
             SourceRow(source)
             if (index < sources.size - 1) {
@@ -459,7 +459,7 @@ private fun SourceRow(source: DataSourceEntity) {
             )
             source.sourcePage?.let { page ->
                 Text(
-                    text = "第 $page 页",
+                    text = stringResource(R.string.kp_page, page),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -575,7 +575,7 @@ private fun RelatedGroup(
                     modifier = Modifier.size(18.dp),
                 )
                 WenyanInfoChip(
-                    text = "${points.size} 个",
+                    text = stringResource(R.string.kp_related_points_count, points.size),
                     variant = type.chipVariant,
                 )
             }
@@ -661,11 +661,12 @@ private const val RELATED_SUMMARY_PREVIEW_LENGTH = 80
  * - LOW 低频 → TERTIARY
  * - 其他 → NEUTRAL
  */
+@Composable
 private fun examFrequencyChip(examFrequency: String): Pair<String, ChipVariant> = when (examFrequency) {
-    "HIGH" -> "高频" to ChipVariant.PRIMARY
-    "MEDIUM" -> "中频" to ChipVariant.SECONDARY
-    "LOW" -> "低频" to ChipVariant.TERTIARY
-    else -> "未考" to ChipVariant.NEUTRAL
+    "HIGH" -> stringResource(R.string.kp_freq_high) to ChipVariant.PRIMARY
+    "MEDIUM" -> stringResource(R.string.kp_freq_medium) to ChipVariant.SECONDARY
+    "LOW" -> stringResource(R.string.kp_freq_low) to ChipVariant.TERTIARY
+    else -> stringResource(R.string.kp_freq_none) to ChipVariant.NEUTRAL
 }
 
 // ── 相关论述题（v0.9.8 知识点串联器） ──────────────────────
@@ -788,7 +789,7 @@ private fun WrongAnswersSection(
 ) {
     if (wrongAnswers.isEmpty()) return
 
-    GroupedCard(title = "错题记录（${wrongAnswers.size}）") {
+    GroupedCard(title = stringResource(R.string.kp_wrong_records, wrongAnswers.size)) {
         wrongAnswers.forEachIndexed { index, wrong ->
             WrongAnswerRow(
                 wrong = wrong,
@@ -840,7 +841,7 @@ private fun WrongAnswerRow(
             // v0.8.20 P2-7 修复:wrongCount <= 0 时不展示(语义不合理,数据异常时不误导用户)
             if (wrong.wrongCount > 0) {
                 WenyanInfoChip(
-                    text = "错答 ${wrong.wrongCount} 次",
+                    text = stringResource(R.string.kp_wrong_count, wrong.wrongCount),
                     variant = ChipVariant.NEUTRAL,
                 )
             }

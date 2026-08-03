@@ -8,4 +8,41 @@
     <string name="text_05">标记已解决</string>
     <string name="text_06">查看全部分类</string>
     <string name="text_07">搜索知识点（标题 / 结论 / 全文 / 教材原文）</string>
+
+    <!-- 知识点详情 UI 文本（v0.9.30 i18n 补全） -->
+    <string name="kp_freq_high">高频</string>
+    <string name="kp_freq_medium">中频</string>
+    <string name="kp_freq_low">低频</string>
+    <string name="kp_freq_none">未考</string>
+    <string name="kp_detail_title">知识点详情</string>
+    <string name="kp_load_failed">加载失败</string>
+    <string name="kp_not_found">知识点不存在</string>
+    <string name="kp_not_found_desc">该知识点可能已被删除或 ID 错误</string>
+    <string name="kp_summary">摘要</string>
+    <string name="kp_multi_perspective">多教材对照</string>
+    <string name="kp_source_magongcheng">答题基准（马工程）</string>
+    <string name="kp_source_yuanxingpei">学习理解（袁行霈）</string>
+    <string name="kp_sources">资料来源</string>
+    <string name="kp_related_contrast">对比</string>
+    <string name="kp_related_extension">延伸</string>
+    <string name="kp_essay_connector">知识点串联器</string>
+    <string name="kp_essay_connector_desc">这道题考过这个知识点</string>
+    <string name="kp_related_essays">相关论述题</string>
+    <string name="kp_related_points">关联知识点</string>
+    <string name="kp_wrong_hint">这题我错过几次</string>
+    <string name="kp_wrong_resolve">标记已解决</string>
+    <string name="kp_wrong_last_time">最后答错时间</string>
+    <string name="kp_wrong_records">错题记录</string>
+    <string name="kp_source_card">卡片复习</string>
+    <string name="kp_source_quiz">真题练习</string>
+    <string name="kp_source_essay">论述题自评</string>
+    <string name="kp_source_unknown">未知来源</string>
+    <string name="kp_sources_count">资料来源（%1$d）</string>
+    <string name="kp_page">第 %1$d 页</string>
+    <string name="kp_related_points_count">%1$d 个</string>
+    <string name="kp_wrong_count">错答 %1$d 次</string>
+    <string name="kp_list_title">知识点</string>
+    <string name="kp_ai_assistant">AI助手</string>
+    <string name="kp_clear_search">清除搜索</string>
+    <string name="kp_essay_list_title">论述题</string>
 </resources>
