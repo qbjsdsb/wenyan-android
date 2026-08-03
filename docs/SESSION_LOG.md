@@ -6491,3 +6491,24 @@ while (retryCount <= maxRetries) {
     实际下载 sha256 为准
   - CardSplitter 的标签解析缺陷：`indexOf("标签：")` 命中正文普通词（"不同：""特色："）即误判结构化，
     需阈值保护（>=3 才按维度拆）
+
+## 2026-08-04 凌晨：v0.9.29 严谨发布完成（卡片备考系统，Release #59）
+
+- **完成**：
+  - **卡片备考系统**（`3118574`）：用户担心 6000+ 张卡片背不完 → 调研 Anki/FSRS 最佳实践 + 考研背诵方法
+    后实现：CardSettingsRepository（DataStore：每日新卡默认60可设10-200/考频HIGH_MEDIUM/四科/考试日期）+
+    ReviewRepository.getTodayStudyQueue（到期∪新卡，考频HIGH优先，按卡片数限额取整知识点 60张≈10个）+
+    getStudyProgress + daysUntilExam；CardsScreen 今日任务横幅（距考试/新卡/复习/进度条）；SettingsScreen
+    卡片备考分组（滑杆/SegmentedButton/Checkbox/DatePicker）；27 个新单测；全量 556 单测 0 失败
+  - **v0.9.29 发布**（`d8695c2` 版本号 54/0.9.29 + CHANGELOG）：tag v0.9.29 → 发布成功，Release #59
+  - **发布后验证**：APK aapt2 54/0.9.29 + apksigner v2 + 两 APK sha256 一致（7ea3170b…，6,041,185 字节）
+    + body 来自 CHANGELOG（卡片备考系统/每日新卡限额/今日任务横幅/556 单测）
+  - **receipt**：`docs/release-receipts/v0.9.29-release-receipt.md`；00-STATUS 更新（556 单测 / 54）
+- **进行中**：
+  - 全面检查批次 B（仓库卫生：release-assets 74MB git rm --cached + build 产物清理）、C（UI 体验）、D（合规）待执行
+  - ⚠️ 待人工验证：卡片备考系统真机实测（今日任务横幅/每日限额/设置页配置）、emulator 冒烟
+- **关键发现**：
+  - 卡片备考系统架构：CardsViewModel 不直接依赖 ReviewRepository（难 fake），改由 CardRepository 暴露
+    getTodayStudyQueue/getStudyProgress 委托，测试只需扩展 FakeCardRepository + FakeCardSettingsRepository
+  - Hilt 新 Repository 需在 DataModule 加 @Binds（漏了会 MissingBinding 编译失败）
+  - 60 张/天 ≈ 103 天背完 6200 张，8 月初 → 12 月下旬约 140 天，考前留 40 天二轮，量合理
