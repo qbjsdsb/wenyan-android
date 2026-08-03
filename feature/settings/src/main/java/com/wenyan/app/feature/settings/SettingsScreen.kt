@@ -488,7 +488,7 @@ private fun CardStudySettingsCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 44.dp)
+                    .heightIn(min = 48.dp)
                     .padding(horizontal = Spacing.lg),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

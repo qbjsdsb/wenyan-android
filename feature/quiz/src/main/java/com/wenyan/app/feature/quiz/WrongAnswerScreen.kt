@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -113,7 +115,7 @@ import kotlinx.coroutines.withTimeout
 // 状态永远清不掉、Snackbar 永远显示。withTimeout(5s) 兜底即使挂起也强制返回。
 private const val SNACKBAR_TIMEOUT_MS = 5_000L
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun WrongAnswerScreen(
     onBack: (() -> Unit)? = null,
@@ -233,7 +235,8 @@ private fun WrongAnswerFilterRow(
 ) {
     // v0.8.4 修复：仅 2 项过滤用 LazyRow 过度设计，改用普通 Row 减少开销
     // v0.9.4：3 项过滤（含 DUE）仍用 Row，宽度足够
-    Row(
+    // v0.9.30 打磨：改 FlowRow，窄屏/大字号下长标签换行不溢出
+    FlowRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
@@ -524,7 +527,11 @@ private fun WrongAnswerCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (!item.isResolved) {
-                        OutlinedButton(onClick = onMarkResolved) {
+                        OutlinedButton(
+                            onClick = onMarkResolved,
+                            // v0.9.30 打磨：触控目标 ≥48dp
+                            modifier = Modifier.heightIn(min = 48.dp),
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = null,
@@ -534,7 +541,11 @@ private fun WrongAnswerCard(
                         }
                     }
                     // v0.8.4 修复：删除是破坏性操作，按钮用 error 色传达危险语义
-                    TextButton(onClick = onDelete) {
+                    TextButton(
+                        onClick = onDelete,
+                        // v0.9.30 打磨：触控目标 ≥48dp
+                        modifier = Modifier.heightIn(min = 48.dp),
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = null,

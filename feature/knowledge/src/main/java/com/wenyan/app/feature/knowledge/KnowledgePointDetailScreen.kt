@@ -199,8 +199,15 @@ fun KnowledgePointDetailScreen(
                                     }
 
                                     // ── 多教材对照 ──
-                                    item(key = "multi_perspective", contentType = "multi_perspective") {
-                                        MultiPerspectiveSection(point)
+                                    // v0.9.30 打磨：条件化 item，避免空 section 残留空槽位+间距
+                                    if (
+                                        !point.coreConclusion.isNullOrBlank() ||
+                                        !point.studyText.isNullOrBlank() ||
+                                        point.multiPerspectives?.isNotEmpty() == true
+                                    ) {
+                                        item(key = "multi_perspective", contentType = "multi_perspective") {
+                                            MultiPerspectiveSection(point)
+                                        }
                                     }
 
                                     // ── 来源溯源 ──
@@ -211,27 +218,39 @@ fun KnowledgePointDetailScreen(
                                     }
 
                                     // ── 关联知识点 ──
-                                    item(key = "related_points", contentType = "related_points") {
-                                        RelatedPointsSection(
-                                            detail = uiState.detail,
-                                            onNavigateToDetail = onNavigateToDetail,
-                                        )
+                                    val detailForRelated = uiState.detail
+                                    if (
+                                        detailForRelated != null &&
+                                        (detailForRelated.relatedPoints.isNotEmpty() ||
+                                            detailForRelated.contrastPoints.isNotEmpty() ||
+                                            detailForRelated.extensionPoints.isNotEmpty())
+                                    ) {
+                                        item(key = "related_points", contentType = "related_points") {
+                                            RelatedPointsSection(
+                                                detail = detailForRelated,
+                                                onNavigateToDetail = onNavigateToDetail,
+                                            )
+                                        }
                                     }
 
                                     // ── 相关论述题(v0.9.8 知识点串联器) ──
-                                    item(key = "related_essays", contentType = "related_essays") {
-                                        RelatedEssaysSection(
-                                            essays = uiState.relatedEssays,
-                                            onNavigateToEssay = onNavigateToEssay,
-                                        )
+                                    if (uiState.relatedEssays.isNotEmpty()) {
+                                        item(key = "related_essays", contentType = "related_essays") {
+                                            RelatedEssaysSection(
+                                                essays = uiState.relatedEssays,
+                                                onNavigateToEssay = onNavigateToEssay,
+                                            )
+                                        }
                                     }
 
                                     // ── 错题记录(v0.8.19 P1-REL-1) ──
-                                    item(key = "wrong_answers", contentType = "wrong_answers") {
-                                        WrongAnswersSection(
-                                            wrongAnswers = uiState.wrongAnswers,
-                                            onMarkResolved = viewModel::markWrongAnswerResolved,
-                                        )
+                                    if (uiState.wrongAnswers.isNotEmpty()) {
+                                        item(key = "wrong_answers", contentType = "wrong_answers") {
+                                            WrongAnswersSection(
+                                                wrongAnswers = uiState.wrongAnswers,
+                                                onMarkResolved = viewModel::markWrongAnswerResolved,
+                                            )
+                                        }
                                     }
                                 } // LazyColumn end
                             } // Box end

@@ -4,10 +4,16 @@ import androidx.compose.ui.res.stringResource
 import com.wenyan.app.feature.aiassistant.R
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -127,7 +133,8 @@ fun AiAssistantScreen(
             viewModel.clearError()
             snackbarHostState.showSnackbar(
                 message = msg,
-                duration = SnackbarDuration.Short,
+                // v0.9.30 打磨：长错误信息用 Long 时长，Short 会被截断
+                duration = SnackbarDuration.Long,
             )
         }
     }
@@ -592,9 +599,12 @@ private fun InputBar(
             enabled = if (isLoading) true else text.isNotBlank(),
         ) {
             if (isLoading) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "停止生成",
+                // v0.9.30 打磨：停止用方块图标（Close X 语义是"关闭"，误导；Stop 图标库缺失，用自定义方块）
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant),
                 )
             } else {
                 Icon(
@@ -619,13 +629,24 @@ private fun StreamingBubble(
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    // v0.9.30 打磨：光标闪烁动画（此前为静态"▍"，注释称闪烁实为不闪）
+    val infiniteTransition = rememberInfiniteTransition(label = "streaming_cursor")
+    val cursorAlpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 500, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "cursor_alpha",
+    )
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Start,
     ) {
         Column(
             modifier = Modifier
-                .padding(end = 48.dp)
+                // v0.9.30 打磨：移除幽灵头像 48dp 留白（无头像渲染，留白致气泡不对称）
                 .clip(MaterialTheme.shapes.large)
                 .background(colorScheme.surfaceContainerHigh)
                 .padding(Spacing.md),
@@ -635,11 +656,11 @@ private fun StreamingBubble(
                 style = MaterialTheme.typography.bodyMedium,
                 color = colorScheme.onSurface,
             )
-            // 光标（简单竖线动画提示生成中）
+            // 光标（闪烁竖线提示生成中）
             Text(
                 text = "▍",
                 style = MaterialTheme.typography.bodyMedium,
-                color = colorScheme.primary,
+                color = colorScheme.primary.copy(alpha = cursorAlpha),
             )
         }
     }
@@ -664,10 +685,7 @@ private fun MessageBubble(
         ) {
             Column(
                 modifier = Modifier
-                    .padding(
-                        start = if (isUser) 48.dp else 0.dp,
-                        end = if (isUser) 0.dp else 48.dp,
-                    )
+                    // v0.9.30 打磨：移除幽灵头像 48dp 留白（无头像渲染）
                     .clip(MaterialTheme.shapes.large)
                     .background(containerColor)
                     .padding(Spacing.md),
