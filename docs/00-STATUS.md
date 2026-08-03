@@ -68,9 +68,9 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **baa178a**（v0.9.27 版本号提升，2026-08-04） |
-| 最新 Release | **v0.9.27**（2026-08-04，正式签名 + R8 + 图标 v7.5 + 内容补齐 25 个）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.27 |
-| versionCode / versionName | **52 / "0.9.27"** |
+| 最新 commit | **1ebc94e**（知识卡片拆分修复，2026-08-04） |
+| 最新 Release | **v0.9.28**（2026-08-04，P1 更新下载修复 + P2 卡片拆分修复）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.28 |
+| versionCode / versionName | **53 / "0.9.28"** |
 | 知识点 | **960 个** |
 | 真题 | **485 道** |
 | 论述题 | **134 道**（v0.9.23 起删年份显示，数据层 year 保留） |
@@ -80,11 +80,22 @@
 | 图谱 | **已移除**（v0.9.3） |
 | AI 服务商 | DeepSeek/通义/智谱/月之暗面/自定义（v0.9.23 修复 URL 拼接） |
 | 更新日志机制 | **CHANGELOG.md** + release.yml 动态读取（v0.9.23 起） |
-| 单测 | **518 个 0 失败**（批一+批二后，v0.9.27 验证仍 0 失败） |
-| R8 | **已启用并随 v0.9.27 发布**（APK 5.96MB，需 emulator 冒烟实测） |
+| 单测 | **529 个 0 失败**（v0.9.28 验证：新增 UpdateRepository 10 + 卡片质量检查 1） |
+| R8 | **已启用并随 v0.9.28 发布**（APK 5.96MB，需 emulator 冒烟实测） |
 | 启动图标 | **v7.5 双色页精进**（v0.9.27 起：米色右页+页脚厚度+缩进+主题镂空，纯矢量） |
 | 崩溃上报 | **未接入**（需 Firebase/Sentry 配置） |
 | 阻塞 | **无** |
+
+## ✅ v0.9.28 发布验证记录（2026-08-04，Release #58）
+
+> 发布核心验证已全部通过（详见 `docs/release-receipts/v0.9.28-release-receipt.md`）。
+
+1. **tag 与版本**：✅ v0.9.28 → 1ebc94e = HEAD；versionCode 53 / versionName "0.9.28"
+2. **Release 页面**：✅ 文研App v0.9.28（Run #58 覆盖更新），正文"更新内容"来自 CHANGELOG v0.9.28（更新下载修复 + 知识卡片拆分质量 + 529 单测 关键词全部出现）
+3. **APK 资产**：✅ wenyan-v0.9.28.apk + wenyan-latest.apk 均 200（5,959,265 字节），sha256 完全一致（6a103183…）
+4. **APK 版本**：✅ aapt2 校验 versionCode 53 / versionName "0.9.28" / targetSdk 35
+5. **APK 签名**：✅ apksigner v2 scheme 通过
+6. **单测/构建**：✅ 529 单测 0 失败 + assembleDebug + assembleRelease(R8) 全绿（本地已验）
 
 ## ✅ v0.9.27 发布验证记录（2026-08-04，Release #56）
 

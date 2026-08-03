@@ -6463,3 +6463,31 @@ while (retryCount <= maxRetries) {
   - App 更新下载取 `assets.firstOrNull { name.endsWith(".apk") }`（最新 release 第一个 .apk = 带版本号的），删历史 release 资产不影响更新
   - 项目本地磁盘 831MB：82% 是 Gradle build 产物（app/build 456MB + 模块 build ~170MB），74MB 是 git 追踪的 release-assets 旧 APK；可 `./gradlew clean` + `git rm -r --cached release-assets/` 清理
   - 沙箱 api.github.com 直连 TLS 拦截（exit 35），ghfast.top 代理只支持 github.com 网页不支持 api.github.com；WebFetch 可访问 api.github.com（备用验证通道）
+
+## 2026-08-04 凌晨：v0.9.28 严谨发布完成（App 内更新下载修复 + 知识卡片拆分，Release #58）
+
+- **完成**：
+  - **App 内更新下载失败 P1 hotfix**（`7bb6f1e`）：用户实测 GitHub 手动下载能装、App 内更新报"应用文件存在问题"。
+    根因：国内 `api.github.com` 不可达时降级路径 `fetchLatestTagFromFallback` 返回 assets=emptyList，
+    checkForUpdate fallback 下载 URL 到 release **tag 页面 HTML**——App 下载网页当 APK，安装器必然报错。
+    修复：新增 `resolveDownloadUrl`/`buildApkDownloadUrl`（降级路径按 release.yml 命名规则构造真实 APK URL）；
+    UpdateViewModel 下载加 Content-Length + sha256 双重校验 + 失败重试 1 次；新增 10 个单测。
+  - **知识卡片拆分 P2 修复**（`1ebc94e`）：用户要求"一张一张看卡片"→ 写 `CardQualityInspectionTest` 用真实
+    CardSplitter 对 960 知识点逐张检查，发现 **35 个知识点只拆 1 张超长卡**（全文仅 1 处"标签："被误判结构化）。
+    修复：`MIN_STRUCTURED_DIMENSIONS=3` 阈值，不足时按句末标点拆分 → 35 个知识点变 4-6 张，全库无 1-2 张卡。
+  - **v0.9.28 发布**（versionCode 53）：tag 初推 7bb6f1e（Run #57 创建旧 release）→ 卡片修复后 force 更新
+    tag 到 1ebc94e（Run #58 用 update_release:true 覆盖更新）→ 最终版 APK sha256 6a103183…（含两个修复）。
+    教训：**force 更新 tag 会触发新 Release run 覆盖 release**（Run #57 旧版先被验证，Run #58 才是最终版）。
+  - **receipt**：`docs/release-receipts/v0.9.28-release-receipt.md`；00-STATUS 更新（529 单测 / 53）
+- **进行中**：
+  - **v0.9.29 卡片备考系统**（用户全选 4 项 + 调研优化）：每日新卡限额（默认 60 可设）/ 考频筛选 /
+    科目章节筛选 / 考试倒计时计划 / 复习新卡比例保护 / 今日任务入口
+  - 全面检查批次 B（仓库卫生）/C（UI 体验）/D（合规）待执行
+  - ⚠️ 待人工验证：v0.9.28 App 内更新是否正常（用户实测）、emulator 冒烟
+- **关键发现**：
+  - 卡片总量：960 知识点 × ~6.5 张 ≈ 6200 张（名词解释 5539 + 论述要点 ~960）；FSRS 只把到期卡放进队列，
+    每日量可控；6200÷60 ≈ 103 天可在考前过完一遍
+  - GitHub API assets digest 有缓存延迟（release 被 update_release 覆盖后 API 仍显示旧 digest），
+    实际下载 sha256 为准
+  - CardSplitter 的标签解析缺陷：`indexOf("标签：")` 命中正文普通词（"不同：""特色："）即误判结构化，
+    需阈值保护（>=3 才按维度拆）
