@@ -697,13 +697,13 @@ private fun SessionCompleteState(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
                 StatCard(
-                    label = "已复习",
+                    label = stringResource(R.string.card_reviewed),
                     value = reviewedCount.toString(),
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f),
                 )
                 StatCard(
-                    label = "需重练",
+                    label = stringResource(R.string.card_need_retry),
                     value = againCount.toString(),
                     color = if (againCount > 0) {
                         MaterialTheme.colorScheme.error
@@ -713,7 +713,7 @@ private fun SessionCompleteState(
                     modifier = Modifier.weight(1f),
                 )
                 StatCard(
-                    label = "掌握率",
+                    label = stringResource(R.string.card_mastery),
                     value = "${(masteryRate * 100).toInt()}%",
                     color = when {
                         masteryRate >= 0.85f -> MaterialTheme.colorScheme.primary
@@ -823,6 +823,8 @@ private fun UndoButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
+    // v0.9.30 i18n：semantics lambda 非 Composable，先在函数体取资源
+    val undoContentDesc = stringResource(R.string.card_undo)
     TextButton(
         onClick = onUndo,
         enabled = enabled,
@@ -830,7 +832,7 @@ private fun UndoButton(
             .heightIn(min = 48.dp)
             // v0.9.30 打磨：不可用时透明但恒占位（避免 1↔2 按钮切换布局跳动）
             .alpha(if (enabled) 1f else 0f)
-            .semantics { contentDescription = "撤销上一张" },
+            .semantics { contentDescription = undoContentDesc },
     ) {
         Icon(
             imageVector = Icons.AutoMirrored.Filled.Undo,
@@ -854,11 +856,13 @@ private fun SkipButton(
     onSkip: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // v0.9.30 i18n：semantics lambda 非 Composable，先在函数体取资源
+    val skipContentDesc = stringResource(R.string.card_skip)
     TextButton(
         onClick = onSkip,
         modifier = modifier
             .heightIn(min = 48.dp)
-            .semantics { contentDescription = "跳过当前卡片，不评分" },
+            .semantics { contentDescription = skipContentDesc },
     ) {
         Icon(
             imageVector = Icons.Default.SkipNext,
@@ -1085,7 +1089,7 @@ private fun RatingButtons(
     ) {
         // AGAIN：红色警示（"完全不会"）
         RatingButton(
-            label = "不会",
+            label = stringResource(R.string.card_rating_again),
             intervalText = previews[Rating.AGAIN]?.displayText,
             onClick = { onRate(CardRating.AGAIN) },
             containerColor = MaterialTheme.colorScheme.errorContainer,
@@ -1096,7 +1100,7 @@ private fun RatingButtons(
 
         // HARD：黄/橙色（"有难度"）
         RatingButton(
-            label = "困难",
+            label = stringResource(R.string.card_rating_hard),
             intervalText = previews[Rating.HARD]?.displayText,
             onClick = { onRate(CardRating.HARD) },
             containerColor = MaterialTheme.colorScheme.tertiaryContainer,
@@ -1108,7 +1112,7 @@ private fun RatingButtons(
         // GOOD：绿色（"掌握了"，FSRS 标准间隔，Anki 惯例绿=成功）
         // v0.8.9:从 primary(蓝) 改为 secondaryContainer(绿),与 Anki Mobile 对齐
         RatingButton(
-            label = "良好",
+            label = stringResource(R.string.card_rating_good),
             intervalText = previews[Rating.GOOD]?.displayText,
             onClick = { onRate(CardRating.GOOD) },
             containerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -1122,7 +1126,7 @@ private fun RatingButtons(
         // v0.8.12 P2-2:改用 primaryContainer 而非 primary,保持 FilledTonalButton 视觉层级
         // 弱于 GOOD 的 Button(filled),避免 EASY 比 GOOD 更醒目颠倒视觉强调
         RatingButton(
-            label = "简单",
+            label = stringResource(R.string.card_rating_easy),
             intervalText = previews[Rating.EASY]?.displayText,
             onClick = { onRate(CardRating.EASY) },
             containerColor = MaterialTheme.colorScheme.primaryContainer,
