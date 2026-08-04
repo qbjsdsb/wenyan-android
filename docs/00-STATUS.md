@@ -1,11 +1,13 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-08-04（v0.9.33 功能完成 + 版本号提升，待发布 Release #63）
+> 最后更新：2026-08-04（v0.9.33 已发布，Release #63）
 
 ## ✅ 当前状态
 
-**v0.9.33 待发布**（2026-08-04）：真题背题专项——名词解释/简答背诵模式（versionCode 58）。功能 commit `ecf307d` + 版本号 commit `88ffcb4` 已提交，等待 push 触发 Release #63。
+**v0.9.33 已发布**（2026-08-04，Release #63）：真题背题专项——名词解释/简答背诵模式（versionCode 58）。
+- **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.33
+- **receipt**：`docs/release-receipts/v0.9.33-release-receipt.md`
 
 **v0.9.32 已发布**（2026-08-04，Release #62）：AI 界面 IME 空白修复 + 键盘发送 + 空态建议 + validateBaseUrl https。
 
