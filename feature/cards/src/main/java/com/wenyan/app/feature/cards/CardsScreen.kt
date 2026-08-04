@@ -91,6 +91,7 @@ import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.component.MaxContentWidth
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
+import com.wenyan.app.core.designsystem.component.WenyanRatingButton
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import kotlinx.coroutines.withTimeout
 import com.wenyan.app.core.designsystem.theme.ColorMode
@@ -1081,6 +1082,9 @@ private fun FlipCard(
 /**
  * FSRS 评分按钮组。
  *
+ * v0.9.31 统一为设计系统公共组件 [WenyanRatingButton]，
+ * 与错题本（WrongAnswerScreen）共用同一实现，消除三处重复。
+ *
  * v0.8.5 颜色编码：
  * - AGAIN：error 容器（红，警告）
  * - HARD：tertiary 容器（黄/橙，注意）
@@ -1165,11 +1169,15 @@ private fun RatingButtons(
 }
 
 /**
- * 单个评分按钮：评分标签 + 预期间隔（v0.8.7 抽取）。
+ * 单个评分按钮：评分标签 + 预期间隔（v0.8.7 抽取；v0.9.31 委托公共组件）。
+ *
+ * v0.9.31 起实现统一为设计系统公共组件 [WenyanRatingButton]，
+ * 与错题本/论述题自评共用同一实现，消除三处重复。
+ * 本适配器仅补充 Cards 特有的无障碍描述（"评分后 X 后重看"）。
  *
  * - [label]：评分文字（"不会"/"困难"/"良好"/"简单"）
  * - [intervalText]：预期间隔（"1分钟"/"6天"/"12天"），null 时不显示
- * - [isPrimary]：true 用 [Button]（filled），false 用 [FilledTonalButton]
+ * - [isPrimary]：true 用 filled [Button]，false 用 [FilledTonalButton]
  */
 @Composable
 private fun RatingButton(
@@ -1186,60 +1194,16 @@ private fun RatingButton(
     } else {
         label
     }
-    // v0.8.17 P0 修复:isPrimary=true 时 Button 也必须传 colors,否则用默认 primary(蓝)。
-    // 原实现只为 FilledTonalButton 传 colors,Button 用默认 colors,导致 GOOD 按钮显示
-    // 默认 primary(蓝)而非设计的 secondaryContainer(绿),与 EASY(primaryContainer 蓝)
-    // 颜色重复,4 档按钮实际显示为红/黄/蓝/蓝,破坏"红黄绿蓝"渐进视觉直觉。
-    // 现为 Button 传入 buttonColors(containerColor, contentColor),与 FilledTonalButton
-    // 保持一致的容器配色,实现 v0.8.9 P2-3 注释中"GOOD=secondaryContainer(绿)"的设计意图。
-    if (isPrimary) {
-        Button(
-            onClick = onClick,
-            modifier = modifier
-                .heightIn(min = 48.dp)
-                .semantics { contentDescription = semanticsDesc },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = containerColor,
-                contentColor = contentColor,
-            ),
-        ) {
-            RatingButtonContent(label = label, intervalText = intervalText)
-        }
-    } else {
-        FilledTonalButton(
-            onClick = onClick,
-            modifier = modifier
-                .heightIn(min = 48.dp)
-                .semantics { contentDescription = semanticsDesc },
-            colors = ButtonDefaults.filledTonalButtonColors(
-                containerColor = containerColor,
-                contentColor = contentColor,
-            ),
-        ) {
-            RatingButtonContent(label = label, intervalText = intervalText)
-        }
-    }
-}
-
-/**
- * 评分按钮内容：标签 + 预期间隔（v0.8.7 抽取）。
- *
- * 标签用 labelLarge，间隔用 labelSmall（视觉层次）。
- * 间隔为 null 时只显示标签（降级模式）。
- */
-@Composable
-private fun RatingButtonContent(label: String, intervalText: String?) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(label, style = MaterialTheme.typography.labelLarge)
-        if (intervalText != null) {
-            Text(
-                text = intervalText,
-                style = MaterialTheme.typography.labelSmall,
-            )
-        }
-    }
+    WenyanRatingButton(
+        label = label,
+        intervalText = intervalText,
+        onClick = onClick,
+        containerColor = containerColor,
+        contentColor = contentColor,
+        isPrimary = isPrimary,
+        contentDescription = semanticsDesc,
+        modifier = modifier,
+    )
 }
 
 /**

@@ -31,10 +31,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -58,8 +55,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -76,6 +71,7 @@ import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.TonalCard
 import com.wenyan.app.core.designsystem.component.WenyanInfoChip
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
+import com.wenyan.app.core.designsystem.component.WenyanRatingButton
 import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import com.wenyan.app.core.fsrs.Rating
@@ -657,9 +653,9 @@ private fun WrongAnswerSchedulingInfo(
 }
 
 /**
- * FSRS 四档评分按钮（v0.9.4 新增）。
+ * FSRS 四档评分按钮（v0.9.4 新增；v0.9.31 统一为设计系统公共组件 [WenyanRatingButton]）。
  *
- * 颜色编码与 feature/cards/CardsScreen.kt 的 RatingButtons 完全一致:
+ * 颜色编码与 feature/cards/CardsScreen.kt 的 RatingButtons 完全一致（公共组件统一维护）：
  * - AGAIN：error 容器（红，警告）— "完全不会"
  * - HARD：tertiary 容器（黄/橙，注意）— "有难度"
  * - GOOD：secondary 容器（绿，成功）— "掌握了"（FSRS 标准间隔）
@@ -724,7 +720,11 @@ private fun WrongAnswerRatingButtons(
 }
 
 /**
- * 单个错题评分按钮（v0.9.4 新增）。
+ * 单个错题评分按钮（v0.9.4 新增；v0.9.31 委托公共组件）。
+ *
+ * v0.9.31 起实现统一为设计系统公共组件 [WenyanRatingButton]，
+ * 与卡片复习/论述题自评共用同一实现，消除三处重复。
+ * 本适配器仅补充错题本特有的无障碍描述（"评分后调度下次复习"）。
  *
  * 与 CardsScreen 的 RatingButton 结构一致，仅 label 无 intervalText（错题不显示预期间隔）。
  * isPrimary=true 用 [Button]（filled），false 用 [FilledTonalButton]。
@@ -738,33 +738,15 @@ private fun WrongAnswerRatingButton(
     isPrimary: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    if (isPrimary) {
-        Button(
-            onClick = onClick,
-            modifier = modifier
-                .heightIn(min = 48.dp)
-                .semantics { contentDescription = "$label：评分后调度下次复习" },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = containerColor,
-                contentColor = contentColor,
-            ),
-        ) {
-            Text(label, style = MaterialTheme.typography.labelLarge)
-        }
-    } else {
-        FilledTonalButton(
-            onClick = onClick,
-            modifier = modifier
-                .heightIn(min = 48.dp)
-                .semantics { contentDescription = "$label：评分后调度下次复习" },
-            colors = ButtonDefaults.filledTonalButtonColors(
-                containerColor = containerColor,
-                contentColor = contentColor,
-            ),
-        ) {
-            Text(label, style = MaterialTheme.typography.labelLarge)
-        }
-    }
+    WenyanRatingButton(
+        label = label,
+        onClick = onClick,
+        containerColor = containerColor,
+        contentColor = contentColor,
+        isPrimary = isPrimary,
+        contentDescription = "$label：评分后调度下次复习",
+        modifier = modifier,
+    )
 }
 
 // ── 辅助工具 ────────────────────────────────────────────────────

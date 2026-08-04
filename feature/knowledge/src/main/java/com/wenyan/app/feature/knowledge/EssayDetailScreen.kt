@@ -70,6 +70,7 @@ import com.wenyan.app.core.designsystem.component.TonalCardLow
 import com.wenyan.app.core.designsystem.component.WenyanInfoChip
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
+import com.wenyan.app.core.designsystem.component.WenyanRatingButton
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import com.wenyan.app.core.designsystem.theme.ColorMode
@@ -1013,25 +1014,31 @@ private fun EssaySelfRatingSection(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            SelfRatingButton(
+            WenyanRatingButton(
                 label = "不会",
                 icon = Icons.Default.SentimentDissatisfied,
                 isSelected = selfRating == EssaySelfRating.AGAIN,
                 onClick = { onRateSelf(EssaySelfRating.AGAIN) },
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer,
                 modifier = Modifier.weight(1f),
             )
-            SelfRatingButton(
+            WenyanRatingButton(
                 label = "尚可",
                 icon = Icons.Default.SentimentNeutral,
                 isSelected = selfRating == EssaySelfRating.GOOD,
                 onClick = { onRateSelf(EssaySelfRating.GOOD) },
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 modifier = Modifier.weight(1f),
             )
-            SelfRatingButton(
+            WenyanRatingButton(
                 label = "轻松",
                 icon = Icons.Default.SentimentVerySatisfied,
                 isSelected = selfRating == EssaySelfRating.EASY,
                 onClick = { onRateSelf(EssaySelfRating.EASY) },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -1074,47 +1081,8 @@ private fun EssaySelfRatingSection(
     }
 }
 
-/**
- * 自评档位按钮。
- *
- * 选中时用 [FilledTonalButton]（M3 次级强调），未选中用 [OutlinedButton]。
- */
-@Composable
-private fun SelfRatingButton(
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    if (isSelected) {
-        FilledTonalButton(
-            onClick = onClick,
-            modifier = modifier.heightIn(min = 48.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(ButtonDefaults.IconSize),
-            )
-            Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
-            Text(text = label)
-        }
-    } else {
-        OutlinedButton(
-            onClick = onClick,
-            modifier = modifier.heightIn(min = 48.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(ButtonDefaults.IconSize),
-            )
-            Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
-            Text(text = label)
-        }
-    }
-}
+// 自评档位按钮 v0.9.31 起统一为设计系统公共组件 WenyanRatingButton（选择模式），
+// 与卡片复习/错题本共用同一实现，消除三处重复。历史独立实现已移除。
 
 // ── 通用组件 ───────────────────────────────────────────────
 
