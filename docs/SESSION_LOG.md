@@ -4,6 +4,49 @@
 
 ---
 
+## 2026-08-05 会话：v0.9.34 全局横屏适配
+
+- **完成**：
+  - **横屏双栏（commit `acb2649`）**：知识卡片复习页横屏 Column→Row 双栏——
+    左卡片区（占全部高度+大部分宽度，突出大易读）+ 右 200dp 操作面板
+    （2×2 评分网格，按钮 ~90dp 更小、总高 ~120dp）
+    - 新增 `AdaptiveWindowLayout`（core/designsystem）：BoxWithConstraints 暴露
+      内容区尺寸 + `shouldUseDualPane(maxWidth>maxHeight && maxWidth>=600dp)` 纯函数
+    - `RatingButtons` 加 columns 参数（横屏 2 / 竖屏 4）；`SiblingRatedHint` 窄版
+    - CardsScreen 外层横屏解除 widthIn(600) 让双栏用满宽度
+  - **全局巡检**：4 个列表类 Screen（知识/论述题/真题背题/错题本）顶部搜索/筛选栏
+    限宽居中与列表对齐；AiAssistant InputBar 限宽（IME 独占语义不变）
+  - **反复打磨（commit `9ef057c`，3 轮深度复查）**：
+    - TodayPlanBanner 横屏 compact 单行（~110dp→~44dp，释放 ~70dp 给卡片）
+    - 右栏 verticalScroll 兜底（矮横屏 318dp 内容 vs 198dp 可用溢出）
+    - 右栏滚动重置（翻转/切卡 scrollTo(0)，与左栏 FlipCard 对称）
+    - SessionCompleteState / QuizPracticeDetail 操作栏限宽
+  - **版本号提升（commit `a200511`）**：versionCode 59 / versionName 0.9.34 + CHANGELOG
+- **验证**：
+  - 全量 **569 单测 0 失败**（+10 AdaptiveWindowLayoutTest：横屏判定边界
+    599/600dp、宽=高、平板竖/横屏 + Compose 尺寸注入）
+  - `assembleDebug` BUILD SUCCESSFUL（4 轮全量验证）
+- **进行中**：
+  - v0.9.34 发布流程：待 push + tag 触发 Release #64 → release receipt
+- **下次继续**：
+  - push + 触发 release.yml（Release #64）→ 生成 release receipt
+  - 路线图规划项待选：复习提醒通知（WorkManager）/ 学习统计页（review_logs
+    数据已就绪）/ 数据导出导入（工作量最小）
+- **关键发现**：
+  - 横屏手机（高 ~360dp）垂直空间极紧张：TopBar 64dp + 横幅 + 进度 + 按钮组后
+    卡片仅 ~140dp，必须压缩横幅/收敛按钮才能"卡片大"
+  - `shouldUseDualPane` 用内容区尺寸（BoxWithConstraints）而非
+    LocalConfiguration.orientation：Preview 可设 widthDp/heightDp、单测可注入
+  - 竖屏零回归原则：所有横屏新参数默认 false / 竖屏宽度 < 断点不生效
+  - Compose 测试 `assertIsDisplayed` 在 Robolectric 默认屏幕（<800dp）会失败，
+    超出屏幕的节点用 `assertExists` 验证
+- **commit**：
+  - `acb2649` — feat(ui): 全局横屏适配——知识卡片双栏 + 列表/输入栏限宽（v0.9.34）
+  - `9ef057c` — refactor(ui): 横屏适配反复打磨——横幅紧凑化/滚动兜底/完成态限宽（v0.9.34）
+  - `a200511` — chore: v0.9.34 版本号提升（versionCode 59 / versionName 0.9.34）+ CHANGELOG
+
+---
+
 ## 2026-08-04 会话：v0.9.33 真题背题专项
 
 - **完成**：
