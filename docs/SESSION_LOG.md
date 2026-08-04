@@ -4,6 +4,40 @@
 
 ---
 
+## 2026-08-04 会话：v0.9.33 真题背题专项
+
+- **完成**：
+  - **真题背题功能（v0.9.33，commit `ecf307d`）**：知识点页新增"真题背题"入口卡，
+    名词解释/简答背诵模式——列表页（题型/科目/年份三维筛选）+ 详情页（显示答案/会了/不会进错题本走 FSRS）
+    - DAO `observeByQuestionTypes`：多题型 IN 查询，稳定 ORDER BY（year DESC + exam_paper_code + id）
+    - Repository `observePracticeQuestions`：题型白名单封装，数据层排除 ESSAY 避免与论述题 Tab 重复
+    - 导航：`quiz_practice` / `quiz_practice_detail` 两个子路由，筛选条件随参数传递保持上下文
+    - 错题本联动：标记"不会"→ `recordWrongAnswer(SOURCE_QUIZ_WRONG)`，错题本显示"真题练习"
+  - **质量复查修复（4 项，用户要求"重复检查做到最好"）**：
+    - Snackbar `withTimeout(5s)` 防挂起：对齐 CardsScreen v0.9.23 / WrongAnswerScreen v0.9.25 模式
+    - `markDontKnow` 失败时成功文案覆盖失败文案的误导 bug（仅成功时覆盖"最后一题"提示）
+    - 详情页 ErrorState 重试按钮无效（空 lambda）→ ViewModel `retry()` 取消旧 job + CancellationException rethrow
+    - `（本题暂无参考答案）` 硬编码 → 资源化 `kp_quiz_no_answer`
+  - **测试修复**：两个模块 `FakeExamQuestionDao` 补齐 `observeByQuestionTypes`（core/data + feature/knowledge）
+  - **版本号提升（commit `88ffcb4`）**：versionCode 58 / versionName 0.9.33 + CHANGELOG
+- **验证**：
+  - 全量 **559 单测 0 失败**（3 轮：首次失败→修复 fake→通过；复查修复后再跑 1 轮全绿）
+  - `assembleDebug` BUILD SUCCESSFUL
+- **进行中**：
+  - v0.9.33 发布流程：release receipt + SESSION_LOG + 00-STATUS 待更新，等待 push 触发 Release #63
+- **下次继续**：
+  - push + 触发 release.yml（Release #63）→ 生成 release receipt（run id / sha256）
+  - 路线图规划项待选：复习提醒通知（WorkManager）/ 学习统计页（review_logs 数据已就绪）/ 数据导出导入（工作量最小）
+- **关键发现**：
+  - material3 1.5.0-alpha18 的 `showSnackbar` 挂起 bug 是项目已知模式（v0.9.23/25 已修两次），新代码必须套用 withTimeout 保护
+  - `catch` 直接设置 StateFlow（非 emit 模式）时，取消必须 rethrow `CancellationException`，否则 retry 取消旧 job 会误设错误态
+  - 项目 ViewModel 内硬编码 snackbar 文案是既有惯例；Composable 内文案必须资源化
+- **commit**：
+  - `ecf307d` — feat(knowledge): 真题背题专项——名词解释/简答背诵模式（v0.9.33）
+  - `88ffcb4` — chore: v0.9.33 版本号提升（versionCode 58 / versionName 0.9.33）+ CHANGELOG
+
+---
+
 ## 2026-07-12 完整工作日会话
 
 - **完成**：
