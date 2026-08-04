@@ -203,7 +203,16 @@ private fun QuizPracticeFilterBar(
     onSubjectSelected: (String?) -> Unit,
     onYearSelected: (Int?) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+    // v0.9.34 横屏：筛选栏与下方列表对齐限宽居中（列表已 widthIn comfortable），
+    // 避免横屏下题型/科目/年份 LazyRow 全宽拉伸
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+    Column(
+        modifier = Modifier.widthIn(max = MaxContentWidth.comfortable),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
         // 题型 Tab
         LazyRow(
             contentPadding = PaddingValues(horizontal = Spacing.lg),
@@ -282,6 +291,7 @@ private fun QuizPracticeFilterBar(
                 }
             }
         }
+    }
     }
 }
 

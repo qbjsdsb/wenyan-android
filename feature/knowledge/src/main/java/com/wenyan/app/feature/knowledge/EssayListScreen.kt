@@ -195,44 +195,52 @@ private fun EssayFilterBar(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        // 科目筛选 + 审题思路开关（FlowRow 自动换行）
-        // v0.9.23：年份筛选已删除（用户需求"论述题不要年份"）
-        FlowRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.lg),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        // v0.9.34 横屏：筛选栏与下方列表对齐限宽居中（列表已 widthIn comfortable），
+        // 避免横屏下科目 chips 全宽拉伸
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            FilterChip(
-                selected = selectedSubjectId == null,
-                onClick = { onSubjectSelected(null) },
-                enabled = enabled,
-                label = { Text(stringResource(R.string.text_03)) },
-            )
-            subjects.forEach { subject ->
+            // 科目筛选 + 审题思路开关（FlowRow 自动换行）
+            // v0.9.23：年份筛选已删除（用户需求"论述题不要年份"）
+            FlowRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = MaxContentWidth.comfortable)
+                    .padding(horizontal = Spacing.lg),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
                 FilterChip(
-                    selected = selectedSubjectId == subject.id,
-                    onClick = { onSubjectSelected(subject.id) },
+                    selected = selectedSubjectId == null,
+                    onClick = { onSubjectSelected(null) },
                     enabled = enabled,
-                    label = { Text(subject.name) },
+                    label = { Text(stringResource(R.string.text_03)) },
+                )
+                subjects.forEach { subject ->
+                    FilterChip(
+                        selected = selectedSubjectId == subject.id,
+                        onClick = { onSubjectSelected(subject.id) },
+                        enabled = enabled,
+                        label = { Text(subject.name) },
+                    )
+                }
+                // 审题思路开关（与科目 chip 同行，空间不足自动换行）
+                FilterChip(
+                    selected = onlyWithAngle,
+                    onClick = onToggleOnlyWithAngle,
+                    enabled = enabled,
+                    label = { Text(stringResource(R.string.text_04)) },
+                    // v0.9.30 打磨：常驻灯泡图标（此前仅选中时显示，chip 宽度突变致 FlowRow 重排跳动）
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Lightbulb,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 4.dp),
+                        )
+                    },
                 )
             }
-            // 审题思路开关（与科目 chip 同行，空间不足自动换行）
-            FilterChip(
-                selected = onlyWithAngle,
-                onClick = onToggleOnlyWithAngle,
-                enabled = enabled,
-                label = { Text(stringResource(R.string.text_04)) },
-                // v0.9.30 打磨：常驻灯泡图标（此前仅选中时显示，chip 宽度突变致 FlowRow 重排跳动）
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Lightbulb,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 4.dp),
-                    )
-                },
-            )
         }
     }
 }

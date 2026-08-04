@@ -17,13 +17,16 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -85,6 +88,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.data.cards.ClozeQuoteCard
 import com.wenyan.app.core.data.repository.IntervalPreview
+import com.wenyan.app.core.designsystem.component.AdaptiveWindowLayout
 import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ErrorState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
@@ -257,105 +261,126 @@ fun CardsScreen(
                 .padding(innerPadding),
             contentAlignment = Alignment.TopCenter,
         ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .widthIn(max = MaxContentWidth.compact)
-                .padding(Spacing.lg),
-        ) {
-            // v0.9.29: 今日任务横幅（加载/错误时隐藏，避免数据未就绪闪烁）
-            if (!stateKey.isLoading && stateKey.error == null) {
-                TodayPlanBanner(
-                    plan = todayPlan,
+        // v0.9.34 横屏：外层感知内容区尺寸——横屏时解除 widthIn 限制，
+        // 让 CardReviewContent 双栏布局用满宽度；TodayPlanBanner 限宽居中防拉伸。
+        AdaptiveWindowLayout(modifier = Modifier.fillMaxSize()) { layout ->
+            val useDualPane = layout.isLandscape
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (useDualPane) {
+                            Modifier
+                        } else {
+                            Modifier.widthIn(max = MaxContentWidth.compact)
+                        },
+                    )
+                    .padding(Spacing.lg),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                // v0.9.29: 今日任务横幅（加载/错误时隐藏，避免数据未就绪闪烁）
+                if (!stateKey.isLoading && stateKey.error == null) {
+                    TodayPlanBanner(
+                        plan = todayPlan,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (useDualPane) {
+                                    // 横屏横幅限宽居中（comfortable），避免全宽拉伸
+                                    Modifier.widthIn(max = MaxContentWidth.comfortable)
+                                } else {
+                                    Modifier
+                                },
+                            )
+                            .padding(bottom = Spacing.md),
+                    )
+                }
+                Crossfade(
+                    targetState = stateKey,
+                    animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
+                    label = "cards_state",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = Spacing.md),
-                )
-            }
-            Crossfade(
-                targetState = stateKey,
-                animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
-                label = "cards_state",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-            ) { key ->
-                when {
-                    key.isLoading -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            WenyanLoadingIndicator()
-                        }
-                    }
-                    key.error != null -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            ErrorState(
-                                icon = Icons.Default.CloudOff,
-                                title = "加载失败",
-                                message = key.error,
-                                onRetry = viewModel::retry,
-                            )
-                        }
-                    }
-                    key.isFinished -> {
-                        // 会话完成态：展示本次复习统计 + 会话时长 + 鼓励继续 / 返回
-                        // v0.8.17 P1:sessionDurationMinutes 改为 collect StateFlow,
-                        // 避免在 Composable 函数体中直接调用 viewModel.getSessionDurationMinutes()
-                        // 破坏重组稳定性(每次重组返回不同值,SessionCompleteState 无谓重组)
-                        // v0.9.7 M5:新增 onUndo 参数,允许用户撤销最后一张卡的评分(回退到 CardReviewContent)
-                        SessionCompleteState(
-                            reviewedCount = sessionReviewed,
-                            againCount = sessionAgain,
-                            sessionDurationMinutes = sessionDurationMinutes,
-                            onRetry = viewModel::retry,
-                            onUndo = viewModel::undo,
-                            onExit = onNavigateToKnowledge,
-                        )
-                    }
-                    !key.hasCards -> {
-                        // 今日无到期卡（首次进入就没卡，与"刚完成一轮"区分）
-                        // v0.8.8：加"去学习"按钮引导用户到知识点列表
-                        // v0.9.29：今日任务横幅已在上方展示（新卡/复习/距考试/进度）
-                        EmptyState(
-                            icon = Icons.Default.CheckCircle,
-                            title = "今天没有到期卡片",
-                            description = "今日新卡与复习任务见上方，可去知识点列表预习新内容",
-                            action = {
-                                FilledTonalButton(
-                                    onClick = onNavigateToKnowledge,
-                                    modifier = Modifier.heightIn(min = 48.dp),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.MenuBook,
-                                        contentDescription = null,
-                                        modifier = Modifier.padding(end = Spacing.xs),
-                                    )
-                                    Text(stringResource(R.string.text_05))
-                                }
-                            },
-                        )
-                    }
-                    else -> {
-                        uiState.currentCard?.let { card ->
-                            CardReviewContent(
-                                card = card,
-                                uiState = uiState,
-                                previews = currentPreviews,
-                                isSiblingAlreadyRated = isSiblingAlreadyRated,
-                                isInWrongBook = card.pointId in manualAddedPointIds,
-                                isAddingBookmark = isAddingBookmark,
-                                onFlip = viewModel::flipCard,
-                                onRate = viewModel::rateCard,
-                                onUndo = viewModel::undo,
-                                onSkip = viewModel::skipCard,
-                                onAddToWrongAnswerBook = viewModel::addToWrongAnswerBook,
+                        .weight(1f),
+                ) { key ->
+                    when {
+                        key.isLoading -> {
+                            Box(
                                 modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                WenyanLoadingIndicator()
+                            }
+                        }
+                        key.error != null -> {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                ErrorState(
+                                    icon = Icons.Default.CloudOff,
+                                    title = "加载失败",
+                                    message = key.error,
+                                    onRetry = viewModel::retry,
+                                )
+                            }
+                        }
+                        key.isFinished -> {
+                            // 会话完成态：展示本次复习统计 + 会话时长 + 鼓励继续 / 返回
+                            // v0.8.17 P1:sessionDurationMinutes 改为 collect StateFlow,
+                            // 避免在 Composable 函数体中直接调用 viewModel.getSessionDurationMinutes()
+                            // 破坏重组稳定性(每次重组返回不同值,SessionCompleteState 无谓重组)
+                            // v0.9.7 M5:新增 onUndo 参数,允许用户撤销最后一张卡的评分(回退到 CardReviewContent)
+                            SessionCompleteState(
+                                reviewedCount = sessionReviewed,
+                                againCount = sessionAgain,
+                                sessionDurationMinutes = sessionDurationMinutes,
+                                onRetry = viewModel::retry,
+                                onUndo = viewModel::undo,
+                                onExit = onNavigateToKnowledge,
                             )
+                        }
+                        !key.hasCards -> {
+                            // 今日无到期卡（首次进入就没卡，与"刚完成一轮"区分）
+                            // v0.8.8：加"去学习"按钮引导用户到知识点列表
+                            // v0.9.29：今日任务横幅已在上方展示（新卡/复习/距考试/进度）
+                            EmptyState(
+                                icon = Icons.Default.CheckCircle,
+                                title = "今天没有到期卡片",
+                                description = "今日新卡与复习任务见上方，可去知识点列表预习新内容",
+                                action = {
+                                    FilledTonalButton(
+                                        onClick = onNavigateToKnowledge,
+                                        modifier = Modifier.heightIn(min = 48.dp),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                                            contentDescription = null,
+                                            modifier = Modifier.padding(end = Spacing.xs),
+                                        )
+                                        Text(stringResource(R.string.text_05))
+                                    }
+                                },
+                            )
+                        }
+                        else -> {
+                            uiState.currentCard?.let { card ->
+                                CardReviewContent(
+                                    card = card,
+                                    uiState = uiState,
+                                    previews = currentPreviews,
+                                    isSiblingAlreadyRated = isSiblingAlreadyRated,
+                                    isInWrongBook = card.pointId in manualAddedPointIds,
+                                    isAddingBookmark = isAddingBookmark,
+                                    useDualPane = useDualPane,
+                                    onFlip = viewModel::flipCard,
+                                    onRate = viewModel::rateCard,
+                                    onUndo = viewModel::undo,
+                                    onSkip = viewModel::skipCard,
+                                    onAddToWrongAnswerBook = viewModel::addToWrongAnswerBook,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
                         }
                     }
                 }
@@ -400,6 +425,7 @@ private fun CardReviewContent(
     isSiblingAlreadyRated: Boolean,
     isInWrongBook: Boolean,
     isAddingBookmark: Boolean,
+    useDualPane: Boolean = false,
     onFlip: () -> Unit,
     onRate: (CardRating) -> Unit,
     onUndo: () -> Unit,
@@ -411,17 +437,14 @@ private fun CardReviewContent(
     // 600dp 对应 Material3 中型窗口断点,超过此宽度居中显示留白
     // 用 Box 包裹实现居中:fillMaxSize 占满父容器,widthIn 限制 Column 最大宽度,
     // contentAlignment=CenterHorizontally 让 Column 在大屏上水平居中
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .widthIn(max = MaxContentWidth.compact),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
+    //
+    // v0.9.34 横屏:useDualPane=true 时走"左卡片 / 右操作面板"双栏布局——
+    // 卡片占全部高度 + 大部分宽度（突出、大、方便阅读），评分按钮收敛到
+    // 右侧 200dp 窄列（2×2 网格，按钮更小）。竖屏 useDualPane=false 保持原单栏。
+
+    // ── 进度 + 新卡徽章 + 可翻转卡片（竖屏与横屏左栏共用）──
+    @Composable
+    fun ColumnScope.CardArea() {
         // 进度区：文字 + 进度条
         ProgressSection(
             currentIndex = uiState.currentIndex,
@@ -449,103 +472,191 @@ private fun CardReviewContent(
         }
 
         // 可翻转卡片
+        // v0.9.34 横屏：widthIn(max=comfortable) 防止大平板横屏左栏过宽
+        // （左栏可达 ~944dp）拉伸卡片导致文本行超长；竖屏列宽 ≤600dp 不受影响
         FlipCard(
             card = card,
             isFlipped = uiState.isFlipped,
             onClick = onFlip,
             modifier = Modifier
                 .fillMaxWidth()
+                .widthIn(max = MaxContentWidth.comfortable)
                 .weight(1f),
         )
+    }
 
-        // 评分按钮（翻转后）+ 撤销/跳过按钮 / 翻转前提示文案
-        // 用 AnimatedVisibility 替代 if/else 硬切
-        AnimatedVisibility(
-            visible = uiState.isFlipped,
-            enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 }),
-            exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 4 }),
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                // v0.8.10 P1-B3 修复:sibling 已评分时仍保留评分按钮,仅隐藏预期间隔。
-                // 原实现 isSiblingAlreadyRated=true 时完全隐藏 RatingButtons,导致用户
-                // 无法评分推进(只能跳过),也无法记录错题(sibling AGAIN 仍会调用
-                // wrongAnswerRepository.recordWrongAnswer,但 UI 隐藏按钮后用户无法触发)。
-                //
-                // 修复策略:
-                // - SiblingRatedHint 作为信息提示放在评分按钮上方(非替换)
-                // - RatingButtons 始终渲染,sibling 时传空 previews(不显示预期间隔)
-                //   避免误导用户以为评分会改变调度间隔
-                // - 用户可正常评分推进,AGAIN 评分仍记录错题(不影响 FSRS 调度)
-                if (isSiblingAlreadyRated) {
-                    SiblingRatedHint()
-                }
-                RatingButtons(
-                    onRate = onRate,
-                    previews = if (isSiblingAlreadyRated) emptyMap() else previews,
-                )
-                // v0.9.18: 手动加入错题本按钮
-                AddToWrongAnswerButton(
-                    isInWrongBook = isInWrongBook,
-                    isLoading = isAddingBookmark,
-                    pointId = card.pointId,
-                    onClick = onAddToWrongAnswerBook,
-                )
-                // v0.8.8：撤销 + 跳过按钮横排
-                // 撤销：回退上一张（currentIndex > 0 才显示）
-                // 跳过：不评分推进到下一张（避免乱评污染 FSRS）
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                ) {
-                    // v0.9.30 打磨：撤销按钮恒占位（索引 0 时透明禁用），避免布局跳动
-                    UndoButton(
-                        onUndo = onUndo,
-                        enabled = uiState.currentIndex > 0,
-                        modifier = Modifier.weight(1f),
-                    )
-                    SkipButton(onSkip = onSkip, modifier = Modifier.weight(1f))
-                }
-            }
+    // ── 翻转后操作组：sibling 提示 + 评分 + 加入错题本 + 撤销/跳过 ──
+    @Composable
+    fun ColumnScope.FlippedActions(compact: Boolean) {
+        // v0.8.10 P1-B3 修复:sibling 已评分时仍保留评分按钮,仅隐藏预期间隔。
+        // 原实现 isSiblingAlreadyRated=true 时完全隐藏 RatingButtons,导致用户
+        // 无法评分推进(只能跳过),也无法记录错题(sibling AGAIN 仍会调用
+        // wrongAnswerRepository.recordWrongAnswer,但 UI 隐藏按钮后用户无法触发)。
+        //
+        // 修复策略:
+        // - SiblingRatedHint 作为信息提示放在评分按钮上方(非替换)
+        // - RatingButtons 始终渲染,sibling 时传空 previews(不显示预期间隔)
+        //   避免误导用户以为评分会改变调度间隔
+        // - 用户可正常评分推进,AGAIN 评分仍记录错题(不影响 FSRS 调度)
+        if (isSiblingAlreadyRated) {
+            SiblingRatedHint(compact = compact)
         }
-        AnimatedVisibility(
-            visible = !uiState.isFlipped,
-            enter = fadeIn(),
-            exit = fadeOut(),
+        RatingButtons(
+            onRate = onRate,
+            previews = if (isSiblingAlreadyRated) emptyMap() else previews,
+            // v0.9.34 横屏窄面板 2×2 网格（按钮更小、更省高度），竖屏 4 横排
+            columns = if (compact) 2 else 4,
+        )
+        // v0.9.18: 手动加入错题本按钮
+        AddToWrongAnswerButton(
+            isInWrongBook = isInWrongBook,
+            isLoading = isAddingBookmark,
+            pointId = card.pointId,
+            onClick = onAddToWrongAnswerBook,
+        )
+        // v0.8.8：撤销 + 跳过按钮横排
+        // 撤销：回退上一张（currentIndex > 0 才显示）
+        // 跳过：不评分推进到下一张（避免乱评污染 FSRS）
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            // 翻转前的辅助提示 + 撤销/跳过按钮
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            // v0.9.30 打磨：撤销按钮恒占位（索引 0 时透明禁用），避免布局跳动
+            UndoButton(
+                onUndo = onUndo,
+                enabled = uiState.currentIndex > 0,
+                modifier = Modifier.weight(1f),
+            )
+            SkipButton(onSkip = onSkip, modifier = Modifier.weight(1f))
+        }
+    }
+
+    // ── 翻转前操作组：提示 + 加入错题本 + 撤销/跳过 ──
+    @Composable
+    fun ColumnScope.UnflippedActions() {
+        Text(
+            text = "点击卡片查看答案",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        // v0.9.18: 手动加入错题本按钮（翻转前也可加入）
+        AddToWrongAnswerButton(
+            isInWrongBook = isInWrongBook,
+            isLoading = isAddingBookmark,
+            pointId = card.pointId,
+            onClick = onAddToWrongAnswerBook,
+        )
+        // v0.8.12 P2-14：未翻转也显示撤销/跳过按钮（与翻转后一致）
+        // 原实现未翻转只显示跳过，用户跳过后想撤销必须先翻转才能看到撤销按钮，操作迂回
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            // v0.9.30 打磨：撤销按钮恒占位（索引 0 时透明禁用），避免布局跳动
+            UndoButton(
+                onUndo = onUndo,
+                enabled = uiState.currentIndex > 0,
+                modifier = Modifier.weight(1f),
+            )
+            SkipButton(onSkip = onSkip, modifier = Modifier.weight(1f))
+        }
+    }
+
+    if (useDualPane) {
+        // ── 横屏双栏：左卡片突出 / 右操作面板窄列 ──
+        Column(modifier = modifier) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = Spacing.sm),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
             ) {
-                Text(
-                    text = "点击卡片查看答案",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                // v0.9.18: 手动加入错题本按钮（翻转前也可加入）
-                AddToWrongAnswerButton(
-                    isInWrongBook = isInWrongBook,
-                    isLoading = isAddingBookmark,
-                    pointId = card.pointId,
-                    onClick = onAddToWrongAnswerBook,
-                )
-                // v0.8.12 P2-14：未翻转也显示撤销/跳过按钮（与翻转后一致）
-                // 原实现未翻转只显示跳过，用户跳过后想撤销必须先翻转才能看到撤销按钮，操作迂回
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                // 左栏：进度 + 卡片（占全部高度 + 大部分宽度）
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
-                    // v0.9.30 打磨：撤销按钮恒占位（索引 0 时透明禁用），避免布局跳动
-                    UndoButton(
-                        onUndo = onUndo,
-                        enabled = uiState.currentIndex > 0,
-                        modifier = Modifier.weight(1f),
-                    )
-                    SkipButton(onSkip = onSkip, modifier = Modifier.weight(1f))
+                    CardArea()
+                }
+                // 右栏：操作面板（窄列 200dp，按钮更小）
+                Column(
+                    modifier = Modifier
+                        .width(200.dp)
+                        .fillMaxHeight(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    // 翻转后：评分 2×2 + 加入错题本 + 撤销/跳过
+                    AnimatedVisibility(
+                        visible = uiState.isFlipped,
+                        enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 }),
+                        exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 4 }),
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            FlippedActions(compact = true)
+                        }
+                    }
+                    // 翻转前：提示 + 加入错题本 + 撤销/跳过
+                    AnimatedVisibility(
+                        visible = !uiState.isFlipped,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        ) {
+                            UnflippedActions()
+                        }
+                    }
                 }
             }
         }
+    } else {
+        // ── 竖屏单栏（原布局）──
+        Box(
+            modifier = modifier,
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = MaxContentWidth.compact),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            ) {
+                CardArea()
+
+                // 评分按钮（翻转后）+ 撤销/跳过按钮 / 翻转前提示文案
+                // 用 AnimatedVisibility 替代 if/else 硬切
+                AnimatedVisibility(
+                    visible = uiState.isFlipped,
+                    enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 }),
+                    exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 4 }),
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                        FlippedActions(compact = false)
+                    }
+                }
+                AnimatedVisibility(
+                    visible = !uiState.isFlipped,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                ) {
+                    // 翻转前的辅助提示 + 撤销/跳过按钮
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    ) {
+                        UnflippedActions()
+                    }
+                }
+            }
         }
     }
 }
@@ -563,7 +674,10 @@ private fun CardReviewContent(
  * - AGAIN 评分仍记录错题(不影响 FSRS 调度,但保留错题本更新)
  */
 @Composable
-private fun SiblingRatedHint(modifier: Modifier = Modifier) {
+private fun SiblingRatedHint(
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+) {
     // v0.8.12 P0-7:文案去术语化,图标从 CheckCircle 改为 Info
     // v0.8.13 P1-1:文案补全"评分仍会记入错题本和会话统计",
     // 解决用户"既然不改变计划,为什么还要评分"的困惑。
@@ -573,6 +687,9 @@ private fun SiblingRatedHint(modifier: Modifier = Modifier) {
     // v0.8.14 P2-7 修复:原文案"仍会记入错题本和会话统计"对所有评分都显示,
     // 但只有 AGAIN 评分才记入错题本,GOOD/HARD/EASY 不记。用户可能误以为评 GOOD
     // 也会记错题,造成困惑。现明确区分:AGAIN 记错题,所有评分计入会话统计。
+    //
+    // v0.9.34 横屏:compact=true 时图标上置 + 文字居中（窄操作面板 200dp 内
+    // 避免 icon 横排挤压文字）。
     val hintText = "这张卡和刚复习的卡同属一个知识点，评分不会改变复习计划，" +
         "评 AGAIN 仍会记入错题本"
     Surface(
@@ -584,22 +701,42 @@ private fun SiblingRatedHint(modifier: Modifier = Modifier) {
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.medium,
     ) {
-        Row(
-            modifier = Modifier.padding(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Default.Info,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(end = Spacing.xs),
-            )
-            Text(
-                text = hintText,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = Spacing.xs),
-            )
+        if (compact) {
+            Column(
+                modifier = Modifier.padding(Spacing.sm),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = Spacing.xs),
+                )
+                Text(
+                    text = hintText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        } else {
+            Row(
+                modifier = Modifier.padding(Spacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(end = Spacing.xs),
+                )
+                Text(
+                    text = hintText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = Spacing.xs),
+                )
+            }
         }
     }
 }
@@ -1113,58 +1250,134 @@ private fun FlipCard(
 private fun RatingButtons(
     onRate: (CardRating) -> Unit,
     previews: Map<Rating, IntervalPreview>,
+    columns: Int = 4,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+    // v0.9.34 横屏：columns=2 时 2×2 网格（每个按钮更窄、总高更矮），
+    // 竖屏默认 columns=4 保持一行横排不变。
+    @Composable
+    fun SpecButton(
+        label: String,
+        rating: CardRating,
+        intervalKey: Rating,
+        container: Color,
+        content: Color,
+        primary: Boolean,
+        modifier: Modifier,
     ) {
-        // AGAIN：红色警示（"完全不会"）
         RatingButton(
-            label = stringResource(R.string.card_rating_again),
-            intervalText = previews[Rating.AGAIN]?.displayText,
-            onClick = { onRate(CardRating.AGAIN) },
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-            contentColor = MaterialTheme.colorScheme.onErrorContainer,
-            isPrimary = false,
-            modifier = Modifier.weight(1f),
+            label = label,
+            intervalText = previews[intervalKey]?.displayText,
+            onClick = { onRate(rating) },
+            containerColor = container,
+            contentColor = content,
+            isPrimary = primary,
+            modifier = modifier,
         )
+    }
 
-        // HARD：黄/橙色（"有难度"）
-        RatingButton(
-            label = stringResource(R.string.card_rating_hard),
-            intervalText = previews[Rating.HARD]?.displayText,
-            onClick = { onRate(CardRating.HARD) },
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-            isPrimary = false,
-            modifier = Modifier.weight(1f),
-        )
-
-        // GOOD：绿色（"掌握了"，FSRS 标准间隔，Anki 惯例绿=成功）
-        // v0.8.9:从 primary(蓝) 改为 secondaryContainer(绿),与 Anki Mobile 对齐
-        RatingButton(
-            label = stringResource(R.string.card_rating_good),
-            intervalText = previews[Rating.GOOD]?.displayText,
-            onClick = { onRate(CardRating.GOOD) },
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            isPrimary = true,
-            modifier = Modifier.weight(1f),
-        )
-
-        // EASY：蓝色（"很简单"，加成间隔，Anki 惯例蓝=超预期）
-        // v0.8.9:从 secondaryContainer(绿) 改为 primary(蓝),与 Anki Mobile 对齐
-        // v0.8.12 P2-2:改用 primaryContainer 而非 primary,保持 FilledTonalButton 视觉层级
-        // 弱于 GOOD 的 Button(filled),避免 EASY 比 GOOD 更醒目颠倒视觉强调
-        RatingButton(
-            label = stringResource(R.string.card_rating_easy),
-            intervalText = previews[Rating.EASY]?.displayText,
-            onClick = { onRate(CardRating.EASY) },
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            isPrimary = false,
-            modifier = Modifier.weight(1f),
-        )
+    if (columns >= 4) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            // AGAIN：红色警示（"完全不会"）
+            SpecButton(
+                label = stringResource(R.string.card_rating_again),
+                rating = CardRating.AGAIN,
+                intervalKey = Rating.AGAIN,
+                container = MaterialTheme.colorScheme.errorContainer,
+                content = MaterialTheme.colorScheme.onErrorContainer,
+                primary = false,
+                modifier = Modifier.weight(1f),
+            )
+            // HARD：黄/橙色（"有难度"）
+            SpecButton(
+                label = stringResource(R.string.card_rating_hard),
+                rating = CardRating.HARD,
+                intervalKey = Rating.HARD,
+                container = MaterialTheme.colorScheme.tertiaryContainer,
+                content = MaterialTheme.colorScheme.onTertiaryContainer,
+                primary = false,
+                modifier = Modifier.weight(1f),
+            )
+            // GOOD：绿色（"掌握了"，FSRS 标准间隔，Anki 惯例绿=成功）
+            // v0.8.9:从 primary(蓝) 改为 secondaryContainer(绿),与 Anki Mobile 对齐
+            SpecButton(
+                label = stringResource(R.string.card_rating_good),
+                rating = CardRating.GOOD,
+                intervalKey = Rating.GOOD,
+                container = MaterialTheme.colorScheme.secondaryContainer,
+                content = MaterialTheme.colorScheme.onSecondaryContainer,
+                primary = true,
+                modifier = Modifier.weight(1f),
+            )
+            // EASY：蓝色（"很简单"，加成间隔，Anki 惯例蓝=超预期）
+            // v0.8.9:从 secondaryContainer(绿) 改为 primary(蓝),与 Anki Mobile 对齐
+            // v0.8.12 P2-2:改用 primaryContainer 而非 primary,保持 FilledTonalButton 视觉层级
+            // 弱于 GOOD 的 Button(filled),避免 EASY 比 GOOD 更醒目颠倒视觉强调
+            SpecButton(
+                label = stringResource(R.string.card_rating_easy),
+                rating = CardRating.EASY,
+                intervalKey = Rating.EASY,
+                container = MaterialTheme.colorScheme.primaryContainer,
+                content = MaterialTheme.colorScheme.onPrimaryContainer,
+                primary = false,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    } else {
+        // 2×2 网格：横屏窄操作面板内按钮更小（~90dp）、总高 ~120dp（远小于 4 横排 ~184dp）
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                SpecButton(
+                    label = stringResource(R.string.card_rating_again),
+                    rating = CardRating.AGAIN,
+                    intervalKey = Rating.AGAIN,
+                    container = MaterialTheme.colorScheme.errorContainer,
+                    content = MaterialTheme.colorScheme.onErrorContainer,
+                    primary = false,
+                    modifier = Modifier.weight(1f),
+                )
+                SpecButton(
+                    label = stringResource(R.string.card_rating_hard),
+                    rating = CardRating.HARD,
+                    intervalKey = Rating.HARD,
+                    container = MaterialTheme.colorScheme.tertiaryContainer,
+                    content = MaterialTheme.colorScheme.onTertiaryContainer,
+                    primary = false,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                SpecButton(
+                    label = stringResource(R.string.card_rating_good),
+                    rating = CardRating.GOOD,
+                    intervalKey = Rating.GOOD,
+                    container = MaterialTheme.colorScheme.secondaryContainer,
+                    content = MaterialTheme.colorScheme.onSecondaryContainer,
+                    primary = true,
+                    modifier = Modifier.weight(1f),
+                )
+                SpecButton(
+                    label = stringResource(R.string.card_rating_easy),
+                    rating = CardRating.EASY,
+                    intervalKey = Rating.EASY,
+                    container = MaterialTheme.colorScheme.primaryContainer,
+                    content = MaterialTheme.colorScheme.onPrimaryContainer,
+                    primary = false,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
     }
 }
 
@@ -1280,6 +1493,65 @@ private fun CardsNormalReviewPreview() {
                 isSiblingAlreadyRated = false,
                 isInWrongBook = false,
                 isAddingBookmark = false,
+                onFlip = {},
+                onRate = {},
+                onUndo = {},
+                onSkip = {},
+                onAddToWrongAnswerBook = {},
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
+/**
+ * 横屏双栏 Preview（v0.9.34 新增，翻转前）。
+ *
+ * widthDp=800 / heightDp=400 模拟横屏手机内容区：左卡片大区域 + 右操作面板窄列。
+ * useDualPane=true 走双栏布局（卡片突出大、按钮收敛到右侧窄列）。
+ */
+@Preview(name = "Cards - Landscape (Front)", widthDp = 800, heightDp = 400, showBackground = true)
+@Composable
+private fun CardsLandscapeFrontPreview() {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT, dynamicColor = false)) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            CardReviewContent(
+                card = previewCardItem(),
+                uiState = previewUiState(isFlipped = false),
+                previews = emptyMap(),
+                isSiblingAlreadyRated = false,
+                isInWrongBook = false,
+                isAddingBookmark = false,
+                useDualPane = true,
+                onFlip = {},
+                onRate = {},
+                onUndo = {},
+                onSkip = {},
+                onAddToWrongAnswerBook = {},
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
+/**
+ * 横屏双栏 Preview（v0.9.34 新增，翻转后）。
+ *
+ * 展示 2×2 评分按钮网格（横屏"按钮更小"）+ 加入错题本 + 撤销/跳过，全部收敛在右侧 200dp 窄列。
+ */
+@Preview(name = "Cards - Landscape (Back)", widthDp = 800, heightDp = 400, showBackground = true)
+@Composable
+private fun CardsLandscapeBackPreview() {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT, dynamicColor = false)) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            CardReviewContent(
+                card = previewCardItem(),
+                uiState = previewUiState(isFlipped = true),
+                previews = emptyMap(),
+                isSiblingAlreadyRated = false,
+                isInWrongBook = false,
+                isAddingBookmark = false,
+                useDualPane = true,
                 onFlip = {},
                 onRate = {},
                 onUndo = {},

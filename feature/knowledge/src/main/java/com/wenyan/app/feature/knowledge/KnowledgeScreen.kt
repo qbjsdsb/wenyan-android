@@ -123,29 +123,40 @@ fun KnowledgeScreen(
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .padding(innerPadding),
         ) {
-            // v0.9.33 新增：真题背题入口卡（名词解释/简答专项，位于搜索框上方）
-            QuizPracticeEntryCard(
-                onClick = onNavigateToQuizPractice,
-                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-            )
+            // v0.9.34 横屏：顶部区（入口卡/搜索/分类）与下方列表对齐限宽居中，
+            // 避免横屏下搜索框/分类 chips 全宽拉伸（列表 KnowledgeList 已限宽 comfortable）
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                Column(
+                    modifier = Modifier.widthIn(max = MaxContentWidth.comfortable),
+                ) {
+                    // v0.9.33 新增：真题背题入口卡（名词解释/简答专项，位于搜索框上方）
+                    QuizPracticeEntryCard(
+                        onClick = onNavigateToQuizPractice,
+                        modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                    )
 
-            // v0.8.19 P1-UI-1: 搜索框
-            // v0.9.25 修复：错误态下禁用搜索/分类（原实现可输入/点击高亮，但数据流已终止不重载）
-            val filterEnabled = uiState.error == null
-            SearchBar(
-                query = searchQuery,
-                onQueryChange = viewModel::updateSearchQuery,
-                onClear = viewModel::clearSearch,
-                enabled = filterEnabled,
-            )
+                    // v0.8.19 P1-UI-1: 搜索框
+                    // v0.9.25 修复：错误态下禁用搜索/分类（原实现可输入/点击高亮，但数据流已终止不重载）
+                    val filterEnabled = uiState.error == null
+                    SearchBar(
+                        query = searchQuery,
+                        onQueryChange = viewModel::updateSearchQuery,
+                        onClear = viewModel::clearSearch,
+                        enabled = filterEnabled,
+                    )
 
-            // 分类标签行
-            // v0.8.17 修复 M1:用独立 selectedCategory StateFlow,error/loading 态下也有反馈
-            CategoryChips(
-                selectedCategory = selectedCategory,
-                enabled = filterEnabled,
-                onCategorySelected = viewModel::selectCategory,
-            )
+                    // 分类标签行
+                    // v0.8.17 修复 M1:用独立 selectedCategory StateFlow,error/loading 态下也有反馈
+                    CategoryChips(
+                        selectedCategory = selectedCategory,
+                        enabled = filterEnabled,
+                        onCategorySelected = viewModel::selectCategory,
+                    )
+                }
+            }
 
             Crossfade(
                 targetState = Triple(uiState.isLoading, uiState.error, uiState.knowledgePoints.isEmpty()),

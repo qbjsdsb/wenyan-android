@@ -641,17 +641,24 @@ private fun InputBar(
     onSend: () -> Unit,
     onStop: () -> Unit,
 ) {
-    Row(
+    // v0.9.34 横屏：输入栏限宽居中（消息列表已限宽 compact），
+    // 避免横屏下输入框全宽拉伸。imePadding/navigationBarsPadding 保留在最外层，
+    // 保证键盘弹出时整个输入栏随 IME 上推（v0.9.32 独占 IME 语义不变）。
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            // P0-1 修复：imePadding 让输入栏随 IME 上推，避免键盘遮挡。
-            // navigationBarsPadding 确保手势导航条不遮挡输入栏。
             .imePadding()
-            .navigationBarsPadding()
-            .padding(Spacing.md),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            .navigationBarsPadding(),
+        contentAlignment = Alignment.Center,
     ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = MaxContentWidth.compact)
+                .padding(Spacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
         OutlinedTextField(
             value = text,
             onValueChange = onTextChanged,
@@ -690,6 +697,7 @@ private fun InputBar(
                     contentDescription = stringResource(R.string.ai_send),
                 )
             }
+        }
         }
     }
 }

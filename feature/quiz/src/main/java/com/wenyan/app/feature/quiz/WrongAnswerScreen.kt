@@ -232,9 +232,16 @@ private fun WrongAnswerFilterRow(
     // v0.8.4 修复：仅 2 项过滤用 LazyRow 过度设计，改用普通 Row 减少开销
     // v0.9.4：3 项过滤（含 DUE）仍用 Row，宽度足够
     // v0.9.30 打磨：改 FlowRow，窄屏/大字号下长标签换行不溢出
+    // v0.9.34 横屏：过滤行与下方列表对齐限宽居中（列表已 widthIn comfortable），
+    // 避免横屏下过滤 chips 全宽拉伸
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.TopCenter,
+    ) {
     FlowRow(
         modifier = Modifier
             .fillMaxWidth()
+            .widthIn(max = MaxContentWidth.comfortable)
             .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
@@ -269,6 +276,7 @@ private fun WrongAnswerFilterRow(
                 },
             )
         }
+    }
     }
 }
 
