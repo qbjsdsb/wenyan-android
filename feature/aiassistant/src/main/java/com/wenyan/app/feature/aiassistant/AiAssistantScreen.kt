@@ -60,6 +60,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -79,6 +80,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -311,16 +313,11 @@ fun AiAssistantScreen(
                 modifier = Modifier.fillMaxSize(),
             ) { isEmpty ->
                 if (isEmpty) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.ai_empty_hint),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    // v0.9.32 功能完善：空状态从单行提示升级为学习问题建议列表，
+                    // 点击建议直接向 AI 提问（一键上手，展示能力边界）
+                    EmptyStateWithSuggestions(
+                        onSuggestionClick = { prompt -> viewModel.sendMessage(prompt) },
+                    )
                 } else {
                     // v0.8.15 Stage 1: 横屏/平板下限制消息列表最大宽度并居中，避免对话气泡行宽过宽阅读疲劳。
                     Box(
@@ -418,6 +415,68 @@ fun AiAssistantScreen(
             result = result,
             onDismiss = viewModel::clearRecallResult,
         )
+    }
+}
+
+// ── 空状态学习问题建议 ──────────────────────────────────────────
+
+/**
+ * 空对话状态（v0.9.32 新增）：提示语 + 学习问题建议列表。
+ *
+ * 点击建议直接调用 [AiAssistantViewModel.sendMessage] 发起提问，
+ * 让新用户一键上手，无需先想"问什么"。
+ */
+@Composable
+private fun EmptyStateWithSuggestions(
+    onSuggestionClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val suggestions = listOf(
+        stringResource(R.string.ai_suggest_prompt_1),
+        stringResource(R.string.ai_suggest_prompt_2),
+        stringResource(R.string.ai_suggest_prompt_3),
+        stringResource(R.string.ai_suggest_prompt_4),
+    )
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(Spacing.xl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.ai_empty_hint),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.size(Spacing.xl))
+        Text(
+            text = stringResource(R.string.ai_suggest_title),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.size(Spacing.md))
+        suggestions.forEach { prompt ->
+            Surface(
+                onClick = { onSuggestionClick(prompt) },
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                // v0.9.32 打磨：触控目标满足 48dp（M3 规范）
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = 48.dp)
+                    .padding(vertical = Spacing.xs),
+            ) {
+                Text(
+                    text = prompt,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                )
+            }
+        }
     }
 }
 

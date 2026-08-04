@@ -61,4 +61,10 @@
     <string name="ai_empty_hint">向AI助手提问，它会引导你思考而非直接给答案</string>
     <string name="ai_tokens_used">本次回复 %1$d tokens</string>
     <string name="ai_references_title">引用来源：</string>
+    <!-- v0.9.32：空状态学习问题建议（一键提问） -->
+    <string name="ai_suggest_title">试试这些学习问题：</string>
+    <string name="ai_suggest_prompt_1">帮我梳理中国现代文学的发展脉络</string>
+    <string name="ai_suggest_prompt_2">解释「文以载道」的含义</string>
+    <string name="ai_suggest_prompt_3">论述《红楼梦》的艺术成就</string>
+    <string name="ai_suggest_prompt_4">鲁迅《呐喊》的核心思想是什么？</string>
 </resources>
