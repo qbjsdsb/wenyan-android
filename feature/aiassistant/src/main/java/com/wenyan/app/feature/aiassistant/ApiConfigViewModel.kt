@@ -266,37 +266,52 @@ class ApiConfigViewModel @Inject constructor(
     fun clearError() {
         _errorMessage.value = null
     }
+}
 
-    // ── 私有辅助方法 ──────────────────────────────────────────────
-
-    /**
-     * 校验 baseUrl 格式（v0.8.16 P1-5 新增）。
-     *
-     * Retrofit.Builder.baseUrl() 在协议缺失时抛 IllegalArgumentException：
-     * ```
-     * java.lang.IllegalArgumentException: Illegal URL: api.deepseek.com
-     *   at retrofit2.Retrofit$Builder.baseUrl(Retrofit.java:450)
-     * ```
-     * 此时 AiServiceImpl.createLlmApiService() 抛异常，被 chat() 的 catch 块吞掉
-     * 显示 "AI 调用失败：Illegal URL: ..."，用户难以理解。
-     *
-     * 提前在保存配置时校验，给出友好错误提示。
-     *
-     * @return null 表示通过，非 null 为错误提示
-     */
-    private fun validateBaseUrl(baseUrl: String): String? {
-        val trimmed = baseUrl.trim()
-        return when {
-            !trimmed.startsWith("http://") && !trimmed.startsWith("https://") -> {
-                "接口地址必须以 http:// 或 https:// 开头（当前为 \"$trimmed\"）"
-            }
-            // 检查是否包含 host 部分（"http://" 后至少有一个字符）
-            // 例如 "http://" 本身非法，"https:///" 也非法
-            trimmed.removePrefix("http://").removePrefix("https://").isBlank() -> {
-                "接口地址缺少域名（如 api.deepseek.com）"
-            }
-            else -> null
+/**
+ * 校验 baseUrl 格式（v0.8.16 P1-5 新增；v0.9.31 强制 https + 提为顶层函数便于单测）。
+ *
+ * Retrofit.Builder.baseUrl() 在协议缺失时抛 IllegalArgumentException：
+ * ```
+ * java.lang.IllegalArgumentException: Illegal URL: api.deepseek.com
+ *   at retrofit2.Retrofit$Builder.baseUrl(Retrofit.java:450)
+ * ```
+ * 此时 AiServiceImpl.createLlmApiService() 抛异常，被 chat() 的 catch 块吞掉
+ * 显示 "AI 调用失败：Illegal URL: ..."，用户难以理解。
+ *
+ * 提前在保存配置时校验，给出友好错误提示。
+ *
+ * ## v0.9.31 强制 https（批次 D 合规）
+ *
+ * App 的 network_security_config.xml（P0-M8）已全局 `cleartextTrafficPermitted="false"`，
+ * 即 http:// 明文请求在网络层必然被拦截。此前校验放行 http:// 会导致
+ * "保存成功 → AI 调用神秘失败（明文被拦截）"的糟糕体验。
+ * 现改为仅接受 https://，保存时立即给出明确提示，符合 fail-fast 原则。
+ *
+ * 注：本 App 面向的 LLM 服务商（DeepSeek/通义/智谱/月之暗面）均强制 https；
+ * 本地局域网 http 模型服务（如 Ollama）本就因明文策略无法使用，不应放行误导。
+ *
+ * @return null 表示通过，非 null 为错误提示
+ */
+internal fun validateBaseUrl(baseUrl: String): String? {
+    val trimmed = baseUrl.trim()
+    return when {
+        trimmed.startsWith("http://") -> {
+            "接口地址不支持 http:// 明文传输，请改用 https://（当前为 \"$trimmed\"）"
         }
+        !trimmed.startsWith("https://") -> {
+            "接口地址必须以 https:// 开头（当前为 \"$trimmed\"）"
+        }
+        // 检查是否包含 host 部分：
+        // - "https://" 本身非法（removePrefix 后为空）
+        // - "https:///" 非法（removePrefix 后以 "/" 开头，无 host；v0.9.31 单测捕获的
+        //   原实现漏判边界，Retrofit HttpUrl.parse("https:///") 返回 null 会抛异常）
+        trimmed.removePrefix("https://").let { rest ->
+            rest.isBlank() || rest.startsWith("/")
+        } -> {
+            "接口地址缺少域名（如 api.deepseek.com）"
+        }
+        else -> null
     }
 }
 
