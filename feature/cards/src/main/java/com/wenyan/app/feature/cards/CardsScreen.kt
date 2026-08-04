@@ -88,6 +88,7 @@ import com.wenyan.app.core.data.repository.IntervalPreview
 import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ErrorState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
+import com.wenyan.app.core.designsystem.component.MaxContentWidth
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
@@ -248,11 +249,17 @@ fun CardsScreen(
             isFinished = uiState.isFinished,
             hasCards = uiState.currentCard != null,
         )
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
-                .padding(innerPadding)
+                .padding(innerPadding),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .widthIn(max = MaxContentWidth.compact)
                 .padding(Spacing.lg),
         ) {
             // v0.9.29: 今日任务横幅（加载/错误时隐藏，避免数据未就绪闪烁）
@@ -353,6 +360,7 @@ fun CardsScreen(
                 }
             }
         }
+        } // Box end
     }
 }
 
@@ -409,7 +417,7 @@ private fun CardReviewContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .widthIn(max = 600.dp),
+                .widthIn(max = MaxContentWidth.compact),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {

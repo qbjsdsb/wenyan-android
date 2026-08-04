@@ -386,7 +386,7 @@ private fun PerspectiveCard(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(
-                modifier = Modifier.padding(Spacing.md),
+                modifier = Modifier.padding(Spacing.lg),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
                 Text(
@@ -406,7 +406,7 @@ private fun PerspectiveCard(
         // 学习理解/多视角：用 TonalCardLow（surfaceContainerLow + shapes.medium）
         TonalCardLow(modifier = Modifier.fillMaxWidth()) {
             Column(
-                modifier = Modifier.padding(Spacing.md),
+                modifier = Modifier.padding(Spacing.lg),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
                 Text(

@@ -12,6 +12,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -176,6 +177,8 @@ fun SettingsScreen(
                     state = settingsListState,
                     modifier = Modifier.widthIn(max = MaxContentWidth.compact),
                     verticalArrangement = Arrangement.spacedBy(Spacing.xl),
+                    // v0.9.31 布局精修：首尾留白（此前首尾贴边）
+                    contentPadding = PaddingValues(vertical = Spacing.lg),
                 ) {
             // P0 v0.7.2: 考研倒计时卡片(接通 ExamCountdownManager,原完全未接入)
             item { ExamCountdownCard() }

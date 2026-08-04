@@ -1090,7 +1090,7 @@ private fun SelfRatingButton(
     if (isSelected) {
         FilledTonalButton(
             onClick = onClick,
-            modifier = modifier,
+            modifier = modifier.heightIn(min = 48.dp),
         ) {
             Icon(
                 imageVector = icon,
@@ -1103,7 +1103,7 @@ private fun SelfRatingButton(
     } else {
         OutlinedButton(
             onClick = onClick,
-            modifier = modifier,
+            modifier = modifier.heightIn(min = 48.dp),
         ) {
             Icon(
                 imageVector = icon,
