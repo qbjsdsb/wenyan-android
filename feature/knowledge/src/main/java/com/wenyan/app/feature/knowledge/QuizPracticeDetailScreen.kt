@@ -281,9 +281,16 @@ private fun PracticeActionBar(
     onMarkKnow: () -> Unit,
     onMarkDontKnow: () -> Unit,
 ) {
+    // v0.9.34 横屏：操作栏与题干区对齐限宽居中（题干已 widthIn compact），
+    // 避免横屏下按钮全宽拉伸
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.TopCenter,
+    ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .widthIn(max = MaxContentWidth.compact)
             .padding(horizontal = Spacing.lg, vertical = Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
@@ -357,5 +364,6 @@ private fun PracticeActionBar(
                 }
             }
         }
+    }
     }
 }

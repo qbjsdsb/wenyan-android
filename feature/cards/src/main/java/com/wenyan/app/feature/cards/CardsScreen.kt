@@ -279,6 +279,7 @@ fun CardsScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 // v0.9.29: 今日任务横幅（加载/错误时隐藏，避免数据未就绪闪烁）
+                // v0.9.34 横屏：compact 单行版释放垂直空间给复习卡片
                 if (!stateKey.isLoading && stateKey.error == null) {
                     TodayPlanBanner(
                         plan = todayPlan,
@@ -293,6 +294,7 @@ fun CardsScreen(
                                 },
                             )
                             .padding(bottom = Spacing.md),
+                        compact = useDualPane,
                     )
                 }
                 Crossfade(
@@ -582,10 +584,20 @@ private fun CardReviewContent(
                     CardArea()
                 }
                 // 右栏：操作面板（窄列 200dp，按钮更小）
+                // v0.9.34 打磨：矮横屏（~360dp 高）翻转后操作组（~318dp）可能
+                // 超出右栏可用高度，verticalScroll 兜底保证所有操作可访问
+                // （评分 2×2 与撤销/跳过优先可见，次要"加入错题本"可滚动查看）
+                val actionScrollState = rememberScrollState()
+                // 翻转/切卡时重置滚动到顶部：评分按钮始终优先可见
+                // （与左栏 FlipCard 的 scrollTo(0) 对称）
+                LaunchedEffect(uiState.isFlipped, card.id) {
+                    actionScrollState.scrollTo(0)
+                }
                 Column(
                     modifier = Modifier
                         .width(200.dp)
-                        .fillMaxHeight(),
+                        .fillMaxHeight()
+                        .verticalScroll(actionScrollState),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
@@ -826,6 +838,8 @@ private fun SessionCompleteState(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            // v0.9.34 横屏：外层不限宽后完成态需自限宽（竖屏宽度 < 720dp 不生效）
+            .widthIn(max = MaxContentWidth.comfortable)
             .verticalScroll(rememberScrollState())
             .padding(Spacing.xxl)
             .semantics(mergeDescendants = true) {
@@ -1570,14 +1584,53 @@ private fun CardsLandscapeBackPreview() {
  * - 距考试天数（未设置考试日期显示提示）
  * - 今日：新卡 X 张 · 复习 Y 张（估算，每知识点约 6 张卡）
  * - 学习进度条（已学知识点 / 总 VERIFIED 知识点）
+ *
+ * v0.9.34 横屏：[compact]=true 时降级为单行核心信息（今日任务 + 距考试），
+ * 隐藏进度条/上限行，高度 ~110dp → ~44dp，把垂直空间让给复习卡片。
  */
 @Composable
 private fun TodayPlanBanner(
     plan: TodayPlanUi,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     val examLabel = plan.daysUntilExam?.let { "距考试 $it 天" } ?: "未设置考试日期"
     val progressPercent = (plan.progress * 100).toInt()
+
+    if (compact) {
+        // ── 横屏紧凑版：单行核心任务信息 ──
+        Surface(
+            modifier = modifier,
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = buildString {
+                        append("今日：")
+                        if (plan.newPointCount > 0) append("新学 ${plan.newPointCount} 个知识点")
+                        if (plan.newPointCount > 0 && plan.duePointCount > 0) append(" · ")
+                        if (plan.duePointCount > 0) append("复习 ${plan.duePointCount} 个知识点")
+                        if (plan.newPointCount == 0 && plan.duePointCount == 0) append("暂无学习任务")
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = examLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+        return
+    }
 
     Surface(
         modifier = modifier,
