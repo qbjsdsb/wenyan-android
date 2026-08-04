@@ -103,7 +103,14 @@ android {
         //   筛选，DAO observeByQuestionTypes 多题型 IN 查询稳定排序，数据层排除 ESSAY
         //   避免与论述题 Tab 重复；Snackbar withTimeout 防挂起对齐 v0.9.23/25 模式。
         //   全量 559 测试通过。versionName "0.9.33"）
-        versionCode = 58
+        // v0.9.34=59（全局横屏适配：知识卡片复习布局横屏改双栏——左卡片区占全部
+        //   高度+大部分宽度（突出、大、方便阅读），右侧 200dp 窄操作面板 2×2 评分
+        //   网格（按钮更小更省高度）；AdaptiveWindowLayout helper（shouldUseDualPane
+        //   判据 maxWidth>maxHeight && maxWidth>=600dp，精确捕获横屏手机不误触平板
+        //   竖屏）；列表类 Screen 搜索/筛选栏横屏限宽居中；TodayPlanBanner 横屏
+        //   compact 单行释放 ~70dp 给卡片；完成态/背题详情操作栏限宽；
+        //   全量 569 测试通过（+10 横屏判定测试）。versionName "0.9.34"）
+        versionCode = 59
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         //   数据一致性修复（B1/B2/B3）：
@@ -173,8 +180,8 @@ android {
         // v0.9.28：App 内更新下载修复（见 versionCode 注释）
         // v0.9.29：卡片备考系统（见 versionCode 注释）
         // v0.9.30：卡片打磨 + UI/UX + 仓库卫生 + i18n（见 versionCode 注释）
-        // v0.9.31/32/33：知识卡片学习科学三改进 / AI 界面修复 / 真题背题（见 versionCode 注释）
-        versionName = "0.9.33"
+        // v0.9.31/32/33/34：学习科学三改进 / AI 界面修复 / 真题背题 / 横屏适配（见 versionCode 注释）
+        versionName = "0.9.34"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
