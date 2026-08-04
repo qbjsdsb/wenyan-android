@@ -6561,3 +6561,27 @@ while (retryCount <= maxRetries) {
     sha256 不同但字节大小一致（6,101,985），属预期
   - gh CLI 未认证 + GitHub API 直连被沙箱拦截，发布状态用 ghfast.top 代理轮询 APK 资产 HTTP 200
     + WebFetch API JSON 验证 body/资产 digest 成功
+
+## 2026-08-04 傍晚：v0.9.32 严谨发布完成（AI 界面 IME 空白修复 + 键盘发送 + 空态建议 + 合规，Release #62）
+
+- **完成**：
+  - **AI 输入框空白 P0 修复**（`bd84feb`）：根因 IME 双重消费——Scaffold 默认 contentWindowInsets 含 IME
+    + InputBar 又 imePadding()，键盘弹出时输入框上方出现键盘高度空白；修复 contentWindowInsets=0 由 InputBar 独占 IME
+  - **键盘 Enter 直接发送**（ImeAction.Send + KeyboardActions.onSend）
+  - **空状态学习问题建议**（`bd71985`）：4 个学习问题卡片一键提问 + 触控 48dp + 文案资源化
+  - **validateBaseUrl 强制 https**（`8e8c7b3`，批次 D）：拒绝 http:// 明文敞口，单测捕获 https:/// 漏判，+8 测试
+  - **i18n 补全 6 处**（AI 模块残留硬编码清零，仅 enum displayName 豁免）
+  - **v0.9.32 发布**（`7d67612` 版本 57/0.9.32 + CHANGELOG）：tag → Release #62（约 13 分钟就绪）
+  - **发布后验证**：APK sha256 25ee9497…（两 APK 一致，6,105,461 字节）+ aapt2 57/0.9.32 + apksigner
+    正式证书 + body 关键词全命中（大面积空白/IME 双重消费/键盘 Enter 发送/空态建议/validateBaseUrl/559 单测）
+  - **receipt**：`docs/release-receipts/v0.9.32-release-receipt.md`；00-STATUS 更新（顺序修正为最新在前）
+- **进行中**：
+  - 批次 B 剩余：docs/plans 归档 + SESSION_LOG 截断 + AGENTS.md 清理
+  - 批次 D 剩余：隐私政策/用户协议
+  - ⚠️ 待人工验证：v0.9.32 真机确认 AI 输入框空白修复（用户原报告）、键盘发送、空态建议、http 被拒
+- **关键发现**：
+  - IME 双重消费是"点击输入框上方大面积空白"的典型根因：Scaffold contentWindowInsets 默认含 ime，
+    bottomBar 内组件又 imePadding() 时，内容区 innerPadding.bottom = bottomBarHeight + IME。
+    修复模式：由 bottomBar 独占 IME（contentWindowInsets=0），顶/底栏高度仍由 Scaffold 计入 innerPadding
+  - 排查手段：对比 M3 Scaffold 的 MutableWindowInsets 机制 + 全项目 grep imePadding 定位唯一 double 场景（AI 屏）
+  - 00-STATUS 用 python 批量 replace 需复查段落顺序/重复头，避免插入位置错乱
