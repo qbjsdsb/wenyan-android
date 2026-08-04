@@ -1,11 +1,13 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-08-05（v0.9.34 功能完成 + 版本号提升，待发布 Release #64）
+> 最后更新：2026-08-05（v0.9.34 已发布，Release #64）
 
 ## ✅ 当前状态
 
-**v0.9.34 待发布**（2026-08-05）：全局横屏适配——知识卡片双栏 + 2×2 评分 + 全 App 横屏巡检（versionCode 59）。功能 commit `acb2649` + 打磨 `9ef057c` + 版本号 `a200511` 已提交，等待 push 触发 Release #64。
+**v0.9.34 已发布**（2026-08-05，Release #64）：全局横屏适配——知识卡片双栏 + 2×2 评分 + 全 App 横屏巡检（versionCode 59）。
+- **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.34
+- **receipt**：`docs/release-receipts/v0.9.34-release-receipt.md`
 
 **v0.9.33 已发布**（2026-08-04，Release #63）：真题背题专项——名词解释/简答背诵模式（versionCode 58）。
 - **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.33
