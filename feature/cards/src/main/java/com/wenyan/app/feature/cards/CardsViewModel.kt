@@ -353,9 +353,12 @@ class CardsViewModel @Inject constructor(
                 .flatMapLatest {
                     combine(
                         cardRepository.getCardsForReview(),
+                        // v0.9.31：今日队列（newPoints 用于标记"新卡"徽章）
+                        cardRepository.getTodayStudyQueue(),
                         _isFlipped,
                         _currentIndex,
-                    ) { cards, isFlipped, currentIndex ->
+                    ) { cards, queue, isFlipped, currentIndex ->
+                        val newPointIds = queue.newPoints.map { it.id }.toSet()
                         // v0.8.5 P0：会话内冻结 cards，避免 Flow 重新 emit 导致错位
                         // v0.8.6 P0:进程被杀后恢复(sessionLoaded=true 但 sessionCards=null)
                         //   此时 currentIndex 可能 >0 但 sessionCards 已丢失,重置避免错位
@@ -363,7 +366,9 @@ class CardsViewModel @Inject constructor(
                         val effectiveCards = if (isFirstLoad) {
                             // 首次加载:重新生成 sessionCards
                             savedStateHandle[KEY_SESSION_LOADED] = true
-                            val newCards = cards.mapIndexed { index, card -> card.toUiItem(index) }
+                            val newCards = cards.mapIndexed { index, card ->
+                                card.toUiItem(index, isNew = card.pointId in newPointIds)
+                            }
                             sessionCards = newCards
                             newCards
                         } else if (sessionCards == null) {
@@ -389,7 +394,9 @@ class CardsViewModel @Inject constructor(
                             savedStateHandle["sessionAgainCount"] = 0
                             // 清空评分历史栈(内存已丢失,同步清空避免 undo 错位)
                             ratingHistory.clear()
-                            val newCards = cards.mapIndexed { index, card -> card.toUiItem(index) }
+                            val newCards = cards.mapIndexed { index, card ->
+                                card.toUiItem(index, isNew = card.pointId in newPointIds)
+                            }
                             sessionCards = newCards
                             newCards
                         } else {
@@ -930,7 +937,7 @@ class CardsViewModel @Inject constructor(
     }
 
     /** 将 [CardTemplate] 映射为 UI 层 [CardItem] */
-    private fun CardTemplate.toUiItem(index: Int): CardItem = CardItem(
+    private fun CardTemplate.toUiItem(index: Int, isNew: Boolean = false): CardItem = CardItem(
         // v0.8.8:稳定 ID(替代 index-based),基于 pointId+类型+内容哈希
         // sibling 卡(同 pointId 同类型)靠 front 内容区分,保证 ID 唯一且稳定
         //
@@ -950,6 +957,7 @@ class CardsViewModel @Inject constructor(
         back = back,
         cardType = templateType.name,
         pointId = pointId,
+        isNew = isNew,
         template = this,
     )
 
@@ -1097,6 +1105,8 @@ data class CardItem(
     val cardType: String,
     /** 关联知识点 ID（用于 FSRS 调度回写） */
     val pointId: String = "",
+    /** 是否为"新卡"（v0.9.31：未学过的知识点，首次进入学习循环） */
+    val isNew: Boolean = false,
     val template: CardTemplate? = null,
 )
 

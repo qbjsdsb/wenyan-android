@@ -420,6 +420,25 @@ private fun CardReviewContent(
             modifier = Modifier.fillMaxWidth(),
         )
 
+        // v0.9.31：新卡标识（未学过的知识点首次进入学习循环，帮助理解学习循环）
+        if (card.isNew) {
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.tertiaryContainer,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = "新卡 · 首次学习（10 分钟后强化一次）",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = Spacing.xs),
+                )
+            }
+        }
+
         // 可翻转卡片
         FlipCard(
             card = card,
