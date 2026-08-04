@@ -90,7 +90,11 @@ android {
         // v0.9.30=55（知识卡片打磨：复习/新卡比例保护 + 今日任务显示优化 / 批次 C UI/UX 14 项：
         //   AI 光标动画/触控目标 48dp/布局稳定/空 item 条件化等 / 仓库卫生部分 /
         //   i18n 全量补全约 130 资源（5 模块 UI 文本，剩余硬编码 0）。versionName "0.9.30"）
-        versionCode = 55
+        // v0.9.31=56（知识卡片学习科学三改进：横幅按知识点显示 / 新卡 GOOD 进 10 分钟学习步 /
+        //   新卡徽章标识 / 整体布局精修（大屏宽度/触控目标/间距呼吸感）/
+        //   评分按钮三处重复统一为设计系统公共组件 WenyanRatingButton（Essay 自评补评分色）。
+        //   versionName "0.9.31"）
+        versionCode = 56
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         //   数据一致性修复（B1/B2/B3）：
@@ -160,7 +164,7 @@ android {
         // v0.9.28：App 内更新下载修复（见 versionCode 注释）
         // v0.9.29：卡片备考系统（见 versionCode 注释）
         // v0.9.30：卡片打磨 + UI/UX + 仓库卫生 + i18n（见 versionCode 注释）
-        versionName = "0.9.30"
+        versionName = "0.9.31"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
