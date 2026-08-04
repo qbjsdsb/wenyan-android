@@ -51,6 +51,9 @@ class FsrsWrapper(
         /** FSRS-6学习阶段间隔（Again=1分钟，Hard=5分钟，其他=1天） */
         private const val LEARNING_STEP_AGAIN_DAYS = 1f / 1440f   // 1分钟换算为天
         private const val LEARNING_STEP_HARD_DAYS = 5f / 1440f     // 5分钟换算为天
+        // v0.9.31 优化：新卡首次 GOOD 进入 10 分钟学习步（Anki 学习循环最佳实践，
+        // 此前新卡 GOOD 直接毕业到长间隔，用户只见过一次容易遗忘）
+        private const val LEARNING_STEP_GOOD_DAYS = 10f / 1440f   // 10分钟换算为天
 
         /**
          * FSRS-6默认参数（21个，w[0]-w[20]）
@@ -228,7 +231,9 @@ class FsrsWrapper(
         return when (r) {
             Rating.AGAIN -> ScheduleResult(newS, newD, State.LEARNING, learningInterval(Rating.AGAIN), c.lapses)
             Rating.HARD -> ScheduleResult(newS, newD, State.LEARNING, learningInterval(Rating.HARD), c.lapses)
-            Rating.GOOD -> ScheduleResult(newS, newD, State.REVIEW, nextInterval(newS).toFloat(), c.lapses)
+            // v0.9.31 优化：新卡首次 GOOD 先进 10 分钟学习步（再 GOOD 才毕业到 REVIEW）
+            Rating.GOOD -> ScheduleResult(newS, newD, State.LEARNING, LEARNING_STEP_GOOD_DAYS, c.lapses)
+            // EASY 直接毕业（Anki easy interval 语义：一次轻松答对视为已掌握）
             Rating.EASY -> ScheduleResult(newS, newD, State.REVIEW, nextInterval(newS).toFloat(), c.lapses)
         }
     }

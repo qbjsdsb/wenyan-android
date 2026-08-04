@@ -224,9 +224,9 @@ class FsrsWrapperTest {
         // AGAIN → LEARNING
         val afterAgain = wrapper.schedule(newCard, Rating.AGAIN, now)
         assertEquals(State.LEARNING, afterAgain.state)
-        // GOOD → REVIEW
+        // v0.9.31：新卡首次 GOOD → LEARNING（10 分钟学习步，再 GOOD 才毕业）
         val afterGood = wrapper.schedule(newCard, Rating.GOOD, now)
-        assertEquals(State.REVIEW, afterGood.state)
+        assertEquals(State.LEARNING, afterGood.state)
     }
 
     // ===================== enableFuzz=false 不应用模糊因子 =====================
@@ -543,7 +543,7 @@ class FsrsWrapperTest {
         val newCard = FlashCard(state = State.NEW, lapses = 0)
         assertEquals(State.LEARNING, wrapper.schedule(newCard, Rating.AGAIN, now).state)
         assertEquals(State.LEARNING, wrapper.schedule(newCard, Rating.HARD, now).state)
-        assertEquals(State.REVIEW, wrapper.schedule(newCard, Rating.GOOD, now).state)
+        assertEquals(State.LEARNING, wrapper.schedule(newCard, Rating.GOOD, now).state)
         assertEquals(State.REVIEW, wrapper.schedule(newCard, Rating.EASY, now).state)
 
         // LEARNING 状态卡片

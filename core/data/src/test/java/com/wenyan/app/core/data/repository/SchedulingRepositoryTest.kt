@@ -143,12 +143,12 @@ class SchedulingRepositoryTest {
 
         assertNotNull(result)
         assertTrue("GOOD 后 stability 应 > 0", result!!.stability > 0f)
-        assertEquals("GOOD 后 state 应为 REVIEW", "REVIEW", result.state)
+        assertEquals("v0.9.31: 新卡首次 GOOD 先进学习步(LEARNING)", "LEARNING", result.state)
 
         val memo = db.memoRecordDao().getById("point_1")
         assertNotNull(memo)
         assertEquals("DB 中 stability 应与返回值一致", result.stability, memo!!.stability)
-        assertEquals("DB 中 state 应为 REVIEW", "REVIEW", memo.state)
+        assertEquals("v0.9.31: 新卡首次 GOOD 先进学习步(LEARNING)", "LEARNING", memo.state)
     }
 
     /**
@@ -220,7 +220,7 @@ class SchedulingRepositoryTest {
         // 3. 验证返回值
         assertNotNull("rateWrongAnswer 应返回更新后的 Entity", result)
         assertEquals("id 应一致", wrongAnswerId, result!!.id)
-        assertEquals("GOOD 后 state 应为 REVIEW", "REVIEW", result.schedState)
+        assertEquals("v0.9.31: 新卡首次 GOOD 先进学习步(LEARNING)", "LEARNING", result.schedState)
         assertEquals("sched_reps 应为 1", 1, result.schedReps)
         assertEquals("sched_review_count 应为 1", 1, result.schedReviewCount)
         assertTrue("GOOD 后 stability 应 > 0", result.schedStability > 0f)
@@ -237,7 +237,7 @@ class SchedulingRepositoryTest {
         // 4. 验证 DB 持久化(重新读取确认字段一致)
         val fromDb = db.wrongAnswerDao().getById(wrongAnswerId)
         assertNotNull("DB 中应有此错题", fromDb)
-        assertEquals("DB state 应为 REVIEW", "REVIEW", fromDb!!.schedState)
+        assertEquals("v0.9.31: 新卡首次 GOOD 先进学习步(LEARNING)", "LEARNING", fromDb!!.schedState)
         assertEquals("DB sched_reps 应为 1", 1, fromDb.schedReps)
         assertEquals("DB stability 应与返回值一致", result.schedStability, fromDb.schedStability)
     }
@@ -350,7 +350,7 @@ class SchedulingRepositoryTest {
         assertNull("resolvedAt 应保持 null(未解决)", fromDb.resolvedAt)
         assertEquals("lastWrongAt 应保持原值", 2_000_000L, fromDb.lastWrongAt)
         // 验证调度字段已更新
-        assertEquals("sched_state 应为 REVIEW", "REVIEW", fromDb.schedState)
+        assertEquals("v0.9.31: 新卡首次 GOOD 先进学习步(LEARNING)", "LEARNING", fromDb.schedState)
         assertEquals("sched_reps 应为 1", 1, fromDb.schedReps)
     }
 }
