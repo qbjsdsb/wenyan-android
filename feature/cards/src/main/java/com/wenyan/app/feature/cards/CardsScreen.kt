@@ -1339,15 +1339,25 @@ private fun TodayPlanBanner(
                 )
             }
             Spacer(modifier = Modifier.padding(top = Spacing.xs))
-            // v0.9.29 打磨：显示"约"（每知识点拆 4-7 张，按 6 估算）且补充知识点数更直观
+            // v0.9.30 修复：改按知识点显示（FSRS 按知识点调度，sibling 6 张一起排期；
+            // 此前"复习约 X 张"= 点数×6，用户过 1 张卡减少 6 张，与实际推进粒度不符）
             Text(
-                text = if (plan.duePointCount > 0) {
-                    "今日：新卡约 ${plan.newCardEstimate} 张（${plan.newPointCount} 个知识点）· 复习约 ${plan.dueCardEstimate} 张"
-                } else {
-                    "今日：新卡约 ${plan.newCardEstimate} 张（${plan.newPointCount} 个知识点）"
+                text = buildString {
+                    append("今日：")
+                    if (plan.newPointCount > 0) append("新学 ${plan.newPointCount} 个知识点")
+                    if (plan.newPointCount > 0 && plan.duePointCount > 0) append(" · ")
+                    if (plan.duePointCount > 0) append("复习 ${plan.duePointCount} 个知识点")
+                    if (plan.newPointCount == 0 && plan.duePointCount == 0) append("暂无学习任务")
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(modifier = Modifier.padding(top = Spacing.xs))
+            // 每日新卡限额提示（新卡 = 未学过的知识点；默认 60 张 ≈ 10 个知识点）
+            Text(
+                text = "每日新卡上限 ${plan.newCardLimit} 张（约 ${plan.newCardLimit / CARDS_PER_POINT_UI} 个知识点）",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.padding(top = Spacing.sm))
             LinearProgressIndicator(
@@ -1357,6 +1367,9 @@ private fun TodayPlanBanner(
         }
     }
 }
+
+/** 今日任务横幅用的每知识点卡片数估算（与数据层 CARDS_PER_POINT_ESTIMATE 一致）。 */
+private const val CARDS_PER_POINT_UI = 6
 
 /**
  * 今日无到期卡空状态 Preview。
