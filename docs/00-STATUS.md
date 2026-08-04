@@ -1,13 +1,13 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-08-04（v0.9.27 已发布，Release #56）
+> 最后更新：2026-08-04（v0.9.31 已发布，Release #61）
 
 ## ✅ 当前状态
 
-**v0.9.27 已发布**（2026-08-04，Release #56）：启动图标 v7.5 精进 + 全面检查 P1-1/2 修复 + 四科内容补齐 25 个知识点。
+**v0.9.31 已发布**（2026-08-04，Release #61）：知识卡片学习科学三改进 + 整体布局精修 + 评分按钮三处统一。
 
-**v0.9.26 已发布**（2026-08-03，Release #55）：新启动图标 v7.4（Google Play Books 风格）+ 批三（性能与整洁 5 项）。
+**v0.9.30 已发布**（2026-08-04，Release #60）：知识卡片打磨 + 批次 C UI/UX 14 项 + i18n 资源化 + 仓库卫生部分。
 
 ### v0.9.27 发布内容（tag `baa178a`，versionCode 52 / versionName "0.9.27"）
 - **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.27
@@ -68,9 +68,9 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **133efe8**（v0.9.30 版本号提升，2026-08-04） |
-| 最新 Release | **v0.9.30**（2026-08-04，卡片打磨+UI/UX+i18n+仓库卫生）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.30 |
-| versionCode / versionName | **55 / "0.9.30"** |
+| 最新 commit | **2d930ac**（v0.9.31 版本号提升，2026-08-04） |
+| 最新 Release | **v0.9.31**（2026-08-04，卡片学习科学+布局精修+评分按钮统一）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.31 |
+| versionCode / versionName | **56 / "0.9.31"** |
 | 知识点 | **960 个** |
 | 真题 | **485 道** |
 | 论述题 | **134 道**（v0.9.23 起删年份显示，数据层 year 保留） |
@@ -80,11 +80,22 @@
 | 图谱 | **已移除**（v0.9.3） |
 | AI 服务商 | DeepSeek/通义/智谱/月之暗面/自定义（v0.9.23 修复 URL 拼接） |
 | 更新日志机制 | **CHANGELOG.md** + release.yml 动态读取（v0.9.23 起） |
-| 单测 | **551 个 0 失败**（v0.9.30 验证：删 Quiz 死代码测试 9 后 551） |
-| R8 | **已启用并随 v0.9.30 发布**（APK 6.10MB，需 emulator 冒烟实测） |
+| 单测 | **551 个 0 失败**（v0.9.31 验证） |
+| R8 | **已启用并随 v0.9.31 发布**（APK 6.10MB，需 emulator 冒烟实测） |
 | 启动图标 | **v7.5 双色页精进**（v0.9.27 起：米色右页+页脚厚度+缩进+主题镂空，纯矢量） |
 | 崩溃上报 | **未接入**（需 Firebase/Sentry 配置） |
 | 阻塞 | **无** |
+
+## ✅ v0.9.31 发布验证记录（2026-08-04，Release #61）
+
+> 发布核心验证已全部通过（详见 `docs/release-receipts/v0.9.31-release-receipt.md`）。
+
+1. **tag 与版本**：✅ v0.9.31 → 2d930ac = HEAD；versionCode 56 / versionName "0.9.31"
+2. **Release 页面**：✅ 文研App v0.9.31（id 364745060），正文来自 CHANGELOG v0.9.31（知识卡片学习科学三改进/横幅按知识点/新卡学习步/新卡徽章/评分按钮/WenyanRatingButton/论述题自评评分色/大屏宽度/触控目标/551 单测 全部出现）
+3. **APK 资产**：✅ wenyan-v0.9.31.apk + wenyan-latest.apk 均 200（6,101,985 字节），sha256 完全一致（d8291663…）
+4. **APK 版本**：✅ aapt2 校验 versionCode 56 / versionName "0.9.31" / targetSdk 35
+5. **APK 签名**：✅ apksigner 正式证书（CN=Wenyan App, O=qbjsdsb）
+6. **单测/构建**：✅ 551 单测 0 失败 + assembleDebug + assembleRelease(R8) 本地预验全绿
 
 ## ✅ v0.9.30 发布验证记录（2026-08-04，Release #60）
 

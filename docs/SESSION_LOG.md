@@ -6536,3 +6536,28 @@ while (retryCount <= maxRetries) {
     含变量用 format（%1$s/%1$d）；semantics lambda 非 Composable 需外部取变量；枚举 displayName/教程正文/
     ViewModel 错误消息/相对时间格式保留硬编码（合理）
   - R8 release 本地预验（assembleRelease）与 CI 产物一致（6,101,989 字节），发布前本地跑 release 构建可提前发现 R8 问题
+
+## 2026-08-04 白天：v0.9.31 严谨发布完成（卡片学习科学三改进 + 布局精修 + 评分按钮统一，Release #61）
+
+- **完成**：
+  - **评分按钮三处统一**（`1aea291`）：新增 core:designsystem `WenyanRatingButton` 公共组件
+    （动作模式 isPrimary→filled/tonal + 四档颜色 / 选择模式 isSelected→FilledTonal/Outlined 叠加评分色 /
+    内置 48dp 触控目标）；Cards RatingButton / WrongAnswer WrongAnswerRatingButton 改薄适配器；
+    Essay SelfRatingButton 删除，自评三档补评分色（不会=红/尚可=绿/轻松=蓝）；消除 135 行重复 + 组件 Preview
+  - **v0.9.31 发布**（`2d930ac` 版本 56/0.9.31 + CHANGELOG）：tag → Release #61（约 12 分钟就绪）
+  - **发布后验证**：APK sha256 d8291663…（两 APK 一致，6,101,985 字节）+ aapt2 56/0.9.31 + apksigner
+    正式证书（CN=Wenyan App）+ body 关键词全命中（知识卡片学习科学三改进×1/横幅按知识点×1/新卡学习步×1/
+    新卡徽章×1/评分按钮×1/WenyanRatingButton×2/论述题自评评分色×1/大屏宽度×1/触控目标×1/551 单测×1）
+  - **receipt**：`docs/release-receipts/v0.9.31-release-receipt.md`；00-STATUS 更新
+- **进行中**：
+  - 批次 B 剩余：docs/plans 归档 + SESSION_LOG 截断 + AGENTS.md 清理
+  - 批次 D：合规（隐私政策/用户协议）、validateBaseUrl 强制 https
+  - ⚠️ 待人工验证：v0.9.31 真机冒烟（新卡学习步 GOOD→10 分钟、新卡徽章、横幅按知识点、论述题自评评分色）
+- **关键发现**：
+  - 组件统一要点：三处评分按钮语义不同（动作评分+预期间隔 / 动作评分无间隔 / 选择态+图标），
+    用 isSelected: Boolean? 三态（null=动作 / true=选中 / false=未选中）一个参数覆盖两种模式最简洁；
+    action 的 semantics 文案（"后重看"/"调度下次复习"）属业务语义留在各 screen 薄适配器，不进设计系统
+  - 本地 assembleRelease 用 debug 签名（无 keystore env），仅验证 R8/编译；CI 用正式 keystore，
+    sha256 不同但字节大小一致（6,101,985），属预期
+  - gh CLI 未认证 + GitHub API 直连被沙箱拦截，发布状态用 ghfast.top 代理轮询 APK 资产 HTTP 200
+    + WebFetch API JSON 验证 body/资产 digest 成功
