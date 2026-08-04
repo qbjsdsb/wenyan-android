@@ -94,7 +94,11 @@ android {
         //   新卡徽章标识 / 整体布局精修（大屏宽度/触控目标/间距呼吸感）/
         //   评分按钮三处重复统一为设计系统公共组件 WenyanRatingButton（Essay 自评补评分色）。
         //   versionName "0.9.31"）
-        versionCode = 56
+        // v0.9.32=57（AI 界面修复 + 功能完善：输入框上方大面积空白——IME 双重消费修复
+        //   （Scaffold contentWindowInsets 含 IME + InputBar imePadding 叠加，由 InputBar 独占 IME）/
+        //   键盘 Enter 直接发送 / 空状态学习问题建议一键提问 / i18n 补全 6 处 /
+        //   批次 D：validateBaseUrl 强制 https 拒绝明文敞口。versionName "0.9.32"）
+        versionCode = 57
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         //   数据一致性修复（B1/B2/B3）：
@@ -164,7 +168,7 @@ android {
         // v0.9.28：App 内更新下载修复（见 versionCode 注释）
         // v0.9.29：卡片备考系统（见 versionCode 注释）
         // v0.9.30：卡片打磨 + UI/UX + 仓库卫生 + i18n（见 versionCode 注释）
-        versionName = "0.9.31"
+        versionName = "0.9.32"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
