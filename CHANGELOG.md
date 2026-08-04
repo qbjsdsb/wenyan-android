@@ -8,6 +8,29 @@
 > release.yml 会自动读取当前 tag 对应的日志作为 GitHub Release 正文，
 > App 内"检查更新"界面展示的更新日志即来源于此。**务必随版本更新，不要遗漏。**
 
+## [v0.9.33] - 2026-08-04
+
+真题背题专项：名词解释/简答背诵模式。
+
+### 真题背题（知识点 Tab 新增入口卡）
+
+- **入口**：知识点页搜索框上方新增"真题背题"入口卡（副标题明确"名词解释 · 简答专项，练'记得住'（论述题见论述题 Tab）"），与论述题板块划清边界——背题练记忆、论述题练写作
+- **列表页**：题型（全部/名词解释/简答）+ 科目 + 年份三维筛选，实时显示"共 N 题 / X / Y 题"；卡片展示题型标签（底色区分）+ 科目 + 年份 + 答案字数 + 题干预览
+- **详情页（纯背诵模式）**：题干大字展示 → 点"显示答案"展开结构化参考答案 → 对照记忆后标记"会了"（直接推进）/"不会"（写入错题本并自动进入 FSRS 复习队列）；上一题/下一题在同一筛选集内导航，进度"第 X / N 题"
+- **数据层**：`ExamQuestionDao.observeByQuestionTypes` 多题型 IN 查询（稳定 ORDER BY：year DESC + exam_paper_code + id，保证前后题导航顺序不漂移）；`KnowledgeRepository.observePracticeQuestions` 题型白名单封装，从数据层排除 ESSAY 避免与论述题 Tab 重复展示
+- **错题本联动**：标记"不会"→ `recordWrongAnswer(SOURCE_QUIZ_WRONG)`，错题本显示"真题练习"来源标签，重复标记自动累计错答次数不新增记录
+
+### 工程质量
+
+- Snackbar `withTimeout(5s)` 防挂起：对齐 CardsScreen v0.9.23 / WrongAnswerScreen v0.9.25 修复模式（material3 1.5.0-alpha18 计时异常会导致 showSnackbar 永久挂起、状态清不掉）
+- 详情页错误态重试按钮可用：`retry()` 取消旧加载 job + 重新加载，`CancellationException` 正确 rethrow 防止取消误入错误态
+- 修复"不会"写入失败时成功文案覆盖失败文案的误导提示
+
+### 技术
+
+- 新增 4 文件（列表/详情 Screen + ViewModel）+ DAO/Repository/导航/入口/i18n（28 条新字符串）
+- 全量 **559 单测 0 失败** + assembleDebug 通过
+
 ## [v0.9.32] - 2026-08-04
 
 AI 界面修复 + 功能完善 + 批次 D 合规。
