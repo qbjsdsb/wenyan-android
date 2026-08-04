@@ -57,4 +57,8 @@
     <string name="ai_score_llm">LLM 评分：%1$d / 100</string>
     <string name="ai_score_reason">理由：%1$s</string>
     <string name="api_delete_confirm">确定删除「%1$s」吗？此操作不可撤销。</string>
+    <!-- v0.9.32：AI 界面残留硬编码资源化 -->
+    <string name="ai_empty_hint">向AI助手提问，它会引导你思考而非直接给答案</string>
+    <string name="ai_tokens_used">本次回复 %1$d tokens</string>
+    <string name="ai_references_title">引用来源：</string>
 </resources>

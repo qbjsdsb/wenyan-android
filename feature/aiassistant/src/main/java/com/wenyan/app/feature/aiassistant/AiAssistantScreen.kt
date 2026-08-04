@@ -14,12 +14,16 @@ import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -278,6 +282,13 @@ fun AiAssistantScreen(
                 onStop = viewModel::stopGeneration,
             )
         },
+        // v0.9.32 修复：IME 双重消费导致"点击输入框上方出现大面积空白"。
+        // Scaffold 默认 contentWindowInsets 含 IME（ScaffoldDefaults = systemBars + ime），
+        // 而 bottomBar 的 InputBar 已自行 .imePadding()。两者叠加时键盘弹出，
+        // 内容区 innerPadding.bottom = bottomBarHeight + IME，输入框上方多出键盘高度空白。
+        // 现由 InputBar 独占 IME 处理（imePadding + navigationBarsPadding），
+        // content 不再叠加 IME inset；顶栏/底栏高度仍由 Scaffold 计入 innerPadding。
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -305,7 +316,7 @@ fun AiAssistantScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "向AI助手提问，它会引导你思考而非直接给答案",
+                            text = stringResource(R.string.ai_empty_hint),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -430,10 +441,10 @@ private fun LearningToolDialog(
     onRoteCheck: (pointId: String, relatedIds: List<String>) -> Unit,
 ) {
     val title = when (mode) {
-        LearningToolMode.ESSAY_GUIDE -> "论述题引导"
-        LearningToolMode.WRONG_ANSWER -> "错题解释"
-        LearningToolMode.RECALL_CHECK -> "回忆检测"
-        LearningToolMode.ROTE_CHECK -> "死记硬背检测"
+        LearningToolMode.ESSAY_GUIDE -> stringResource(R.string.text_02)
+        LearningToolMode.WRONG_ANSWER -> stringResource(R.string.text_03)
+        LearningToolMode.RECALL_CHECK -> stringResource(R.string.text_04)
+        LearningToolMode.ROTE_CHECK -> stringResource(R.string.text_05)
     }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -588,6 +599,14 @@ private fun InputBar(
             modifier = Modifier.weight(1f),
             placeholder = { Text(stringResource(R.string.text_28)) },
             maxLines = 3,
+            // v0.9.32 功能完善：键盘 Enter 直接发送（聊天应用惯例）。
+            // 注意：设 Send 后 Enter 不再换行；多行内容可通过粘贴输入（maxLines=3 自动换行显示）。
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+            keyboardActions = KeyboardActions(
+                onSend = {
+                    if (text.isNotBlank() && !isLoading) onSend()
+                },
+            ),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -709,7 +728,7 @@ private fun MessageBubble(
             // v0.9.24 token 用量小字（仅 AI 消息、非空时显示）
             if (message.tokensUsed != null) {
                 Text(
-                    text = "本次回复 ${message.tokensUsed} tokens",
+                    text = stringResource(R.string.ai_tokens_used, message.tokensUsed),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = Spacing.xs, top = Spacing.xs),
@@ -744,7 +763,7 @@ private fun ReferencesList(message: AiMessage) {
             .padding(Spacing.sm),
     ) {
         Text(
-            text = "引用来源：",
+            text = stringResource(R.string.ai_references_title),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -792,7 +811,7 @@ private fun RoteWarningBanner(
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = "知道了",
+            text = stringResource(R.string.text_27),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onErrorContainer,
             fontWeight = FontWeight.Medium,
