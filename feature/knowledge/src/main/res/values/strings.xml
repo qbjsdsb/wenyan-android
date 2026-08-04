@@ -45,4 +45,33 @@
     <string name="kp_ai_assistant">AI助手</string>
     <string name="kp_clear_search">清除搜索</string>
     <string name="kp_essay_list_title">论述题</string>
+
+    <!-- 真题背题 · 名词解释/简答（v0.9.33 新增） -->
+    <string name="kp_quiz_entry_title">真题背题</string>
+    <string name="kp_quiz_entry_desc">名词解释 · 简答专项，练“记得住”（论述题见论述题 Tab）</string>
+    <string name="kp_quiz_list_title">真题背题</string>
+    <string name="kp_quiz_list_count">共 %1$d 题</string>
+    <string name="kp_quiz_list_filtered_count">%1$d / %2$d 题</string>
+    <string name="kp_quiz_type_all">全部</string>
+    <string name="kp_quiz_type_term">名词解释</string>
+    <string name="kp_quiz_type_short">简答</string>
+    <string name="kp_quiz_all_subjects">全部科目</string>
+    <string name="kp_quiz_all_years">全部年份</string>
+    <string name="kp_quiz_empty_filter">当前筛选无匹配题目</string>
+    <string name="kp_quiz_empty_all">暂无背题题目</string>
+    <string name="kp_quiz_empty_desc">尝试调整筛选条件</string>
+    <string name="kp_quiz_detail_title">背题</string>
+    <string name="kp_quiz_show_answer">显示答案</string>
+    <string name="kp_quiz_hide_answer">收起答案</string>
+    <string name="kp_quiz_know">会了</string>
+    <string name="kp_quiz_dont_know">不会</string>
+    <string name="kp_quiz_prev">上一题</string>
+    <string name="kp_quiz_next">下一题</string>
+    <string name="kp_quiz_progress">第 %1$d / %2$d 题</string>
+    <string name="kp_quiz_answer_hint">参考答案</string>
+    <string name="kp_quiz_wrong_added">已加入错题本，将按 FSRS 安排复习</string>
+    <string name="kp_quiz_wrong_added_already">已在错题本，累计错答次数 +1</string>
+    <string name="kp_quiz_answer_len">约 %1$d 字</string>
+    <string name="kp_quiz_year_format">%1$d 年</string>
+    <string name="kp_quiz_no_answer">（本题暂无参考答案）</string>
 </resources>

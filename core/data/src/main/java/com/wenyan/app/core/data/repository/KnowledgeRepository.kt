@@ -202,6 +202,23 @@ class KnowledgeRepository @Inject constructor(
             .catchAndLog(TAG, "observeAllEssays") { emptyList() }
 
     /**
+     * 观察"真题背题"题目（v0.9.33 新增，供名词解释/简答背题专项使用）。
+     *
+     * 仅查询 [types] 指定题型（TERM_EXPLANATION / SHORT_ANSWER），
+     * 从数据层排除 ESSAY——论述题由 [observeAllEssays] 独立板块承载，
+     * 避免"真题"概念在两个入口重复展示。
+     *
+     * 筛选（题型 Tab / 科目 / 年份）由 ViewModel 在内存完成（346 条 < 5ms，
+     * 与 [observeRelatedEssays] 的内存过滤策略一致）。
+     *
+     * @param types 题型白名单，如 listOf("TERM_EXPLANATION", "SHORT_ANSWER")
+     * @return 按年份倒序的真题列表
+     */
+    fun observePracticeQuestions(types: List<String>): Flow<List<ExamQuestionEntity>> =
+        examQuestionDao.observeByQuestionTypes(types)
+            .catchAndLog(TAG, "observePracticeQuestions types=$types") { emptyList() }
+
+    /**
      * 观察单个论述题（v0.9.8 新增，供论述题详情页使用）。
      *
      * @param examQuestionId 真题 ID（如 eq_0038）

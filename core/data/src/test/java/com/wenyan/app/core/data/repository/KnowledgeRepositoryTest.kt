@@ -774,6 +774,23 @@ private class FakeExamQuestionDao(
         throw UnsupportedOperationException()
 
     /**
+     * 按多个题型过滤（v0.9.33 真题背题新增）。
+     *
+     * 生产 SQL 为 `question_type IN (:types) ORDER BY year DESC, exam_paper_code ASC, id ASC`；
+     * 测试中保持相同语义：先按题型过滤，再按 year DESC 排序。
+     */
+    override fun observeByQuestionTypes(types: List<String>): Flow<List<ExamQuestionEntity>> =
+        _essays.map { essays ->
+            essays
+                .filter { it.questionType in types }
+                .sortedWith(
+                    compareByDescending<ExamQuestionEntity> { it.year }
+                        .thenBy { it.examPaperCode }
+                        .thenBy { it.id }
+                )
+        }
+
+    /**
      * 返回注入的全部 ESSAY 题(生产按 year DESC 排序,测试中也保持该顺序)。
      *
      * 测试通过 [setEssays] 注入时自行按年份倒序,与生产 SQL ORDER BY year DESC 一致。

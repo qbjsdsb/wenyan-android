@@ -418,6 +418,23 @@ class FakeExamQuestionDao(
         _essays.mapStateFlow { it.filter { e -> e.questionType == type } }
 
     /**
+     * 按多个题型过滤(v0.9.33 真题背题新增)。
+     *
+     * 生产 SQL:question_type IN (:types) ORDER BY year DESC, exam_paper_code ASC, id ASC。
+     * 测试保持相同语义,保证前后题导航顺序一致。
+     */
+    override fun observeByQuestionTypes(types: List<String>): Flow<List<ExamQuestionEntity>> =
+        _essays.mapStateFlow { essays ->
+            essays
+                .filter { it.questionType in types }
+                .sortedWith(
+                    compareByDescending<ExamQuestionEntity> { it.year }
+                        .thenBy { it.examPaperCode }
+                        .thenBy { it.id }
+                )
+        }
+
+    /**
      * 返回全部 ESSAY 题,按年份倒序(与生产 SQL ORDER BY year DESC 一致)。
      *
      * 调用方(KnowledgeRepository.observeRelatedEssays)在内存中按

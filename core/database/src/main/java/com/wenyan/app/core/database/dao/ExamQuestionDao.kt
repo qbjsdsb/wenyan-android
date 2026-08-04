@@ -46,6 +46,19 @@ interface ExamQuestionDao {
     fun observeByQuestionType(type: String): Flow<List<ExamQuestionEntity>>
 
     /**
+     * 查询指定多个题型的真题（v0.9.33 真题背题新增）。
+     *
+     * 用于"名词解释 + 简答"背题专项：`IN (:types)` 严格限定题型，
+     * 从数据层排除 ESSAY（论述题有独立板块，避免两处重复展示）。
+     *
+     * 索引：question_type 已有单列索引（v0.9.24），IN 子句可用。
+     * 数据量 346 条；保留稳定 ORDER BY（year DESC, exam_paper_code ASC, id ASC）
+     * 保证前后题导航顺序不随查询漂移。
+     */
+    @Query("SELECT * FROM exam_questions WHERE question_type IN (:types) ORDER BY year DESC, exam_paper_code ASC, id ASC")
+    fun observeByQuestionTypes(types: List<String>): Flow<List<ExamQuestionEntity>>
+
+    /**
      * 查询所有论述题（v0.9.8 论述题板块新增）。
      *
      * 返回全部 134 道 ESSAY 题按年份倒序，调用方在内存中按 `related_point_ids`

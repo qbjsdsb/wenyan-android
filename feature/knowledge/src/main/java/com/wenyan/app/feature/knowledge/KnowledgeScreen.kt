@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -31,9 +32,11 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SmartToy
 import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
@@ -86,6 +89,7 @@ import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 fun KnowledgeScreen(
     onNavigateToAiAssistant: () -> Unit = {},
     onNavigateToDetail: (String) -> Unit = {},
+    onNavigateToQuizPractice: () -> Unit = {},
     viewModel: KnowledgeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -119,6 +123,12 @@ fun KnowledgeScreen(
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .padding(innerPadding),
         ) {
+            // v0.9.33 新增：真题背题入口卡（名词解释/简答专项，位于搜索框上方）
+            QuizPracticeEntryCard(
+                onClick = onNavigateToQuizPractice,
+                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+            )
+
             // v0.8.19 P1-UI-1: 搜索框
             // v0.9.25 修复：错误态下禁用搜索/分类（原实现可输入/点击高亮，但数据流已终止不重载）
             val filterEnabled = uiState.error == null
@@ -256,6 +266,60 @@ private fun SearchBar(
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
     )
+}
+
+// ── 真题背题入口卡（v0.9.33）────────────────────────────────
+
+/**
+ * 知识点页顶部"真题背题"入口卡（v0.9.33 新增）。
+ *
+ * 引导进入名词解释/简答背题专项。副标题明确标注"论述题见论述题 Tab"，
+ * 与论述题板块划清边界（背题练"记得住"，论述题练"怎么写"）。
+ */
+@Composable
+private fun QuizPracticeEntryCard(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    androidx.compose.material3.Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceBright,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(Spacing.lg),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            Icon(
+                imageVector = Icons.Default.School,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.kp_quiz_entry_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = stringResource(R.string.kp_quiz_entry_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }
 
 // 分类标签行

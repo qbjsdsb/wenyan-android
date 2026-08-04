@@ -4,8 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import com.wenyan.app.feature.aiassistant.AiAssistantScreen
 import com.wenyan.app.feature.aiassistant.ApiConfigScreen
@@ -14,6 +16,8 @@ import com.wenyan.app.feature.knowledge.EssayDetailScreen
 import com.wenyan.app.feature.knowledge.EssayListScreen
 import com.wenyan.app.feature.knowledge.KnowledgePointDetailScreen
 import com.wenyan.app.feature.knowledge.KnowledgeScreen
+import com.wenyan.app.feature.knowledge.QuizPracticeDetailScreen
+import com.wenyan.app.feature.knowledge.QuizPracticeListScreen
 import com.wenyan.app.feature.quiz.WrongAnswerScreen
 import com.wenyan.app.feature.settings.AboutTutorialScreen
 import com.wenyan.app.feature.settings.SettingsScreen
@@ -78,6 +82,29 @@ fun WenyanNavHost(
                     launchSingleTop = true
                 }
             },
+            onNavigateToQuizPractice = {
+                navController.navigate(ROUTE_QUIZ_PRACTICE) {
+                    launchSingleTop = true
+                }
+            },
+        )
+        // v0.9.33：真题背题子路由（名词解释/简答专项）
+        quizPracticeDestination(
+            onBack = { navController.popBackStack() },
+            onNavigateToDetail = { questionId, type, subject, year ->
+                val typeParam = type ?: FILTER_ALL
+                val subjectParam = subject ?: FILTER_ALL
+                val yearParam = year?.toString() ?: FILTER_ALL
+                navController.navigate(
+                    "$ROUTE_QUIZ_PRACTICE_DETAIL/$questionId" +
+                        "?type=$typeParam&subject=$subjectParam&year=$yearParam",
+                ) {
+                    launchSingleTop = true
+                }
+            },
+        )
+        quizPracticeDetailDestination(
+            onBack = { navController.popBackStack() },
         )
         // v0.9.9：真题 → 论述题迁移，essayTabDestination 替换 quizDestination
         // 顶级 Tab 使用 NavHost 默认 Tab fade transition（与 cards/wrongAnswer/settings 一致）
@@ -193,12 +220,55 @@ fun WenyanNavHost(
 private fun NavGraphBuilder.knowledgeDestination(
     onNavigateToAiAssistant: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
+    onNavigateToQuizPractice: () -> Unit,
 ) {
     composable(TopLevelDestination.ROUTE_KNOWLEDGE) {
         KnowledgeScreen(
             onNavigateToAiAssistant = onNavigateToAiAssistant,
             onNavigateToDetail = onNavigateToDetail,
+            onNavigateToQuizPractice = onNavigateToQuizPractice,
         )
+    }
+}
+
+// v0.9.33：真题背题列表子路由（名词解释/简答专项）
+private fun NavGraphBuilder.quizPracticeDestination(
+    onBack: () -> Unit,
+    onNavigateToDetail: (questionId: String, type: String?, subject: String?, year: Int?) -> Unit,
+) {
+    composable(
+        route = ROUTE_QUIZ_PRACTICE,
+        enterTransition = { WenyanMotion.PushEnterTransition },
+        exitTransition = { WenyanMotion.PushExitTransition },
+        popEnterTransition = { WenyanMotion.PopEnterTransition },
+        popExitTransition = { WenyanMotion.PopExitTransition },
+    ) {
+        QuizPracticeListScreen(
+            onBack = onBack,
+            onNavigateToQuizPracticeDetail = onNavigateToDetail,
+        )
+    }
+}
+
+// v0.9.33：真题背题详情子路由（纯背诵模式）
+private fun NavGraphBuilder.quizPracticeDetailDestination(
+    onBack: () -> Unit,
+) {
+    composable(
+        route = "$ROUTE_QUIZ_PRACTICE_DETAIL/{questionId}?type={type}&subject={subject}&year={year}",
+        arguments = listOf(
+            navArgument("questionId") { type = NavType.StringType },
+            // 筛选条件（"ALL" 表示不筛选），背题页按相同条件重建前后题列表
+            navArgument("type") { type = NavType.StringType; defaultValue = FILTER_ALL },
+            navArgument("subject") { type = NavType.StringType; defaultValue = FILTER_ALL },
+            navArgument("year") { type = NavType.StringType; defaultValue = FILTER_ALL },
+        ),
+        enterTransition = { WenyanMotion.PushEnterTransition },
+        exitTransition = { WenyanMotion.PushExitTransition },
+        popEnterTransition = { WenyanMotion.PopEnterTransition },
+        popExitTransition = { WenyanMotion.PopExitTransition },
+    ) {
+        QuizPracticeDetailScreen(onBack = onBack)
     }
 }
 
@@ -370,3 +440,7 @@ private const val ROUTE_ABOUT = "about"
 private const val ROUTE_ESSAY_DETAIL = "essay_detail"
 // v0.9.11：检查更新子路由
 private const val ROUTE_UPDATE_CHECK = "update_check"
+// v0.9.33：真题背题子路由
+private const val ROUTE_QUIZ_PRACTICE = "quiz_practice"
+private const val ROUTE_QUIZ_PRACTICE_DETAIL = "quiz_practice_detail"
+private const val FILTER_ALL = "ALL"
