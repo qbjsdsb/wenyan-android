@@ -81,6 +81,32 @@ class CardsViewModelTest {
     }
 
     /**
+     * 回归：上游首次发空队列、随后真实卡片到达时，不能把空列表冻结为整场会话。
+     * 该竞态会表现为今日任务横幅已有新卡数量，但正文仍显示“今天没有到期卡片”。
+     */
+    @Test
+    fun `首次空队列后真实卡片到达仍会显示卡片`() = runTest(testDispatcher) {
+        cardRepository = FakeCardRepository(initialCards = emptyList())
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = cardRepository,
+            schedulingRepository = FakeSchedulingRepository(),
+            wrongAnswerRepository = FakeWrongAnswerRepository(),
+            studyProgressRepository = FakeStudyProgressRepository(),
+            cardSettingsRepository = FakeCardSettingsRepository(),
+        )
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.cards.isEmpty())
+
+        cardRepository.emitCards(listOf(testClozeCard(pointId = "late_card")))
+        advanceUntilIdle()
+
+        assertEquals("late_card", viewModel.uiState.value.currentCard?.pointId)
+        assertFalse(viewModel.uiState.value.isFinished)
+    }
+
+    /**
      * 场景 1:rateCard(AGAIN) 后 wrongAnswerRepository.recordWrongAnswer 被调用,
      * source = SOURCE_CARD_AGAIN,pointId 与当前卡片一致,correctAnswer = 完整 quote(ClozeQuoteCard 取 quote 而非 back)。
      */

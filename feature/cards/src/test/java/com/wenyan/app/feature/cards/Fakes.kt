@@ -48,6 +48,10 @@ class FakeCardRepository(
 
     private val _cards = MutableStateFlow(initialCards)
 
+    fun emitCards(cards: List<CardTemplate>) {
+        _cards.value = cards
+    }
+
     override fun getCardsForReview(): Flow<List<CardTemplate>> =
         throwOnGetCards?.let { e ->
             flow { throw e }

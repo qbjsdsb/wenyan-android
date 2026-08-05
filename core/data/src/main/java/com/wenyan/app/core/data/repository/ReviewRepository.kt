@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.shareIn
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -271,16 +271,21 @@ class ReviewRepository @Inject constructor(
      * 原实现每次 collect 都独立执行整条 tickFlow + Room 订阅链：卡片页
      * todayPlan 横幅（仅计数）与 [CardRepositoryImpl.getCardsForReview]
      * （拆卡）各订阅一次，每 60s tick 触发**两套**全表查询 + selectNewPoints
-     * 计算。`stateIn` 共享后仅一个上游在跑，多 UI 流复用同一结果。
+     * 计算。`shareIn` 共享后仅一个上游在跑，多 UI 流复用同一结果。
      *
-     * [SharingStarted.WhileSubscribed]：无订阅者 5s 后停止上游（tick 停止），
-     * 避免后台空转；首个订阅立即拿到空初始值，随后被真实队列替换。
+     * [SharingStarted.WhileSubscribed]：无订阅者 5s 后停止上游并清空 replay，
+     * 避免后台空转。这里刻意不用带空初值的 `stateIn`：卡片会话会冻结首次结果，
+     * 人工空初值会让真实新卡到达后横幅有数量、正文却仍保持空状态；停止后清空
+     * replay 则避免再次进入页面时先冻结上次会话的旧队列。
      */
     private val sharedTodayStudyQueue: Flow<TodayStudyQueue> =
-        buildTodayStudyQueue().stateIn(
+        buildTodayStudyQueue().shareIn(
             scope = externalScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = TodayStudyQueue(emptyList(), emptyList()),
+            started = SharingStarted.WhileSubscribed(
+                stopTimeoutMillis = 5_000,
+                replayExpirationMillis = 0,
+            ),
+            replay = 1,
         )
 
     /**

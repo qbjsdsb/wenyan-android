@@ -3,15 +3,15 @@ package com.wenyan.app.feature.cards
 import androidx.compose.ui.res.stringResource
 import com.wenyan.app.feature.cards.R
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
@@ -102,6 +102,8 @@ import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.designsystem.component.WenyanRatingButton
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import kotlinx.coroutines.withTimeout
+import kotlin.math.PI
+import kotlin.math.sin
 import com.wenyan.app.core.designsystem.theme.ColorMode
 import com.wenyan.app.core.designsystem.theme.ThemeConfig
 import com.wenyan.app.core.designsystem.theme.WenyanTheme
@@ -116,6 +118,12 @@ import com.wenyan.app.core.fsrs.Rating
  * 正常流程下 SnackbarDuration.Short（约 4 秒）先于超时结束。
  */
 private const val SNACKBAR_TIMEOUT_MS = 5_000L
+
+/** 翻转稍慢于普通状态切换，给正反面交接留出可感知的空间运动。 */
+private const val CARD_FLIP_DURATION_MS = 420
+
+/** 正反面操作区使用短促的 fade-through，避免两个不同高度面板同时占位造成跳动。 */
+private const val CARD_ACTIONS_DURATION_MS = 240
 
 /**
  * 横屏双栏卡片最大宽度（v0.9.35 协调优化）。
@@ -669,6 +677,61 @@ internal fun CardReviewContent(
         }
     }
 
+    @Composable
+    fun ColumnScope.AnimatedCardActions(
+        compact: Boolean,
+        vertical: Boolean,
+    ) {
+        AnimatedContent(
+            targetState = uiState.isFlipped,
+            transitionSpec = {
+                val direction = if (targetState) 1 else -1
+                (
+                    fadeIn(
+                        animationSpec = tween(
+                            durationMillis = CARD_ACTIONS_DURATION_MS,
+                            delayMillis = CARD_ACTIONS_DURATION_MS / 4,
+                            easing = WenyanMotion.DecelerateEasing,
+                        ),
+                    ) + slideInVertically(
+                        animationSpec = tween(
+                            CARD_ACTIONS_DURATION_MS,
+                            easing = WenyanMotion.DecelerateEasing,
+                        ),
+                        initialOffsetY = { direction * it / 10 },
+                    )
+                    ).togetherWith(
+                    fadeOut(
+                        animationSpec = tween(
+                            CARD_ACTIONS_DURATION_MS / 2,
+                            easing = WenyanMotion.AccelerateEasing,
+                        ),
+                    ) + slideOutVertically(
+                        animationSpec = tween(
+                            CARD_ACTIONS_DURATION_MS,
+                            easing = WenyanMotion.AccelerateEasing,
+                        ),
+                        targetOffsetY = { -direction * it / 12 },
+                    ),
+                )
+            },
+            label = "card_actions",
+            modifier = Modifier.fillMaxWidth(),
+        ) { flipped ->
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                if (flipped) {
+                    FlippedActions(compact = compact, vertical = vertical)
+                } else {
+                    UnflippedActions(vertical = vertical)
+                }
+            }
+        }
+    }
+
     if (useDualPane) {
         // ── 横屏双栏：左卡片突出 / 右操作面板窄列 ──
         // v0.9.36 全屏：fullscreenLandscape=true 时右操作栏加宽到 280dp、
@@ -713,30 +776,10 @@ internal fun CardReviewContent(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    // 翻转后：评分 + 加入错题本 + 撤销/跳过
-                    AnimatedVisibility(
-                        visible = uiState.isFlipped,
-                        enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 }),
-                        exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 4 }),
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                            FlippedActions(compact = !fullscreenLandscape, vertical = fullscreenLandscape)
-                        }
-                    }
-                    // 翻转前：提示 + 加入错题本 + 撤销/跳过
-                    AnimatedVisibility(
-                        visible = !uiState.isFlipped,
-                        enter = fadeIn(),
-                        exit = fadeOut(),
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                        ) {
-                            UnflippedActions(vertical = fullscreenLandscape)
-                        }
-                    }
+                    AnimatedCardActions(
+                        compact = !fullscreenLandscape,
+                        vertical = fullscreenLandscape,
+                    )
                 }
             }
         }
@@ -769,31 +812,9 @@ internal fun CardReviewContent(
                     },
                 )
 
-                // 评分按钮（翻转后）+ 撤销/跳过按钮 / 翻转前提示文案
-                // 用 AnimatedVisibility 替代 if/else 硬切
-                AnimatedVisibility(
-                    visible = uiState.isFlipped,
-                    enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 }),
-                    exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 4 }),
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                        FlippedActions(compact = false, vertical = false)
-                    }
-                }
-                AnimatedVisibility(
-                    visible = !uiState.isFlipped,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                ) {
-                    // 翻转前的辅助提示 + 撤销/跳过按钮
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    ) {
-                        UnflippedActions(vertical = false)
-                    }
-                }
+                // 正反面操作区共用同一布局槽位，避免旧实现两个 AnimatedVisibility
+                // 在交接期同时占高导致卡片与按钮上下跳动。
+                AnimatedCardActions(compact = false, vertical = false)
             }
         }
     }
@@ -1279,10 +1300,10 @@ private fun FlipCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // 翻转角度动画：v0.8.12 P1-3 对齐 WenyanMotion.DurationMedium(300ms)
+    // 420ms 空间运动 + 中点轻微退远，比原 300ms 匀速观感更柔和、正反面交接更清楚。
     val rotation by animateFloatAsState(
         targetValue = if (isFlipped) 180f else 0f,
-        animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.EmphasizedEasing),
+        animationSpec = tween(CARD_FLIP_DURATION_MS, easing = WenyanMotion.EmphasizedEasing),
         label = "card_flip",
     )
 
@@ -1295,7 +1316,7 @@ private fun FlipCard(
         } else {
             MaterialTheme.colorScheme.surfaceContainerHigh
         },
-        animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.EmphasizedEasing),
+        animationSpec = tween(CARD_FLIP_DURATION_MS, easing = WenyanMotion.EmphasizedEasing),
         label = "card_color",
     )
 
@@ -1320,7 +1341,10 @@ private fun FlipCard(
             )
             .graphicsLayer {
                 rotationY = rotation
-                cameraDistance = 12 * density
+                val scaleAtAngle = flipScale(rotation)
+                scaleX = scaleAtAngle
+                scaleY = scaleAtAngle
+                cameraDistance = 18 * density
             }
             .semantics {
                 role = Role.Button
@@ -1625,6 +1649,12 @@ private fun RatingButton(
  * 会在每帧更新 rotation，本函数在每帧被调用以决定内容切换时机。
  */
 internal fun shouldShowBack(rotation: Float): Boolean = rotation > 90f
+
+/** 翻到侧面时轻微缩小，起止位置保持 1f，避免生硬的平面原地旋转。 */
+internal fun flipScale(rotation: Float): Float {
+    val normalized = rotation.coerceIn(0f, 180f) / 180f
+    return 1f - 0.025f * sin(normalized * PI).toFloat()
+}
 
 // ---------- v0.9.7 M10: @Preview ----------
 //

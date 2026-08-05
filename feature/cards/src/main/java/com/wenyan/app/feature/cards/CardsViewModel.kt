@@ -367,11 +367,16 @@ class CardsViewModel @Inject constructor(
                         val isFirstLoad = savedStateHandle.get<Boolean>(KEY_SESSION_LOADED) != true
                         val effectiveCards = if (isFirstLoad) {
                             // 首次加载:重新生成 sessionCards
-                            savedStateHandle[KEY_SESSION_LOADED] = true
                             // v0.9.37 P1-9:数千张卡的 id 生成(buildString)移出主线程,
                             // 避免冷进入卡片页 combine 在主线程数百 ms 掉帧
                             val newCards = buildSessionCards(cards, newPointIds)
-                            sessionCards = newCards
+                            // 空队列不能冻结为一次学习会话：共享队列过去会先发人工空初值，
+                            // 真实新卡随后到达时因 sessionCards 已冻结为空而永远不可见。
+                            // 即使是真空队列，也应允许 60s tick 后新到期卡进入当前页面。
+                            if (newCards.isNotEmpty()) {
+                                savedStateHandle[KEY_SESSION_LOADED] = true
+                                sessionCards = newCards
+                            }
                             newCards
                         } else if (sessionCards == null) {
                             // 进程被杀后恢复:sessionLoaded=true 但 sessionCards=null
@@ -397,7 +402,13 @@ class CardsViewModel @Inject constructor(
                             // 清空评分历史栈(内存已丢失,同步清空避免 undo 错位)
                             ratingHistory.clear()
                             val newCards = buildSessionCards(cards, newPointIds)
-                            sessionCards = newCards
+                            if (newCards.isNotEmpty()) {
+                                sessionCards = newCards
+                            } else {
+                                // 不冻结空恢复结果，允许随后到期/加载完成的卡片进入。
+                                savedStateHandle[KEY_SESSION_LOADED] = false
+                                sessionCards = null
+                            }
                             newCards
                         } else {
                             // 正常评分中:用冻结的 sessionCards

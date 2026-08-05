@@ -6784,3 +6784,19 @@ while (retryCount <= maxRetries) {
   本机具备 JDK 17，但 Gradle 8.14.4 与 Android SDK 35 下载域名受运行环境网络策略限制，完整
   `testDebugUnitTest` / `assembleDebug` 将由 Draft PR 的 GitHub Actions 执行。
 - **未做**：未发布、未打 tag；“回看”不是数据库级调度回滚，真正撤销需增加复习前状态快照并迁移 schema。
+
+## 2026-08-06：知识卡片空队列竞态与动画流畅度修复（待 CI）
+
+- **问题复现**：真机顶部显示“今日：新学 10 个知识点”，正文却显示“今天没有到期卡片”。
+- **根因**：v0.9.37 将今日队列改为 `stateIn(initialValue = empty)` 后，人工空初值先于 Room
+  真实结果到达；`CardsViewModel` 又会冻结首次卡片列表，导致空会话永久覆盖后续真实新卡。
+- **完成**：
+  - 队列共享改为 `shareIn(replay = 1)`，只重放真实查询结果，不再制造假空状态。
+  - ViewModel 增加第二层保护：空卡片列表不建立冻结会话，真实新卡或 60 秒后到期卡仍可进入当前页面。
+  - 卡片翻转由 300ms 调整为 420ms emphasized motion，中点轻微缩放、降低透视突兀感。
+  - 正反面操作区由两个同时占位的 `AnimatedVisibility` 合并为单槽位 `AnimatedContent`
+    fade-through，消除按钮区高度交接时的上下跳动；竖屏、横屏与全屏共用。
+  - 新增首次空队列后卡片到达、共享流首值真实性、翻转缩放边界等回归测试。
+- **验证**：`git diff --check` 通过；本机 JDK 17 可用，但无 Gradle 8.14.4 缓存且网络策略禁止
+  下载 `services.gradle.org`，完整 `testDebugUnitTest` / `assembleDebug` 交由 PR GitHub Actions 验证。
+- **分支**：`agent/fix-card-queue-animation`。
