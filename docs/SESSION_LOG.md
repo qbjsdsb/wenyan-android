@@ -68,6 +68,23 @@
 
 ---
 
+## 2026-08-05 会话：v0.9.35/36 Release 核验与修复
+
+- **核验通道突破**：GitHub API（SSL EOF）与 Actions 页被代理拦截，发现 **ghfast.top 网页代理可读 `/releases/tag/X` 页面**——以页面标题判别真实 Release（"Release 文研App vX" = 工作流产出；纯 tag 视图 = 未产出）
+- **核验结果**：
+  - v0.9.35：✅ 已发布（Release #65，标题 "Release 文研App v0.9.35"），APK 实测 versionCode 60 / 0.9.35，sha256 `8e8a9d1a…`，receipt 已补写
+  - v0.9.36：❌ 首次 tag 推送（→21d301b）未产出 Release（纯 tag 视图）→ 判定工作流未完成（原因待 API 恢复后查日志）
+- **修复**：移 tag 至 HEAD（ad9ca33，含空态按钮修复）+ 更新 tag 注释（583 单测）+ 强制推送重触发 → **~2.5 分钟生成 Release #66**（2026-08-05T15:55:34Z）
+- **v0.9.36 最终核验**：标题 "Release 文研App v0.9.36"、正文含下载安装/更新内容/功能特性；APK `1e6565f0…` 两资产 sha256 一致；aapt2 versionCode 61 / versionName 0.9.36 / targetSdk 35；apksigner 正式证书 CN=Wenyan App（3fefd8a0… 与历次一致）；receipt 已补全
+- **commit**：
+  - `71a14ae` — docs: v0.9.35 已确认发布 + v0.9.36 重触发（网页代理核验）
+  - （receipt/STATUS 更新随本日志提交）
+- **下次继续**：
+  - GitHub API 恢复后：补录 v0.9.35/36 Release id、查 v0.9.36 首次触发失败日志
+  - 路线图：知识图谱 Graph 视图（数据就绪）/ 学习统计页 / 复习提醒通知
+
+---
+
 ## 2026-08-05 会话：v0.9.34 全局横屏适配
 
 - **完成**：
