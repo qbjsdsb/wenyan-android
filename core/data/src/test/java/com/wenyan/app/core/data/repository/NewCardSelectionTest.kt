@@ -2,6 +2,7 @@ package com.wenyan.app.core.data.repository
 
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
+import com.wenyan.app.core.database.entity.MemoRecordEntity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -17,6 +18,21 @@ import org.junit.Test
  * - 每日限额：按卡片数取整到知识点（60 张 ≈ 10 个）
  */
 class NewCardSelectionTest {
+
+    private fun memo(
+        id: String,
+        state: String = "NEW",
+        reps: Int = 0,
+        reviewCount: Int = 0,
+        lastReviewAt: Long = 0L,
+    ) = MemoRecordEntity(
+        pointId = id,
+        state = state,
+        lastReviewAt = lastReviewAt,
+        nextReviewAt = 1L,
+        reps = reps,
+        reviewCount = reviewCount,
+    )
 
     private fun kp(
         id: String,
@@ -51,6 +67,33 @@ class NewCardSelectionTest {
     )
 
     // ============ 排除已学 ============
+
+    @Test
+    fun `种子预建的 pristine NEW 记录仍属于新卡而不是已学`() {
+        val records = listOf(
+            memo("new"),
+            // 旧版 seed 曾给未学习记录写入安装时间，不能因此误判为已学。
+            memo("legacy_new_timestamp", lastReviewAt = 100L),
+            memo("review", state = "REVIEW", reps = 1, reviewCount = 1, lastReviewAt = 100L),
+        )
+
+        assertEquals(setOf("review"), learnedPointIds(records))
+        assertEquals(setOf("review"), duePointIds(records))
+        assertTrue(records.take(2).all { it.isPristineNew() })
+    }
+
+    @Test
+    fun `旧版字段不一致但存在任一学习痕迹时保留为已学`() {
+        val legacyRecords = listOf(
+            memo("state", state = "REVIEW"),
+            memo("reps", reps = 1),
+            memo("review_count", reviewCount = 1),
+        )
+
+        assertEquals(setOf("state", "reps", "review_count"), learnedPointIds(legacyRecords))
+        assertEquals(setOf("state", "reps", "review_count"), duePointIds(legacyRecords))
+        assertTrue(legacyRecords.none { it.isPristineNew() })
+    }
 
     @Test
     fun `已学知识点不进入新卡候选`() {

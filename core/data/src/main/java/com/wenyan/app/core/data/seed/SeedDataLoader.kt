@@ -5,10 +5,13 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.room.withTransaction
+import com.wenyan.app.core.common.model.ContentSource
 import com.wenyan.app.core.database.WenyanDatabase
 import com.wenyan.app.core.database.dao.ChapterDao
+import com.wenyan.app.core.database.dao.DataSourceDao
 import com.wenyan.app.core.database.dao.ExamCodeHistoryDao
 import com.wenyan.app.core.database.dao.ExamQuestionDao
 import com.wenyan.app.core.database.dao.KnowledgePointDao
@@ -16,6 +19,7 @@ import com.wenyan.app.core.database.dao.MemoRecordDao
 import com.wenyan.app.core.database.dao.SubjectDao
 import com.wenyan.app.core.database.dao.WritingMaterialDao
 import com.wenyan.app.core.database.entity.ChapterEntity
+import com.wenyan.app.core.database.entity.DataSourceEntity
 import com.wenyan.app.core.database.entity.ExamQuestionEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.MemoRecordEntity
@@ -31,6 +35,9 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** 提升此值可在 seed 内容版本不变时触发一次安全重导。 */
+internal const val CURRENT_SEED_IMPORT_SCHEMA_VERSION = 1
+
 /**
  * 种子数据加载器（阶段2：数据管线接通）。
  *
@@ -42,7 +49,7 @@ import javax.inject.Singleton
  * 种子数据结构对齐 generate_seed.py 输出格式，覆盖四类：
  * 知识点 / 真题 / 写作素材（卡片由 [com.wenyan.app.core.data.repository.CardRepository] 动态生成，不入库）。
  *
- * P0-D2 修正：导入过程用 [WenyanDatabase.withTransaction] 包裹，确保 7 步原子性。
+ * P0-D2 修正：导入过程用 [WenyanDatabase.withTransaction] 包裹，确保全部导入步骤原子性。
  * 原实现无事务包裹，中途失败会留下半成品数据 + DataStore 已写"initialized" → 永久半成品。
  *
  * NF-J 修复（种子加载链路稳健性）：
@@ -50,11 +57,11 @@ import javax.inject.Singleton
  *   与主 `wenyan_preferences` 分离，导致全局偏好分散在两处。现统一注入 Hilt 单例
  *   [DataStore]<[Preferences]>，与 [com.wenyan.app.core.data.di.DataStoreModule] 提供的
  *   主 DataStore 共用一个文件（wenyan_preferences.preferences_pb）。
- * - [isInitialized] / [markInitialized] 加 [IOException] 兜底：DataStore 读写在磁盘
+ * - [isInitialized] / [storeSeedState] 加 [IOException] 兜底：DataStore 读写在磁盘
  *   故障/权限异常时抛 IOException，原实现会冒泡到 Application 的 CoroutineExceptionHandler
  *   导致种子加载被吞掉、下次启动仍报错。现 [isInitialized] 异常时假设"未初始化"
- *   让种子重试导入，[markInitialized] 异常时仅 Log.w 不冒泡（App 继续工作，下次启动重试，
- *   种子重复导入用 REPLACE 策略幂等）。
+ *   让种子重试导入，[storeSeedState] 异常时仅 Log.w 不冒泡（App 继续工作，下次启动重试，
+ *   内容表 Upsert 幂等，MemoRecord 按数据库已有 ID 保留）。
  * - 不修改 DAO 的 `@Insert(onConflict = REPLACE)` 策略：种子加载只在
  *   `isInitialized() == false` 时执行（首次安装），事务包裹确保原子性，首次安装
  *   用户无数据可被覆盖。
@@ -62,9 +69,9 @@ import javax.inject.Singleton
  * P1-AUDIT-4 修复：版本感知种子升级。原实现只用 boolean `seed_initialized` 标志，
  * 更新 seed_data.json 后用户不会获得新内容（标志仍为 true）。现改为：
  * - 存储 seed_data.json 的 metadata.version 到 DataStore
- * - 启动时比对存储版本与当前 seed 版本
- * - 版本不一致时重新导入内容表（subjects/chapters/knowledge_points/exam_questions/
- *   writing_materials），用 @Upsert 安全更新内容
+ * - 独立存储导入器 schema，字段消费逻辑变化时无需伪造 seed 内容版本
+ * - 启动时比对内容版本与导入 schema；任一不一致时重新导入内容表
+ *   （subjects/chapters/knowledge_points/exam_questions/writing_materials），用 @Upsert 安全更新内容
  * - **保护 MemoRecord**：升级时跳过已有 MemoRecord 的知识点（保留用户 FSRS 学习进度），
  *   仅为新增知识点创建初始 MemoRecord
  */
@@ -76,6 +83,7 @@ class SeedDataLoader @Inject constructor(
     private val examCodeHistoryDao: ExamCodeHistoryDao,
     private val subjectDao: SubjectDao,
     private val chapterDao: ChapterDao,
+    private val dataSourceDao: DataSourceDao,
     private val knowledgePointDao: KnowledgePointDao,
     private val examQuestionDao: ExamQuestionDao,
     private val writingMaterialDao: WritingMaterialDao,
@@ -96,24 +104,34 @@ class SeedDataLoader @Inject constructor(
      * 反序列化 5.3MB seed_data.json——原实现每次冷启动都全量解析，仅为了比对
      * 版本号，浪费 IO/CPU。首次安装/升级路径保持单次全量解析（不重复）。
      *
-     * NF-J 修复：[isInitialized] 与 [markInitialized] 都已加 IOException 兜底，
+     * NF-J 修复：[isInitialized] 与 [storeSeedState] 都已加 IOException 兜底，
      * 此方法自身不会再因 DataStore 故障抛 IOException；[readSeedDataFromAssets]
      * 与 [importToDatabase] 的异常会冒泡到 Application 的 CoroutineExceptionHandler
      * 被吞掉（Log.e），下次启动重试。
      */
     suspend fun ensureSeedDataLoaded() {
         val initialized = isInitialized()
-        val storedVersion = getStoredSeedVersion()
 
         if (initialized) {
+            val storedVersion = getStoredSeedVersion()
+            val storedImportSchemaVersion = getStoredImportSchemaVersion()
             // v0.9.37 P0-1：命中路径只做轻量版本解析，跳过 5.3MB 全量反序列化
             val currentVersion = readSeedVersionFromAssets().ifBlank { DEFAULT_SEED_VERSION }
-            if (storedVersion == currentVersion) return
-            Timber.i("Seed version upgrade: $storedVersion → $currentVersion, re-importing content (MemoRecord preserved)")
+            val importRequired = shouldImportSeedData(
+                initialized = true,
+                storedContentVersion = storedVersion,
+                currentContentVersion = currentVersion,
+                storedImportSchemaVersion = storedImportSchemaVersion,
+            )
+            if (!importRequired) return
+            Timber.i(
+                "Seed import upgrade: content $storedVersion → $currentVersion, " +
+                    "schema $storedImportSchemaVersion → $CURRENT_SEED_IMPORT_SCHEMA_VERSION " +
+                    "(MemoRecord preserved)",
+            )
             val seedData = readSeedDataFromAssets()
             importToDatabase(seedData, isUpgrade = true)
-            markInitialized()
-            storeSeedVersion(currentVersion)
+            storeSeedState(currentVersion)
             return
         }
 
@@ -121,39 +139,21 @@ class SeedDataLoader @Inject constructor(
         val seedData = readSeedDataFromAssets()
         val currentVersion = seedData.metadata.version.ifBlank { DEFAULT_SEED_VERSION }
         importToDatabase(seedData, isUpgrade = false)
-        markInitialized()
-        storeSeedVersion(currentVersion)
+        storeSeedState(currentVersion)
     }
 
     /**
      * 读取 DataStore 中是否已初始化标志。
      *
      * NF-J 修复：DataStore 读写可能抛 [IOException]（磁盘满/权限/文件损坏），
-     * 兜底返回 false 让种子重试导入（[importToDatabase] 用事务包裹 + REPLACE 幂等，
-     * 重复导入无副作用）。
+     * 兜底返回 false 让种子重试导入（[importToDatabase] 用事务包裹 + Upsert，
+     * MemoRecord 会查询已有 ID，重复导入不会重置学习进度）。
      */
     private suspend fun isInitialized(): Boolean = try {
         preferencesDataStore.data.map { it[SEED_INITIALIZED_KEY] ?: false }.first()
     } catch (e: IOException) {
         Timber.w(e, "DataStore read failed, assuming seed not initialized")
         false
-    }
-
-    /**
-     * 标记初始化完成。
-     *
-     * NF-J 修复：DataStore 写失败时仅 Log.w 不冒泡。原因：
-     * 1. 此时种子已成功导入数据库（[importToDatabase] 事务已提交）；
-     * 2. 若冒泡到 Application，会被 CoroutineExceptionHandler 吞掉，无意义；
-     * 3. 下次启动 [isInitialized] 仍返回 false → 重新导入（REPLACE 幂等，无副作用）。
-     * 唯一代价是下次启动会重复跑一次种子导入，可接受。
-     */
-    private suspend fun markInitialized() {
-        try {
-            preferencesDataStore.edit { it[SEED_INITIALIZED_KEY] = true }
-        } catch (e: IOException) {
-            Timber.w(e, "DataStore write failed, seed will re-import on next launch")
-        }
     }
 
     /**
@@ -170,16 +170,34 @@ class SeedDataLoader @Inject constructor(
     }
 
     /**
-     * 存储种子版本到 DataStore（P1-AUDIT-4）。
+     * 读取种子导入器 schema 版本。
      *
-     * 与 [markInitialized] 同样的 IOException 兜底策略：写失败仅 Log.w，
-     * 下次启动会因版本不匹配重新导入（@Upsert 幂等，无副作用）。
+     * 它与内容版本分离：当 JSON 内容不变、但 App 开始消费此前已存在的字段（例如
+     * textbook_sources）时，只提升导入 schema 即可让老用户安全重导，无需伪造内容版本。
      */
-    private suspend fun storeSeedVersion(version: String) {
+    private suspend fun getStoredImportSchemaVersion(): Int = try {
+        preferencesDataStore.data.map { it[SEED_IMPORT_SCHEMA_VERSION_KEY] ?: 0 }.first()
+    } catch (e: IOException) {
+        Timber.w(e, "DataStore read failed for seed import schema, assuming 0")
+        0
+    }
+
+    /**
+     * 原子保存“已初始化 + 种子内容版本 + 导入 schema”。
+     *
+     * 三个字段必须在同一次 DataStore edit 中提交，避免进程在多次写入之间终止后出现
+     * initialized=true 但版本/schema 未更新的撕裂状态。
+     * 写失败时数据库事务已经成功；下次启动可安全重导，MemoRecord 会按数据库事实保留。
+     */
+    private suspend fun storeSeedState(version: String) {
         try {
-            preferencesDataStore.edit { it[SEED_VERSION_KEY] = version }
+            preferencesDataStore.edit {
+                it[SEED_INITIALIZED_KEY] = true
+                it[SEED_VERSION_KEY] = version
+                it[SEED_IMPORT_SCHEMA_VERSION_KEY] = CURRENT_SEED_IMPORT_SCHEMA_VERSION
+            }
         } catch (e: IOException) {
-            Timber.w(e, "DataStore write failed for seed version: $version")
+            Timber.w(e, "DataStore write failed for seed state: $version; safe re-import will run next launch")
         }
     }
 
@@ -212,14 +230,13 @@ class SeedDataLoader @Inject constructor(
      *
      * 卡片不入库：由 [com.wenyan.app.core.data.repository.CardRepository] 从知识点动态生成。
      *
-     * P0-D2 修正：整个导入过程用 [database.withTransaction] 包裹，确保 7 步原子性。
-     * 任何一步失败将回滚全部已插入数据，且 markInitialized() 不会被调用（在事务外），
+     * P0-D2 修正：整个导入过程用 [database.withTransaction] 包裹，确保全部步骤原子性。
+     * 任何一步失败将回滚全部已插入数据，且 storeSeedState() 不会被调用（在事务外），
      * 下次启动会重新尝试导入，避免留下"半成品数据 + initialized=true"的永久不一致。
      *
      * P1-AUDIT-4 修复：[isUpgrade] 参数控制 MemoRecord 导入策略。
-     * - 首次安装（isUpgrade=false）：为所有知识点创建初始 MemoRecord
-     * - 版本升级（isUpgrade=true）：查询已有 MemoRecord 的 point_id，仅为新增知识点
-     *   创建 MemoRecord，**不覆盖用户 FSRS 学习进度**（stability/difficulty/nextReviewAt）
+     * 无论 DataStore 判断为首次安装还是升级，都查询已有 MemoRecord 的 point_id，仅为缺失
+     * 知识点创建记录，**不覆盖用户 FSRS 学习进度**（stability/difficulty/nextReviewAt）。
      */
     private suspend fun importToDatabase(seedData: SeedData, isUpgrade: Boolean = false) = database.withTransaction {
         val now = System.currentTimeMillis()
@@ -321,9 +338,9 @@ class SeedDataLoader @Inject constructor(
                 difficulty = seed.difficulty,
                 createdAt = now,
                 updatedAt = now,
-                contentSource = "TEXTBOOK_NATIVE",
+                contentSource = seed.contentSourceCode(),
                 ocrStatus = "VERIFIED",
-                sourceFile = seed.sourceRef,
+                sourceFile = seed.resolvedSourceFiles().joinToString("；").takeIf { it.isNotBlank() },
                 sourcePage = null,
                 studyText = seed.studyText,
             )
@@ -332,16 +349,41 @@ class SeedDataLoader @Inject constructor(
             knowledgePointDao.insertAll(knowledgePointEntities)
         }
 
-        // 步骤4：为每个知识点创建初始 MemoRecord（state=NEW，立即到期可复习）
+        // 步骤3.1：导入可追溯教材来源。旧 seed 常用“其他”占位，这种值不写入来源表，
+        // 防止 UI/AI 把占位文本包装成精确引用。App 管理的来源先删后建，种子升级时
+        // 已移除或改名的教材不会残留；非 seed 前缀的用户来源不受影响。
+        dataSourceDao.deleteManagedKnowledgePointSources()
+        val importedKnowledgePointIds = knowledgePointEntities.mapTo(mutableSetOf()) { it.id }
+        val dataSourceEntities = buildSeedDataSourceEntities(
+            seeds = seedData.knowledgePoints,
+            importedKnowledgePointIds = importedKnowledgePointIds,
+            createdAt = now,
+        )
+        if (dataSourceEntities.isNotEmpty()) {
+            dataSourceDao.insertAll(dataSourceEntities)
+        }
+        val declaredConflictCount = seedData.knowledgePoints.count { it.conflictFlag }
+        val verifiableConflictCount = seedData.knowledgePoints.count { it.hasVerifiableTextbookConflict() }
+        if (verifiableConflictCount > 0) {
+            Timber.i("Seed import: marked $verifiableConflictCount knowledge points as verifiable textbook conflicts")
+        }
+        val unverifiedConflictCount = declaredConflictCount - verifiableConflictCount
+        if (unverifiedConflictCount > 0) {
+            Timber.w(
+                "Seed import: ignored $unverifiedConflictCount conflict flags " +
+                    "without at least two traceable textbook sources",
+            )
+        }
+
+        // 步骤4：为每个知识点创建初始 MemoRecord（state=NEW，等待每日新卡选择）
         // P1-AUDIT-4 修复：升级时跳过已有 MemoRecord 的知识点，保留用户 FSRS 学习进度。
         // 仅为新增知识点（种子更新后新加的）创建初始 MemoRecord。
-        val existingMemoPointIds = if (isUpgrade) {
-            memoRecordDao.getExistingPointIds().toSet()
-        } else {
-            emptySet()
-        }
+        // 数据库才是进度是否存在的事实来源。不能依赖 DataStore 的 isUpgrade：若数据库事务
+        // 已成功但 seed 状态写入失败，下次启动会再次被视为“首次安装”；旧逻辑会为空集并
+        // Upsert 全部初始记录，覆盖用户在两次启动之间产生的 FSRS 进度。
+        val existingMemoPointIds = memoRecordDao.getExistingPointIds().toSet()
         val memoRecords = knowledgePointEntities
-            .filter { kp -> kp.id !in existingMemoPointIds }
+            .missingMemoRecords(existingMemoPointIds)
             .map { kp ->
                 MemoRecordEntity(
                     pointId = kp.id,
@@ -350,7 +392,9 @@ class SeedDataLoader @Inject constructor(
                     difficulty = 5f,
                     // P2-AUDIT-1 修正：lastReviewAt = 0L 表示"从未复习"，原为 now 语义错误
                     lastReviewAt = 0L,
-                    nextReviewAt = now, // 立即到期，新知识点可立即进入复习队列
+                    // 保留可立即开始的时间戳；ReviewRepository/DAO 会按 pristine NEW 语义
+                    // 将其交给每日新卡限额处理，而不是归入已学习卡的到期复习队列。
+                    nextReviewAt = now,
                     reviewCount = 0,
                     failCount = 0,
                     inPriorityQueue = 0,
@@ -359,8 +403,8 @@ class SeedDataLoader @Inject constructor(
         if (memoRecords.isNotEmpty()) {
             memoRecordDao.insertAll(memoRecords)
         }
-        if (isUpgrade) {
-            Timber.i("Seed upgrade: created ${memoRecords.size} new MemoRecords, preserved ${existingMemoPointIds.size} existing")
+        if (isUpgrade || existingMemoPointIds.isNotEmpty()) {
+            Timber.i("Seed import: created ${memoRecords.size} new MemoRecords, preserved ${existingMemoPointIds.size} existing")
         }
 
         // 步骤5：导入真题（按 subject 字段映射到 subjectId）
@@ -429,6 +473,8 @@ class SeedDataLoader @Inject constructor(
         private val SEED_INITIALIZED_KEY = booleanPreferencesKey("seed_initialized")
         /** P1-AUDIT-4：种子版本号，用于版本感知升级 */
         private val SEED_VERSION_KEY = stringPreferencesKey("seed_version")
+        /** 导入器 schema：字段消费逻辑变化时触发重导，但不冒充 seed 内容版本。 */
+        private val SEED_IMPORT_SCHEMA_VERSION_KEY = intPreferencesKey("seed_import_schema_version")
         /** seed_data.json metadata.version 为空时的默认版本（视为首次安装） */
         private const val DEFAULT_SEED_VERSION = "v1"
 
@@ -747,6 +793,17 @@ internal fun parseSeedVersionFromJson(
     return shell.metadata?.version.orEmpty()
 }
 
+/** 内容版本或导入 schema 任一变化时都必须重导；首次安装始终导入。 */
+internal fun shouldImportSeedData(
+    initialized: Boolean,
+    storedContentVersion: String,
+    currentContentVersion: String,
+    storedImportSchemaVersion: Int,
+    currentImportSchemaVersion: Int = CURRENT_SEED_IMPORT_SCHEMA_VERSION,
+): Boolean = !initialized ||
+    storedContentVersion != currentContentVersion ||
+    storedImportSchemaVersion != currentImportSchemaVersion
+
 /** 科目种子数据（对应 SubjectEntity） */
 @kotlinx.serialization.Serializable
 data class SubjectSeed(
@@ -776,6 +833,18 @@ data class KnowledgePointSeed(
     val difficulty: Int = 3,
     @SerialName("source_ref")
     val sourceRef: String? = null,
+    /** 交叉校验声称不同教材存在实质表述差异；展示前仍需验证来源是否可追溯。 */
+    @SerialName("conflict_flag")
+    val conflictFlag: Boolean = false,
+    /** 合并前的来源数量，仅用于数据质量审计。 */
+    @SerialName("source_count")
+    val sourceCount: Int = 0,
+    /** 教材/专著来源列表；“其他”等占位值会在导入时过滤。 */
+    @SerialName("textbook_sources")
+    val textbookSources: List<String> = emptyList(),
+    /** 内容合并时间，仅保留种子元数据兼容。 */
+    @SerialName("merged_at")
+    val mergedAt: String? = null,
     val confidence: Double = 1.0,
     /** 学习文本（逐字校对的教材原文，导入到 KnowledgePointEntity.studyText） */
     @SerialName("study_text")
@@ -820,6 +889,64 @@ data class KnowledgePointSeed(
      */
     val relations: List<RelationSeed>? = null,
 )
+
+/**
+ * 返回可向用户展示、可供 RAG 引用的真实来源。
+ *
+ * `source_ref` 是早期格式，`textbook_sources` 是当前格式；合并并去重以兼容历史 seed。
+ * “其他/未知/待补”只表示管线没有精确来源，不能作为书名或页码展示。
+ */
+internal fun KnowledgePointSeed.resolvedSourceFiles(): List<String> =
+    (listOfNotNull(sourceRef) + textbookSources)
+        .map { it.trim() }
+        .filter { it.isNotEmpty() && it !in UNKNOWN_SOURCE_MARKERS }
+        .distinct()
+
+private val UNKNOWN_SOURCE_MARKERS = setOf("其他", "未知", "待补", "无", "N/A")
+
+/**
+ * 只有至少两个可追溯且不同的教材来源，冲突标记才可以向用户展示。
+ *
+ * 当前历史 seed 存在 `conflict_flag=true` 但唯一来源为“其他”的记录；直接展示会把无来源
+ * 的管线标记包装成有证据的教材分歧，因此必须降级并等待数据修复。
+ */
+internal fun KnowledgePointSeed.hasVerifiableTextbookConflict(): Boolean =
+    conflictFlag && resolvedSourceFiles().size >= 2
+
+/** 使用现有 String 列保存经来源验证的教材冲突状态，无需数据库迁移。 */
+internal fun KnowledgePointSeed.contentSourceCode(): String =
+    if (hasVerifiableTextbookConflict()) {
+        ContentSource.TEXTBOOK_CONFLICT
+    } else {
+        ContentSource.TEXTBOOK_NATIVE
+    }
+
+/** 将 seed 教材列表映射为已有 data_sources 表的稳定记录。 */
+internal fun buildSeedDataSourceEntities(
+    seeds: List<KnowledgePointSeed>,
+    importedKnowledgePointIds: Set<String>,
+    createdAt: Long,
+): List<DataSourceEntity> = seeds
+    .filter { it.id in importedKnowledgePointIds }
+    .flatMap { seed ->
+        seed.resolvedSourceFiles().mapIndexed { index, sourceFile ->
+            DataSourceEntity(
+                id = "seed-kp-source:${seed.id}:$index",
+                knowledgePointId = seed.id,
+                examQuestionId = null,
+                sourceFile = sourceFile,
+                sourcePage = null,
+                contentSource = seed.contentSourceCode(),
+                ocrStatus = "VERIFIED",
+                createdAt = createdAt,
+            )
+        }
+    }
+
+/** 仅返回数据库中尚无记忆记录的知识点，防止重复 seed 导入覆盖用户进度。 */
+internal fun List<KnowledgePointEntity>.missingMemoRecords(
+    existingMemoPointIds: Set<String>,
+): List<KnowledgePointEntity> = filterNot { it.id in existingMemoPointIds }
 
 /**
  * 实体种子数据（v0.7.7 新增）。

@@ -148,7 +148,7 @@ private val CARD_MAX_WIDTH_FULLSCREEN = 560.dp
  * 2. 评分按钮颜色编码：AGAIN=error 红 / HARD=tertiary 黄 / GOOD=primary 蓝 / EASY=secondary 绿
  *    （原实现四个按钮全是中性色，用户无法一眼识别评分语义）
  * 3. 完成态展示会话统计：已复习 N 张 / AGAIN M 张 / 完成率
- * 4. 撤销按钮：currentIndex > 0 时可见，回退上一张（不回滚 FSRS）
+ * 4. 回看按钮：currentIndex > 0 时可见，回看上一张（不回滚 FSRS）
  * 5. 进度条：用 LinearProgressIndicator 替代纯文字 "3 / 12"
  *
  * 翻转动画通过 graphicsLayer rotationY 实现。
@@ -381,7 +381,7 @@ fun CardsScreen(
                             // v0.8.17 P1:sessionDurationMinutes 改为 collect StateFlow,
                             // 避免在 Composable 函数体中直接调用 viewModel.getSessionDurationMinutes()
                             // 破坏重组稳定性(每次重组返回不同值,SessionCompleteState 无谓重组)
-                            // v0.9.7 M5:新增 onUndo 参数,允许用户撤销最后一张卡的评分(回退到 CardReviewContent)
+                            // 完成后仍可回看最后一张卡（仅回到 CardReviewContent，不回滚评分）
                             SessionCompleteState(
                                 reviewedCount = sessionReviewed,
                                 againCount = sessionAgain,
@@ -567,21 +567,21 @@ internal fun CardReviewContent(
         )
     }
 
-    // ── 翻转后操作组：sibling 提示 + 评分 + 加入错题本 + 撤销/跳过 ──
+    // ── 翻转后操作组：已调度提示 + 评分 + 加入错题本 + 回看/跳过 ──
     @Composable
     fun ColumnScope.FlippedActions(compact: Boolean, vertical: Boolean = false) {
-        // v0.8.10 P1-B3 修复:sibling 已评分时仍保留评分按钮,仅隐藏预期间隔。
+        // 同一知识点已完成调度时仍保留评分按钮，但隐藏不会生效的预期间隔。
         // 原实现 isSiblingAlreadyRated=true 时完全隐藏 RatingButtons,导致用户
         // 无法评分推进(只能跳过),也无法记录错题(sibling AGAIN 仍会调用
         // wrongAnswerRepository.recordWrongAnswer,但 UI 隐藏按钮后用户无法触发)。
         //
         // 修复策略:
-        // - SiblingRatedHint 作为信息提示放在评分按钮上方(非替换)
+        // - AlreadyScheduledHint 作为信息提示放在评分按钮上方(非替换)
         // - RatingButtons 始终渲染,sibling 时传空 previews(不显示预期间隔)
         //   避免误导用户以为评分会改变调度间隔
         // - 用户可正常评分推进,AGAIN 评分仍记录错题(不影响 FSRS 调度)
         if (isSiblingAlreadyRated) {
-            SiblingRatedHint(compact = compact || vertical)
+            AlreadyScheduledHint(compact = compact || vertical)
         }
         RatingButtons(
             onRate = onRate,
@@ -617,7 +617,7 @@ internal fun CardReviewContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                // v0.9.30 打磨：撤销按钮恒占位（索引 0 时透明禁用），避免布局跳动
+                // 回看按钮恒占位（索引 0 时透明禁用），避免布局跳动
                 UndoButton(
                     onUndo = onUndo,
                     enabled = uiState.currentIndex > 0,
@@ -644,7 +644,7 @@ internal fun CardReviewContent(
             onClick = onAddToWrongAnswerBook,
         )
         // v0.8.12 P2-14：未翻转也显示撤销/跳过按钮（与翻转后一致）
-        // 原实现未翻转只显示跳过，用户跳过后想撤销必须先翻转才能看到撤销按钮，操作迂回
+        // 原实现未翻转只显示跳过，用户想回看上一张必须先翻转，操作迂回
         // v0.9.36 全屏横屏：vertical 时单列竖排（每按钮全栏宽）
         if (vertical) {
             UndoButton(
@@ -658,7 +658,7 @@ internal fun CardReviewContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                // v0.9.30 打磨：撤销按钮恒占位（索引 0 时透明禁用），避免布局跳动
+                // 回看按钮恒占位（索引 0 时透明禁用），避免布局跳动
                 UndoButton(
                     onUndo = onUndo,
                     enabled = uiState.currentIndex > 0,
@@ -800,19 +800,19 @@ internal fun CardReviewContent(
 }
 
 /**
- * sibling 卡已评分提示(v0.8.9 P1-2 新增,v0.8.10 P1-B3 重构)。
+ * 当前知识点已完成调度的提示。
  *
- * 当前卡片与已评分的首张 sibling 卡共享同一知识点,评分不会触发 FSRS 调度
- * (调度已在首张卡完成,参考 Anki sibling burying 避免重复评分导致 stability 虚高)。
+ * 适用于同知识点的后续 sibling 卡，也适用于“回看上一张”后的首张卡。
+ * 此时评分不会再次触发 FSRS，避免重复调度导致 stability 虚高。
  *
  * v0.8.10 P1-B3 修复:
- * - 原实现用 SiblingRatedHint **替换** RatingButtons,导致用户无法评分推进
- * - 现改为 SiblingRatedHint 作为信息提示放在 RatingButtons **上方**
+ * - 原实现用提示 **替换** RatingButtons,导致用户无法评分推进
+ * - 现将提示放在 RatingButtons **上方**
  * - 评分按钮始终渲染(不显示预期间隔),用户可正常评分推进
  * - AGAIN 评分仍记录错题(不影响 FSRS 调度,但保留错题本更新)
  */
 @Composable
-private fun SiblingRatedHint(
+private fun AlreadyScheduledHint(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
 ) {
@@ -828,8 +828,8 @@ private fun SiblingRatedHint(
     //
     // v0.9.34 横屏:compact=true 时图标上置 + 文字居中（窄操作面板 200dp 内
     // 避免 icon 横排挤压文字）。
-    val hintText = "这张卡和刚复习的卡同属一个知识点，评分不会改变复习计划，" +
-        "评 AGAIN 仍会记入错题本"
+    val hintText = "这个知识点本轮已安排复习，本卡评分不会再次改变间隔；" +
+        "评“不会”仍会加入错题本"
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -1067,11 +1067,10 @@ internal fun SessionCompleteState(
             )
             Text(stringResource(R.string.text_06))
         }
-        // v0.9.7 M5:撤销最后一张卡评分,回退到 CardReviewContent 重新评分。
-        // 适用场景:用户评完最后一张才发现评错了(如本想评 GOOD 却点了 AGAIN),
-        // 此时 Crossfade 已切到完成态,原实现无法撤销。现提供撤销入口,
-        // undo 后 currentIndex 回退,isFinished 变 false,Crossfade 切回复习态。
-        // 仅在 reviewedCount > 0 时显示(无评分无可撤销)。
+        // 完成态允许回看最后一张；数据库评分与复习计划保持不变。
+        // 适用场景：完成后想重新查看最后一张的题面与答案。
+        // 回看后 currentIndex 回退、isFinished 变 false，Crossfade 切回复习态；
+        // 已落库的评分、错题与复习计划均不改变。仅在 reviewedCount > 0 时显示。
         if (reviewedCount > 0) {
             FilledTonalButton(
                 onClick = onUndo,
@@ -1128,9 +1127,9 @@ private fun StatCard(
 }
 
 /**
- * 撤销按钮：仅 UI 回退，不回滚 FSRS 调度。
+ * 回看按钮：仅 UI 回退，不回滚 FSRS 调度。
  *
- * v0.8.5 新增：参考 Anki Z 键撤销，简化为 TextButton 风格，
+ * 历史方法名为 undo；界面明确称为“回看”，避免用户误以为数据库评分已撤销。
  * 触控目标 ≥48dp，左对齐 Undo 图标 + 文字。
  *
  * v0.8.8：新增 [modifier] 参数，支持在 Row 中 weight 分配宽度。
@@ -1893,7 +1892,7 @@ private fun CardsEmptyPreview() {
  * 会话完成态 Preview。
  *
  * 展示:AutoAwesome 图标 + "本次复习完成" + 用时 + 统计卡(已复习12/需重练3/掌握率75%)
- * + 鼓励文案 + 再复习一轮/撤销最后一张/返回知识点列表 三个按钮。
+ * + 鼓励文案 + 再复习一轮/回看最后一张/返回知识点列表 三个按钮。
  * 对应 CardsScreen Crossfade 中 `key.isFinished` 分支。
  */
 @Preview(name = "Cards - Finished (Light)", showBackground = true)

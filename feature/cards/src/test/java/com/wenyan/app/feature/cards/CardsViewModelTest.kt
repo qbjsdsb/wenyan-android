@@ -1250,20 +1250,16 @@ class CardsViewModelTest {
         )
     }
 
-    // ---------- v0.8.13 新增:P1-1 undo 不误报 sibling 测试 ----------
+    // ---------- 已调度状态提示（含回看场景） ----------
 
     /**
-     * 场景 29(P1):undo 回到首张评分卡时 isSiblingAlreadyRated=false。
+     * 场景 29(P1):回看首张评分卡时仍标记该知识点已完成调度。
      *
-     * v0.8.13 P1-1 修复:原实现 undo 回到刚评过的首张卡时,
-     * 因 pointId 在 ratedPointIds 中,isSiblingAlreadyRated 误报 true,
-     * 显示"这张卡和刚复习的卡同属一个知识点"提示(语义错误:首张卡不是 sibling)。
-     *
-     * 场景:两张同 pointId 卡(sibling),评 GOOD 卡 A → 推进到卡 B(sibling,提示显示)→
-     * undo → 回到卡 A(应不显示提示,因为卡 A 是首张评分卡不是 sibling)。
+     * 回看不会回滚 FSRS，因此必须继续隐藏预期间隔；旧逻辑返回 false，会重新显示
+     * “良好→6天”等不会真正生效的预览。
      */
     @Test
-    fun `undo 回到首张评分卡时 isSiblingAlreadyRated 为 false`() = runTest(testDispatcher) {
+    fun `回看首张评分卡时仍显示知识点已调度`() = runTest(testDispatcher) {
         // 两张同 pointId 的 sibling 卡
         val cards = listOf(
             testTermCard(front = "文学研究会 — 时代", back = "1921年", pointId = "p1"),
@@ -1283,8 +1279,8 @@ class CardsViewModelTest {
         )
         advanceUntilIdle()
 
-        // 初始:卡 A,未评分,isSibling=false
-        assertFalse("初始卡 A 不应是 sibling", viewModel.isSiblingAlreadyRated.value)
+        // 初始：卡 A 尚未调度
+        assertFalse("初始卡 A 尚未调度", viewModel.isSiblingAlreadyRated.value)
 
         // 评 GOOD 卡 A,推进到卡 B(sibling)
         viewModel.rateCard(CardRating.GOOD)
@@ -1294,11 +1290,11 @@ class CardsViewModelTest {
             viewModel.isSiblingAlreadyRated.value,
         )
 
-        // undo 回到卡 A
+        // 回看卡 A；调度并未回滚，因此仍应隐藏预期间隔并显示说明
         viewModel.undo()
         advanceUntilIdle()
-        assertFalse(
-            "undo 回到首张评分卡 A,isSiblingAlreadyRated 应为 false(不是 sibling)",
+        assertTrue(
+            "回看卡 A 时该知识点仍已调度，不能重新显示虚假间隔预览",
             viewModel.isSiblingAlreadyRated.value,
         )
     }

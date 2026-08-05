@@ -18,10 +18,11 @@ import androidx.compose.ui.unit.dp
 import com.wenyan.app.core.common.model.ContentSource
 
 /**
- * 内容来源五级颜色标签组件（M3 Expressive 主题角色色版）。
+ * 内容来源颜色标签组件（M3 Expressive 主题角色色版）。
  *
  * 颜色映射：
  * - TEXTBOOK_NATIVE / TEXTBOOK_OCR → secondaryContainer / onSecondaryContainer
+ * - TEXTBOOK_CONFLICT → errorContainer / onErrorContainer（提醒结合原教材复核）
  * - AI_GENERATED → tertiaryContainer / onTertiaryContainer
  * - HYBRID → surfaceContainerHighest / onSurfaceVariant
  * - USER_CREATED → surfaceContainerHigh / onSurfaceVariant
@@ -55,6 +56,12 @@ fun ContentSourceBadge(
             containerColor = colorScheme.secondaryContainer,
             contentColor = colorScheme.onSecondaryContainer,
             showWarning = false,
+        )
+        contentSource == ContentSource.TEXTBOOK_CONFLICT -> BadgeConfig(
+            text = "教材有分歧",
+            containerColor = colorScheme.errorContainer,
+            contentColor = colorScheme.onErrorContainer,
+            showWarning = true,
         )
         contentSource == ContentSource.AI_GENERATED -> BadgeConfig(
             text = "AI",

@@ -33,8 +33,28 @@ interface MemoRecordDao {
     @Query("SELECT * FROM memo_records WHERE point_id = :pointId")
     fun observeById(pointId: String): Flow<MemoRecordEntity?>
 
-    /** 查询到期需要复习的知识点（next_review_at <= 当前时间，使用 SQLite 内置时间避免 Flow 构建时时间戳固定） */
-    @Query("SELECT * FROM memo_records WHERE next_review_at <= (CAST(strftime('%s', 'now') AS INTEGER) * 1000) ORDER BY next_review_at ASC")
+    /**
+     * 查询真正到期的已学习记录。
+     *
+     * SeedDataLoader 会为全部知识点预建一条 pristine NEW 记录，便于首次评分时直接进入
+     * FSRS；这类记录虽然 next_review_at 为当前时间，但语义仍是“每日新卡”，必须经过
+     * 新卡限额与筛选，不能混入到期复习队列。
+     *
+     * 同时兼容两类旧数据：真正复习过但 reps 未回填的行可由 review_count 识别；旧版
+     * 未学习行可能把 last_review_at 写成安装时间，因此不能用该字段判断是否学过。
+     */
+    @Query(
+        """
+        SELECT * FROM memo_records
+        WHERE next_review_at <= (CAST(strftime('%s', 'now') AS INTEGER) * 1000)
+          AND NOT (
+              state = 'NEW'
+              AND reps = 0
+              AND review_count = 0
+          )
+        ORDER BY next_review_at ASC
+        """,
+    )
     fun observeDue(): Flow<List<MemoRecordEntity>>
 
     /** 查询优先队列中的记忆记录 */

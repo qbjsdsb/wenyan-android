@@ -134,7 +134,11 @@ android {
         //   （设置页边距/停止按钮无障碍/@Immutable 补齐/update{} 原子/友好错误/proguard 注释）；
         //   全量 594 测试通过（+11：种子轻量解析 3 + 完成态无障碍 4 + 缓存键 4）。
         //   versionName "0.9.37"）
-        versionCode = 62
+        // v0.9.38=63（学习完整性与来源可信度修复：未学习 NEW 记录不再误入到期队列或
+        //   学习进度；种子导入版本原子记录并保留 FSRS 状态；来源元数据真实落库，移除
+        //   伪 P0 页码与无证据冲突展示；“撤销”更名“回看”并隐藏无效间隔预览；新增
+        //   DAO→Repository 集成和回归测试。GitHub Actions 单测、assembleDebug 通过。）
+        versionCode = 63
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         //   数据一致性修复（B1/B2/B3）：
@@ -206,7 +210,8 @@ android {
         // v0.9.30：卡片打磨 + UI/UX + 仓库卫生 + i18n（见 versionCode 注释）
         // v0.9.31~35：学习科学 / AI 修复 / 真题背题 / 横屏适配 / 审计修复（见 versionCode 注释）
         // v0.9.36：知识卡片全屏沉浸模式（见 versionCode 注释）
-        versionName = "0.9.37"
+        // v0.9.37：布局与性能深度优化（见 versionCode 注释）
+        versionName = "0.9.38"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

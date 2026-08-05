@@ -191,6 +191,10 @@ class FakeDataSourceDao(
         throw UnsupportedOperationException("deleteById not used in knowledge feature tests")
     }
 
+    override suspend fun deleteManagedKnowledgePointSources() {
+        throw UnsupportedOperationException("deleteManagedKnowledgePointSources not used in knowledge feature tests")
+    }
+
     override suspend fun getById(id: String): DataSourceEntity? {
         throw UnsupportedOperationException("getById not used in knowledge feature tests")
     }

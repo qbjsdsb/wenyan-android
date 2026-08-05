@@ -1,6 +1,8 @@
 package com.wenyan.app.core.data.seed
 
+import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -273,13 +275,127 @@ class SeedDataLoaderTest {
         subject: String = "中国古代文学",
         tags: List<String>? = listOf("default"),
         title: String = "测试知识点 $id",
+        sourceRef: String? = null,
+        textbookSources: List<String> = emptyList(),
     ) = KnowledgePointSeed(
         id = id,
         title = title,
         coreConclusion = "结论",
         subject = subject,
         tags = tags,
+        sourceRef = sourceRef,
+        textbookSources = textbookSources,
     )
+
+    @Test
+    fun `resolvedSourceFiles 合并新旧来源去重并过滤占位文本`() {
+        val seed = kpSeed(
+            id = "kp_source",
+            sourceRef = " 袁行霈《中国文学史》 ",
+            textbookSources = listOf(
+                "袁行霈《中国文学史》",
+                "其他",
+                "",
+                "钱理群《中国现代文学三十年》",
+            ),
+        )
+
+        assertEquals(
+            listOf("袁行霈《中国文学史》", "钱理群《中国现代文学三十年》"),
+            seed.resolvedSourceFiles(),
+        )
+    }
+
+    @Test
+    fun `resolvedSourceFiles 只有未知占位时返回空列表`() {
+        val seed = kpSeed(
+            id = "kp_unknown_source",
+            textbookSources = listOf("其他", "未知", "待补", "N/A"),
+        )
+
+        assertTrue(seed.resolvedSourceFiles().isEmpty())
+    }
+
+    @Test
+    fun `无可追溯教材的 conflict flag 不向用户展示为教材分歧`() {
+        val unverifiedConflict = kpSeed(
+            id = "kp_unverified_conflict",
+            textbookSources = listOf("其他"),
+        ).copy(conflictFlag = true, sourceCount = 1)
+
+        assertFalse(unverifiedConflict.hasVerifiableTextbookConflict())
+        assertEquals("TEXTBOOK_NATIVE", unverifiedConflict.contentSourceCode())
+    }
+
+    @Test
+    fun `buildSeedDataSourceEntities 仅导入有效知识点来源并保留冲突状态`() {
+        val normal = kpSeed(
+            id = "kp_normal",
+            textbookSources = listOf("袁行霈《中国文学史》", "其他"),
+        )
+        val conflict = kpSeed(
+            id = "kp_conflict",
+            textbookSources = listOf("钱理群《中国现代文学三十年》", "夏志清《中国现代小说史》"),
+        ).copy(conflictFlag = true)
+        val skipped = kpSeed(
+            id = "kp_invalid_subject",
+            textbookSources = listOf("不应入库"),
+        )
+
+        val entities = buildSeedDataSourceEntities(
+            seeds = listOf(normal, conflict, skipped),
+            importedKnowledgePointIds = setOf("kp_normal", "kp_conflict"),
+            createdAt = 123L,
+        )
+
+        assertEquals(3, entities.size)
+        assertTrue(conflict.hasVerifiableTextbookConflict())
+        assertEquals("seed-kp-source:kp_normal:0", entities[0].id)
+        assertEquals("TEXTBOOK_NATIVE", entities[0].contentSource)
+        assertEquals(
+            listOf("钱理群《中国现代文学三十年》", "夏志清《中国现代小说史》"),
+            entities.filter { it.knowledgePointId == "kp_conflict" }.map { it.sourceFile },
+        )
+        assertTrue(
+            entities.filter { it.knowledgePointId == "kp_conflict" }
+                .all { it.contentSource == "TEXTBOOK_CONFLICT" },
+        )
+        assertTrue(entities.none { it.knowledgePointId == "kp_invalid_subject" })
+    }
+
+    @Test
+    fun `重复种子导入只为缺失知识点创建 MemoRecord`() {
+        val points = listOf("existing_learned", "existing_new", "brand_new").map { id ->
+            KnowledgePointEntity(
+                id = id,
+                chapterId = "chapter",
+                title = id,
+                summary = null,
+                coreConclusion = "结论",
+                fullContent = "内容",
+                multiPerspectives = null,
+                relatedIds = null,
+                contrastIds = null,
+                extensionIds = null,
+                examRecords = null,
+                examFrequency = "HIGH",
+                termTemplate = null,
+                tags = null,
+                difficulty = 3,
+                createdAt = 1L,
+                updatedAt = 1L,
+                contentSource = "TEXTBOOK_NATIVE",
+                ocrStatus = "VERIFIED",
+                sourceFile = null,
+                sourcePage = null,
+                studyText = null,
+            )
+        }
+
+        val missing = points.missingMemoRecords(setOf("existing_learned", "existing_new"))
+
+        assertEquals(listOf("brand_new"), missing.map { it.id })
+    }
 
     @Test
     fun `computeRelatedIdsByTags 同 subject 共享 1 个 tag 产生关联`() {
@@ -421,5 +537,41 @@ class SeedDataLoaderTest {
     @Test(expected = Exception::class)
     fun `parseSeedVersionFromJson 非法 JSON 抛异常`() {
         parseSeedVersionFromJson("not-json{")
+    }
+
+    @Test
+    fun `内容版本不变但导入 schema 提升时仍触发安全重导`() {
+        assertTrue(
+            shouldImportSeedData(
+                initialized = false,
+                storedContentVersion = "2.18.0",
+                currentContentVersion = "2.18.0",
+                storedImportSchemaVersion = CURRENT_SEED_IMPORT_SCHEMA_VERSION,
+            ),
+        )
+        assertTrue(
+            shouldImportSeedData(
+                initialized = true,
+                storedContentVersion = "2.17.0",
+                currentContentVersion = "2.18.0",
+                storedImportSchemaVersion = CURRENT_SEED_IMPORT_SCHEMA_VERSION,
+            ),
+        )
+        assertTrue(
+            shouldImportSeedData(
+                initialized = true,
+                storedContentVersion = "2.18.0",
+                currentContentVersion = "2.18.0",
+                storedImportSchemaVersion = 0,
+            ),
+        )
+        assertFalse(
+            shouldImportSeedData(
+                initialized = true,
+                storedContentVersion = "2.18.0",
+                currentContentVersion = "2.18.0",
+                storedImportSchemaVersion = CURRENT_SEED_IMPORT_SCHEMA_VERSION,
+            ),
+        )
     }
 }

@@ -148,7 +148,7 @@ class ChatRepositoryImpl @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            // DataStore 写失败不冒泡(与 SeedDataLoader.markInitialized 同样策略),
+            // DataStore 写失败不冒泡（与 SeedDataLoader 的种子状态写入策略一致），
             // 下次启动 loadOrInitCurrent 会重新从 DB 推断
             // v0.8.21: Log.w → Timber.w（tag 自动推断）
             Timber.w(e, "setCurrentConversation failed for id=$id")

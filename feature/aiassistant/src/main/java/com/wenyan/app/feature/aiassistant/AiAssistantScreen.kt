@@ -1,6 +1,7 @@
 package com.wenyan.app.feature.aiassistant
 
 import androidx.compose.ui.res.stringResource
+import com.wenyan.app.core.ai.sourceLabel
 import com.wenyan.app.feature.aiassistant.R
 
 import androidx.compose.animation.Crossfade
@@ -858,7 +859,7 @@ private fun ReferencesList(message: AiMessage) {
         )
         message.references.forEachIndexed { index, ref ->
             Text(
-                text = "${index + 1}. 《${ref.sourceFile}》P${ref.sourcePage}",
+                text = "${index + 1}. ${ref.sourceLabel()}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

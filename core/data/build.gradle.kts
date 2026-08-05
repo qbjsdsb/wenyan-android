@@ -45,7 +45,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
 
-    // Room KTX（P0-D2 修正：SeedDataLoader 需要 withTransaction 扩展以包裹 7 步种子导入）
+    // Room KTX（P0-D2 修正：SeedDataLoader 需要 withTransaction 扩展以包裹完整种子导入）
     // core:database 仅 implementation room-ktx，未 api 暴露，需在此显式声明
     implementation(libs.androidx.room.ktx)
 
