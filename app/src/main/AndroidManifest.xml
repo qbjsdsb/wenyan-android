@@ -2,9 +2,9 @@
 <!-- 文研App AndroidManifest：单 Activity + Hilt Application + 网络权限 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- AI 助手调用大模型 API 需要网络权限 -->
+    <!-- AI 助手调用大模型 API 需要网络权限
+         v0.9.35 第四轮审计：删除冗余 ACCESS_NETWORK_STATE（全仓零代码使用） -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- 软件内更新：安装 APK 需要（Android 8+ 需用户授权"安装未知应用"） -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 

@@ -234,8 +234,14 @@ class QuizPracticeDetailViewModel @Inject constructor(
     /** 防连击锁：400ms 内只允许一次推进操作（"会了"/"不会"共用）。 */
     private var lastAdvanceAt = 0L
 
+    /**
+     * 时间源（可注入便于单测——纯 JVM 测试中 SystemClock.uptimeMillis 恒 0，
+     * 防连击锁会永远锁住首次调用）。生产默认系统时钟。
+     */
+    internal var uptimeMillis: () -> Long = { android.os.SystemClock.uptimeMillis() }
+
     private fun tryAcquireAdvanceLock(): Boolean {
-        val now = android.os.SystemClock.uptimeMillis()
+        val now = uptimeMillis()
         if (now - lastAdvanceAt < ADVANCE_LOCK_MS) return false
         lastAdvanceAt = now
         return true

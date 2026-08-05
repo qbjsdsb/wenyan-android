@@ -338,13 +338,20 @@ class CardsViewModel @Inject constructor(
     init {
         // v0.9.35 审计修复：会话完成时累加学习时长到 study_progress.totalStudyTime——
         // addStudyTime 原无任何调用方（死链路），设置页"学习进度"总时长恒为 0。
+        // v0.9.35 第四轮审计：按 sessionStartTime 结算去重——"完成→撤销→再完成"
+        // 时同一会话的时长只累加一次（undo 不改 startTime，retry 会重置 startTime
+        // 因此新会话正常累加）。
         viewModelScope.launch {
+            var settledStartTime = -1L
             _uiState
                 .map { it.isFinished }
                 .distinctUntilChanged()
                 .drop(1) // 跳过初始发射，只响应"false→true"转变
                 .collect { finished ->
                     if (finished) {
+                        val start = _sessionStartTime.value
+                        if (start == settledStartTime) return@collect
+                        settledStartTime = start
                         try {
                             studyProgressRepository.addStudyTime(
                                 sessionDurationMinutes.value.coerceAtLeast(1) * 60,

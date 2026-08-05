@@ -428,14 +428,21 @@ private fun CardStudySettingsCard(
 
     GroupedCard(title = stringResource(R.string.settings_cards)) {
         // 每日新卡数
+        // v0.9.35 第四轮审计修复：滑杆本地 state + onValueChangeFinished 提交——
+        // 原每次拖动都写 DataStore（快速拖动卡顿/抖动）；拖动过程仅更新本地显示，
+        // 松手才持久化，与 settings.dailyNewLimit 变化时重置本地值
+        var sliderValue by remember(settings.dailyNewLimit) {
+            mutableStateOf(settings.dailyNewLimit.toFloat())
+        }
         GroupedCardItem(
             title = stringResource(R.string.settings_daily_new_limit),
-            subtitle = "${settings.dailyNewLimit} 张/天",
+            subtitle = "${sliderValue.roundToInt()} 张/天",
             description = "每天最多学习的新卡数量（含复习由 FSRS 自动安排）",
         )
         Slider(
-            value = settings.dailyNewLimit.toFloat(),
-            onValueChange = { onDailyNewLimitChange(it.roundToInt()) },
+            value = sliderValue,
+            onValueChange = { sliderValue = it },
+            onValueChangeFinished = { onDailyNewLimitChange(sliderValue.roundToInt()) },
             valueRange = 10f..200f,
             steps = 18, // 10-200 步进 10
             modifier = Modifier

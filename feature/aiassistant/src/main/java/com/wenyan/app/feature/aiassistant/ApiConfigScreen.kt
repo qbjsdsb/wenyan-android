@@ -459,8 +459,13 @@ private fun ApiConfigFormDialog(
     val baseUrlError = remember(formState.baseUrl) {
         when {
             formState.baseUrl.isBlank() -> "请输入接口地址"
+            // v0.9.35 第四轮审计：UI 校验与 validateBaseUrl 完全对齐——强制 https
+            // + 空域名盲区（"https://" 或 "https:///" 无 host 会在 Retrofit 抛异常）
             !formState.baseUrl.startsWith("https://") ->
                 "需以 https:// 开头（出于安全不支持 http://）"
+            formState.baseUrl.removePrefix("https://").isBlank() ||
+                formState.baseUrl.removePrefix("https://").startsWith("/") ->
+                "接口地址缺少域名（如 api.deepseek.com）"
             else -> null
         }
     }
