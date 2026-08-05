@@ -138,7 +138,11 @@ android {
         //   学习进度；种子导入版本原子记录并保留 FSRS 状态；来源元数据真实落库，移除
         //   伪 P0 页码与无证据冲突展示；“撤销”更名“回看”并隐藏无效间隔预览；新增
         //   DAO→Repository 集成和回归测试。GitHub Actions 单测、assembleDebug 通过。）
-        versionCode = 63
+        // v0.9.39=64（知识卡片空队列竞态修复：v0.9.37 stateIn 空初值被 CardsViewModel 冻结为会话
+        //   →"横幅有新卡、正文无卡片"；改 shareIn(replay=1) 只重放真实查询 + VM 空列表不冻结会话双保险。
+        //   翻转 300ms→420ms emphasized + 正反面操作区 AnimatedContent fade-through 替代双 AnimatedVisibility
+        //   消除高度跳动。合并 PR #3，CI 3 次全绿。）
+        versionCode = 64
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         //   数据一致性修复（B1/B2/B3）：
@@ -211,7 +215,9 @@ android {
         // v0.9.31~35：学习科学 / AI 修复 / 真题背题 / 横屏适配 / 审计修复（见 versionCode 注释）
         // v0.9.36：知识卡片全屏沉浸模式（见 versionCode 注释）
         // v0.9.37：布局与性能深度优化（见 versionCode 注释）
-        versionName = "0.9.38"
+        // v0.9.38：学习完整性与来源可信度修复（见 versionCode 注释）
+        // v0.9.39：知识卡片空队列竞态修复 + 翻转动画平滑化（见 versionCode 注释）
+        versionName = "0.9.39"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
