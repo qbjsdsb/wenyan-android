@@ -102,8 +102,13 @@ object CardSplitter {
             // v0.9.35 产品体验修复：正面加"共N点"总上下文——
             // 复习队列按知识点 round-robin 打散（Anki 混合复习，见 CardRepository
             // interleaveSiblingCards），用户连续看到不同知识点的"第1点"时无法感知
-            // 该知识点的后续卡片会在队列稍后出现；"第X点 · 共N点"让归属与进度一目了然
-            val totalLabel = indexToChinese(sentences.size)
+            // 该知识点的后续卡片会在队列稍后出现；"第X点 · 共N点"让归属与进度一目了然。
+            // 注意：超过 TARGET_SPLIT_MAX 句时尾部会裁剪合并为"其他要点"卡（下方 trimmed
+            // 分支），因此总数取裁剪后的编号卡数 min(size, TARGET_SPLIT_MAX-1)，
+            // 避免"共8点"却只有 6 张卡的感知错位。
+            val totalLabel = indexToChinese(
+                if (sentences.size > TARGET_SPLIT_MAX) TARGET_SPLIT_MAX - 1 else sentences.size,
+            )
             sentences.mapIndexed { index, sentence ->
                 buildTermDimensionCard(
                     term,

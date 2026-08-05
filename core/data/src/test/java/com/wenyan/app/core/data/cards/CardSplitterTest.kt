@@ -96,7 +96,15 @@ class CardSplitterTest {
         val cards = CardSplitter.splitTermExplanation("建安风骨", definition)
         // 3 个分句 → 3 张卡（不足 5 张不强行拆分）
         assertEquals(3, cards.size)
-        cards.forEach { assertTrue("无标签时维度应为第N点", it.front.contains("第")) }
+        // v0.9.35 体验改进：正面含"第X点 · 共N点"总上下文（N=实际分句数）
+        cards.forEachIndexed { index, card ->
+            assertTrue("无标签时维度应为第N点", card.front.contains("第"))
+            assertTrue(
+                "卡 ${index + 1} 应含'共3点'（front=${card.front}）",
+                card.front.contains("共三点"),
+            )
+        }
+        assertEquals("第一点 · 共三点", cards.first().front.substringAfter(" — "))
     }
 
     // ===================== 超过 6 张合并尾段 =====================
@@ -117,6 +125,13 @@ class CardSplitterTest {
         val cards = CardSplitter.splitTermExplanation("某名词", definition)
         assertEquals(6, cards.size)
         assertTrue("最后一张应为合并的'其他要点'", cards.last().front.contains("其他要点"))
+        // v0.9.35 裁剪感知：前 5 张编号卡显示"共5点"（而非原始 7 句数），与裁剪后卡数一致
+        cards.take(5).forEachIndexed { index, card ->
+            assertTrue(
+                "编号卡 ${index + 1} 应含'共5点'（front=${card.front}）",
+                card.front.contains("共五点"),
+            )
+        }
     }
 
     // ===================== v0.8.10 修复：结构化标签 >6 维度不再被截断 =====================
