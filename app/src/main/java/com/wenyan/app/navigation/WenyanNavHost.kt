@@ -2,6 +2,7 @@ package com.wenyan.app.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -11,7 +12,9 @@ import androidx.navigation.navArgument
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import com.wenyan.app.feature.aiassistant.AiAssistantScreen
 import com.wenyan.app.feature.aiassistant.ApiConfigScreen
+import com.wenyan.app.feature.cards.CardsFullscreenScreen
 import com.wenyan.app.feature.cards.CardsScreen
+import com.wenyan.app.feature.cards.CardsViewModel
 import com.wenyan.app.feature.knowledge.EssayDetailScreen
 import com.wenyan.app.feature.knowledge.EssayListScreen
 import com.wenyan.app.feature.knowledge.KnowledgePointDetailScreen
@@ -140,6 +143,45 @@ fun WenyanNavHost(
                     }
                     launchSingleTop = true
                 }
+            },
+            // v0.9.36 全屏模式：Push 进入全屏沉浸页（共享卡片页 ViewModel）
+            onNavigateToFullscreen = {
+                navController.navigate(ROUTE_CARDS_FULLSCREEN) {
+                    launchSingleTop = true
+                }
+            },
+        )
+        // v0.9.36 全屏沉浸页子路由（共享卡片页 ViewModel，保持同一复习会话）
+        cardsFullscreenDestination(
+            onBack = { navController.popBackStack() },
+            onNavigateToAiAssistant = {
+                navController.navigate(ROUTE_AI_ASSISTANT) {
+                    launchSingleTop = true
+                }
+            },
+            onNavigateToKnowledge = {
+                navController.navigate(TopLevelDestination.ROUTE_KNOWLEDGE) {
+                    popUpTo(navController.graph.startDestinationId) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            onNavigateToDetail = { pointId ->
+                navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId") {
+                    popUpTo("$ROUTE_KNOWLEDGE_DETAIL/{pointId}") {
+                        inclusive = true
+                    }
+                    launchSingleTop = true
+                }
+            },
+            // 关键：与卡片页共享同一 CardsViewModel（同 backStackEntry → 同一会话状态）。
+            // 通过 @Composable provider 延迟到 composable 内容内求值（NavHost builder 非 composable 上下文）
+            viewModelProvider = {
+                hiltViewModel(
+                    navController.getBackStackEntry(TopLevelDestination.ROUTE_CARDS),
+                )
             },
         )
         // v0.9.0：WrongAnswer 提升为顶级 Tab（原 graphDestination 位置）
@@ -289,12 +331,40 @@ private fun NavGraphBuilder.cardsDestination(
     onNavigateToAiAssistant: () -> Unit,
     onNavigateToKnowledge: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
+    onNavigateToFullscreen: () -> Unit,
 ) {
     composable(TopLevelDestination.ROUTE_CARDS) {
         CardsScreen(
             onNavigateToAiAssistant = onNavigateToAiAssistant,
             onNavigateToKnowledge = onNavigateToKnowledge,
             onNavigateToDetail = onNavigateToDetail,
+            onNavigateToFullscreen = onNavigateToFullscreen,
+        )
+    }
+}
+
+// v0.9.36：全屏沉浸复习子路由（共享卡片页 CardsViewModel，保持同一复习会话）
+// 子路由用 Push/Pop slide transition（与 AiAssistant 等子路由一致）
+private fun NavGraphBuilder.cardsFullscreenDestination(
+    onBack: () -> Unit,
+    onNavigateToAiAssistant: () -> Unit,
+    onNavigateToKnowledge: () -> Unit,
+    onNavigateToDetail: (String) -> Unit,
+    viewModelProvider: @Composable () -> CardsViewModel,
+) {
+    composable(
+        route = ROUTE_CARDS_FULLSCREEN,
+        enterTransition = { WenyanMotion.PushEnterTransition },
+        exitTransition = { WenyanMotion.PushExitTransition },
+        popEnterTransition = { WenyanMotion.PopEnterTransition },
+        popExitTransition = { WenyanMotion.PopExitTransition },
+    ) {
+        CardsFullscreenScreen(
+            onBack = onBack,
+            onNavigateToAiAssistant = onNavigateToAiAssistant,
+            onNavigateToKnowledge = onNavigateToKnowledge,
+            onNavigateToDetail = onNavigateToDetail,
+            viewModel = viewModelProvider(),
         )
     }
 }
@@ -443,4 +513,6 @@ private const val ROUTE_UPDATE_CHECK = "update_check"
 // v0.9.33：真题背题子路由
 private const val ROUTE_QUIZ_PRACTICE = "quiz_practice"
 private const val ROUTE_QUIZ_PRACTICE_DETAIL = "quiz_practice_detail"
+// v0.9.36：知识卡片全屏沉浸页子路由
+private const val ROUTE_CARDS_FULLSCREEN = "cards_fullscreen"
 private const val FILTER_ALL = "ALL"

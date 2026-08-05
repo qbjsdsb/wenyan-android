@@ -25,4 +25,7 @@
     <string name="card_rating_hard">困难</string>
     <string name="card_rating_good">良好</string>
     <string name="card_rating_easy">简单</string>
+    <!-- v0.9.36 全屏模式 -->
+    <string name="card_fullscreen">全屏</string>
+    <string name="card_fullscreen_exit">退出全屏</string>
 </resources>
