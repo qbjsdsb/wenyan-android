@@ -969,81 +969,92 @@ internal fun SessionCompleteState(
             // v0.9.34 横屏：外层不限宽后完成态需自限宽（竖屏宽度 < 720dp 不生效）
             .widthIn(max = MaxContentWidth.comfortable)
             .verticalScroll(rememberScrollState())
-            .padding(Spacing.xxl)
-            .semantics(mergeDescendants = true) {
-                contentDescription = fullDescription
-            },
+            .padding(Spacing.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.lg),
     ) {
-        Icon(
-            imageVector = Icons.Default.AutoAwesome,
-            contentDescription = null,
-            modifier = Modifier.padding(top = Spacing.xl),
-            tint = MaterialTheme.colorScheme.primary,
-        )
-        Text(
-            text = "本次复习完成",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-        )
-        // v0.8.7：会话用时（提升学习成就感）
-        // v0.8.13 P0-2:reviewedCount=0 时隐藏会话时长和统计卡片,只显示空状态文案
-        // (此场景为防御性兜底,正常流程 reviewedCount=0 应进入"今日无到期卡"分支)
-        if (reviewedCount > 0) {
-            Text(
-                text = "用时 $sessionDurationMinutes 分钟",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+        // v0.9.37 P0-3：仅统计信息区合并为单一语义节点（TalkBack 一次朗读
+        // fullDescription），下方 3 个操作按钮各自独立可聚焦/可触发。
+        // 原实现 mergeDescendants 作用在整个 Column，把"再复习/撤销/返回"
+        // 3 个按钮并入单一节点——读屏用户无法分别操作，核心完成流程受损。
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics(mergeDescendants = true) {
+                    contentDescription = fullDescription
+                },
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+        ) {
+            Icon(
+                imageVector = Icons.Default.AutoAwesome,
+                contentDescription = null,
+                modifier = Modifier.padding(top = Spacing.xl),
+                tint = MaterialTheme.colorScheme.primary,
             )
-            // 统计卡：复习张数 / AGAIN 张数 / 掌握率
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-            ) {
-                StatCard(
-                    label = stringResource(R.string.card_reviewed),
-                    value = reviewedCount.toString(),
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f),
+            Text(
+                text = "本次复习完成",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+            // v0.8.7：会话用时（提升学习成就感）
+            // v0.8.13 P0-2:reviewedCount=0 时隐藏会话时长和统计卡片,只显示空状态文案
+            // (此场景为防御性兜底,正常流程 reviewedCount=0 应进入"今日无到期卡"分支)
+            if (reviewedCount > 0) {
+                Text(
+                    text = "用时 $sessionDurationMinutes 分钟",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                StatCard(
-                    label = stringResource(R.string.card_need_retry),
-                    value = againCount.toString(),
-                    color = if (againCount > 0) {
-                        MaterialTheme.colorScheme.error
-                    } else {
-                        MaterialTheme.colorScheme.outline
-                    },
-                    modifier = Modifier.weight(1f),
+                // 统计卡：复习张数 / AGAIN 张数 / 掌握率
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                ) {
+                    StatCard(
+                        label = stringResource(R.string.card_reviewed),
+                        value = reviewedCount.toString(),
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    StatCard(
+                        label = stringResource(R.string.card_need_retry),
+                        value = againCount.toString(),
+                        color = if (againCount > 0) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.outline
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    StatCard(
+                        label = stringResource(R.string.card_mastery),
+                        value = "${(masteryRate * 100).toInt()}%",
+                        color = when {
+                            masteryRate >= 0.85f -> MaterialTheme.colorScheme.primary
+                            masteryRate >= 0.6f -> MaterialTheme.colorScheme.tertiary
+                            else -> MaterialTheme.colorScheme.error
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Text(
+                    text = encouragement,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
                 )
-                StatCard(
-                    label = stringResource(R.string.card_mastery),
-                    value = "${(masteryRate * 100).toInt()}%",
-                    color = when {
-                        masteryRate >= 0.85f -> MaterialTheme.colorScheme.primary
-                        masteryRate >= 0.6f -> MaterialTheme.colorScheme.tertiary
-                        else -> MaterialTheme.colorScheme.error
-                    },
-                    modifier = Modifier.weight(1f),
+            } else {
+                // reviewedCount=0 兜底:仅显示空状态文案,不展示统计卡片
+                Text(
+                    text = encouragement,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
                 )
             }
-            Text(
-                text = encouragement,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-        } else {
-            // reviewedCount=0 兜底:仅显示空状态文案,不展示统计卡片
-            Text(
-                text = encouragement,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
         }
         Button(
             onClick = onRetry,

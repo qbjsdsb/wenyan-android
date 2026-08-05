@@ -11,6 +11,7 @@ import com.wenyan.app.core.database.dao.ReviewLogDao
 import com.wenyan.app.core.database.entity.ChatConversationEntity
 import com.wenyan.app.core.database.entity.ChatMessageEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import com.wenyan.app.core.database.entity.KnowledgePointListItem
 import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import com.wenyan.app.core.database.entity.ReviewLogEntity
 import kotlinx.coroutines.CompletableDeferred
@@ -110,6 +111,9 @@ class FakeKnowledgePointDao(
     override fun observeVerifiedForReview(): Flow<List<KnowledgePointEntity>> = flowOf(emptyList())
     override fun observeVerifiedWithSubject(): Flow<List<KnowledgePointWithSubject>> = flowOf(emptyList())
     override fun observeSearchWithSubject(keyword: String): Flow<List<KnowledgePointWithSubject>> = flowOf(emptyList())
+    // v0.9.37 P1-2：lean 投影版本（本模块不调用，返回空流兜底）
+    override fun observeVerifiedListItem(): Flow<List<KnowledgePointListItem>> = flowOf(emptyList())
+    override fun observeSearchListItem(keyword: String): Flow<List<KnowledgePointListItem>> = flowOf(emptyList())
     override suspend fun updateOcrStatus(id: String, status: String) {}
 
     override suspend fun searchByKeyword(keyword: String, limit: Int): List<KnowledgePointEntity> {

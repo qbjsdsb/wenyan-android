@@ -91,6 +91,11 @@ class SeedDataLoader @Inject constructor(
      * - 种子版本升级（initialized=true 但版本不同）：导入内容表，跳过已有 MemoRecord
      * - 无变化（initialized=true 且版本相同）：跳过
      *
+     * v0.9.37 P0-1 优化：已初始化时**先轻量读种子版本**（[parseSeedVersionFromJson]
+     * 只解析 metadata 壳，不构建 960 个实体对象），版本命中则完全跳过全量
+     * 反序列化 5.3MB seed_data.json——原实现每次冷启动都全量解析，仅为了比对
+     * 版本号，浪费 IO/CPU。首次安装/升级路径保持单次全量解析（不重复）。
+     *
      * NF-J 修复：[isInitialized] 与 [markInitialized] 都已加 IOException 兜底，
      * 此方法自身不会再因 DataStore 故障抛 IOException；[readSeedDataFromAssets]
      * 与 [importToDatabase] 的异常会冒泡到 Application 的 CoroutineExceptionHandler
@@ -98,17 +103,24 @@ class SeedDataLoader @Inject constructor(
      */
     suspend fun ensureSeedDataLoaded() {
         val initialized = isInitialized()
-        val seedData = readSeedDataFromAssets()
-        val currentVersion = seedData.metadata.version.ifBlank { DEFAULT_SEED_VERSION }
         val storedVersion = getStoredSeedVersion()
 
-        if (initialized && storedVersion == currentVersion) return
-
-        val isUpgrade = initialized && storedVersion != currentVersion
-        if (isUpgrade) {
+        if (initialized) {
+            // v0.9.37 P0-1：命中路径只做轻量版本解析，跳过 5.3MB 全量反序列化
+            val currentVersion = readSeedVersionFromAssets().ifBlank { DEFAULT_SEED_VERSION }
+            if (storedVersion == currentVersion) return
             Timber.i("Seed version upgrade: $storedVersion → $currentVersion, re-importing content (MemoRecord preserved)")
+            val seedData = readSeedDataFromAssets()
+            importToDatabase(seedData, isUpgrade = true)
+            markInitialized()
+            storeSeedVersion(currentVersion)
+            return
         }
-        importToDatabase(seedData, isUpgrade = isUpgrade)
+
+        // 首次安装：全量导入（含 MemoRecord）
+        val seedData = readSeedDataFromAssets()
+        val currentVersion = seedData.metadata.version.ifBlank { DEFAULT_SEED_VERSION }
+        importToDatabase(seedData, isUpgrade = false)
         markInitialized()
         storeSeedVersion(currentVersion)
     }
@@ -175,6 +187,18 @@ class SeedDataLoader @Inject constructor(
     private fun readSeedDataFromAssets(): SeedData {
         val jsonStr = context.assets.open(SEED_DATA_FILE).bufferedReader().use { it.readText() }
         return json.decodeFromString(SeedData.serializer(), jsonStr)
+    }
+
+    /**
+     * 轻量读取种子版本（v0.9.37 P0-1）。
+     *
+     * 只解析 JSON 顶层的 metadata 壳（[SeedVersionShell]），**不构建**
+     * subjects/knowledgePoints/examQuestions/writingMaterials 共 960+ 实体对象。
+     * 用于 [ensureSeedDataLoaded] 的版本命中判断，避免每次冷启动全量反序列化。
+     */
+    private fun readSeedVersionFromAssets(): String {
+        val jsonStr = context.assets.open(SEED_DATA_FILE).bufferedReader().use { it.readText() }
+        return parseSeedVersionFromJson(jsonStr)
     }
 
     /**
@@ -698,6 +722,30 @@ data class SeedMetadata(
     val generatedAt: String = "",
     val description: String = "",
 )
+
+/** 种子 JSON 版本轻量解析壳（v0.9.37 P0-1）：只保留 metadata，其余字段忽略。 */
+@kotlinx.serialization.Serializable
+private data class SeedVersionShell(
+    @SerialName("metadata") val metadata: SeedMetadata? = null,
+)
+
+/**
+ * 从种子 JSON 字符串轻量解析版本号（v0.9.37 P0-1）。
+ *
+ * 用 [SeedVersionShell] 解析：`ignoreUnknownKeys=true` 下跳过
+ * subjects/knowledge_points/exam_questions/writing_materials 等大数组，
+ * **不构建 960+ 实体对象**（仅 tokenize 跳过）。
+ *
+ * internal 暴露给 [SeedDataLoaderTest]：用含巨大 knowledge_points 数组的
+ * JSON 验证只返回 metadata.version 且不抛异常。
+ */
+internal fun parseSeedVersionFromJson(
+    jsonStr: String,
+    json: Json = Json { ignoreUnknownKeys = true },
+): String {
+    val shell = json.decodeFromString(SeedVersionShell.serializer(), jsonStr)
+    return shell.metadata?.version.orEmpty()
+}
 
 /** 科目种子数据（对应 SubjectEntity） */
 @kotlinx.serialization.Serializable

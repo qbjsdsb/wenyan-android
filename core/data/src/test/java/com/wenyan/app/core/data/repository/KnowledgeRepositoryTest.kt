@@ -7,6 +7,7 @@ import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.entity.DataSourceEntity
 import com.wenyan.app.core.database.entity.ExamQuestionEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import com.wenyan.app.core.database.entity.KnowledgePointListItem
 import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -683,6 +684,31 @@ private class FakeKpDao(
                 .filter { it.ocrStatus == "VERIFIED" }
                 .sortedByDescending { it.updatedAt }
                 .map { KnowledgePointWithSubject(point = it, subjectName = "中国古代文学") }
+        }
+
+    // v0.9.37 P1-2：lean 投影版本——与全字段流同源，仅映射为展示列
+    override fun observeSearchListItem(keyword: String): Flow<List<KnowledgePointListItem>> =
+        observeSearchWithSubject(keyword).map { list ->
+            list.map { KnowledgePointListItem(
+                id = it.point.id,
+                title = it.point.title,
+                summary = it.point.summary,
+                coreConclusion = it.point.coreConclusion,
+                examFrequency = it.point.examFrequency,
+                subjectName = it.subjectName,
+            ) }
+        }
+
+    override fun observeVerifiedListItem(): Flow<List<KnowledgePointListItem>> =
+        observeVerifiedWithSubject().map { list ->
+            list.map { KnowledgePointListItem(
+                id = it.point.id,
+                title = it.point.title,
+                summary = it.point.summary,
+                coreConclusion = it.point.coreConclusion,
+                examFrequency = it.point.examFrequency,
+                subjectName = it.subjectName,
+            ) }
         }
 }
 

@@ -16,6 +16,7 @@ import com.wenyan.app.core.database.entity.CardTemplateType
 import com.wenyan.app.core.database.entity.DataSourceEntity
 import com.wenyan.app.core.database.entity.ExamQuestionEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import com.wenyan.app.core.database.entity.KnowledgePointListItem
 import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import com.wenyan.app.core.database.entity.MemoRecordEntity
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
@@ -139,7 +140,24 @@ class FakeKnowledgePointDao(
                 .sortedByDescending { it.updatedAt }
                 .map { KnowledgePointWithSubject(point = it, subjectName = "中国古代文学") }
         }
+
+    // v0.9.37 P1-2：lean 投影版本——从全字段流映射为展示列（与生产 DAO 投影语义一致）
+    override fun observeSearchListItem(keyword: String): Flow<List<KnowledgePointListItem>> =
+        observeSearchWithSubject(keyword).map { list -> list.map { it.toListItem() } }
+
+    override fun observeVerifiedListItem(): Flow<List<KnowledgePointListItem>> =
+        observeVerifiedWithSubject().map { list -> list.map { it.toListItem() } }
 }
+
+/** 从关联实体映射为 lean 展示投影（v0.9.37 P1-2）。 */
+private fun KnowledgePointWithSubject.toListItem() = KnowledgePointListItem(
+    id = point.id,
+    title = point.title,
+    summary = point.summary,
+    coreConclusion = point.coreConclusion,
+    examFrequency = point.examFrequency,
+    subjectName = subjectName,
+)
 
 /**
  * [DataSourceDao] 的 Fake 实现,供 knowledge 模块测试使用(v0.8.19 P1-REL-2 新增)。

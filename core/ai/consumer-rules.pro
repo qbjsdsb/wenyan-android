@@ -37,5 +37,9 @@
 -dontwarn org.bouncycastle.**
 -dontwarn org.openjsse.**
 
-# OkHttpClient / Interceptor 内部字段（via builder 反射）
--keep class okhttp3.** { *; }
+# v0.9.37 P1-10：移除过宽的 `-keep class okhttp3.** { *; }`。
+# 原规则禁用 OkHttp 的 R8 收缩致 dex 膨胀；OkHttp 4.x AAR 自带精准
+# consumer rules（Platform 反射所需 keep 已内置），常规 OkHttpClient/
+# Interceptor 使用为直接引用，R8 不会误删，无需手动全量 keep。
+# 若未来引入 OkHttp 反射扩展点（如自定义 Platform），在此按需补充
+# `-keep class okhttp3.internal.platform.XXX { *; }`。

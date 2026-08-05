@@ -6,13 +6,16 @@ import com.wenyan.app.core.database.dao.MemoRecordDao
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -167,6 +170,7 @@ class ReviewRepository @Inject constructor(
     private val knowledgePointDao: KnowledgePointDao,
     private val memoRecordDao: MemoRecordDao,
     private val cardSettingsRepository: CardSettingsRepository,
+    @com.wenyan.app.core.data.di.ApplicationScope private val externalScope: CoroutineScope,
 ) {
 
     private companion object {
@@ -232,6 +236,24 @@ class ReviewRepository @Inject constructor(
         .catchAndLog(TAG, "getReviewQueue") { emptyList() }
 
     /**
+     * 今日学习队列共享热流（v0.9.37 P0-2）。
+     *
+     * 原实现每次 collect 都独立执行整条 tickFlow + Room 订阅链：卡片页
+     * todayPlan 横幅（仅计数）与 [CardRepositoryImpl.getCardsForReview]
+     * （拆卡）各订阅一次，每 60s tick 触发**两套**全表查询 + selectNewPoints
+     * 计算。`stateIn` 共享后仅一个上游在跑，多 UI 流复用同一结果。
+     *
+     * [SharingStarted.WhileSubscribed]：无订阅者 5s 后停止上游（tick 停止），
+     * 避免后台空转；首个订阅立即拿到空初始值，随后被真实队列替换。
+     */
+    private val sharedTodayStudyQueue: Flow<TodayStudyQueue> =
+        buildTodayStudyQueue().stateIn(
+            scope = externalScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = TodayStudyQueue(emptyList(), emptyList()),
+        )
+
+    /**
      * 今日学习队列（v0.9.29 卡片备考系统）。
      *
      * = 到期复习知识点 ∪ 每日新卡知识点（按考频/科目筛选 + 每日限额）。
@@ -248,8 +270,10 @@ class ReviewRepository @Inject constructor(
      * - [CardSettingsRepository.cardSettings]：考频/科目/每日限额
      *
      * 全部用 tickFlow + flatMapLatest 周期刷新，保证 60s 内新到期/新卡自动进入。
+     *
+     * v0.9.37 P0-2：返回 [sharedTodayStudyQueue] 共享热流，多订阅不重复查询。
      */
-    fun getTodayStudyQueue(): Flow<TodayStudyQueue> = tickFlow
+    private fun buildTodayStudyQueue(): Flow<TodayStudyQueue> = tickFlow
         .flatMapLatest {
             combine(
                 knowledgePointDao.observeVerifiedForReview(),
@@ -277,6 +301,9 @@ class ReviewRepository @Inject constructor(
         }
         .distinctUntilChanged()
         .catchAndLog(TAG, "getTodayStudyQueue") { TodayStudyQueue(emptyList(), emptyList()) }
+
+    /** 对外暴露共享热流（v0.9.37 P0-2）。 */
+    fun getTodayStudyQueue(): Flow<TodayStudyQueue> = sharedTodayStudyQueue
 
     /**
      * 学习进度（v0.9.29）：已学知识点数 / 总 VERIFIED 知识点数。

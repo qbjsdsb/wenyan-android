@@ -178,7 +178,8 @@ fun SettingsScreen(
                     modifier = Modifier.widthIn(max = MaxContentWidth.compact),
                     verticalArrangement = Arrangement.spacedBy(Spacing.xl),
                     // v0.9.31 布局精修：首尾留白（此前首尾贴边）
-                    contentPadding = PaddingValues(vertical = Spacing.lg),
+                    // v0.9.37 P2：补齐水平边距（全 App 唯一贴边列表，与其他 Screen 一致）
+                    contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.lg),
                 ) {
             // P0 v0.7.2: 考研倒计时卡片(接通 ExamCountdownManager,原完全未接入)
             // v0.9.35 审计修复:注入用户设置的考试日期(原两套真相——设置日期但倒计时不联动)

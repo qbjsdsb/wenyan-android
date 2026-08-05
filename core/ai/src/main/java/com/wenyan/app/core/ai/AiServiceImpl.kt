@@ -5,6 +5,7 @@ import com.wenyan.app.core.ai.network.ChatRequest
 import com.wenyan.app.core.ai.network.ChatStreamChunk
 import com.wenyan.app.core.ai.network.ChatUsage
 import com.wenyan.app.core.ai.network.LlmApiService
+import com.wenyan.app.core.common.util.friendlyErrorMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -49,6 +50,12 @@ class AiServiceImpl @Inject constructor(
 ) : AiService {
 
     private val json = Json { ignoreUnknownKeys = true }
+
+    // v0.9.37 P1-6：按 baseUrl 缓存 Retrofit/LlmApiService。
+    // 原实现每次 chat 调用都新建 Retrofit（解析 baseUrl + 构建代理对象），
+    // 高频问答场景小分配累积；baseUrl 变化时（用户切换服务商）自动重建。
+    // synchronized 保证多线程安全（OkHttp 回调线程 + 协程并发）。
+    private val llmApiServices = mutableMapOf<String, LlmApiService>()
 
     // v0.9.26 成本控制：全局并发限制（跨页面共享，防多页面同时打 API 撞限流）。
     // Semaphore(3) 允许 3 个并发 AI 调用（含 SSE 长连接占槽），
@@ -122,7 +129,10 @@ class AiServiceImpl @Inject constructor(
             // 其他 IO 异常（如 ConnectionResetException）归为网络问题
             emit("网络错误，请检查网络连接：${e.message}")
         } catch (e: Exception) {
-            emit("AI 调用失败：${e.message}")
+            // v0.9.37 P2：兜底不向用户泄露裸异常文本（原 ${e.message} 可能含
+            // 英文堆栈/URL 等实现细节）；friendlyErrorMessage 映射网络/超时/
+            // 数据库类异常为友好提示，未知异常统一"加载失败,请重试"
+            emit("AI 调用失败，${friendlyErrorMessage(e)}")
         }
     }.flowOn(Dispatchers.IO)
 
@@ -338,18 +348,24 @@ class AiServiceImpl @Inject constructor(
     }
 
     /**
-     * 根据配置动态构造 [LlmApiService]。
+     * 根据配置动态构造/复用 [LlmApiService]（v0.9.37 P1-6 缓存化）。
      *
      * baseUrl 必须以 `/` 结尾（Retrofit 要求），否则补全。
+     * 同 baseUrl 复用同一实例，避免每次调用重复构建 Retrofit；
+     * 切换服务商（baseUrl 变化）时自动缓存新实例，旧实例随 GC 回收。
      */
     private fun createLlmApiService(config: LlmConfig): LlmApiService {
         val baseUrl = if (config.baseUrl.endsWith("/")) config.baseUrl else "${config.baseUrl}/"
-        return Retrofit.Builder()
-            .baseUrl(baseUrl)
-            .client(okHttpClient)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-            .create(LlmApiService::class.java)
+        return synchronized(llmApiServices) {
+            llmApiServices.getOrPut(baseUrl) {
+                Retrofit.Builder()
+                    .baseUrl(baseUrl)
+                    .client(okHttpClient)
+                    .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+                    .build()
+                    .create(LlmApiService::class.java)
+            }
+        }
     }
 
     private companion object {

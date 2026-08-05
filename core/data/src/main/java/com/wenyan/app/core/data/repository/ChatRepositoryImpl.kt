@@ -110,8 +110,27 @@ class ChatRepositoryImpl @Inject constructor(
             )
             // 更新对话计数与时间戳(touch 内部 message_count + 1, updated_at = now)
             conversationDao.touch(conversationId, now)
+            // v0.9.37 P1-7：会话消息保留上限——长对话超过 MAX_MESSAGES_PER_CONVERSATION
+            // 时删除最旧超限消息并同步修正 message_count，防止 DB 无限膨胀
+            // （历史消息仅在 UI 展示与 LLM 上下文注入时使用，最旧消息截断可接受）。
+            enforceMessageCap(conversationId, now)
         }
         return id
+    }
+
+    /**
+     * 会话消息保留上限（v0.9.37 P1-7）。
+     *
+     * 200 条 ≈ 100 轮问答，远超正常复习答疑会话长度；配合 LLM 上下文注入
+     * 仅取最近 [ChatRepository.getRecentMessages] 的 limit（多轮 20 条），
+     * 截断最旧消息不影响 AI 质量，仅限制本地 DB 体积。
+     */
+    private suspend fun enforceMessageCap(conversationId: String, now: Long) {
+        val count = messageDao.countByConversation(conversationId)
+        if (count <= MAX_MESSAGES_PER_CONVERSATION) return
+        val overflow = count - MAX_MESSAGES_PER_CONVERSATION
+        messageDao.deleteOldestByConversation(conversationId, overflow)
+        conversationDao.setMessageCount(conversationId, MAX_MESSAGES_PER_CONVERSATION, now)
     }
 
     override suspend fun deleteConversation(id: String) {
@@ -160,5 +179,8 @@ class ChatRepositoryImpl @Inject constructor(
 
     private companion object {
         private val KEY_CURRENT_CONVERSATION_ID = stringPreferencesKey("current_chat_conversation_id")
+
+        /** 会话消息保留上限（v0.9.37 P1-7，200 条 ≈ 100 轮问答）。 */
+        private const val MAX_MESSAGES_PER_CONVERSATION = 200
     }
 }

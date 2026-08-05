@@ -44,4 +44,17 @@ interface ChatMessageDao {
 
     @Query("SELECT COUNT(*) FROM chat_messages WHERE conversation_id = :conversationId")
     suspend fun countByConversation(conversationId: String): Int
+
+    /**
+     * 删除会话最旧的 N 条消息（v0.9.37 P1-7：消息保留上限）。
+     *
+     * 按 (created_at, rowid) 升序取最旧 limit 条的 rowid 删除——rowid 兜底
+     * 同毫秒多条消息的场景（created_at 可能重复，仅按 created_at 会误删更多）。
+     */
+    @Query(
+        "DELETE FROM chat_messages WHERE rowid IN (" +
+            "SELECT rowid FROM chat_messages WHERE conversation_id = :conversationId " +
+            "ORDER BY created_at ASC, rowid ASC LIMIT :limit)",
+    )
+    suspend fun deleteOldestByConversation(conversationId: String, limit: Int)
 }

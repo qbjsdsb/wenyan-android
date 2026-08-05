@@ -21,6 +21,7 @@ import com.wenyan.app.core.database.entity.CardTemplateType
 import com.wenyan.app.core.fsrs.Rating
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
@@ -36,6 +37,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -397,9 +399,9 @@ class CardsViewModel @Inject constructor(
                         val effectiveCards = if (isFirstLoad) {
                             // 首次加载:重新生成 sessionCards
                             savedStateHandle[KEY_SESSION_LOADED] = true
-                            val newCards = cards.mapIndexed { index, card ->
-                                card.toUiItem(index, isNew = card.pointId in newPointIds)
-                            }
+                            // v0.9.37 P1-9:数千张卡的 id 生成(buildString)移出主线程,
+                            // 避免冷进入卡片页 combine 在主线程数百 ms 掉帧
+                            val newCards = buildSessionCards(cards, newPointIds)
                             sessionCards = newCards
                             newCards
                         } else if (sessionCards == null) {
@@ -425,9 +427,7 @@ class CardsViewModel @Inject constructor(
                             savedStateHandle["sessionAgainCount"] = 0
                             // 清空评分历史栈(内存已丢失,同步清空避免 undo 错位)
                             ratingHistory.clear()
-                            val newCards = cards.mapIndexed { index, card ->
-                                card.toUiItem(index, isNew = card.pointId in newPointIds)
-                            }
+                            val newCards = buildSessionCards(cards, newPointIds)
                             sessionCards = newCards
                             newCards
                         } else {
@@ -678,11 +678,12 @@ class CardsViewModel @Inject constructor(
                     // 原实现用累计 failCount >= 8,导致达到阈值后每次评分都弹警告
                     // 现仅当 oldFailCount < 8 && newFailCount >= 8 时弹警告(首次跨阈值)
                     if (oldFailCount < LEECH_THRESHOLD && updated.failCount >= LEECH_THRESHOLD) {
-                        _leechWarnings.value = _leechWarnings.value + LeechWarning(
+                        // v0.9.37 P2：读改写用 update{}（原子），未来并发写入不丢更新
+                        _leechWarnings.update { it + LeechWarning(
                             message = "这张卡片已连续答错 ${updated.failCount} 次，" +
                                 "建议查看知识点详情重新理解，或问 AI 助手辅助。",
                             pointId = pointId,
-                        )
+                        ) }
                     }
 
                     // v0.8.12 P0-2:recordStudySession 移入 if (updated != null) 块
@@ -807,7 +808,8 @@ class CardsViewModel @Inject constructor(
 
     /** 清除当前 Leech 警告(队首),显示队列中下一个(若有) */
     fun clearLeechWarning() {
-        _leechWarnings.value = _leechWarnings.value.drop(1)
+        // v0.9.37 P2：读改写用 update{}（原子）
+        _leechWarnings.update { it.drop(1) }
     }
 
     /**
@@ -997,6 +999,22 @@ class CardsViewModel @Inject constructor(
     )
 
     /**
+     * 批量构建会话卡片（v0.9.37 P1-9）。
+     *
+     * 纯 CPU 计算（id buildString + 新卡标记），移入 [sessionCardDispatcher]
+     * （默认 Default）执行，避免冷进入卡片页时在 combine（Main 上下文）对
+     * 数千张卡逐个生成 id 导致掉帧。
+     */
+    private suspend fun buildSessionCards(
+        cards: List<CardTemplate>,
+        newPointIds: Set<String>,
+    ): List<CardItem> = withContext(sessionCardDispatcher) {
+        cards.mapIndexed { index, card ->
+            card.toUiItem(index, isNew = card.pointId in newPointIds)
+        }
+    }
+
+    /**
      * 从卡片模板提取真实的"正确答案"文本,用于错题记录的 correctAnswer 字段(v0.8.13 P0-2)。
      *
      * 原实现所有卡片类型都用 [CardItem.back],但部分模板的 back 是占位文本或非结构化答案:
@@ -1070,6 +1088,17 @@ class CardsViewModel @Inject constructor(
         private const val KEY_SESSION_LOADED = "sessionLoaded"
 
         /**
+         * 会话卡片批量构建的调度器（v0.9.37 P1-9）。
+         *
+         * 默认 [Dispatchers.Default]（CPU 密集 id 生成移出主线程）；
+         * internal 可注入——单测 runTest 虚拟调度器下替换为测试调度器，
+         * 避免真实线程异步导致虚拟时间无法等待（与 `uptimeMillis` 同模式）。
+         */
+        @kotlin.jvm.Volatile
+        internal var sessionCardDispatcher: kotlinx.coroutines.CoroutineDispatcher =
+            kotlinx.coroutines.Dispatchers.Default
+
+        /**
          * Leech 阈值(参考 Anki 默认 8 次)。
          *
          * 当某知识点 failCount >= 此值时,提示用户"这张卡复习 N 次仍记不住"。
@@ -1080,6 +1109,8 @@ class CardsViewModel @Inject constructor(
 }
 
 // 卡片 UI 状态
+// v0.9.37 P2：补 @Immutable（与 TodayPlanUi/CardItem 保持一致，列表项稳定性统一）
+@Immutable
 data class CardsUiState(
     val isLoading: Boolean = false,
     val cards: List<CardItem> = emptyList(),

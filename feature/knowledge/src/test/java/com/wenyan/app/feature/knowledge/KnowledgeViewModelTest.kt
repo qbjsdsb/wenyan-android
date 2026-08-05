@@ -1,9 +1,7 @@
 package com.wenyan.app.feature.knowledge
 
-import com.wenyan.app.core.database.entity.KnowledgePointEntity
-import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
+import com.wenyan.app.core.database.entity.KnowledgePointListItem
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -39,7 +37,7 @@ class KnowledgeViewModelTest {
         )
         val result = KnowledgeViewModel.filterByCategory(points, KnowledgeCategory.ANCIENT)
         assertEquals(1, result.size)
-        assertEquals("kp1", result[0].point.id)
+        assertEquals("kp1", result[0].id)
     }
 
     @Test
@@ -50,7 +48,7 @@ class KnowledgeViewModelTest {
         )
         val result = KnowledgeViewModel.filterByCategory(points, KnowledgeCategory.MODERN)
         assertEquals(1, result.size)
-        assertEquals("kp2", result[0].point.id)
+        assertEquals("kp2", result[0].id)
     }
 
     @Test
@@ -61,7 +59,7 @@ class KnowledgeViewModelTest {
         )
         val result = KnowledgeViewModel.filterByCategory(points, KnowledgeCategory.FOREIGN)
         assertEquals(1, result.size)
-        assertEquals("kp2", result[0].point.id)
+        assertEquals("kp2", result[0].id)
     }
 
     @Test
@@ -72,35 +70,25 @@ class KnowledgeViewModelTest {
         )
         val result = KnowledgeViewModel.filterByCategory(points, KnowledgeCategory.THEORY)
         assertEquals(1, result.size)
-        assertEquals("kp2", result[0].point.id)
+        assertEquals("kp2", result[0].id)
     }
 
     @Test
     fun toUiItem_subjectTakesSubjectNameNotContentSource() {
-        val pointWithSubject = KnowledgePointWithSubject(
-            point = makePoint(
-                id = "kp1",
-                contentSource = "TEXTBOOK_NATIVE",
-            ),
-            subjectName = "中国古代文学",
-        )
-        val uiItem = KnowledgeViewModel.toUiItem(pointWithSubject)
+        // lean 投影无 contentSource 字段；验证 subject 取 subjectName
+        val item = makeListItem(subjectName = "中国古代文学")
+        val uiItem = KnowledgeViewModel.toUiItem(item)
         assertEquals("中国古代文学", uiItem.subject)
-        assertNotEquals("TEXTBOOK_NATIVE", uiItem.subject)
     }
 
     @Test
     fun toUiItem_summaryFallsBackToCoreConclusion() {
         val longCoreConclusion = "这是一段很长的核心结论，超过一百字需要被截断。".repeat(5)
-        val pointWithSubject = KnowledgePointWithSubject(
-            point = makePoint(
-                id = "kp1",
-                summary = null,
-                coreConclusion = longCoreConclusion,
-            ),
-            subjectName = "中国古代文学",
+        val item = makeListItem(
+            summary = null,
+            coreConclusion = longCoreConclusion,
         )
-        val uiItem = KnowledgeViewModel.toUiItem(pointWithSubject)
+        val uiItem = KnowledgeViewModel.toUiItem(item)
         assertNotNull(uiItem.summary)
         assertTrue("summary should be at most 100 chars", uiItem.summary.length <= 100)
         assertEquals(longCoreConclusion.take(100), uiItem.summary)
@@ -108,21 +96,17 @@ class KnowledgeViewModelTest {
 
     @Test
     fun toUiItem_summaryNotNullUsesSummaryDirectly() {
-        val pointWithSubject = KnowledgePointWithSubject(
-            point = makePoint(
-                id = "kp1",
-                summary = "人工编写的简短摘要",
-                coreConclusion = "这是很长的核心结论，不应该被使用".repeat(10),
-            ),
-            subjectName = "中国古代文学",
+        val item = makeListItem(
+            summary = "人工编写的简短摘要",
+            coreConclusion = "这是很长的核心结论，不应该被使用".repeat(10),
         )
-        val uiItem = KnowledgeViewModel.toUiItem(pointWithSubject)
+        val uiItem = KnowledgeViewModel.toUiItem(item)
         assertEquals("人工编写的简短摘要", uiItem.summary)
     }
 
     @Test
     fun filterByCategory_emptyList_returnsEmptyList() {
-        val points = emptyList<KnowledgePointWithSubject>()
+        val points = emptyList<KnowledgePointListItem>()
         val result = KnowledgeViewModel.filterByCategory(points, KnowledgeCategory.ANCIENT)
         assertTrue("empty list should return empty", result.isEmpty())
     }
@@ -174,11 +158,8 @@ class KnowledgeViewModelTest {
 
     @Test
     fun toUiItem_nullSubjectName_fallsBackToUnknown() {
-        val pointWithSubject = KnowledgePointWithSubject(
-            point = makePoint(id = "kp1"),
-            subjectName = null,
-        )
-        val uiItem = KnowledgeViewModel.toUiItem(pointWithSubject)
+        val item = makeListItem(subjectName = null)
+        val uiItem = KnowledgeViewModel.toUiItem(item)
         assertEquals("未知科目", uiItem.subject)
     }
 
@@ -186,61 +167,42 @@ class KnowledgeViewModelTest {
 
     @Test
     fun toUiItem_passesThroughExamFrequency_high() {
-        val pointWithSubject = KnowledgePointWithSubject(
-            point = makePoint(id = "kp1", examFrequency = "HIGH"),
-            subjectName = "中国古代文学",
-        )
-        val uiItem = KnowledgeViewModel.toUiItem(pointWithSubject)
+        val item = makeListItem(examFrequency = "HIGH")
+        val uiItem = KnowledgeViewModel.toUiItem(item)
         assertEquals("HIGH", uiItem.examFrequency)
     }
 
     @Test
     fun toUiItem_passesThroughExamFrequency_never() {
-        val pointWithSubject = KnowledgePointWithSubject(
-            point = makePoint(id = "kp1", examFrequency = "NEVER"),
-            subjectName = "中国古代文学",
-        )
-        val uiItem = KnowledgeViewModel.toUiItem(pointWithSubject)
+        val item = makeListItem(examFrequency = "NEVER")
+        val uiItem = KnowledgeViewModel.toUiItem(item)
         assertEquals("NEVER", uiItem.examFrequency)
     }
 
     private fun makePointWithSubject(
         id: String,
         subjectName: String?,
-    ) = KnowledgePointWithSubject(
-        point = makePoint(id = id),
+    ) = KnowledgePointListItem(
+        id = id,
+        title = "测试知识点",
+        summary = "测试摘要",
+        coreConclusion = "测试核心结论",
+        examFrequency = "NEVER",
         subjectName = subjectName,
     )
 
-    private fun makePoint(
+    private fun makeListItem(
         id: String = "kp1",
-        title: String = "测试知识点",
+        subjectName: String? = "中国古代文学",
         summary: String? = "测试摘要",
         coreConclusion: String = "测试核心结论",
-        contentSource: String? = "TEXTBOOK_NATIVE",
         examFrequency: String = "NEVER",
-    ) = KnowledgePointEntity(
+    ) = KnowledgePointListItem(
         id = id,
-        chapterId = "ch1",
-        title = title,
+        title = "测试知识点",
         summary = summary,
         coreConclusion = coreConclusion,
-        fullContent = "",
-        multiPerspectives = null,
-        relatedIds = null,
-        contrastIds = null,
-        extensionIds = null,
-        examRecords = null,
         examFrequency = examFrequency,
-        termTemplate = null,
-        tags = null,
-        difficulty = 3,
-        createdAt = System.currentTimeMillis(),
-        updatedAt = System.currentTimeMillis(),
-        contentSource = contentSource,
-        ocrStatus = "VERIFIED",
-        sourceFile = null,
-        sourcePage = null,
-        studyText = null,
+        subjectName = subjectName,
     )
 }

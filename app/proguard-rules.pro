@@ -1,7 +1,8 @@
 # 文研App ProGuard 规则（P1-PG Wave 4 补齐）
 #
-# 当前 isMinifyEnabled=false（未启用 R8/minify），本文件为后续启用 R8 预置规则。
-# 启用 R8 时，consumer-rules.pro（各模块）+ 本文件（app 专用）合并生效。
+# v0.9.24 起 isMinifyEnabled=true（R8/minify 已启用）且 v0.9.37 起
+# isShrinkResources=true（资源压缩）；本文件（app 专用）+ consumer-rules.pro
+# （各模块）合并生效。
 #
 # 参考来源：
 # - Hilt: https://dagger.dev/hilt/proguard-guide

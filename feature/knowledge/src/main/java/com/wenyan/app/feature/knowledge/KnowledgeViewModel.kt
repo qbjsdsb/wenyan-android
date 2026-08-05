@@ -1,10 +1,11 @@
 package com.wenyan.app.feature.knowledge
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.repository.KnowledgeRepository
-import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
+import com.wenyan.app.core.database.entity.KnowledgePointListItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -113,12 +114,14 @@ class KnowledgeViewModel @Inject constructor(
                         .onStart { emit(_searchQuery.value) }
                         .distinctUntilChanged()
                         .flatMapLatest { query ->
+                            // v0.9.37 P1-2：列表展示走 lean 投影（只查展示列，
+                            // 不加载 full_content/study_text 大文本列）
                             val pointsFlow = if (query.isBlank()) {
-                                knowledgeRepository.getVerifiedWithSubject()
+                                knowledgeRepository.getVerifiedListItems()
                             } else {
                                 // 转义 LIKE 通配符,避免 % 和 _ 被当通配符
                                 val escaped = knowledgeRepository.escapeLikeWildcards(query.trim())
-                                knowledgeRepository.searchVerifiedWithSubject(escaped)
+                                knowledgeRepository.searchVerifiedListItems(escaped)
                             }
                             combine(pointsFlow, selectedCategory) { points, category ->
                                 val filtered = filterByCategory(points, category)
@@ -216,7 +219,7 @@ class KnowledgeViewModel @Inject constructor(
         /**
          * 按科目筛选知识点。
          *
-         * 用 [KnowledgeCategory.keyword] 在 [KnowledgePointWithSubject.subjectName] 中做 contains 匹配。
+         * 用 [KnowledgeCategory.keyword] 在 [KnowledgePointListItem.subjectName] 中做 contains 匹配。
          * seed_data.json 的科目名是全名（"中国古代文学"），枚举 label 是简称（"古代文学"），
          * contains 匹配可兼容两者。
          *
@@ -226,26 +229,28 @@ class KnowledgeViewModel @Inject constructor(
          * P1-AUDIT-5 修正：subjectName 可能为 null（LEFT JOIN 无有效科目关联的知识点）。
          * null subjectName 不匹配任何具体分类（ANCIENT/MODERN/FOREIGN/THEORY），
          * 但在 ALL 分类下会显示（fallback "未知科目"）。
+         *
+         * v0.9.37 P1-2：参数从 [KnowledgePointWithSubject] 改为 lean 投影
+         * [KnowledgePointListItem]（列表流不再加载大文本列）。
          */
         internal fun filterByCategory(
-            points: List<KnowledgePointWithSubject>,
+            points: List<KnowledgePointListItem>,
             category: KnowledgeCategory,
-        ): List<KnowledgePointWithSubject> {
+        ): List<KnowledgePointListItem> {
             if (category == KnowledgeCategory.ALL) return points
             return points.filter { it.subjectName?.contains(category.keyword) == true }
         }
 
-        /** 将关联数据映射为 UI 项（供测试调用） */
-        internal fun toUiItem(pointWithSubject: KnowledgePointWithSubject): KnowledgePointItem =
+        /** 将 lean 投影数据映射为 UI 项（v0.9.37 P1-2，供测试调用） */
+        internal fun toUiItem(item: KnowledgePointListItem): KnowledgePointItem =
             KnowledgePointItem(
-                id = pointWithSubject.point.id,
-                title = pointWithSubject.point.title,
-                subject = pointWithSubject.subjectName ?: "未知科目",
-                summary = pointWithSubject.point.summary
-                    ?: pointWithSubject.point.coreConclusion.take(100),
+                id = item.id,
+                title = item.title,
+                subject = item.subjectName ?: "未知科目",
+                summary = item.summary ?: item.coreConclusion.take(100),
                 // v0.8.20 P1-2 新增:透传考频,列表卡片展示高频/中频/低频标签,
                 // 用户浏览时快速识别高频考点(无需点进详情页查看)
-                examFrequency = pointWithSubject.point.examFrequency,
+                examFrequency = item.examFrequency,
             )
     }
 }
@@ -268,7 +273,10 @@ data class KnowledgeUiState(
  * v0.8.20 P1-2 新增 [examFrequency]:透传原始考频值(HIGH/MEDIUM/LOW/NEVER),
  * UI 层根据值显示对应 chip(高频/中频/低频/未考),
  * 与详情页 HeaderSection 的考频映射逻辑一致(避免在 ViewModel 层做 string 翻译)。
+ *
+ * v0.9.37 P2：补 @Immutable（全字段不可变，Compose 列表项稳定性统一）。
  */
+@Immutable
 data class KnowledgePointItem(
     val id: String,
     val title: String,

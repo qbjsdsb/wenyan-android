@@ -18,8 +18,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+// v0.9.37 P1-4：长详情页懒加载（verticalScroll → LazyColumn）
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -125,7 +126,7 @@ fun EssayDetailScreen(
             )
         },
     ) { innerPadding ->
-        val scrollState = rememberScrollState()
+        val listState = rememberLazyListState()
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -171,79 +172,105 @@ fun EssayDetailScreen(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.TopCenter,
                             ) {
-                                Column(
+                                // v0.9.37 P1-4：长详情页（11 区块 + AI 引导，内容可达数千字）
+                                // 由 Column+verticalScroll 改为 LazyColumn——区块按需组合/布局，
+                                // 低端机首次进入与 AI 引导回流不再一次性布局全部内容。
+                                // 与兄弟页 KnowledgePointDetailScreen 的懒加载策略对齐。
+                                LazyColumn(
                                     modifier = Modifier
                                         .widthIn(max = MaxContentWidth.comfortable)
-                                        .verticalScroll(scrollState)
                                         .padding(Spacing.lg),
+                                    state = listState,
                                     verticalArrangement = Arrangement.spacedBy(Spacing.lg),
                                 ) {
                                     // 1. 题目信息区（v0.9.23：年份已删除）
-                                    EssayHeaderSection(
-                                        score = essay.score,
-                                        examPaperCode = essay.examPaperCode,
-                                    )
+                                    item(key = "header") {
+                                        EssayHeaderSection(
+                                            score = essay.score,
+                                            examPaperCode = essay.examPaperCode,
+                                        )
+                                    }
 
                                     // 2. 题目正文
-                                    EssayContentSection(content = essay.content)
+                                    item(key = "content") {
+                                        EssayContentSection(content = essay.content)
+                                    }
 
                                     // 3. 审题思路区
                                     uiState.angle?.let { angle ->
-                                        EssayAngleSection(angle = angle)
+                                        item(key = "angle") {
+                                            EssayAngleSection(angle = angle)
+                                        }
                                     }
 
                                     // 4. 论证路径区
                                     uiState.angle?.argumentPath?.let { path ->
-                                        EssayArgumentPathSection(path = path)
+                                        item(key = "argument_path") {
+                                            EssayArgumentPathSection(path = path)
+                                        }
                                     }
 
                                     // 5. 答题框架区
                                     essay.answerFramework?.takeIf { it.isNotBlank() }?.let { framework ->
-                                        EssayFrameworkSection(framework = framework)
+                                        item(key = "framework") {
+                                            EssayFrameworkSection(framework = framework)
+                                        }
                                     }
 
                                     // 6. 依据区
                                     uiState.notes?.evidences?.takeIf { it.isNotEmpty() }?.let { evidences ->
-                                        EssayEvidencesSection(evidences = evidences)
+                                        item(key = "evidences") {
+                                            EssayEvidencesSection(evidences = evidences)
+                                        }
                                     }
 
                                     // 7. 交叉验证区
                                     uiState.notes?.crossValidation?.let { cv ->
                                         if (!cv.textbookComparison.isNullOrBlank() || !cv.scholarComparison.isNullOrBlank()) {
-                                            EssayCrossValidationSection(crossValidation = cv)
+                                            item(key = "cross_validation") {
+                                                EssayCrossValidationSection(crossValidation = cv)
+                                            }
                                         }
                                     }
 
                                     // 8. 参考链接区
                                     uiState.notes?.referenceLinks?.takeIf { it.isNotEmpty() }?.let { links ->
-                                        EssayReferenceLinksSection(links = links)
+                                        item(key = "reference_links") {
+                                            EssayReferenceLinksSection(links = links)
+                                        }
                                     }
 
                                     // 9. 知识盲点区
                                     uiState.notes?.knowledgeGaps?.takeIf { it.isNotEmpty() }?.let { gaps ->
-                                        EssayKnowledgeGapsSection(gaps = gaps)
+                                        item(key = "knowledge_gaps") {
+                                            EssayKnowledgeGapsSection(gaps = gaps)
+                                        }
                                     }
 
                                     // 10. 关联知识点区
                                     if (uiState.relatedPoints.isNotEmpty()) {
-                                        EssayRelatedPointsSection(
-                                            points = uiState.relatedPoints,
-                                            onNavigateToKnowledgeDetail = onNavigateToKnowledgeDetail,
-                                        )
+                                        item(key = "related_points") {
+                                            EssayRelatedPointsSection(
+                                                points = uiState.relatedPoints,
+                                                onNavigateToKnowledgeDetail = onNavigateToKnowledgeDetail,
+                                            )
+                                        }
                                     }
 
                                     // 11. AI 审题助手区（v0.9.9 Phase 3 新增）
                                     // 答题区 + 三阶段引导 + 自评错题回写
-                                    EssayAiGuideSection(
-                                        uiState = uiState,
-                                        onStartAnswering = viewModel::startAnswering,
-                                        onCancelAnswering = viewModel::cancelAnswering,
-                                        onUpdateUserAnswer = viewModel::updateUserAnswer,
-                                        onSubmitAnswer = viewModel::submitAnswerAndGuide,
-                                        onRetryAiGuide = viewModel::retryAiGuide,
-                                        onClearAiGuides = viewModel::clearAiGuides,
-                                        onRateSelf = viewModel::rateSelf,
-                                    )
+                                    item(key = "ai_guide") {
+                                        EssayAiGuideSection(
+                                            uiState = uiState,
+                                            onStartAnswering = viewModel::startAnswering,
+                                            onCancelAnswering = viewModel::cancelAnswering,
+                                            onUpdateUserAnswer = viewModel::updateUserAnswer,
+                                            onSubmitAnswer = viewModel::submitAnswerAndGuide,
+                                            onRetryAiGuide = viewModel::retryAiGuide,
+                                            onClearAiGuides = viewModel::clearAiGuides,
+                                            onRateSelf = viewModel::rateSelf,
+                                        )
+                                    }
                                 }
                             }
                         }

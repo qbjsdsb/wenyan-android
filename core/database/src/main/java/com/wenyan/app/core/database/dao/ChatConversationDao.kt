@@ -36,4 +36,12 @@ interface ChatConversationDao {
         "UPDATE chat_conversations SET message_count = message_count + 1, updated_at = :updatedAt WHERE id = :id",
     )
     suspend fun touch(id: String, updatedAt: Long)
+
+    /**
+     * 直接设定消息计数（v0.9.37 P1-7：消息保留上限清理后同步计数，防漂移）。
+     */
+    @Query(
+        "UPDATE chat_conversations SET message_count = :count, updated_at = :updatedAt WHERE id = :id",
+    )
+    suspend fun setMessageCount(id: String, count: Int, updatedAt: Long)
 }

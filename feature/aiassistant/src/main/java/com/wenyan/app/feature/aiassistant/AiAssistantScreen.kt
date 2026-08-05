@@ -17,6 +17,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -698,11 +700,17 @@ private fun InputBar(
         ) {
             if (isLoading) {
                 // v0.9.30 打磨：停止用方块图标（Close X 语义是"关闭"，误导；Stop 图标库缺失，用自定义方块）
+                // v0.9.37 P2：补 contentDescription（TalkBack 可朗读"停止生成"）。
+                // stringResource 需在 composable 上下文取值（semantics lambda 非 composable）。
+                val stopDesc = stringResource(R.string.ai_stop_generating)
                 Box(
                     modifier = Modifier
                         .size(16.dp)
                         .clip(RoundedCornerShape(3.dp))
-                        .background(MaterialTheme.colorScheme.onSurfaceVariant),
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant)
+                        .semantics {
+                            contentDescription = stopDesc
+                        },
                 )
             } else {
                 Icon(

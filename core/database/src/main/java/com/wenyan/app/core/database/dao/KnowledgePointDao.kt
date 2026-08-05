@@ -5,6 +5,7 @@ import androidx.room.Query
 import androidx.room.Update
 import androidx.room.Upsert
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import com.wenyan.app.core.database.entity.KnowledgePointListItem
 import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import kotlinx.coroutines.flow.Flow
 
@@ -150,4 +151,47 @@ interface KnowledgePointDao {
             "ORDER BY kp.updated_at DESC",
     )
     fun observeVerifiedWithSubject(): Flow<List<KnowledgePointWithSubject>>
+
+    /**
+     * 列表展示 lean 投影（v0.9.37 P1-2）。
+     *
+     * 与 [observeVerifiedWithSubject] 等价（VERIFIED + 科目名 + updated_at DESC），
+     * 但**只查展示列**（id/title/summary/core_conclusion/exam_frequency/subject_name），
+     * 不加载 full_content / study_text / multi_perspectives / related_ids 等大文本列。
+     * 供知识点列表/搜索 UI 使用；复习拆卡仍用 [observeVerifiedWithSubject] 全字段。
+     *
+     * 注意：WHERE/ORDER BY 引用 kp.full_content / kp.study_text / kp.updated_at
+     * 不在 SELECT 列中——SQLite 允许，不影响查询正确性。
+     */
+    @Query(
+        "SELECT kp.id, kp.title, kp.summary, kp.core_conclusion, kp.exam_frequency, s.name AS subject_name " +
+            "FROM knowledge_points kp " +
+            "LEFT JOIN chapters c ON kp.chapter_id = c.id " +
+            "LEFT JOIN subjects s ON c.subject_id = s.id " +
+            "WHERE kp.ocr_status = 'VERIFIED' " +
+            "ORDER BY kp.updated_at DESC",
+    )
+    fun observeVerifiedListItem(): Flow<List<KnowledgePointListItem>>
+
+    /**
+     * 列表搜索 lean 投影（v0.9.37 P1-2）。
+     *
+     * 与 [observeSearchWithSubject] 语义一致（VERIFIED + 四字段 LIKE + updated_at DESC），
+     * 但只查展示列。搜索匹配在 SQL 内完成，返回列无需包含 full_content/study_text。
+     *
+     * @param keyword 搜索关键词（已转义 % 和 _）
+     */
+    @Query(
+        "SELECT kp.id, kp.title, kp.summary, kp.core_conclusion, kp.exam_frequency, s.name AS subject_name " +
+            "FROM knowledge_points kp " +
+            "LEFT JOIN chapters c ON kp.chapter_id = c.id " +
+            "LEFT JOIN subjects s ON c.subject_id = s.id " +
+            "WHERE kp.ocr_status = 'VERIFIED' AND (" +
+            "kp.title LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
+            "kp.core_conclusion LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
+            "kp.full_content LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
+            "kp.study_text LIKE '%' || :keyword || '%' ESCAPE '\\' " +
+            ") ORDER BY kp.updated_at DESC",
+    )
+    fun observeSearchListItem(keyword: String): Flow<List<KnowledgePointListItem>>
 }

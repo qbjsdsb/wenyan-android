@@ -8,6 +8,7 @@ import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.entity.DataSourceEntity
 import com.wenyan.app.core.database.entity.ExamQuestionEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import com.wenyan.app.core.database.entity.KnowledgePointListItem
 import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -119,6 +120,38 @@ class KnowledgeRepository @Inject constructor(
     fun getVerifiedWithSubject(): Flow<List<KnowledgePointWithSubject>> =
         knowledgePointDao.observeVerifiedWithSubject()
             .catchAndLog(TAG, "getVerifiedWithSubject") { emptyList() }
+
+    /**
+     * 列表展示 lean 投影（v0.9.37 P1-2）。
+     *
+     * 与 [getVerifiedWithSubject] 语义一致（VERIFIED + 科目名 + updated_at DESC），
+     * 但底层走 [KnowledgePointDao.observeVerifiedListItem]：只查展示列，
+     * 不加载 full_content/study_text/multi_perspectives 等大文本列。
+     * 知识点列表 UI 应使用本方法（列表卡片只用 title/summary/考频/科目）。
+     *
+     * [getVerifiedWithSubject] 保留给复习拆卡等需要全字段的场景。
+     */
+    fun getVerifiedListItems(): Flow<List<KnowledgePointListItem>> =
+        knowledgePointDao.observeVerifiedListItem()
+            .catchAndLog(TAG, "getVerifiedListItems") { emptyList() }
+
+    /**
+     * 列表搜索 lean 投影（v0.9.37 P1-2）。
+     *
+     * 与 [searchVerifiedWithSubject] 语义一致（VERIFIED + 四字段 LIKE + 转义），
+     * 但只查展示列（搜索匹配在 SQL 内完成）。
+     *
+     * @param keyword 搜索关键词(已转义 % 和 _,非空)
+     * @throws IllegalArgumentException 如果 keyword 为空或纯空白
+     */
+    fun searchVerifiedListItems(keyword: String): Flow<List<KnowledgePointListItem>> {
+        require(keyword.isNotBlank()) {
+            "keyword must not be blank; use getVerifiedListItems() for unfiltered list. " +
+                "Blank keyword causes SQL LIKE '%%' to exclude NULL fields, silently losing points."
+        }
+        return knowledgePointDao.observeSearchListItem(keyword)
+            .catchAndLog(TAG, "searchVerifiedListItems") { emptyList() }
+    }
 
     /**
      * 关键词搜索已 VERIFIED 知识点(附带科目名,v0.8.19 新增)。

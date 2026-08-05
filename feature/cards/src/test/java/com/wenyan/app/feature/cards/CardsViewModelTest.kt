@@ -53,6 +53,9 @@ class CardsViewModelTest {
     @Before
     fun setup() = runTest(testDispatcher) {
         Dispatchers.setMain(testDispatcher)
+        // v0.9.37 P1-9：会话卡片构建调度器注入虚拟调度器，
+        // 避免真实 Default 线程异步导致虚拟时间无法等待（runTest 只控制测试调度器）
+        CardsViewModel.sessionCardDispatcher = testDispatcher
 
         // 预设 1 张测试卡片(pointId="point_1")
         cardRepository = FakeCardRepository(listOf(testClozeCard()))

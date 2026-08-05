@@ -377,4 +377,49 @@ class SeedDataLoaderTest {
         val result = SeedDataLoader.computeRelatedIdsByTags(emptyList())
         assertTrue("空列表应返回空 map", result.isEmpty())
     }
+
+    // ── v0.9.37 P0-1：轻量版本解析（parseSeedVersionFromJson）测试 ──────
+
+    /**
+     * 场景 1：含巨大 knowledge_points 数组的 JSON 只返回 metadata.version。
+     *
+     * 验证 [parseSeedVersionFromJson] 用 SeedVersionShell 壳解析：不构建
+     * 960+ 实体对象，仅跳过未知字段（ignoreUnknownKeys），返回版本号。
+     * 若解析器试图全量反序列化 knowledge_points（字段不匹配会抛错），
+     * 本测试将失败——从而回归保护"轻量解析"行为。
+     */
+    @Test
+    fun `parseSeedVersionFromJson 跳过巨大 body 只返回版本号`() {
+        // 模拟真实结构：metadata + 大数组（此处用 200 个简化实体验证跳过能力）
+        val bigBody = buildString {
+            append("""{"metadata":{"version":"2.18.0","generated_at":"2026-01-01","description":"测试"},"subjects":[],""")
+            append(""""knowledge_points":[""")
+            repeat(200) { i ->
+                if (i > 0) append(",")
+                append("""{"id":"kp_$i","title":"测试知识点 $i","core_conclusion":"结论","subject":"中国古代文学","tags":["先秦"]}""")
+            }
+            append("""],"exam_questions":[],"writing_materials":[]}""")
+        }
+
+        val version = parseSeedVersionFromJson(bigBody)
+        assertEquals("应轻量解析出 metadata.version", "2.18.0", version)
+    }
+
+    /**
+     * 场景 2：metadata 缺失时返回空串（调用方兜底 DEFAULT_SEED_VERSION）。
+     */
+    @Test
+    fun `parseSeedVersionFromJson metadata 缺失返回空串`() {
+        val version = parseSeedVersionFromJson("""{"subjects":[]}""")
+        assertEquals("metadata 缺失应返回空串", "", version)
+    }
+
+    /**
+     * 场景 3：非 JSON 输入抛出异常（调用方在 ensureSeedDataLoaded 中依赖
+     * 异常冒泡到 Application 处理器后下次重试，不在此吞掉）。
+     */
+    @Test(expected = Exception::class)
+    fun `parseSeedVersionFromJson 非法 JSON 抛异常`() {
+        parseSeedVersionFromJson("not-json{")
+    }
 }
