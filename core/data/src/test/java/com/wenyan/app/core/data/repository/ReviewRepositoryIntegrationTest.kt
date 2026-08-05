@@ -102,9 +102,9 @@ class ReviewRepositoryIntegrationTest {
     @Test
     fun `首装预建 NEW 记录受每日限额控制且不进入到期复习`() = runTest {
         repository.getTodayStudyQueue().test {
-            var queue = awaitItem()
-            // stateIn 会先发射空初值，随后由 Room 真实查询替换。
-            if (queue.totalPoints == 0) queue = awaitItem()
+            // 共享流的首个值必须来自真实 Room 查询，不能先发人工空队列；否则
+            // CardsViewModel 会把空列表冻结为会话，造成“横幅有新卡、正文无卡片”。
+            val queue = awaitItem()
             assertEquals(setOf("review", "legacy"), queue.duePoints.mapTo(mutableSetOf()) { it.id })
             assertEquals(listOf("new"), queue.newPoints.map { it.id })
             cancelAndIgnoreRemainingEvents()

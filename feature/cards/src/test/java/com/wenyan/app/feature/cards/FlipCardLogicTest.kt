@@ -40,4 +40,17 @@ class FlipCardLogicTest {
         assertEquals(true, shouldShowBack(135f))
         assertEquals(false, shouldShowBack(45f))
     }
+
+    @Test
+    fun flipScale_startAndEndRemainFullSize_midpointPullsBackSlightly() {
+        assertEquals(1f, flipScale(0f), 0.0001f)
+        assertEquals(0.975f, flipScale(90f), 0.0001f)
+        assertEquals(1f, flipScale(180f), 0.0001f)
+    }
+
+    @Test
+    fun flipScale_clampsOutOfRangeAngles() {
+        assertEquals(1f, flipScale(-20f), 0.0001f)
+        assertEquals(1f, flipScale(220f), 0.0001f)
+    }
 }
