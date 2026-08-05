@@ -1,16 +1,18 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-08-05（v0.9.36 功能完成 + 版本号提升 + tag 推送，待 Release #66）
+> 最后更新：2026-08-05（v0.9.35 已确认发布；v0.9.36 首次触发未产出 Release，已移 tag 至 HEAD 重新触发）
 
 ## ✅ 当前状态
 
-**v0.9.36 待确认**（2026-08-05）：知识卡片全屏沉浸模式（versionCode 61）。commit `1b3c621`（功能）+ `21d301b`（版本号）已推送 main，tag `v0.9.36` 已推送（git 代理通道），CI Release #66 已触发但**因 GitHub API 网络故障（SSL EOF）无法通过 API 确认结果**，需网络恢复后核验 Release 页/APK 资产/签名。
+**v0.9.36 重新触发中**（2026-08-05）：知识卡片全屏沉浸模式（versionCode 61）。**首次 tag 推送未产出 Release**（GitHub 网页代理核验：`/releases/tag/v0.9.36` 页面为纯 tag 视图，无"文研App v0.9.36"标题/工作流正文/APK 资产，判定工作流未完成）。已将 tag 移动至 HEAD（`ad9ca33`，含空态按钮修复）并**强制推送重新触发 Release #66**，验证轮询中。
 - 全屏沉浸：ImmersiveSystemBars 隐藏系统栏 + 左上角浮动退出 + 共享卡片页 ViewModel 同一复习会话
 - 横屏：卡片 560dp + 右操作栏 280dp 单列竖排评分；竖屏放宽最大宽度上限
 - 全量 **583 单测 0 失败** + assembleDebug 通过（本地已验）
 
-**v0.9.35 待确认**（2026-08-05）：横屏协调优化（卡片 480dp 居中 + 面板垂直居中）+ 全面质量审计修复 18 项（versionCode 60）。tag `v0.9.35` 已推送，CI Release #65 已触发但结果同样受 GitHub API 网络故障影响未确认。
+**v0.9.35 已确认发布**（2026-08-05，Release #65）：横屏协调优化（卡片 480dp 居中 + 面板垂直居中）+ 全面质量审计修复 18 项（versionCode 60）。GitHub 网页代理核验：`/releases/tag/v0.9.35` 页面标题为 "Release 文研App v0.9.35"（真实 Release，工作流正文存在）——此前受 GitHub API 网络故障影响未确认，现已确认发布成功。
+- **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.35
+- **receipt**：`docs/release-receipts/v0.9.35-release-receipt.md`（待补写）
 
 **v0.9.34 已发布**（2026-08-05，Release #64）：全局横屏适配——知识卡片双栏 + 2×2 评分 + 全 App 横屏巡检（versionCode 59）。
 - **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.34
@@ -83,8 +85,8 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **21d301b**（v0.9.36 版本号提升，2026-08-05） |
-| 最新 Release | **v0.9.34**（2026-08-05，Release #64，v0.9.35/36 CI 待网络恢复确认）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.34 |
+| 最新 commit | **ad9ca33**（全屏空态按钮限高居中，2026-08-05） |
+| 最新 Release | **v0.9.35**（2026-08-05，Release #65，已网页核验确认）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.35 |
 | versionCode / versionName | **61 / "0.9.36"** |
 | 知识点 | **960 个** |
 | 真题 | **485 道** |
@@ -99,7 +101,7 @@
 | R8 | **已启用并随 v0.9.32 发布**（APK 6.11MB，需 emulator 冒烟实测） |
 | 启动图标 | **v7.5 双色页精进**（v0.9.27 起：米色右页+页脚厚度+缩进+主题镂空，纯矢量） |
 | 崩溃上报 | **未接入**（需 Firebase/Sentry 配置） |
-| 阻塞 | **GitHub API 网络故障（SSL EOF）**：git 代理通道正常，API 不可达，CI 结果待确认 |
+| 阻塞 | **GitHub API 网络故障（SSL EOF）**：git 代理通道 + 网页代理（ghfast.top /releases/tag/X）正常，API 与 Actions 页被拦截；v0.9.36 Release 已重触发待确认 |
 
 ## ✅ v0.9.32 发布验证记录（2026-08-04，Release #62）
 
