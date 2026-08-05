@@ -110,7 +110,12 @@ android {
         //   竖屏）；列表类 Screen 搜索/筛选栏横屏限宽居中；TodayPlanBanner 横屏
         //   compact 单行释放 ~70dp 给卡片；完成态/背题详情操作栏限宽；
         //   全量 569 测试通过（+10 横屏判定测试）。versionName "0.9.34"）
-        versionCode = 59
+        // v0.9.35=60（横屏知识卡片协调优化：卡片限宽 480dp 居中 + 操作面板垂直居中 +
+        //   横屏协调性回归测试 5 个；全面质量审计修复 18 项：双断点不一致（MEDIUM 窗口
+        //   双栏激活）、窄横屏顶栏降级、markDontKnow 连点竞态、新卡排序方向、考试日期
+        //   倒计时联动、AI 幽灵回复代次防护、token 预算截断、错题调度清理等；
+        //   全量 574 测试通过。versionName "0.9.35"）
+        versionCode = 60
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         //   数据一致性修复（B1/B2/B3）：
@@ -180,8 +185,8 @@ android {
         // v0.9.28：App 内更新下载修复（见 versionCode 注释）
         // v0.9.29：卡片备考系统（见 versionCode 注释）
         // v0.9.30：卡片打磨 + UI/UX + 仓库卫生 + i18n（见 versionCode 注释）
-        // v0.9.31/32/33/34：学习科学三改进 / AI 界面修复 / 真题背题 / 横屏适配（见 versionCode 注释）
-        versionName = "0.9.34"
+        // v0.9.31~35：学习科学 / AI 修复 / 真题背题 / 横屏适配 / 审计修复（见 versionCode 注释）
+        versionName = "0.9.35"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
