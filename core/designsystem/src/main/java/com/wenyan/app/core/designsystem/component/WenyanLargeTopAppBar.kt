@@ -14,6 +14,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.window.core.layout.WindowHeightSizeClass
 import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -66,8 +67,12 @@ fun WenyanLargeTopAppBar(
 ) {
     // v0.8.15 Stage 2: 横屏/平板（Medium/Expanded）下 Large 标题展开态过高（152dp），
     // 挤压本就紧张的垂直内容区。降级为标准 TopAppBar（64dp）节省 88dp 垂直空间。
-    val windowWidthSizeClass = currentWindowAdaptiveInfo().windowSizeClass.windowWidthSizeClass
-    val useLarge = windowWidthSizeClass == WindowWidthSizeClass.COMPACT
+    // v0.9.35 审计修复（H2）：COMPACT 窄横屏（如 540×360 小折叠屏）宽高类均为
+    // COMPACT，若仅按宽度类判 Large，152dp 大标题 + 80dp 底栏会吃光内容区
+    // （仅剩 ~100dp）。补高度类：高度 COMPACT（<480dp）一律降级标准栏。
+    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+    val useLarge = windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.COMPACT &&
+        windowSizeClass.windowHeightSizeClass != WindowHeightSizeClass.COMPACT
 
     val colors = TopAppBarDefaults.topAppBarColors(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,

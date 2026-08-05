@@ -145,9 +145,13 @@ interface WrongAnswerDao {
 
     /**
      * 递增答错次数并重置为未解决状态。
+     *
+     * v0.9.35 审计修复：同时清空 sched_next_review_at（=0）——原实现只清
+     * resolved_at，重复答错后错题仍按旧调度时间到期，不立即进入 DUE 待复习列表；
+     * 清空后按 [markResolved] 重置语义由调度方重新安排。
      */
     @Query(
-        "UPDATE wrong_answers SET wrong_count = wrong_count + 1, last_wrong_at = :lastWrongAt, resolved_at = NULL WHERE id = :id",
+        "UPDATE wrong_answers SET wrong_count = wrong_count + 1, last_wrong_at = :lastWrongAt, resolved_at = NULL, sched_next_review_at = 0 WHERE id = :id",
     )
     suspend fun incrementWrongCount(id: String, lastWrongAt: Long)
 

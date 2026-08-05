@@ -181,7 +181,8 @@ fun SettingsScreen(
                     contentPadding = PaddingValues(vertical = Spacing.lg),
                 ) {
             // P0 v0.7.2: 考研倒计时卡片(接通 ExamCountdownManager,原完全未接入)
-            item { ExamCountdownCard() }
+            // v0.9.35 审计修复:注入用户设置的考试日期(原两套真相——设置日期但倒计时不联动)
+            item { ExamCountdownCard(examDateMillis = cardSettings.examDateMillis) }
 
             // P0 v0.7.2: 学习进度卡片(接通 study_progress 表,原死表)
             item { StudyProgressCard() }
@@ -565,12 +566,14 @@ private fun formatExamDate(millis: Long): String {
  * 展示:距考研天数、当前学习阶段(基础/强化/冲刺)、目标保持率。
  */
 @Composable
-private fun ExamCountdownCard() {
-    val today = remember { java.time.LocalDate.now() }
-    val daysToExam = remember { ExamCountdownManager.getDaysToExam(today) }
-    val phase = remember { ExamCountdownManager.getStudyPhase(daysToExam) }
-    val retention = remember { ExamCountdownManager.getGlobalRetention(daysToExam) }
-    val examDate = remember {
+private fun ExamCountdownCard(examDateMillis: Long? = null) {
+    // v0.9.35 审计修复:去 remember 固定 today——跨午夜/挂后台返回重组时自动刷新
+    val today = java.time.LocalDate.now()
+    val examDate = if (examDateMillis != null) {
+        java.time.Instant.ofEpochMilli(examDateMillis)
+            .atZone(java.time.ZoneId.systemDefault())
+            .toLocalDate()
+    } else {
         val currentYearExam = ExamCountdownManager.getExamDate(today.year)
         if (today.isAfter(currentYearExam)) {
             ExamCountdownManager.getExamDate(today.year + 1)
@@ -578,6 +581,10 @@ private fun ExamCountdownCard() {
             currentYearExam
         }
     }
+    // 用户设置考试日期优先；未设置回退 ExamCountdownManager 默认（12 月下旬）
+    val daysToExam = java.time.temporal.ChronoUnit.DAYS.between(today, examDate).toInt().coerceAtLeast(0)
+    val phase = ExamCountdownManager.getStudyPhase(daysToExam)
+    val retention = ExamCountdownManager.getGlobalRetention(daysToExam)
 
     val phaseLabel = when (phase) {
         StudyPhase.BASIC -> "基础阶段"

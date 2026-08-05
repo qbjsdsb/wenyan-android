@@ -80,6 +80,10 @@ class AiAssistantViewModel @Inject constructor(
      */
     private var currentConversationId: String? = null
 
+    /** v0.9.35 审计修复：对话代次——clearMessages/startNewConversation 时递增，
+     * 过期 AI 任务的写入（幽灵回复）据此丢弃 */
+    private var conversationGeneration = 0
+
     /**
      * 当前 AI 任务 Job（v0.9.23 P0-1/P1-3 修复）。
      *
@@ -197,6 +201,22 @@ class AiAssistantViewModel @Inject constructor(
                     }
                     return@launchAiTask
                 }
+                // v0.9.35 审计修复：多轮上下文须在 appendMessage **之前**提取——
+                // 原实现先持久化当前用户消息再 getRecentMessages，本次提问内容
+                // 在 history 与 user query 中重复注入（浪费 token 且可能误导模型）。
+                val history = chatRepository
+                    .getRecentMessages(convId, MAX_HISTORY_MESSAGES)
+                    .mapNotNull { entity ->
+                        when (entity.role.uppercase()) {
+                            "USER" -> ChatMessage(role = "user", content = entity.content)
+                            "ASSISTANT" -> ChatMessage(role = "assistant", content = entity.content)
+                            else -> null // 跳过 SYSTEM / 其他
+                        }
+                    }
+                    // v0.9.35 审计修复：token 预算截断——20 条长回复（AI 范文 500-800 字）
+                    // 可超 8k 上下文模型（如 moonshot-v1-8k）限制触发 400 错误；
+                    // 按总字符预算从最早的对话丢弃，保留最近上下文
+                    .let { trimHistoryByBudget(it) }
                 chatRepository.appendMessage(
                     conversationId = convId,
                     role = AiRole.USER.name,
@@ -221,15 +241,6 @@ class AiAssistantViewModel @Inject constructor(
 
                 // 3. 构建 prompt 并调用 AI（v0.9.24 改流式）
                 //    v0.9.24 多轮上下文：取最近 N 条历史注入 LLM（仅 USER/ASSISTANT 消息）
-                val history = chatRepository
-                    .getRecentMessages(convId, MAX_HISTORY_MESSAGES)
-                    .mapNotNull { entity ->
-                        when (entity.role.uppercase()) {
-                            "USER" -> ChatMessage(role = "user", content = entity.content)
-                            "ASSISTANT" -> ChatMessage(role = "assistant", content = entity.content)
-                            else -> null // 跳过 SYSTEM / 其他
-                        }
-                    }
                 val prompt = PromptTemplates.buildChatPrompt(text, ragResult.references)
                 var tokensUsed: Int? = null
 
@@ -493,6 +504,24 @@ class AiAssistantViewModel @Inject constructor(
         }
     }
 
+    /**
+     * v0.9.35 审计修复：多轮上下文 token 预算截断。
+     *
+     * getRecentMessages 返回旧→新；中文字符 ≈ 1 token，预算 6000 字符 ≈ 6k token，
+     * 给 system prompt + RAG 引用 + 本次提问留出安全余量。从最早的消息开始丢弃，
+     * 保留最近连续上下文（越近越相关）。
+     */
+    private fun trimHistoryByBudget(history: List<ChatMessage>): List<ChatMessage> {
+        var total = 0
+        val kept = ArrayDeque<ChatMessage>()
+        for (msg in history.asReversed()) {
+            if (total + msg.content.length > HISTORY_TOKEN_BUDGET_CHARS) break
+            total += msg.content.length
+            kept.addFirst(msg)
+        }
+        return kept.toList()
+    }
+
     // ── UI 辅助方法 ───────────────────────────────────────────────
 
     /** 更新输入框文本 */
@@ -504,7 +533,10 @@ class AiAssistantViewModel @Inject constructor(
     fun clearMessages() {
         // v0.9.23 P0-1 修复：先取消在途 AI 任务，避免 sendMessage 协程在
         // currentConversationId 置 null 后读到 null（NPE）或把消息写入已删除会话。
+        // v0.9.35 审计修复：代次递增，阻止被取消协程的 CancellationException 分支
+        // 在 NonCancellable 内把"半截回复"写回已清空的消息列表（幽灵回复）
         aiJob?.cancel()
+        conversationGeneration++
         val convId = currentConversationId
         if (convId != null) {
             viewModelScope.launch {
@@ -531,7 +563,9 @@ class AiAssistantViewModel @Inject constructor(
      */
     fun startNewConversation() {
         // v0.9.23 P0-1 修复：先取消在途 AI 任务（同 clearMessages）
+        // v0.9.35 审计修复：代次递增（同 clearMessages）
         aiJob?.cancel()
+        conversationGeneration++
         currentConversationId = null
         viewModelScope.launch {
             chatRepository.setCurrentConversation(null)
@@ -623,6 +657,10 @@ class AiAssistantViewModel @Inject constructor(
         stage: SocraticStage? = null,
         tokensUsed: Int? = null,
     ) {
+        // v0.9.35 审计修复：代次快照——若清空/新建对话发生（代次递增），
+        // 本次写入视为过期丢弃（幽灵回复防护）；update 内比较保证与
+        // clearMessages 的递增在主线程串行一致
+        val generation = conversationGeneration
         val msg = AiMessage(
             id = nextId(),
             role = AiRole.ASSISTANT,
@@ -632,11 +670,14 @@ class AiAssistantViewModel @Inject constructor(
             stage = stage,
             tokensUsed = tokensUsed,
         )
-        _uiState.update { it.copy(messages = it.messages + msg) }
+        _uiState.update { state ->
+            if (generation != conversationGeneration) state
+            else state.copy(messages = state.messages + msg)
+        }
 
         // NF-PP6: 持久化 AI 消息(currentConversationId 应已由 sendMessage 的 ensureConversation 设置)
         val convId = currentConversationId
-        if (convId != null) {
+        if (convId != null && generation == conversationGeneration) {
             chatRepository.appendMessage(
                 conversationId = convId,
                 role = AiRole.ASSISTANT.name,
@@ -721,6 +762,8 @@ class AiAssistantViewModel @Inject constructor(
          * 单条 MAX_INPUT_LENGTH=2000 字约束，总 token 在可控范围。
          */
         private const val MAX_HISTORY_MESSAGES = 20
+        /** 多轮上下文总字符预算（≈6k token，中文 1 字≈1 token；v0.9.35 审计新增） */
+        private const val HISTORY_TOKEN_BUDGET_CHARS = 6000
 
         /**
          * 用户输入最大长度（v0.8.16 P1-3）。

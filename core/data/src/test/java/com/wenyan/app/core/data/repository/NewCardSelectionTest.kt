@@ -142,7 +142,7 @@ class NewCardSelectionTest {
     // ============ 排序 ============
 
     @Test
-    fun `按考频 HIGH 优先排序，同频按 updatedAt`() {
+    fun `按考频 HIGH 优先排序，同频按 updatedAt 降序（新内容优先）`() {
         val candidates = listOf(
             kp("low_new", "LOW", updatedAt = 5000L),
             kp("high_old", "HIGH", updatedAt = 100L),
@@ -153,8 +153,9 @@ class NewCardSelectionTest {
 
         val result = selectNewPoints(candidates, emptySet(), settings, 60)
 
-        // HIGH(100,200) → MEDIUM(3000) → LOW(5000)
-        assertEquals(listOf("high_old", "high_new", "med", "low_new"), result.map { it.id })
+        // v0.9.35 审计修复：同频 updatedAt 降序（新内容优先，与 KnowledgePointDao
+        // ORDER BY updated_at DESC 一致）；HIGH(200,100) → MEDIUM(3000) → LOW(5000)
+        assertEquals(listOf("high_new", "high_old", "med", "low_new"), result.map { it.id })
     }
 
     // ============ 每日限额 ============

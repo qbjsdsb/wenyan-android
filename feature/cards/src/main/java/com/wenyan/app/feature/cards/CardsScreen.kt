@@ -89,6 +89,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.data.cards.ClozeQuoteCard
 import com.wenyan.app.core.data.repository.IntervalPreview
 import com.wenyan.app.core.designsystem.component.AdaptiveWindowLayout
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.window.core.layout.WindowWidthSizeClass
 import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ErrorState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
@@ -241,12 +243,12 @@ fun CardsScreen(
     ExpressiveScaffold(
         topBar = {
             WenyanLargeTopAppBar(
-                title = "记忆卡片",
+                title = stringResource(R.string.card_title),
                 actions = {
                     IconButton(onClick = onNavigateToAiAssistant) {
                         Icon(
                             imageVector = Icons.Default.SmartToy,
-                            contentDescription = "AI助手",
+                            contentDescription = stringResource(R.string.card_ai_assistant),
                         )
                     }
                 },
@@ -272,8 +274,14 @@ fun CardsScreen(
         ) {
         // v0.9.34 横屏：外层感知内容区尺寸——横屏时解除 widthIn 限制，
         // 让 CardReviewContent 双栏布局用满宽度；TodayPlanBanner 限宽居中防拉伸。
+        // v0.9.35 审计修复（H1）：双断点不一致——MEDIUM 窗口（600-840dp）渲染
+        // 左侧 80dp 折叠 rail 后内容区仅 520-599dp，shouldUseDualPane 内容区
+        // ≥600dp 判据永不激活。补窗口宽度类：窗口非 COMPACT（MEDIUM/EXPANDED）
+        // 且内容区宽 > 高即双栏，覆盖 600-679dp 横屏手机。
         AdaptiveWindowLayout(modifier = Modifier.fillMaxSize()) { layout ->
-            val useDualPane = layout.isLandscape
+            val windowWidthClass = currentWindowAdaptiveInfo().windowSizeClass.windowWidthSizeClass
+            val useDualPane = layout.maxWidth > layout.maxHeight &&
+                (windowWidthClass != WindowWidthSizeClass.COMPACT || layout.maxWidth >= 600.dp)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -324,16 +332,25 @@ fun CardsScreen(
                             }
                         }
                         key.error != null -> {
+                            // v0.9.35 审计修复（M3）：横屏外层不限宽时错误态全宽拉伸，
+                            // 限宽 comfortable 居中（竖屏 <720dp 不生效零回归）
                             Box(
                                 modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center,
+                                contentAlignment = Alignment.TopCenter,
                             ) {
-                                ErrorState(
-                                    icon = Icons.Default.CloudOff,
-                                    title = "加载失败",
-                                    message = key.error,
-                                    onRetry = viewModel::retry,
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .widthIn(max = MaxContentWidth.comfortable)
+                                        .fillMaxHeight(),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    ErrorState(
+                                        icon = Icons.Default.CloudOff,
+                                        title = stringResource(R.string.card_load_failed),
+                                        message = key.error,
+                                        onRetry = viewModel::retry,
+                                    )
+                                }
                             }
                         }
                         key.isFinished -> {
@@ -355,24 +372,37 @@ fun CardsScreen(
                             // 今日无到期卡（首次进入就没卡，与"刚完成一轮"区分）
                             // v0.8.8：加"去学习"按钮引导用户到知识点列表
                             // v0.9.29：今日任务横幅已在上方展示（新卡/复习/距考试/进度）
-                            EmptyState(
-                                icon = Icons.Default.CheckCircle,
-                                title = "今天没有到期卡片",
-                                description = "今日新卡与复习任务见上方，可去知识点列表预习新内容",
-                                action = {
-                                    FilledTonalButton(
-                                        onClick = onNavigateToKnowledge,
-                                        modifier = Modifier.heightIn(min = 48.dp),
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Filled.MenuBook,
-                                            contentDescription = null,
-                                            modifier = Modifier.padding(end = Spacing.xs),
-                                        )
-                                        Text(stringResource(R.string.text_05))
-                                    }
-                                },
-                            )
+                            // v0.9.35 审计修复（M3）：横屏空态限宽居中
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.TopCenter,
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .widthIn(max = MaxContentWidth.comfortable)
+                                        .fillMaxHeight(),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    EmptyState(
+                                        icon = Icons.Default.CheckCircle,
+                                        title = stringResource(R.string.card_empty_today),
+                                        description = "今日新卡与复习任务见上方，可去知识点列表预习新内容",
+                                        action = {
+                                            FilledTonalButton(
+                                                onClick = onNavigateToKnowledge,
+                                                modifier = Modifier.heightIn(min = 48.dp),
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.padding(end = Spacing.xs),
+                                                )
+                                                Text(stringResource(R.string.text_05))
+                                            }
+                                        },
+                                    )
+                                }
+                            }
                         }
                         else -> {
                             uiState.currentCard?.let { card ->
@@ -502,6 +532,9 @@ internal fun CardReviewContent(
             modifier = Modifier
                 .widthIn(max = CARD_MAX_WIDTH_LANDSCAPE)
                 .fillMaxWidth()
+                // v0.9.35 审计修复（M1）：极端矮屏（内容区 <300dp）卡片 height 保底，
+                // 避免 weight 挤压到不可读；正常高度不受影响
+                .heightIn(min = 140.dp)
                 .weight(1f),
         )
     }

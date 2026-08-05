@@ -298,12 +298,18 @@ fun AiAssistantScreen(
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .padding(innerPadding),
         ) {
-            // 死记硬背提示横幅
+            // 死记硬背提示横幅（v0.9.35 审计修复：横屏限宽居中，与消息列表对齐）
             uiState.roteWarning?.let { warning ->
-                RoteWarningBanner(
-                    warning = warning,
-                    onDismiss = viewModel::clearRoteWarning,
-                )
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    RoteWarningBanner(
+                        warning = warning,
+                        onDismiss = viewModel::clearRoteWarning,
+                        modifier = Modifier.widthIn(max = MaxContentWidth.compact),
+                    )
+                }
             }
 
             Crossfade(
@@ -315,9 +321,16 @@ fun AiAssistantScreen(
                 if (isEmpty) {
                     // v0.9.32 功能完善：空状态从单行提示升级为学习问题建议列表，
                     // 点击建议直接向 AI 提问（一键上手，展示能力边界）
-                    EmptyStateWithSuggestions(
-                        onSuggestionClick = { prompt -> viewModel.sendMessage(prompt) },
-                    )
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.TopCenter,
+                    ) {
+                        EmptyStateWithSuggestions(
+                            onSuggestionClick = { prompt -> viewModel.sendMessage(prompt) },
+                            // v0.9.35 审计修复：横屏限宽居中，与消息列表（compact）对齐
+                            modifier = Modifier.widthIn(max = MaxContentWidth.compact),
+                        )
+                    }
                 } else {
                     // v0.8.15 Stage 1: 横屏/平板下限制消息列表最大宽度并居中，避免对话气泡行宽过宽阅读疲劳。
                     Box(
@@ -653,8 +666,8 @@ private fun InputBar(
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
                 .widthIn(max = MaxContentWidth.compact)
+                .fillMaxWidth()
                 .padding(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -856,9 +869,10 @@ private fun ReferencesList(message: AiMessage) {
 private fun RoteWarningBanner(
     warning: String,
     onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.errorContainer)
             .padding(Spacing.md),

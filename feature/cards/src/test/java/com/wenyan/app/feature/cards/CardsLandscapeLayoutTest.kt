@@ -3,11 +3,13 @@ package com.wenyan.app.feature.cards
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertLeftPositionInRootIsEqualTo
 import androidx.compose.ui.test.assertPositionInRootIsEqualTo
 import androidx.compose.ui.test.assertTopPositionInRootIsEqualTo
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.unit.dp
 import com.wenyan.app.core.designsystem.theme.ColorMode
@@ -36,15 +38,19 @@ class CardsLandscapeLayoutTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    private fun renderCard(isFlipped: Boolean) {
+    private fun renderCard(
+        isFlipped: Boolean,
+        isSibling: Boolean = false,
+        height: Int = 400,
+    ) {
         composeRule.setContent {
             WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT, dynamicColor = false)) {
-                Box(Modifier.requiredSize(800.dp, 400.dp)) {
+                Box(Modifier.requiredSize(800.dp, height.dp)) {
                     CardReviewContent(
                         card = previewCardItem(),
                         uiState = previewUiState(isFlipped = isFlipped),
                         previews = emptyMap(),
-                        isSiblingAlreadyRated = false,
+                        isSiblingAlreadyRated = isSibling,
                         isInWrongBook = false,
                         isAddingBookmark = false,
                         useDualPane = true,
@@ -101,5 +107,15 @@ class CardsLandscapeLayoutTest {
         // 右列：'困难'左缘 704
         composeRule.onNodeWithContentDescription("困难")
             .assertLeftPositionInRootIsEqualTo(704.dp)
+    }
+
+    @Test
+    fun `横屏矮屏 sibling 全展开 右栏可滚动到达加入错题本`() {
+        // 800x300 矮横屏 + sibling 提示全展开（~318dp 内容 > ~292dp 右栏视口）
+        renderCard(isFlipped = true, isSibling = true, height = 300)
+        // 评分按钮优先可见（顶部）
+        composeRule.onNodeWithContentDescription("不会").assertExists()
+        // 次要"加入错题本"可滚动访问
+        composeRule.onNodeWithContentDescription("加入错题本").performScrollTo().assertIsDisplayed()
     }
 }

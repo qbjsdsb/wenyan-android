@@ -453,11 +453,14 @@ private fun ApiConfigFormDialog(
     val displayNameError = remember(formState.displayName) {
         if (formState.displayName.isBlank()) "请输入显示名称" else null
     }
+    // v0.9.35 审计修复：UI 校验与 validateBaseUrl 同步强制 https（v0.9.31 批次 D）——
+    // 原 UI 放行 http://（提示"需以 http(s):// 开头"），输入 http 无红字、保存才报错，
+    // 体验不一致；现输入 http:// 立即提示改用 https
     val baseUrlError = remember(formState.baseUrl) {
         when {
             formState.baseUrl.isBlank() -> "请输入接口地址"
-            !formState.baseUrl.startsWith("http://") && !formState.baseUrl.startsWith("https://") ->
-                "需以 http(s):// 开头"
+            !formState.baseUrl.startsWith("https://") ->
+                "需以 https:// 开头（出于安全不支持 http://）"
             else -> null
         }
     }

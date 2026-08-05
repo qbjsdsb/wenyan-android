@@ -205,8 +205,8 @@ private fun EssayFilterBar(
             // v0.9.23：年份筛选已删除（用户需求"论述题不要年份"）
             FlowRow(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .widthIn(max = MaxContentWidth.comfortable)
+                    .fillMaxWidth()
                     .padding(horizontal = Spacing.lg),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),

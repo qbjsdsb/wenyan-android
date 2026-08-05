@@ -289,8 +289,8 @@ private fun PracticeActionBar(
     ) {
     Column(
         modifier = Modifier
-            .fillMaxWidth()
             .widthIn(max = MaxContentWidth.compact)
+            .fillMaxWidth()
             .padding(horizontal = Spacing.lg, vertical = Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {

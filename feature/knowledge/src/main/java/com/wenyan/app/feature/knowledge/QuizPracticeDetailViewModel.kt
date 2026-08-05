@@ -44,8 +44,12 @@ class QuizPracticeDetailViewModel @Inject constructor(
     private val wrongAnswerRepository: WrongAnswerRepository,
 ) : ViewModel() {
 
-    /** 起始题目 ID（nav 路径参数） */
-    private val startQuestionId: String = checkNotNull(savedStateHandle[KEY_QUESTION_ID])
+    /**
+     * 起始题目 ID（nav 路径参数）。
+     * v0.9.35 审计修复：原 checkNotNull 对异常导航/未来 deep link 会在构造期崩溃；
+     * 改可空，loadQuestions 内友好降级为错误态（对齐 KnowledgePointDetail 容错模式）。
+     */
+    private val startQuestionId: String? = savedStateHandle.get<String>(KEY_QUESTION_ID)
 
     /** 筛选条件（nav query 参数，"ALL" 表示不筛选） */
     private val selectedType: String? = savedStateHandle.get<String>(KEY_TYPE)?.takeIf { it != FILTER_ALL }
@@ -109,6 +113,12 @@ class QuizPracticeDetailViewModel @Inject constructor(
 
     private fun loadQuestions() {
         loadJob?.cancel()
+        val startId = startQuestionId
+        if (startId == null) {
+            _error.value = "缺少题目参数，请返回列表重试"
+            _isLoading.value = false
+            return
+        }
         loadJob = viewModelScope.launch {
             knowledgeRepository.observePracticeQuestions(QuizPracticeTypes.ALL)
                 .catch { e ->
@@ -124,12 +134,12 @@ class QuizPracticeDetailViewModel @Inject constructor(
                             (selectedSubjectId == null || q.subjectId == selectedSubjectId) &&
                             (selectedYear == null || q.year == selectedYear)
                     }
-                    val startIndex = filtered.indexOfFirst { it.id == startQuestionId }
+                    val startIndex = filtered.indexOfFirst { it.id == startId }
                     if (startIndex < 0) {
                         // 起始题不在筛选集（防御：列表页用相同条件导航，正常不会发生）
                         Timber.w(
                             "QuizPracticeDetail startQuestionId=%s not in filter set (type=%s subject=%s year=%s)",
-                            startQuestionId, selectedType, selectedSubjectId, selectedYear,
+                            startId, selectedType, selectedSubjectId, selectedYear,
                         )
                         _error.value = "题目不在当前筛选中，请返回列表重试"
                         _isLoading.value = false
@@ -172,6 +182,8 @@ class QuizPracticeDetailViewModel @Inject constructor(
 
     /** 标记"会了"→ 推进到下一题（已是最后一题则保持原位，由 UI 提示已完成） */
     fun markKnow() {
+        // v0.9.35 审计修复：400ms 防连击窗，避免快速双击"会了"连跳两题
+        if (!tryAcquireAdvanceLock()) return
         hideAnswer()
         if (_currentIndex.value < _questions.value.size - 1) {
             _currentIndex.value += 1
@@ -180,11 +192,24 @@ class QuizPracticeDetailViewModel @Inject constructor(
         }
     }
 
-    /** 标记"不会"→ 写入错题本 + 推进到下一题 */
+    /**
+     * 标记"不会"→ 写入错题本 + 推进到下一题。
+     *
+     * v0.9.35 审计修复（P1）：原实现先捕获题目再在协程内 await recordWrongAnswer，
+     * 完成后才推进索引——快速连点会启动多个协程：同一题重复写入错题本
+     * （wrongCount 虚增）且各协程先后 +1 静默跳题。现改为：
+     * - 同步推进索引（用已捕获的 question），重复点击作用于下一题而非同题
+     * - 400ms 防连击窗，误触双击只推进一次
+     */
     fun markDontKnow() {
         val question = currentQuestion.value ?: return
+        if (!tryAcquireAdvanceLock()) return
+        val isLast = _currentIndex.value >= _questions.value.size - 1
+        if (!isLast) {
+            _currentIndex.value += 1
+        }
+        hideAnswer()
         viewModelScope.launch {
-            var recorded = false
             try {
                 wrongAnswerRepository.recordWrongAnswer(
                     pointId = null,
@@ -193,20 +218,27 @@ class QuizPracticeDetailViewModel @Inject constructor(
                     correctAnswer = question.answerFramework,
                     source = WrongAnswerRepository.SOURCE_QUIZ_WRONG,
                 )
-                recorded = true
-                _message.value = "已加入错题本，将按 FSRS 安排复习"
+                _message.value = if (isLast) {
+                    "已加入错题本（已是最后一题）"
+                } else {
+                    "已加入错题本，将按 FSRS 安排复习"
+                }
             } catch (e: Exception) {
                 Timber.e(e, "markDontKnow recordWrongAnswer failed")
+                // 推进已同步完成不回退；仅提示失败（错题本写入失败不影响背诵流程）
                 _message.value = "加入错题本失败，请稍后重试"
             }
-            hideAnswer()
-            if (_currentIndex.value < _questions.value.size - 1) {
-                _currentIndex.value += 1
-            } else if (recorded) {
-                // 仅在写入成功时覆盖"最后一题"提示，失败保留原失败文案
-                _message.value = "已加入错题本（已是最后一题）"
-            }
         }
+    }
+
+    /** 防连击锁：400ms 内只允许一次推进操作（"会了"/"不会"共用）。 */
+    private var lastAdvanceAt = 0L
+
+    private fun tryAcquireAdvanceLock(): Boolean {
+        val now = android.os.SystemClock.uptimeMillis()
+        if (now - lastAdvanceAt < ADVANCE_LOCK_MS) return false
+        lastAdvanceAt = now
+        return true
     }
 
     /** 重试加载（错误态下 ErrorState 重试按钮回调） */
@@ -226,6 +258,9 @@ class QuizPracticeDetailViewModel @Inject constructor(
         const val KEY_SUBJECT = "subject"
         const val KEY_YEAR = "year"
         const val FILTER_ALL = "ALL"
+
+        /** 防连击窗口：400ms 内"会了/不会"只生效一次（v0.9.35 审计修复） */
+        const val ADVANCE_LOCK_MS = 400L
     }
 }
 

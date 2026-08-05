@@ -91,10 +91,11 @@ internal fun selectNewPoints(
         .filter { it.subjectName == null || it.subjectName in settings.subjectFilters }
         .filter { matchesFrequency(it.point.examFrequency, settings.frequencyFilter) }
         .sortedWith(
-            compareBy<KnowledgePointWithSubject>(
-                { frequencyRank(it.point.examFrequency) },
-                { it.point.updatedAt },
-            ),
+            // v0.9.35 审计修复：同考频下 updated_at 应降序（新内容优先，与注释及
+            // KnowledgePointDao ORDER BY updated_at DESC 一致）；原 compareBy 升序
+            // 导致每日新卡永远先推最旧内容，新内容可能长期不出现
+            compareBy<KnowledgePointWithSubject> { frequencyRank(it.point.examFrequency) }
+                .thenByDescending { it.point.updatedAt },
         )
     return takeNewPointsByCardLimit(candidates.map { it.point }, dailyNewLimit)
 }

@@ -22,7 +22,13 @@ import org.robolectric.annotation.Config
  * 调用方无需再次 OptIn —— opt-in 在声明位点生效。
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(
+    sdk = [34],
+    // v0.9.35 审计修复（H2）：TopAppBar 按高度类降级——竖屏手机（高度 MEDIUM）
+    // 用 Large 大标题栏；默认 Robolectric 设备（470dp 高）高度 COMPACT 会降级，
+    // 指定竖屏手机尺寸保证测试验证 Large 模式
+    qualifiers = "w411dp-h891dp-port",
+)
 class WenyanLargeTopAppBarTest {
 
     @get:Rule

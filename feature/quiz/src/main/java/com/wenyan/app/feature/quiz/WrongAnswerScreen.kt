@@ -240,8 +240,8 @@ private fun WrongAnswerFilterRow(
     ) {
     FlowRow(
         modifier = Modifier
-            .fillMaxWidth()
             .widthIn(max = MaxContentWidth.comfortable)
+            .fillMaxWidth()
             .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
@@ -764,6 +764,7 @@ private fun formatSource(source: String): String = when (source) {
     WrongAnswerRepository.SOURCE_CARD_AGAIN -> "卡片复习"
     WrongAnswerRepository.SOURCE_QUIZ_WRONG -> "真题练习"
     WrongAnswerRepository.SOURCE_ESSAY_PRACTICE -> "论述题自评"
+    WrongAnswerRepository.SOURCE_CARD_MANUAL -> "手动加入"
     else -> source
 }
 

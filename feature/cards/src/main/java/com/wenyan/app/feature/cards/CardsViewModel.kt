@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
@@ -335,6 +336,29 @@ class CardsViewModel @Inject constructor(
         )
 
     init {
+        // v0.9.35 审计修复：会话完成时累加学习时长到 study_progress.totalStudyTime——
+        // addStudyTime 原无任何调用方（死链路），设置页"学习进度"总时长恒为 0。
+        viewModelScope.launch {
+            _uiState
+                .map { it.isFinished }
+                .distinctUntilChanged()
+                .drop(1) // 跳过初始发射，只响应"false→true"转变
+                .collect { finished ->
+                    if (finished) {
+                        try {
+                            studyProgressRepository.addStudyTime(
+                                sessionDurationMinutes.value.coerceAtLeast(1) * 60,
+                            )
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            // 学习时长统计失败不影响复习主流程，仅记录
+                            Timber.w(e, "addStudyTime failed on session finish")
+                        }
+                    }
+                }
+        }
+
         viewModelScope.launch {
             // v0.8.20 P1-2 修复 retry-after-error bug:
             // 原结构 `.flatMapLatest { combine... }.catch { emit(...) }.collect {...}`
@@ -605,6 +629,10 @@ class CardsViewModel @Inject constructor(
                 } catch (e: Exception) {
                     // v0.8.12 P1-3:错误优先级调度失败 > 学习进度 > 错题,用 hasSchedulingError 标记
                     _errorMessage.value = "评分调度失败：${e.message ?: "未知错误"}"
+                    // v0.9.35 审计修复：调度失败回滚 ratedPointIds 标记，
+                    // 否则同 pointId 的 sibling 卡本会话永不再触发调度（FSRS 数据永久缺失）
+                    ratedPointIds.remove(pointId)
+                    ratedPointFirstCardIds.remove(pointId)
                     null
                 }
 
