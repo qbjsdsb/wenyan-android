@@ -21,6 +21,9 @@ android {
     testOptions {
         unitTests {
             isReturnDefaultValues = true
+            // v0.9.35 横屏审查:Robolectric 需要解析 Android 资源/manifest
+            //（含 ui-test-manifest 的 ComponentActivity 声明）才能跑 Compose 截图
+            isIncludeAndroidResources = true
         }
     }
 }
@@ -62,4 +65,8 @@ dependencies {
     // v0.9.18: Compose UI 测试依赖（AddToWrongAnswerButton 测试）
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     testImplementation(libs.androidx.compose.ui.test.junit4)
+    // v0.9.35 横屏审查:Robolectric 渲染截图（JVM 跑无需 emulator）
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.compose.ui.tooling)
 }

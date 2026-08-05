@@ -114,6 +114,15 @@ import com.wenyan.app.core.fsrs.Rating
 private const val SNACKBAR_TIMEOUT_MS = 5_000L
 
 /**
+ * 横屏双栏卡片最大宽度（v0.9.35 协调优化）。
+ *
+ * 实测 800dp 内容区下左栏宽 584dp（比例 1.73:1，行文过长似横幅）；
+ * 限宽 480dp 后比例 ~1.42:1，阅读舒适、更像"卡片"。
+ * 竖屏列宽 < 480dp 时 widthIn 不生效，保持 fillMaxWidth 原行为。
+ */
+private val CARD_MAX_WIDTH_LANDSCAPE = 480.dp
+
+/**
  * 记忆卡片界面。
  *
  * 实现卡片正反面翻转交互：
@@ -420,7 +429,7 @@ private data class CardsStateKey(
  * 原实现 sibling 卡也显示"GOOD→6天",但评分不会触发 FSRS 调度,误导用户。
  */
 @Composable
-private fun CardReviewContent(
+internal fun CardReviewContent(
     card: CardItem,
     uiState: CardsUiState,
     previews: Map<Rating, IntervalPreview>,
@@ -448,10 +457,15 @@ private fun CardReviewContent(
     @Composable
     fun ColumnScope.CardArea() {
         // 进度区：文字 + 进度条
+        // v0.9.35 横屏协调：进度条与卡片同宽限宽居中（widthIn 在 fillMaxWidth
+        // 前，避免 fillMaxWidth 强制全宽后 widthIn 约束冲突；左栏 Column
+        // horizontalAlignment=Center 居中；竖屏列宽 < 480dp 不受影响）
         ProgressSection(
             currentIndex = uiState.currentIndex,
             total = uiState.cards.size,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .widthIn(max = CARD_MAX_WIDTH_LANDSCAPE)
+                .fillMaxWidth(),
         )
 
         // v0.9.31：新卡标识（未学过的知识点首次进入学习循环，帮助理解学习循环）
@@ -459,7 +473,9 @@ private fun CardReviewContent(
             Surface(
                 shape = MaterialTheme.shapes.small,
                 color = MaterialTheme.colorScheme.tertiaryContainer,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .widthIn(max = CARD_MAX_WIDTH_LANDSCAPE)
+                    .fillMaxWidth(),
             ) {
                 Text(
                     text = "新卡 · 首次学习（10 分钟后强化一次）",
@@ -474,15 +490,18 @@ private fun CardReviewContent(
         }
 
         // 可翻转卡片
-        // v0.9.34 横屏：widthIn(max=comfortable) 防止大平板横屏左栏过宽
-        // （左栏可达 ~944dp）拉伸卡片导致文本行超长；竖屏列宽 ≤600dp 不受影响
+        // v0.9.34 横屏：widthIn 防止大平板横屏左栏过宽
+        // v0.9.35 协调优化：限宽收窄到 480dp（实测 800dp 内容区卡片达 584dp 宽、
+        // 比例 1.73:1 行文过长似横幅；480dp 下比例 ~1.42:1 更舒适协调），
+        // 左栏 horizontalAlignment=Center 居中，两侧留白与右栏形成平衡。
+        // 竖屏列宽 < 480dp 不受影响（fillMaxWidth 优先）
         FlipCard(
             card = card,
             isFlipped = uiState.isFlipped,
             onClick = onFlip,
             modifier = Modifier
+                .widthIn(max = CARD_MAX_WIDTH_LANDSCAPE)
                 .fillMaxWidth()
-                .widthIn(max = MaxContentWidth.comfortable)
                 .weight(1f),
         )
     }
@@ -587,6 +606,9 @@ private fun CardReviewContent(
                 // v0.9.34 打磨：矮横屏（~360dp 高）翻转后操作组（~318dp）可能
                 // 超出右栏可用高度，verticalScroll 兜底保证所有操作可访问
                 // （评分 2×2 与撤销/跳过优先可见，次要"加入错题本"可滚动查看）
+                // v0.9.35 协调优化：Arrangement.Center 垂直居中——实测右栏内容
+                // 仅占顶部 155~230dp，下方 160~240dp 空白（视觉悬空失衡）；
+                // Center 使操作面板与左侧卡片垂直平衡；内容超出时自动可滚
                 val actionScrollState = rememberScrollState()
                 // 翻转/切卡时重置滚动到顶部：评分按钮始终优先可见
                 // （与左栏 FlipCard 的 scrollTo(0) 对称）
@@ -599,7 +621,7 @@ private fun CardReviewContent(
                         .fillMaxHeight()
                         .verticalScroll(actionScrollState),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalArrangement = Arrangement.Center,
                 ) {
                     // 翻转后：评分 2×2 + 加入错题本 + 撤销/跳过
                     AnimatedVisibility(
@@ -1462,7 +1484,7 @@ internal fun shouldShowBack(rotation: Float): Boolean = rotation > 90f
  * 构造一张"苏轼名句填空"卡,内容真实可读,便于在 Preview 中验证
  * CardContent 渲染(正面挖空 / 背面答案) + FlipCard 翻转 + 评分按钮布局。
  */
-private fun previewCardItem(): CardItem = CardItem(
+internal fun previewCardItem(): CardItem = CardItem(
     id = "preview_card_1",
     front = "苏轼____，号东坡居士",
     back = "轼",
@@ -1483,7 +1505,7 @@ private fun previewCardItem(): CardItem = CardItem(
  *
  * @param isFlipped 是否已翻转(true=展示背面+评分按钮,false=展示正面问题)
  */
-private fun previewUiState(isFlipped: Boolean = true): CardsUiState = CardsUiState(
+internal fun previewUiState(isFlipped: Boolean = true): CardsUiState = CardsUiState(
     cards = listOf(previewCardItem()),
     currentIndex = 0,
     isFlipped = isFlipped,
