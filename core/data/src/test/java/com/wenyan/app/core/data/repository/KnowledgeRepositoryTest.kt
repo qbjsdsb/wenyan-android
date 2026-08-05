@@ -733,6 +733,8 @@ private class FakeDsDao(
 
     override suspend fun deleteById(id: String) = throw UnsupportedOperationException()
 
+    override suspend fun deleteManagedKnowledgePointSources() = throw UnsupportedOperationException()
+
     override suspend fun getById(id: String): DataSourceEntity? = throw UnsupportedOperationException()
 
     override fun observeByKnowledgePoint(pointId: String): Flow<List<DataSourceEntity>> =
