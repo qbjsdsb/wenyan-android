@@ -115,7 +115,15 @@ android {
         //   双栏激活）、窄横屏顶栏降级、markDontKnow 连点竞态、新卡排序方向、考试日期
         //   倒计时联动、AI 幽灵回复代次防护、token 预算截断、错题调度清理等；
         //   全量 574 测试通过。versionName "0.9.35"）
-        versionCode = 60
+        // v0.9.36=61（知识卡片全屏沉浸模式：卡片页顶栏全屏按钮（有卡可复习时显示）进入
+        //   全屏页——ImmersiveSystemBars 隐藏状态栏+导航栏（项目首个沉浸式先例，滑动边缘
+        //   临时唤出自动隐藏）；无顶栏零 insets Scaffold 内容占满全屏；左上角半透明圆形
+        //   浮动退出按钮；共享卡片页 CardsViewModel（hiltViewModel getBackStackEntry）
+        //   保持同一复习会话；横屏双栏变体：卡片放宽 560dp + 右操作栏 280dp 单列竖排
+        //   评分按钮（用户"一个个竖着排列"偏好）；竖屏放宽最大宽度上限；
+        //   Leech 警告/加入错题本/Snackbar 全镜像卡片页；全量 579 测试通过
+        //   （+4 全屏横屏布局测试）。versionName "0.9.36"）
+        versionCode = 61
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         //   数据一致性修复（B1/B2/B3）：
@@ -186,7 +194,8 @@ android {
         // v0.9.29：卡片备考系统（见 versionCode 注释）
         // v0.9.30：卡片打磨 + UI/UX + 仓库卫生 + i18n（见 versionCode 注释）
         // v0.9.31~35：学习科学 / AI 修复 / 真题背题 / 横屏适配 / 审计修复（见 versionCode 注释）
-        versionName = "0.9.35"
+        // v0.9.36：知识卡片全屏沉浸模式（见 versionCode 注释）
+        versionName = "0.9.36"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
