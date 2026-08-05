@@ -54,7 +54,7 @@
       左缘 72dp；面板左缘 720dp；"不会" top=25 居中）
   - **版本号提升（commit `21d301b`）**：versionCode 61 / versionName 0.9.36 +
     CHANGELOG + 00-STATUS + receipt（v0.9.36-release-receipt.md）
-- **验证**：全量 **579 单测 0 失败** + assembleDebug + app/cards compileDebugKotlin
+- **验证**：全量 **583 单测 0 失败** + assembleDebug + app/cards compileDebugKotlin
   全部通过（offline；GitHub API 网络故障不影响本地构建）
 - **发布**：main（`21d301b`）+ tag `v0.9.36` 已通过 git 代理通道（ghfast.top）推送，
   CI Release #66 已触发但 **GitHub API（SSL EOF）无法确认结果**——与 v0.9.35 相同

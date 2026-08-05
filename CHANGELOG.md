@@ -26,7 +26,7 @@
 
 - 新增 `ImmersiveSystemBars`（WindowInsetsControllerCompat + BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE），离开组合自动恢复系统栏
 - 全屏横屏布局回归测试 4 个：卡片 560dp 居中 / 操作栏 280dp / 评分按钮单列竖排 / 面板垂直居中
-- 全量 **579 单测 0 失败** + assembleDebug 通过
+- 全量 **583 单测 0 失败** + assembleDebug 通过
 
 ## [v0.9.35] - 2026-08-05
 
