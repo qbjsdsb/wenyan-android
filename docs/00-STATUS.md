@@ -1,11 +1,16 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-08-05（v0.9.35 功能完成 + 版本号提升，待发布 Release #65）
+> 最后更新：2026-08-05（v0.9.36 功能完成 + 版本号提升 + tag 推送，待 Release #66）
 
 ## ✅ 当前状态
 
-**v0.9.35 待发布**（2026-08-05）：横屏协调优化（卡片 480dp 居中 + 面板垂直居中）+ 全面质量审计修复 18 项（versionCode 60）。commit `9bb31eb` + `623cdee` 已提交，等待 push 触发 Release #65。
+**v0.9.36 待确认**（2026-08-05）：知识卡片全屏沉浸模式（versionCode 61）。commit `1b3c621`（功能）+ `21d301b`（版本号）已推送 main，tag `v0.9.36` 已推送（git 代理通道），CI Release #66 已触发但**因 GitHub API 网络故障（SSL EOF）无法通过 API 确认结果**，需网络恢复后核验 Release 页/APK 资产/签名。
+- 全屏沉浸：ImmersiveSystemBars 隐藏系统栏 + 左上角浮动退出 + 共享卡片页 ViewModel 同一复习会话
+- 横屏：卡片 560dp + 右操作栏 280dp 单列竖排评分；竖屏放宽最大宽度上限
+- 全量 **579 单测 0 失败** + assembleDebug 通过（本地已验）
+
+**v0.9.35 待确认**（2026-08-05）：横屏协调优化（卡片 480dp 居中 + 面板垂直居中）+ 全面质量审计修复 18 项（versionCode 60）。tag `v0.9.35` 已推送，CI Release #65 已触发但结果同样受 GitHub API 网络故障影响未确认。
 
 **v0.9.34 已发布**（2026-08-05，Release #64）：全局横屏适配——知识卡片双栏 + 2×2 评分 + 全 App 横屏巡检（versionCode 59）。
 - **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.34
@@ -78,9 +83,9 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **7d67612**（v0.9.32 版本号提升，2026-08-04） |
-| 最新 Release | **v0.9.32**（2026-08-04，AI IME 修复+键盘发送+空态建议+合规）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.32 |
-| versionCode / versionName | **57 / "0.9.32"** |
+| 最新 commit | **21d301b**（v0.9.36 版本号提升，2026-08-05） |
+| 最新 Release | **v0.9.34**（2026-08-05，Release #64，v0.9.35/36 CI 待网络恢复确认）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.34 |
+| versionCode / versionName | **61 / "0.9.36"** |
 | 知识点 | **960 个** |
 | 真题 | **485 道** |
 | 论述题 | **134 道**（v0.9.23 起删年份显示，数据层 year 保留） |
@@ -90,11 +95,11 @@
 | 图谱 | **已移除**（v0.9.3） |
 | AI 服务商 | DeepSeek/通义/智谱/月之暗面/自定义（v0.9.23 修复 URL 拼接） |
 | 更新日志机制 | **CHANGELOG.md** + release.yml 动态读取（v0.9.23 起） |
-| 单测 | **559 个 0 失败**（v0.9.32 验证，validateBaseUrl +8） |
+| 单测 | **579 个 0 失败**（v0.9.36 验证，全屏横屏 +4） |
 | R8 | **已启用并随 v0.9.32 发布**（APK 6.11MB，需 emulator 冒烟实测） |
 | 启动图标 | **v7.5 双色页精进**（v0.9.27 起：米色右页+页脚厚度+缩进+主题镂空，纯矢量） |
 | 崩溃上报 | **未接入**（需 Firebase/Sentry 配置） |
-| 阻塞 | **无** |
+| 阻塞 | **GitHub API 网络故障（SSL EOF）**：git 代理通道正常，API 不可达，CI 结果待确认 |
 
 ## ✅ v0.9.32 发布验证记录（2026-08-04，Release #62）
 

@@ -34,6 +34,40 @@
 
 ---
 
+## 2026-08-05 会话：v0.9.36 知识卡片全屏沉浸模式
+
+- **完成**：
+  - **全屏沉浸模式（commit `1b3c621`）**：
+    - `ImmersiveSystemBars`（core/designsystem 新增）：项目首个沉浸式先例——
+      WindowInsetsControllerCompat + BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE 隐藏
+      系统栏，滑动边缘临时唤出自动隐藏，onDispose 自动恢复
+    - `CardsFullscreenScreen`（feature/cards 新增）：无顶栏零 insets Scaffold +
+      左上角半透明圆形浮动退出按钮；五态 Crossfade + Snackbar + Leech 警告
+      AlertDialog 全镜像卡片页
+    - **共享复习会话**：`hiltViewModel(navController.getBackStackEntry(ROUTE_CARDS))`
+      经 @Composable provider 延迟求值（NavHost builder 非 composable 上下文——
+      初次直接传 viewModel 编译报错，改 provider 后通过）
+    - 横屏变体：卡片 560dp + 右操作栏 280dp 单列竖排评分（RatingButtons columns=1）；
+      竖屏放宽上限（comfortable）
+    - 顶栏全屏入口（有卡时显示）；strings 新增 card_fullscreen/card_fullscreen_exit
+    - `CardsFullscreenLayoutTest` 4 断言（实测校准：Spacing.lg=16 → 左栏 704dp 卡片
+      左缘 72dp；面板左缘 720dp；"不会" top=25 居中）
+  - **版本号提升（commit `21d301b`）**：versionCode 61 / versionName 0.9.36 +
+    CHANGELOG + 00-STATUS + receipt（v0.9.36-release-receipt.md）
+- **验证**：全量 **579 单测 0 失败** + assembleDebug + app/cards compileDebugKotlin
+  全部通过（offline；GitHub API 网络故障不影响本地构建）
+- **发布**：main（`21d301b`）+ tag `v0.9.36` 已通过 git 代理通道（ghfast.top）推送，
+  CI Release #66 已触发但 **GitHub API（SSL EOF）无法确认结果**——与 v0.9.35 相同
+  状态，待网络恢复后核验 Release 页/APK/签名
+- **commit**：
+  - `1b3c621` — feat(cards): 知识卡片全屏沉浸模式（v0.9.36）
+  - `21d301b` — chore: v0.9.36 版本号提升（versionCode 61 / versionName 0.9.36）+ CHANGELOG
+- **下次继续**：
+  - 网络恢复后核验 v0.9.35（#65）/ v0.9.36（#66）CI 结果 + receipt 补全
+  - 路线图：知识图谱 Graph 视图（数据就绪）/ 学习统计页 / 复习提醒通知
+
+---
+
 ## 2026-08-05 会话：v0.9.34 全局横屏适配
 
 - **完成**：
