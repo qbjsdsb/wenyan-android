@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
@@ -247,7 +248,7 @@ fun CardsFullscreenScreen(
                                         action = {
                                             FilledTonalButton(
                                                 onClick = onNavigateToKnowledge,
-                                                modifier = Modifier.fillMaxWidth(),
+                                                modifier = Modifier.heightIn(min = 48.dp),
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.AutoMirrored.Filled.MenuBook,
