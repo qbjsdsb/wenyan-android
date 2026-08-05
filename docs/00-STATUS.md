@@ -1,9 +1,17 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-08-05（v0.9.35 已确认发布；v0.9.36 重触发后已发布并完成 APK 核验）
+> 最后更新：2026-08-06（v0.9.37 已发布并完成 APK 核验）
 
 ## ✅ 当前状态
+
+**v0.9.37 已发布**（2026-08-06，Release #67）：布局与性能深度优化（versionCode 62）。推送后 ~14 分钟生成 Release（CI 冷缓存较慢，非异常），APK 已下载实测核验通过。
+- **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.37
+- **receipt**：`docs/release-receipts/v0.9.37-release-receipt.md`
+- P0：种子加载版本检查前置 / 卡片页拆卡缓存 + 共享热流 + 移出主线程 / 完成态无障碍修复
+- P1：APK -12.1%（shrinkResources + OkHttp 规则）/ 列表 lean 投影 / 论述题 LazyColumn / Retrofit 缓存 / 聊天上限
+- APK 实测：versionCode 62 / versionName "0.9.37" / targetSdk 35 / 正式签名（3fefd8a0…）/ 5.15MB
+- 全量 **594 单测 0 失败**（+11）+ assembleDebug/Release 通过
 
 **v0.9.36 已发布**（2026-08-05，Release #66）：知识卡片全屏沉浸模式（versionCode 61）。首次 tag 推送未产出 Release，移 tag 至 HEAD（`ad9ca33`）强制推送重触发后 ~2.5 分钟生成 Release，APK 已下载实测核验通过。
 - **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.36
@@ -88,9 +96,9 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **ad9ca33**（全屏空态按钮限高居中，2026-08-05） |
-| 最新 Release | **v0.9.36**（2026-08-05，Release #66，全屏沉浸模式，APK 已实测核验）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.36 |
-| versionCode / versionName | **61 / "0.9.36"** |
+| 最新 commit | **7055446**（布局与性能深度优化，2026-08-06） |
+| 最新 Release | **v0.9.37**（2026-08-06，Release #67，性能深度优化，APK 已实测核验）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.37 |
+| versionCode / versionName | **62 / "0.9.37"** |
 | 知识点 | **960 个** |
 | 真题 | **485 道** |
 | 论述题 | **134 道**（v0.9.23 起删年份显示，数据层 year 保留） |

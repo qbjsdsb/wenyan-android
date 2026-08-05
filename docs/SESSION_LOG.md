@@ -6743,3 +6743,27 @@ while (retryCount <= maxRetries) {
     修复模式：由 bottomBar 独占 IME（contentWindowInsets=0），顶/底栏高度仍由 Scaffold 计入 innerPadding
   - 排查手段：对比 M3 Scaffold 的 MutableWindowInsets 机制 + 全项目 grep imePadding 定位唯一 double 场景（AI 屏）
   - 00-STATUS 用 python 批量 replace 需复查段落顺序/重复头，避免插入位置错乱
+
+---
+
+## 2026-08-06 会话：v0.9.37 布局与性能深度优化
+
+- **完成**（4 路并行审计 + 逐条实测复核，commit `7055446`）：
+  - **P0**：
+    - 种子加载版本检查前置：老用户冷启动不再全量解析 5.3MB JSON（`SeedVersionShell` 轻量解析 metadata，+3 测试）
+    - 卡片页拆卡缓存：评分后不再全量重拆数千张卡（(id,updatedAt) 排序键，顺序无关，+4 测试）；
+      今日队列 stateIn 共享热流（ApplicationScope + WhileSubscribed 5s，消除横幅/拆卡双份订阅）
+    - 完成态语义合并修复：3 按钮恢复 TalkBack 独立操作（仅统计区 merge，+4 无障碍测试）
+  - **P1**：shrinkResources + OkHttp keep 收窄（**APK 6.15MB→5.15MB，-12.1%**）/ 列表 lean 投影
+    DAO（KnowledgePointListItem）/ 论述题详情 LazyColumn / Retrofit 按 baseUrl 缓存 /
+    聊天历史上限 200 条（rowid 稳定删最旧）/ 卡片首帧 id 生成移出主线程（sessionCardDispatcher 可注入）
+  - **P2**：设置页水平边距 / 停止生成无障碍文案 / @Immutable 补齐 / _leechWarnings.update{} /
+    AI 兜底错误友好化 / proguard 注释修正
+  - **版本号提升**：versionCode 62 / versionName 0.9.37 + CHANGELOG
+- **验证**：全量 **594 单测 0 失败**（+11）+ assembleDebug/Release 通过（R8 + shrinkResources + OkHttp 规则变更）
+- **发布**：main + tag v0.9.37 推送 → ~14 分钟生成 Release #67（CI 冷缓存较慢，非异常），
+  APK 实测：versionCode 62 / 0.9.37 / targetSdk 35 / 正式签名 3fefd8a0… / sha256 `2c9157ee…` 两资产一致
+- **已评估未改**：RetryInterceptor 的 Thread.sleep 保留（OkHttp 拦截器阻塞 API，协程化需上移重试逻辑到 flow 层，
+  改动面大 + 已有 5s clamp，风险>收益）
+- **下次继续**：
+  - 路线图：知识图谱 Graph 视图（数据就绪）/ 学习统计页（review_logs 就绪）/ 复习提醒通知（WorkManager）
