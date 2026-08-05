@@ -99,8 +99,20 @@ object CardSplitter {
         } else {
             // 无标签：按分句拆分（无结构化字段）
             val sentences = splitSentences(definition)
+            // v0.9.35 产品体验修复：正面加"共N点"总上下文——
+            // 复习队列按知识点 round-robin 打散（Anki 混合复习，见 CardRepository
+            // interleaveSiblingCards），用户连续看到不同知识点的"第1点"时无法感知
+            // 该知识点的后续卡片会在队列稍后出现；"第X点 · 共N点"让归属与进度一目了然
+            val totalLabel = indexToChinese(sentences.size)
             sentences.mapIndexed { index, sentence ->
-                buildTermDimensionCard(term, "第${indexToChinese(index + 1)}点", sentence, pointId, fullExplanation = fullExplanation, studyText = studyText)
+                buildTermDimensionCard(
+                    term,
+                    "第${indexToChinese(index + 1)}点 · 共${totalLabel}点",
+                    sentence,
+                    pointId,
+                    fullExplanation = fullExplanation,
+                    studyText = studyText,
+                )
             }
         }
 
