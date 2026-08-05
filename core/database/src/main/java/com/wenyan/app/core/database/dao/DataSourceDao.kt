@@ -26,6 +26,14 @@ interface DataSourceDao {
     @Query("DELETE FROM data_sources WHERE id = :id")
     suspend fun deleteById(id: String)
 
+    /**
+     * 删除 App 根据 seed_data.json 管理的知识点来源，保留未来用户手工添加的来源。
+     *
+     * 每次种子升级都先清理再重建，避免教材列表删除或改名后留下幽灵来源。
+     */
+    @Query("DELETE FROM data_sources WHERE id LIKE 'seed-kp-source:%'")
+    suspend fun deleteManagedKnowledgePointSources()
+
     @Query("SELECT * FROM data_sources WHERE id = :id")
     suspend fun getById(id: String): DataSourceEntity?
 

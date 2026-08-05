@@ -20,7 +20,7 @@ import org.robolectric.annotation.Config
  * 完成态可访问性回归测试（v0.9.37 P0-3）。
  *
  * 背景：原 [SessionCompleteState] 把 `mergeDescendants=true` 放在整个 Column 上，
- * 将"再复习一轮 / 撤销最后一张 / 返回知识点列表"3 个独立按钮并入单一语义节点，
+ * 将"再复习一轮 / 回看最后一张 / 返回知识点列表"3 个独立按钮并入单一语义节点，
  * TalkBack 用户无法分别聚焦/触发（多 onClick 合并后仅剩一个可激活）。
  *
  * 修复后：仅统计信息区（图标+标题+用时+统计卡+鼓励）合并朗读 fullDescription，
@@ -59,9 +59,9 @@ class CardsSessionCompleteAccessibilityTest {
     }
 
     @Test
-    fun `完成态 撤销最后一张按钮可独立触发`() {
+    fun `完成态 回看最后一张按钮可独立触发`() {
         renderComplete()
-        composeRule.onNodeWithText("撤销最后一张")
+        composeRule.onNodeWithText("回看最后一张")
             .assertHasClickAction()
     }
 

@@ -137,25 +137,8 @@ class CardsViewModel @Inject constructor(
     @Volatile
     private var sessionCards: List<CardItem>? = null
 
-    /** 已评分的 pointId 集合（sibling 去重，同 pointId 仅第一次触发 FSRS 调度） */
+    /** 已完成调度的 pointId 集合（同 pointId 仅第一次触发 FSRS 调度） */
     private val ratedPointIds = mutableSetOf<String>()
-
-    /**
-     * 每个 pointId 的"首张评分卡" cardId(v0.8.13 P1-1 新增)。
-     *
-     * 用于 [isSiblingAlreadyRated] 区分"undo 回到刚评过的首张卡"和"后续 sibling 卡":
-     * - 用户评 GOOD 卡 A(p1) → 推进到 sibling 卡 B(p1) → 显示 sibling 提示(正确)
-     * - 用户 undo → 回到卡 A(p1) → 卡 A 的 pointId 在 ratedPointIds 中,
-     *   但卡 A 是首张评分卡不是 sibling,不应显示提示
-     *
-     * 通过比较 [CardItem.id] 与 [ratedPointFirstCardIds][pointId] 判断:
-     * - 相等:当前卡是该 pointId 的首张评分卡(undo 回退场景),不是 sibling
-     * - 不等:当前卡是后续 sibling 卡,显示提示
-     *
-     * 与 [ratedPointIds] 一致,undo 不回退(避免重新评分时 sibling 判断错乱),
-     * retry 时清空。
-     */
-    private val ratedPointFirstCardIds = mutableMapOf<String, String>()
 
     /**
      * 会话内已复习张数(v0.8.9 持久化到 SavedStateHandle,修复 P2-2)。
@@ -303,33 +286,19 @@ class CardsViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
     /**
-     * 当前卡片是否为"已评分 sibling 卡"(v0.8.9 新增,修复 P1-2)。
+     * 当前知识点是否已经在本会话完成过调度。
      *
-     * - true:当前卡 [CardItem.pointId] 已在 [ratedPointIds] 中(同知识点的兄弟卡已评分过)
-     * - UI 据此隐藏 [currentPreviews] 的预期间隔显示,避免误导用户
-     *   (sibling 卡评分不会触发 FSRS 调度,显示"GOOD→6天"是误导)
-     * - UI 改为显示"已调度(同知识点首卡已评分)"提示
+     * true 时隐藏预期间隔并显示说明：后续 sibling 评分和“回看上一张”后的重新选择
+     * 都不会再次写 FSRS。旧实现对回看的首张卡返回 false，导致 UI 重新显示“良好→6天”
+     * 等预览，但实际评分会被去重，属于明确误导。
      *
-     * v0.8.13 P1-1 修复:区分"undo 回到刚评过的首张卡"和"后续 sibling 卡"。
-     * 原实现仅判断 pointId in ratedPointIds,导致用户 undo 回到首张评分卡时
-     * 也显示 sibling 提示(语义错误:首张卡不是 sibling,它是被评分的那张)。
-     * 现增加 [ratedPointFirstCardIds] 判断:若当前卡 id == 该 pointId 的首张评分卡 id,
-     * 说明是 undo 回退场景,不是 sibling,返回 false。
-     *
-     * 注意:声明顺序必须在 [_uiState] 和 [ratedPointIds] 之后,否则初始化时
-     * 它们还未初始化(backing field 为 null),会导致 NPE。
-     * stateIn 持有 viewModelScope 和 SharingStarted.Eagerly,会立即开始收集,
-     * 但 map 的 lambda 是惰性执行的(Flow emit 时才执行),此时 [ratedPointIds]
-     * 已完成初始化。
+     * 属性名保留以减少 UI/测试改动；语义已经从“是否 sibling”收敛为“是否已调度”。
      */
     val isSiblingAlreadyRated: StateFlow<Boolean> = _uiState
         .map { state ->
             val card = state.currentCard ?: return@map false
             val pointId = card.pointId
-            if (pointId.isBlank() || pointId !in ratedPointIds) return@map false
-            // v0.8.13 P1-1:当前卡是该 pointId 的首张评分卡(undo 回退场景),不是 sibling
-            val firstCardId = ratedPointFirstCardIds[pointId]
-            firstCardId != null && firstCardId != card.id
+            pointId.isNotBlank() && pointId in ratedPointIds
         }
         .stateIn(
             scope = viewModelScope,
@@ -608,9 +577,6 @@ class CardsViewModel @Inject constructor(
         val shouldSchedule = pointId !in ratedPointIds && templateType != null
         if (shouldSchedule) {
             ratedPointIds.add(pointId)
-            // v0.8.13 P1-1:记录该 pointId 的首张评分卡 id,
-            // 供 isSiblingAlreadyRated 区分 undo 回退场景
-            ratedPointFirstCardIds[pointId] = current.id
         }
 
         // v0.8.8:入栈评分历史,undo 时据此回退 sessionReviewedCount/sessionAgainCount
@@ -639,7 +605,6 @@ class CardsViewModel @Inject constructor(
                     // v0.9.35 审计修复：调度失败回滚 ratedPointIds 标记，
                     // 否则同 pointId 的 sibling 卡本会话永不再触发调度（FSRS 数据永久缺失）
                     ratedPointIds.remove(pointId)
-                    ratedPointFirstCardIds.remove(pointId)
                     null
                 }
 
@@ -758,12 +723,12 @@ class CardsViewModel @Inject constructor(
     }
 
     /**
-     * 撤销上一张卡片（仅 UI 回退，不回滚 FSRS 调度）。
+     * 回看上一张卡片（仅 UI 回退，不回滚 FSRS 调度）。
      *
      * v0.8.5 P1 新增：
-     * - 参考 Anki 的 Z 键撤销，但简化为仅回退 UI 索引。
+     * - 仅回退 UI 索引，供用户重新查看内容。
      * - FSRS 调度不可逆（已写入 memo_records + review_logs），
-     *   撤销仅让用户回看上一张卡片内容。
+     *   回看仅让用户重新查看上一张卡片内容。
      * - 边界：currentIndex == 0 时无操作。
      *
      * v0.8.8 重写:用 [ratingHistory] 栈精确回退两项统计:
@@ -775,7 +740,7 @@ class CardsViewModel @Inject constructor(
      * 但 FSRS 调度不可逆(已写入 DB),重新评分会第二次调用 rateCard,
      * 基于已调度的 stability 再次计算,导致 stability 异常增长,FSRS 数据失真。
      * 现恢复 v0.8.5 设计:undo 仅回退 UI + 统计,ratedPointIds 保持不变,
-     * 重新评分时 shouldSchedule=false(调度被"吞"),用户 UI 回退但 FSRS 保持第一次结果。
+     * 回看后再次选择评分时 shouldSchedule=false，用户可继续推进，但 FSRS 保持第一次结果。
      * GOOD/HARD/EASY 都是 pass,影响小;AGAIN 已记录错题,用户可从错题本复习。
      */
     fun undo() {
@@ -827,8 +792,6 @@ class CardsViewModel @Inject constructor(
     fun retry() {
         sessionCards = null
         ratedPointIds.clear()
-        // v0.8.13 P1-1:同步清空首张评分卡记录,避免 retry 后 isSiblingAlreadyRated 误判
-        ratedPointFirstCardIds.clear()
         ratingHistory.clear()
         // v0.8.12 P1:retry 清理 lastFailCounts,避免恢复后 Leech 检测基准错误
         lastFailCounts.clear()
@@ -981,7 +944,7 @@ class CardsViewModel @Inject constructor(
         // v0.8.14 P1-1 修复:原用 `front.take(16).hashCode()` 仅取前 16 字符,
         // 两张同 pointId 卡如果 front 前 16 字符相同(如"建安风骨 — 时代特征"和
         // "建安风骨 — 时代背景"前 16 字符都是"建安风骨 — 时代"),ID 完全相同,
-        // 导致 ratedPointFirstCardIds 判断错乱、Compose key 重复。
+        // 会导致 Compose key 重复以及卡片身份混淆。
         // 现用全文 hashCode,降低碰撞概率(仍非密码学安全,但业务场景足够)。
         id = buildString {
             append(templateType.name)

@@ -16,7 +16,7 @@ import androidx.room.PrimaryKey
  * - source_file: 来源文件路径
  * - source_page: 来源页码
  * - content_source: 内容来源类型
- *     TEXTBOOK_NATIVE / TEXTBOOK_OCR / AI_GENERATED / HYBRID / USER_CREATED / MISSING
+ *     TEXTBOOK_NATIVE / TEXTBOOK_OCR / TEXTBOOK_CONFLICT / AI_GENERATED / HYBRID / USER_CREATED / MISSING
  * - ocr_status: OCR 状态，默认 VERIFIED（VERIFIED / PENDING）
  * - created_at: 创建时间
  */
@@ -59,7 +59,7 @@ data class DataSourceEntity(
     @ColumnInfo(name = "source_page")
     val sourcePage: Int?,
 
-    /** 内容来源：TEXTBOOK_NATIVE / TEXTBOOK_OCR / AI_GENERATED / HYBRID / USER_CREATED / MISSING */
+    /** 内容来源：TEXTBOOK_NATIVE / TEXTBOOK_OCR / TEXTBOOK_CONFLICT / AI_GENERATED / HYBRID / USER_CREATED / MISSING */
     @ColumnInfo(name = "content_source")
     val contentSource: String,
 

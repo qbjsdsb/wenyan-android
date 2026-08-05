@@ -263,8 +263,8 @@ $refContext
     private fun formatReferences(references: List<RagReference>): String {
         if (references.isEmpty()) return "（无相关资料）"
         return references.joinToString("\n\n") { ref ->
-            "来源：${ref.sourceFile} P${ref.sourcePage}\n" +
-                "类型：${ref.contentSource}\n" +
+            "来源：${ref.sourceLabel()}\n" +
+                "类型：${ref.contentSourceLabel()}\n" +
                 "摘录：${ref.excerpt}"
         }
     }

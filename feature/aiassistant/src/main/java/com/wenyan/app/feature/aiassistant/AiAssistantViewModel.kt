@@ -12,6 +12,7 @@ import com.wenyan.app.core.ai.SocraticGuide
 import com.wenyan.app.core.ai.SocraticStage
 import com.wenyan.app.core.ai.SocraticTutor
 import com.wenyan.app.core.ai.WrongAnswerExplanation
+import com.wenyan.app.core.ai.sourceLabel
 import com.wenyan.app.core.ai.network.ChatMessage
 import com.wenyan.app.core.ai.recall.AntiRoteMemorization
 import com.wenyan.app.core.ai.recall.QuestionType
@@ -713,7 +714,7 @@ class AiAssistantViewModel @Inject constructor(
             if (references.isNotEmpty()) {
                 append("\n以下是从资料库检索到的相关内容，供参考：\n")
                 references.forEachIndexed { index, ref ->
-                    append("${index + 1}. 《${ref.sourceFile}》P${ref.sourcePage}\n")
+                    append("${index + 1}. ${ref.sourceLabel()}\n")
                     append("   ${ref.excerpt.take(100)}\n")
                 }
             }
@@ -831,7 +832,7 @@ data class AiAssistantUiState(
  * @param id 唯一标识
  * @param role 消息角色（用户/助手）
  * @param content 消息内容
- * @param contentSource 内容来源（AI_GENERATED / TEXTBOOK_NATIVE / TEXTBOOK_OCR），仅助手消息有
+ * @param contentSource 内容来源（如 AI_GENERATED / TEXTBOOK_NATIVE / TEXTBOOK_CONFLICT），仅助手消息有
  * @param references RAG 引用来源列表（可溯源），仅助手消息有
  * @param stage 苏格拉底引导阶段（仅苏格拉底引导消息有）
  * @param tokensUsed AI 回复消耗 token 数（v0.9.24 新增，仅助手消息有，可空）

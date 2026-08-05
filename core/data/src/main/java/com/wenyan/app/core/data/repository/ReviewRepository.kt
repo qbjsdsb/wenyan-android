@@ -5,6 +5,7 @@ import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.dao.MemoRecordDao
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.KnowledgePointWithSubject
+import com.wenyan.app.core.database.entity.MemoRecordEntity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -42,6 +43,35 @@ data class StudyProgress(
 )
 
 /**
+ * 尚未发生过真实评分的初始记录。
+ *
+ * 不能只检查 `state == NEW` 或 `reps == 0`：早期版本曾出现 reps 未回填。状态与两种
+ * 计数都保持初始值时，才认定为未学习。这里有意不要求 `lastReviewAt == 0`，因为旧版
+ * SeedDataLoader 曾给未学习记录写入安装时间；升级后仍应把它们当作新卡。
+ */
+internal fun MemoRecordEntity.isPristineNew(): Boolean =
+    state == "NEW" && reps == 0 && reviewCount == 0
+
+/** 从记忆记录中提取真正已有学习痕迹的知识点 ID。 */
+internal fun learnedPointIds(records: List<MemoRecordEntity>): Set<String> =
+    records.asSequence()
+        .filterNot { it.isPristineNew() }
+        .map { it.pointId }
+        .toSet()
+
+/**
+ * 对 DAO 的到期结果再做一层领域规则保护。
+ *
+ * DAO 已在 SQL 层排除 pristine NEW；此处防止 Fake DAO、旧查询实现或未来重构重新把新卡
+ * 混入复习队列。
+ */
+internal fun duePointIds(records: List<MemoRecordEntity>): Set<String> =
+    records.asSequence()
+        .filterNot { it.isPristineNew() }
+        .map { it.pointId }
+        .toSet()
+
+/**
  * 距考试天数（v0.9.29，纯函数可测）。
  *
  * @param examDateMillis 考试日期（毫秒时间戳）
@@ -77,7 +107,7 @@ internal fun computeEffectiveNewLimit(duePointCount: Int, dailyNewLimit: Int): I
  * 从全部 VERIFIED 知识点中挑选每日新卡（v0.9.29，纯函数可测）。
  *
  * 规则：
- * 1. 排除已学（有 memo_record）的知识点
+ * 1. 排除已学（memo_record 已有真实评分痕迹）的知识点；pristine NEW 仍属于新卡
  * 2. 按科目筛选（subject_name 为 null 时保留，避免漏卡）
  * 3. 按考频筛选（HIGH / HIGH+MEDIUM / ALL）
  * 4. 排序：考频 HIGH → MEDIUM → LOW，同频按 updated_at（新内容优先）
@@ -228,7 +258,7 @@ class ReviewRepository @Inject constructor(
                 knowledgePointDao.observeVerifiedForReview(),
                 memoRecordDao.observeDue(),
             ) { verifiedPoints, dueRecords ->
-                val dueIds = dueRecords.map { it.pointId }.toSet()
+                val dueIds = duePointIds(dueRecords)
                 verifiedPoints.filter { it.id in dueIds }
             }
         }
@@ -266,7 +296,7 @@ class ReviewRepository @Inject constructor(
      * - [KnowledgePointDao.observeVerifiedForReview]：VERIFIED 知识点（到期判断用）
      * - [KnowledgePointDao.observeVerifiedWithSubject]：VERIFIED 知识点 + 科目名（新卡候选用）
      * - [MemoRecordDao.observeDue]：到期记忆记录
-     * - [MemoRecordDao.observeAll]：已学记录（新卡 = 未学）
+     * - [MemoRecordDao.observeAll]：全部记录（新卡 = 无记录或仅有 pristine NEW 记录）
      * - [CardSettingsRepository.cardSettings]：考频/科目/每日限额
      *
      * 全部用 tickFlow + flatMapLatest 周期刷新，保证 60s 内新到期/新卡自动进入。
@@ -282,9 +312,9 @@ class ReviewRepository @Inject constructor(
                 knowledgePointDao.observeVerifiedWithSubject(),
                 cardSettingsRepository.cardSettings,
             ) { verifiedPoints, dueRecords, allRecords, verifiedWithSubject, settings ->
-                val dueIds = dueRecords.map { it.pointId }.toSet()
+                val dueIds = duePointIds(dueRecords)
                 val duePoints = verifiedPoints.filter { it.id in dueIds }
-                val learnedIds = allRecords.map { it.pointId }.toSet()
+                val learnedIds = learnedPointIds(allRecords)
                 // v0.9.29 打磨：复习/新卡比例保护——复习量大时自动减少/暂停新卡
                 val effectiveNewLimit = computeEffectiveNewLimit(
                     duePointCount = duePoints.size,
@@ -309,16 +339,18 @@ class ReviewRepository @Inject constructor(
      * 学习进度（v0.9.29）：已学知识点数 / 总 VERIFIED 知识点数。
      *
      * 用于卡片页"今日任务"进度条：
-     * - [StudyProgress.learnedPoints]：有 memo_record 的知识点（已学过）
+     * - [StudyProgress.learnedPoints]：memo_record 已有真实评分痕迹的 VERIFIED 知识点
      * - [StudyProgress.totalVerifiedPoints]：VERIFIED 总数
      */
     fun getStudyProgress(): Flow<StudyProgress> = combine(
         memoRecordDao.observeAll(),
         knowledgePointDao.observeVerifiedForReview(),
     ) { records, verifiedPoints ->
+        val learnedIds = learnedPointIds(records)
+        val verifiedIds = verifiedPoints.mapTo(mutableSetOf()) { it.id }
         StudyProgress(
-            learnedPoints = records.map { it.pointId }.distinct().size,
-            totalVerifiedPoints = verifiedPoints.size,
+            learnedPoints = verifiedIds.count { it in learnedIds },
+            totalVerifiedPoints = verifiedIds.size,
         )
     }.distinctUntilChanged()
         .catchAndLog(TAG, "getStudyProgress") { StudyProgress(0, 0) }
@@ -340,7 +372,7 @@ class ReviewRepository @Inject constructor(
                 memoRecordDao.observeDue(),
             ) { verifiedPoints, dueRecords ->
                 val verifiedIds = verifiedPoints.map { it.id }.toSet()
-                dueRecords.count { it.pointId in verifiedIds }
+                duePointIds(dueRecords).count { it in verifiedIds }
             }
         }
         .distinctUntilChanged()

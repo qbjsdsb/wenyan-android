@@ -130,6 +130,40 @@ class RagEngineTest {
         }
     }
 
+    @Test
+    fun `来源页码未知时不伪造 P0`() = runTest {
+        val entity = sampleEntity(
+            id = "kp_unknown_source",
+            title = "文学艺术的起源",
+            coreConclusion = "文学艺术起源于生产劳动",
+            sourceFile = null,
+            sourcePage = null,
+        )
+        val engine = RagEngine(FakeKnowledgePointDao(searchResults = listOf(entity)))
+
+        engine.search("文学艺术的起源").test {
+            val reference = awaitItem().references.single()
+            assertEquals("资料库知识点：文学艺术的起源", reference.sourceFile)
+            assertEquals(null, reference.sourcePage)
+            assertEquals("资料库知识点：文学艺术的起源", reference.sourceLabel())
+            assertFalse(reference.sourceLabel().contains("P0"))
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `真实页码和教材冲突状态使用清晰展示文本`() {
+        val reference = RagReference(
+            sourceFile = "袁行霈《中国文学史》",
+            sourcePage = 156,
+            contentSource = "TEXTBOOK_CONFLICT",
+            excerpt = "测试摘录",
+        )
+
+        assertEquals("袁行霈《中国文学史》 P156", reference.sourceLabel())
+        assertEquals("不同教材表述存在分歧，需结合原教材复核", reference.contentSourceLabel())
+    }
+
     private fun sampleEntity(
         id: String,
         title: String,

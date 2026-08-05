@@ -1,6 +1,7 @@
 package com.wenyan.app.core.ai
 
 import androidx.compose.runtime.Immutable
+import com.wenyan.app.core.common.model.ContentSource
 import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +17,7 @@ import javax.inject.Singleton
  * Spec 第 53-55 行、第 372-388 行要求：
  * - 基于用户资料库 + 权威教材库做 RAG 检索
  * - 回答中标注引用来源（如"据袁行霈《中国文学史》第二卷 P156"）
- * - 区分资料原文（TEXTBOOK_NATIVE / TEXTBOOK_OCR）与 AI 生成内容
+ * - 区分教材资料（含教材分歧标记）与 AI 生成内容
  * - 无相关结果时不编造答案，明确告知用户"该问题不在当前资料库覆盖范围内"
  *
  * 实现方案（阶段4）：
@@ -142,9 +143,9 @@ class RagEngine @Inject constructor(
     private fun KnowledgePointEntity.toRagReference(): RagReference {
         val excerpt = buildExcerpt()
         return RagReference(
-            sourceFile = sourceFile ?: title,
-            sourcePage = sourcePage ?: 0,
-            contentSource = contentSource ?: "TEXTBOOK_NATIVE",
+            sourceFile = sourceFile?.takeIf { it.isNotBlank() } ?: "资料库知识点：$title",
+            sourcePage = sourcePage?.takeIf { it > 0 },
+            contentSource = contentSource ?: ContentSource.TEXTBOOK_NATIVE,
             excerpt = excerpt,
         )
     }
@@ -192,15 +193,33 @@ data class RagResult(
  * RAG 引用来源（可溯源）。
  *
  * @param sourceFile 来源文件，如"袁行霈《中国文学史》第二卷"
- * @param sourcePage 来源页码，如 156
- * @param contentSource 内容来源类型：TEXTBOOK_NATIVE / TEXTBOOK_OCR
+ * @param sourcePage 来源页码，如 156；未知时为 null，禁止用 0 伪装成精确页码
+ * @param contentSource 内容来源类型：TEXTBOOK_NATIVE / TEXTBOOK_OCR / TEXTBOOK_CONFLICT 等
  * @param excerpt 引用原文片段
  */
 @Immutable
 @Serializable
 data class RagReference(
     val sourceFile: String,
-    val sourcePage: Int,
+    val sourcePage: Int? = null,
     val contentSource: String,
     val excerpt: String,
 )
+
+/** 用户可见的来源文本；仅在页码真实存在且大于 0 时显示页码。 */
+fun RagReference.sourceLabel(): String = buildString {
+    append(sourceFile)
+    sourcePage?.takeIf { it > 0 }?.let { append(" P$it") }
+}
+
+/** 将内部来源代码转换为给模型和用户看的中文说明。 */
+fun RagReference.contentSourceLabel(): String = when (contentSource) {
+    ContentSource.TEXTBOOK_NATIVE -> "教材资料"
+    ContentSource.TEXTBOOK_OCR -> "教材 OCR"
+    ContentSource.TEXTBOOK_CONFLICT -> "不同教材表述存在分歧，需结合原教材复核"
+    ContentSource.AI_GENERATED -> "AI 生成"
+    ContentSource.HYBRID -> "资料与 AI 混合"
+    ContentSource.USER_CREATED -> "用户资料"
+    ContentSource.MISSING -> "来源缺失"
+    else -> contentSource
+}

@@ -6767,3 +6767,20 @@ while (retryCount <= maxRetries) {
   改动面大 + 已有 5s clamp，风险>收益）
 - **下次继续**：
   - 路线图：知识图谱 Graph 视图（数据就绪）/ 学习统计页（review_logs 就绪）/ 复习提醒通知（WorkManager）
+
+## 2026-08-06：学习队列完整性、来源可信度与复习语义修复（待 CI）
+
+- **范围**：`core:database` / `core:data` / `core:ai` / `core:designsystem` / `feature:cards` /
+  `feature:aiassistant` / `app` 种子数据。
+- **完成**：
+  - 修复预创建 NEW 记忆记录被误计为到期复习、已学/待复习集合与学习进度不一致的问题；兼容旧种子时间戳及历史记录。
+  - 种子导入改为原子写入版本状态，始终按数据库现有记忆记录保护 FSRS 进度；新增独立导入 schema=1，
+    在不伪造 seed 内容版本的前提下触发老用户重导，并解析、持久化教材来源字段。
+  - 仅在至少存在两个有效教材来源时展示冲突；当前 43 条原始冲突标记均缺少可核验的双来源，保持普通来源并记录告警。
+  - RAG 引用页码改为可空，不再伪造 `P0`；引用标签、离线回答和 AI 界面统一展示真实来源。
+  - 卡片“撤销”改为诚实的“回看”语义；已调度卡片不再展示会误导用户的预测间隔。
+  - 新增队列边界、种子升级/来源、RAG 引用、卡片回看，以及 Room DAO→Repository 集成测试。
+- **验证**：`git diff --check`、种子 JSON/XML 解析与数据不变量、SQLite 等价查询和来源保留场景通过；
+  本机具备 JDK 17，但 Gradle 8.14.4 与 Android SDK 35 下载域名受运行环境网络策略限制，完整
+  `testDebugUnitTest` / `assembleDebug` 将由 Draft PR 的 GitHub Actions 执行。
+- **未做**：未发布、未打 tag；“回看”不是数据库级调度回滚，真正撤销需增加复习前状态快照并迁移 schema。

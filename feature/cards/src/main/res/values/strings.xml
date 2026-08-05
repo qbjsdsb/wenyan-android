@@ -7,9 +7,9 @@
     <string name="text_04">知道了</string>
     <string name="text_05">去学习</string>
     <string name="text_06">再复习一轮</string>
-    <string name="text_07">撤销最后一张</string>
+    <string name="text_07">回看最后一张</string>
     <string name="text_08">返回知识点列表</string>
-    <string name="text_09">撤销</string>
+    <string name="text_09">回看</string>
     <string name="text_10">跳过</string>
     <!-- 卡片页 UI 文本（v0.9.30 i18n 补全） -->
     <string name="card_title">记忆卡片</string>
@@ -19,7 +19,7 @@
     <string name="card_reviewed">已复习</string>
     <string name="card_need_retry">需重练</string>
     <string name="card_mastery">掌握率</string>
-    <string name="card_undo">撤销上一张</string>
+    <string name="card_undo">回看上一张，不改变复习计划</string>
     <string name="card_skip">跳过当前卡片，不评分</string>
     <string name="card_rating_again">不会</string>
     <string name="card_rating_hard">困难</string>

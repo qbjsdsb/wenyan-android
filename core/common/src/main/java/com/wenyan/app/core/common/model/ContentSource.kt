@@ -1,10 +1,11 @@
 package com.wenyan.app.core.common.model
 
 /**
- * 内容来源五级标注 + 1 特殊状态（Spec 第 43-47 行、第 201-205 行）。
+ * 内容来源标注。
  *
  * - [TEXTBOOK_NATIVE]：原生电子文本 → UI 绿色"资料"标签
  * - [TEXTBOOK_OCR]：扫描 OCR 文本 → UI 绿色"资料"标签（带 OCR 角标）
+ * - [TEXTBOOK_CONFLICT]：多本教材的表述存在实质差异 → UI 警示标签
  * - [AI_GENERATED]：AI 生成内容 → UI 蓝色"AI"标签
  * - [HYBRID]：混合（资料 + AI）→ UI 黄色"资料+AI"标签
  * - [USER_CREATED]：用户创建 → UI 灰色"我的"标签
@@ -23,6 +24,7 @@ package com.wenyan.app.core.common.model
 object ContentSource {
     const val TEXTBOOK_NATIVE = "TEXTBOOK_NATIVE"
     const val TEXTBOOK_OCR = "TEXTBOOK_OCR"
+    const val TEXTBOOK_CONFLICT = "TEXTBOOK_CONFLICT"
     const val AI_GENERATED = "AI_GENERATED"
     const val HYBRID = "HYBRID"
     const val USER_CREATED = "USER_CREATED"

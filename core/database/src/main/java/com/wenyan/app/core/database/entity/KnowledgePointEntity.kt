@@ -106,7 +106,7 @@ data class KnowledgePointEntity(
 
     // ---------- Spec 新增字段 ----------
 
-    /** 内容来源：TEXTBOOK_NATIVE / TEXTBOOK_OCR / AI_GENERATED / HYBRID / USER_CREATED / MISSING */
+    /** 内容来源：TEXTBOOK_NATIVE / TEXTBOOK_OCR / TEXTBOOK_CONFLICT / AI_GENERATED / HYBRID / USER_CREATED / MISSING */
     @ColumnInfo(name = "content_source")
     val contentSource: String?,
 
