@@ -4,8 +4,11 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wenyan.app.core.data.repository.ChapterRepository
 import com.wenyan.app.core.data.repository.KnowledgeRepository
+import com.wenyan.app.core.database.entity.ChapterEntity
 import com.wenyan.app.core.database.entity.KnowledgePointListItem
+import com.wenyan.app.core.database.entity.SubjectEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -18,8 +21,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -49,6 +54,7 @@ import javax.inject.Inject
 class KnowledgeViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val knowledgeRepository: KnowledgeRepository,
+    private val chapterRepository: ChapterRepository,
 ) : ViewModel() {
 
     // NF-L1 修复：selectedCategory 持久化到 SavedStateHandle（存 enum name 为 String）
@@ -77,6 +83,10 @@ class KnowledgeViewModel @Inject constructor(
      */
     private val _retryTrigger = MutableStateFlow(0)
 
+    /** 框架与列表模式共享同一份 lean 查询，避免进入知识点页后重复扫描知识点表。 */
+    private val verifiedListItems = knowledgeRepository.getVerifiedListItems()
+        .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), replay = 1)
+
     /**
      * 知识点列表 UI 状态（P1-4 改造为 MutableStateFlow 包装）。
      *
@@ -94,6 +104,10 @@ class KnowledgeViewModel @Inject constructor(
      */
     private val _uiState = MutableStateFlow<KnowledgeUiState>(KnowledgeUiState(isLoading = true))
     val uiState: StateFlow<KnowledgeUiState> = _uiState.asStateFlow()
+
+    /** 框架浏览状态。列表模式仍由 [uiState] 提供，两个模式共享同一份轻量知识点流。 */
+    private val _frameworkUiState = MutableStateFlow<FrameworkUiState>(FrameworkUiState(isLoading = true))
+    val frameworkUiState: StateFlow<FrameworkUiState> = _frameworkUiState.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -117,7 +131,7 @@ class KnowledgeViewModel @Inject constructor(
                             // v0.9.37 P1-2：列表展示走 lean 投影（只查展示列，
                             // 不加载 full_content/study_text 大文本列）
                             val pointsFlow = if (query.isBlank()) {
-                                knowledgeRepository.getVerifiedListItems()
+                                verifiedListItems
                             } else {
                                 // 转义 LIKE 通配符,避免 % 和 _ 被当通配符
                                 val escaped = knowledgeRepository.escapeLikeWildcards(query.trim())
@@ -148,6 +162,99 @@ class KnowledgeViewModel @Inject constructor(
                 }
                 .collect { _uiState.value = it }
         }
+
+        viewModelScope.launch {
+            _retryTrigger
+                .flatMapLatest {
+                    observeFramework()
+                        .catch { e ->
+                            Timber.e(e, "loadKnowledgeFramework failed")
+                            _frameworkUiState.value = _frameworkUiState.value.copy(
+                                isLoading = false,
+                                error = friendlyErrorMessage(e),
+                            )
+                        }
+                }
+                .collect { _frameworkUiState.value = it }
+        }
+    }
+
+    private fun observeFramework(): kotlinx.coroutines.flow.Flow<FrameworkUiState> =
+        chapterRepository.observeSubjects()
+            .flatMapLatest { subjects ->
+                observeChaptersForSubjects(subjects)
+                    .combine(verifiedListItems) { chapters, points ->
+                        buildFrameworkState(subjects, chapters, points)
+                    }
+            }
+
+    private fun observeChaptersForSubjects(subjects: List<SubjectEntity>): kotlinx.coroutines.flow.Flow<List<ChapterEntity>> =
+        if (subjects.isEmpty()) {
+            flowOf(emptyList())
+        } else {
+            combine(subjects.map { chapterRepository.observeChapters(it.id) }) { chapterLists ->
+                chapterLists.flatMap { it }
+            }
+        }
+
+    private fun buildFrameworkState(
+        subjects: List<SubjectEntity>,
+        chapters: List<ChapterEntity>,
+        points: List<KnowledgePointListItem>,
+    ): FrameworkUiState {
+        val pointsByChapter = points
+            .filter { it.chapterId.isNotBlank() }
+            .groupBy { it.chapterId }
+            // 框架页遵循 seed 中稳定的知识点 ID 顺序，而不是沿用 updated_at DESC。
+            // 种子导入时多个知识点可能共享同一时间戳，直接依赖数据库平局排序会让
+            // 同一专题每次打开的顺序不稳定，破坏教材式阅读路径。
+            .mapValues { (_, items) -> orderFrameworkPoints(items.map(::toUiItem)) }
+        val chaptersBySubject = chapters.groupBy { it.subjectId }
+
+        val subjectItems = subjects.map { subject ->
+            val subjectChapters = chaptersBySubject[subject.id].orEmpty()
+            val childrenByParent = subjectChapters.groupBy { it.parentId }
+            val directPoints = subjectChapters.associate { chapter ->
+                chapter.id to pointsByChapter[chapter.id].orEmpty()
+            }
+            val aggregateCache = mutableMapOf<String, ChapterAggregate>()
+
+            fun aggregate(chapterId: String, visiting: Set<String> = emptySet()): ChapterAggregate {
+                aggregateCache[chapterId]?.let { return it }
+                if (chapterId in visiting) return ChapterAggregate()
+                val direct = directPoints[chapterId].orEmpty()
+                val children = childrenByParent[chapterId].orEmpty()
+                    .map { aggregate(it.id, visiting + chapterId) }
+                return ChapterAggregate(
+                    totalPointCount = direct.size + children.sumOf { it.totalPointCount },
+                    highFrequencyCount = direct.count { it.examFrequency == "HIGH" } +
+                        children.sumOf { it.highFrequencyCount },
+                ).also { aggregateCache[chapterId] = it }
+            }
+
+            val chapterItems = subjectChapters.map { chapter ->
+                val direct = directPoints[chapter.id].orEmpty()
+                val aggregate = aggregate(chapter.id)
+                FrameworkChapterItem(
+                    id = chapter.id,
+                    title = chapter.title,
+                    parentId = chapter.parentId,
+                    sortOrder = chapter.sortOrder,
+                    childCount = childrenByParent[chapter.id].orEmpty().size,
+                    directPointCount = direct.size,
+                    totalPointCount = aggregate.totalPointCount,
+                    highFrequencyCount = aggregate.highFrequencyCount,
+                )
+            }
+            FrameworkSubjectItem(
+                id = subject.id,
+                name = subject.name,
+                rootChapterId = subjectChapters.firstOrNull { it.parentId == null }?.id,
+                chapters = chapterItems,
+                pointsByChapter = pointsByChapter.filterKeys { key -> subjectChapters.any { it.id == key } },
+            )
+        }
+        return FrameworkUiState(isLoading = false, subjects = subjectItems)
     }
 
     // 切换分类标签（NF-L1 修复：持久化到 SavedStateHandle）
@@ -195,6 +302,7 @@ class KnowledgeViewModel @Inject constructor(
      */
     fun retry() {
         _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+        _frameworkUiState.value = _frameworkUiState.value.copy(isLoading = true, error = null)
         _retryTrigger.value++
     }
 
@@ -247,11 +355,24 @@ class KnowledgeViewModel @Inject constructor(
                 id = item.id,
                 title = item.title,
                 subject = item.subjectName ?: "未知科目",
-                summary = item.summary ?: item.coreConclusion.take(100),
+                // 空字符串和全空白摘要与 null 具有相同的“未提供”语义，统一使用核心结论兜底。
+                summary = item.summary
+                    ?.trim()
+                    ?.takeIf { it.isNotEmpty() }
+                    ?: item.coreConclusion.trim().take(100),
                 // v0.8.20 P1-2 新增:透传考频,列表卡片展示高频/中频/低频标签,
                 // 用户浏览时快速识别高频考点(无需点进详情页查看)
                 examFrequency = item.examFrequency,
             )
+
+        /**
+         * 框架页知识点的稳定教材顺序。
+         *
+         * seed 使用零填充知识点 ID（如 kp_00001），按 ID 排序即可恢复导入顺序；
+         * 对用户自建 ID 也能提供确定性的退化顺序，不改变列表模式的“最近更新优先”。
+         */
+        internal fun orderFrameworkPoints(points: List<KnowledgePointItem>): List<KnowledgePointItem> =
+            points.sortedBy { it.id }
     }
 }
 
@@ -265,6 +386,36 @@ data class KnowledgeUiState(
     // v0.8.20 P0-2 修复:删除死字段 searchQuery。
     // 原字段从未被 UI 读取(UI 用 viewModel.searchQuery StateFlow 实时值),
     // 且 debounce 300ms 后才更新,与 viewModel.searchQuery 双源不同步,易引入 bug。
+)
+
+data class FrameworkUiState(
+    val isLoading: Boolean = false,
+    val subjects: List<FrameworkSubjectItem> = emptyList(),
+    val error: String? = null,
+)
+
+data class FrameworkSubjectItem(
+    val id: String,
+    val name: String,
+    val rootChapterId: String?,
+    val chapters: List<FrameworkChapterItem>,
+    val pointsByChapter: Map<String, List<KnowledgePointItem>>,
+)
+
+data class FrameworkChapterItem(
+    val id: String,
+    val title: String,
+    val parentId: String?,
+    val sortOrder: Int,
+    val childCount: Int,
+    val directPointCount: Int,
+    val totalPointCount: Int,
+    val highFrequencyCount: Int,
+)
+
+private data class ChapterAggregate(
+    val totalPointCount: Int = 0,
+    val highFrequencyCount: Int = 0,
 )
 
 /**

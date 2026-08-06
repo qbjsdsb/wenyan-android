@@ -164,7 +164,7 @@ interface KnowledgePointDao {
      * 不在 SELECT 列中——SQLite 允许，不影响查询正确性。
      */
     @Query(
-        "SELECT kp.id, kp.title, kp.summary, kp.core_conclusion, kp.exam_frequency, s.name AS subject_name " +
+        "SELECT kp.id, kp.chapter_id, kp.title, kp.summary, kp.core_conclusion, kp.exam_frequency, s.name AS subject_name " +
             "FROM knowledge_points kp " +
             "LEFT JOIN chapters c ON kp.chapter_id = c.id " +
             "LEFT JOIN subjects s ON c.subject_id = s.id " +
@@ -182,7 +182,7 @@ interface KnowledgePointDao {
      * @param keyword 搜索关键词（已转义 % 和 _）
      */
     @Query(
-        "SELECT kp.id, kp.title, kp.summary, kp.core_conclusion, kp.exam_frequency, s.name AS subject_name " +
+        "SELECT kp.id, kp.chapter_id, kp.title, kp.summary, kp.core_conclusion, kp.exam_frequency, s.name AS subject_name " +
             "FROM knowledge_points kp " +
             "LEFT JOIN chapters c ON kp.chapter_id = c.id " +
             "LEFT JOIN subjects s ON c.subject_id = s.id " +

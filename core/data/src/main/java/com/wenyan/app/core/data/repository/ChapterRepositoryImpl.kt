@@ -35,6 +35,10 @@ class ChapterRepositoryImpl @Inject constructor(
         chapterDao.observeRoots(subjectId)
             .catchAndLog(TAG, "observeRootChapters") { emptyList() }
 
+    override fun observeChapters(subjectId: String): Flow<List<ChapterEntity>> =
+        chapterDao.observeBySubject(subjectId)
+            .catchAndLog(TAG, "observeChapters") { emptyList() }
+
     override fun observeChildren(parentId: String): Flow<List<ChapterEntity>> =
         chapterDao.observeChildren(parentId)
             .catchAndLog(TAG, "observeChildren") { emptyList() }

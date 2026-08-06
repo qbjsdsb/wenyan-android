@@ -105,6 +105,27 @@ class KnowledgeViewModelTest {
     }
 
     @Test
+    fun toUiItem_blankSummaryFallsBackToCoreConclusion() {
+        val item = makeListItem(
+            summary = "  \n  ",
+            coreConclusion = "核心结论兜底内容",
+        )
+        val uiItem = KnowledgeViewModel.toUiItem(item)
+        assertEquals("核心结论兜底内容", uiItem.summary)
+    }
+
+    @Test
+    fun orderFrameworkPoints_usesStableKnowledgePointIdOrder() {
+        val points = listOf(
+            KnowledgePointItem("kp_00012", "后出现", "古代文学", "摘要"),
+            KnowledgePointItem("kp_00002", "先出现", "古代文学", "摘要"),
+            KnowledgePointItem("kp_00007", "中间出现", "古代文学", "摘要"),
+        )
+        val ordered = KnowledgeViewModel.orderFrameworkPoints(points)
+        assertEquals(listOf("kp_00002", "kp_00007", "kp_00012"), ordered.map { it.id })
+    }
+
+    @Test
     fun filterByCategory_emptyList_returnsEmptyList() {
         val points = emptyList<KnowledgePointListItem>()
         val result = KnowledgeViewModel.filterByCategory(points, KnowledgeCategory.ANCIENT)

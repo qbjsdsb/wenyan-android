@@ -4,7 +4,12 @@ import androidx.compose.ui.res.stringResource
 import com.wenyan.app.feature.knowledge.R
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
+import androidx.activity.compose.BackHandler
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.semantics.Role
@@ -16,12 +21,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.CompositionLocalProvider
 import com.wenyan.app.core.designsystem.component.LocalLazyListState
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -35,6 +42,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
@@ -46,14 +55,23 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -97,6 +115,10 @@ fun KnowledgeScreen(
     // v0.8.17 修复 M1:订阅独立 selectedCategory StateFlow,error/loading 态下
     // 也能立即响应分类切换,与 uiState.selectedCategory(仅在 success 分支更新)解耦
     val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
+    val frameworkState by viewModel.frameworkUiState.collectAsStateWithLifecycle()
+    var browseModeName by rememberSaveable { mutableStateOf(KnowledgeBrowseMode.FRAMEWORK.name) }
+    val browseMode = KnowledgeBrowseMode.entries.find { it.name == browseModeName }
+        ?: KnowledgeBrowseMode.FRAMEWORK
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
     )
@@ -132,39 +154,54 @@ fun KnowledgeScreen(
                 Column(
                     modifier = Modifier.widthIn(max = MaxContentWidth.comfortable),
                 ) {
-                    // v0.9.33 新增：真题背题入口卡（名词解释/简答专项，位于搜索框上方）
-                    QuizPracticeEntryCard(
-                        onClick = onNavigateToQuizPractice,
-                        modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                    BrowseModeSwitcher(
+                        mode = browseMode,
+                        onModeChange = { browseModeName = it.name },
+                        modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
                     )
 
-                    // v0.8.19 P1-UI-1: 搜索框
-                    // v0.9.25 修复：错误态下禁用搜索/分类（原实现可输入/点击高亮，但数据流已终止不重载）
-                    val filterEnabled = uiState.error == null
-                    SearchBar(
-                        query = searchQuery,
-                        onQueryChange = viewModel::updateSearchQuery,
-                        onClear = viewModel::clearSearch,
-                        enabled = filterEnabled,
-                    )
+                    if (browseMode == KnowledgeBrowseMode.LIST) {
+                        // 真题背题属于平铺练习入口，放在列表模式中，避免削弱框架首页的整体结构。
+                        QuizPracticeEntryCard(
+                            onClick = onNavigateToQuizPractice,
+                            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                        )
 
-                    // 分类标签行
-                    // v0.8.17 修复 M1:用独立 selectedCategory StateFlow,error/loading 态下也有反馈
-                    CategoryChips(
-                        selectedCategory = selectedCategory,
-                        enabled = filterEnabled,
-                        onCategorySelected = viewModel::selectCategory,
-                    )
+                        // v0.8.19 P1-UI-1: 搜索框
+                        // v0.9.25 修复：错误态下禁用搜索/分类（原实现可输入/点击高亮，但数据流已终止不重载）
+                        val filterEnabled = uiState.error == null
+                        SearchBar(
+                            query = searchQuery,
+                            onQueryChange = viewModel::updateSearchQuery,
+                            onClear = viewModel::clearSearch,
+                            enabled = filterEnabled,
+                        )
+
+                        // 分类标签行
+                        // v0.8.17 修复 M1:用独立 selectedCategory StateFlow,error/loading 态下也有反馈
+                        CategoryChips(
+                            selectedCategory = selectedCategory,
+                            enabled = filterEnabled,
+                            onCategorySelected = viewModel::selectCategory,
+                        )
+                    }
                 }
             }
 
             Crossfade(
-                targetState = Triple(uiState.isLoading, uiState.error, uiState.knowledgePoints.isEmpty()),
+                targetState = Triple(browseMode, uiState.isLoading, uiState.error),
                 animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
                 label = "knowledge_state",
                 modifier = Modifier.fillMaxSize(),
-            ) { (isLoading, error, isEmpty) ->
+            ) { (mode, isLoading, error) ->
                 when {
+                    mode == KnowledgeBrowseMode.FRAMEWORK -> {
+                        FrameworkBrowser(
+                            state = frameworkState,
+                            onNavigateToDetail = onNavigateToDetail,
+                            onRetry = viewModel::retry,
+                        )
+                    }
                     isLoading -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -187,7 +224,7 @@ fun KnowledgeScreen(
                             )
                         }
                     }
-                    isEmpty -> {
+                    uiState.knowledgePoints.isEmpty() -> {
                         // v0.8.19 P1-UI-1: 区分"无搜索结果"和"无数据"两种空态
                         // v0.8.20 P1-3 修复:搜索 + 分类叠加下 0 结果时,提示用户切换分类
                         // (如"鲁迅"在"古代文学"分类下搜不到,但切换到"现当代文学"可找到)
@@ -217,11 +254,559 @@ fun KnowledgeScreen(
                         KnowledgeList(
                             items = uiState.knowledgePoints,
                             onNavigateToDetail = onNavigateToDetail,
-                            contentPadding = PaddingValues(Spacing.lg),
+                            contentPadding = PaddingValues(
+                                start = Spacing.lg,
+                                top = Spacing.lg,
+                                end = Spacing.lg,
+                                bottom = Spacing.xxl,
+                            ),
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+private enum class KnowledgeBrowseMode {
+    FRAMEWORK,
+    LIST,
+}
+
+private data class FrameworkDestination(
+    val subjectId: String?,
+    val chapterId: String?,
+)
+
+@Composable
+private fun BrowseModeSwitcher(
+    mode: KnowledgeBrowseMode,
+    onModeChange: (KnowledgeBrowseMode) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    SingleChoiceSegmentedButtonRow(
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        val modes = listOf(
+            KnowledgeBrowseMode.FRAMEWORK to R.string.kp_mode_framework,
+            KnowledgeBrowseMode.LIST to R.string.kp_mode_list,
+        )
+        modes.forEachIndexed { index, (itemMode, labelRes) ->
+            SegmentedButton(
+                selected = mode == itemMode,
+                onClick = { onModeChange(itemMode) },
+                shape = SegmentedButtonDefaults.itemShape(
+                    index = index,
+                    count = modes.size,
+                ),
+                label = { Text(stringResource(labelRes)) },
+            )
+        }
+    }
+}
+
+/**
+ * 框架浏览器：科目总览 → 根章节 → 子专题 → 知识点。
+ *
+ * 只展示当前层级，避免把四层树一次性铺在手机屏幕上；系统返回键与页面返回按钮
+ * 共享同一条父级路径，进入详情后仍复用原有知识点详情导航。
+ */
+@Composable
+private fun FrameworkBrowser(
+    state: FrameworkUiState,
+    onNavigateToDetail: (String) -> Unit,
+    onRetry: () -> Unit,
+) {
+    var selectedSubjectId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedChapterId by rememberSaveable { mutableStateOf<String?>(null) }
+    var navigationDirection by rememberSaveable { mutableStateOf(1) }
+    val selectedSubject = state.subjects.firstOrNull { it.id == selectedSubjectId }
+    val rootChapterId = selectedSubject?.rootChapterId
+    val currentChapterId = selectedChapterId ?: rootChapterId
+    val currentChapter = selectedSubject?.chapters?.firstOrNull { it.id == currentChapterId }
+    val atRoot = selectedSubject != null && (currentChapter == null || currentChapter.id == rootChapterId)
+    val breadcrumb = if (selectedSubject != null && currentChapter != null && !atRoot) {
+        buildFrameworkBreadcrumb(selectedSubject, currentChapter.id)
+    } else {
+        null
+    }
+
+    // 数据库重导或进程恢复后，旧的导航 ID 可能已经不再存在。只在数据加载完成后校正，
+    // 避免初次加载时把 rememberSaveable 中的路径误清空。
+    LaunchedEffect(state.subjects, state.isLoading) {
+        if (!state.isLoading && state.subjects.isNotEmpty()) {
+            if (selectedSubjectId != null && selectedSubject == null) {
+                selectedSubjectId = null
+                selectedChapterId = null
+            } else if (selectedSubject != null && selectedChapterId != null && currentChapter == null) {
+                selectedChapterId = rootChapterId
+            }
+        }
+    }
+
+    fun goBack() {
+        navigationDirection = -1
+        if (currentChapter != null && !atRoot) {
+            selectedChapterId = currentChapter.parentId ?: rootChapterId
+        } else {
+            selectedSubjectId = null
+            selectedChapterId = null
+        }
+    }
+
+    BackHandler(enabled = selectedSubject != null) {
+        goBack()
+    }
+
+    when {
+        state.isLoading -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                WenyanLoadingIndicator()
+            }
+        }
+        state.error != null -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                ErrorState(
+                    icon = Icons.Default.CloudOff,
+                    title = stringResource(R.string.kp_framework_load_failed),
+                    message = state.error,
+                    onRetry = onRetry,
+                )
+            }
+        }
+        state.subjects.isEmpty() -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                EmptyState(
+                    icon = Icons.Default.AccountTree,
+                    title = stringResource(R.string.kp_framework_no_data),
+                )
+            }
+        }
+        else -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .widthIn(max = MaxContentWidth.comfortable),
+                ) {
+                    FrameworkHeader(
+                        subject = selectedSubject,
+                        currentChapter = currentChapter,
+                        atRoot = atRoot,
+                        breadcrumb = breadcrumb,
+                        onBack = { goBack() },
+                    )
+                    AnimatedContent(
+                        targetState = FrameworkDestination(selectedSubjectId, currentChapterId),
+                        transitionSpec = {
+                            if (navigationDirection > 0) {
+                                WenyanMotion.PushEnterTransition togetherWith WenyanMotion.PushExitTransition
+                            } else {
+                                WenyanMotion.PopEnterTransition togetherWith WenyanMotion.PopExitTransition
+                            }
+                        },
+                        label = "framework_navigation",
+                        modifier = Modifier.fillMaxSize(),
+                    ) { destination ->
+                        // 使用 AnimatedContent 自己的目标快照，避免进入下一层时旧页面也被
+                        // 外层 selectedSubject 立即改写，导致过渡期间内容“闪”成同一页。
+                        val destinationSubject = state.subjects.firstOrNull { it.id == destination.subjectId }
+                        if (destinationSubject == null) {
+                            FrameworkSubjectList(
+                                subjects = state.subjects,
+                                onSelect = { subject ->
+                                    navigationDirection = 1
+                                    selectedSubjectId = subject.id
+                                    selectedChapterId = subject.rootChapterId
+                                },
+                            )
+                        } else {
+                            FrameworkChapterList(
+                                subject = destinationSubject,
+                                chapterId = destination.chapterId,
+                                onSelectChapter = {
+                                    navigationDirection = 1
+                                    selectedChapterId = it
+                                },
+                                onNavigateToDetail = onNavigateToDetail,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun buildFrameworkBreadcrumb(
+    subject: FrameworkSubjectItem,
+    chapterId: String,
+): String {
+    val chaptersById = subject.chapters.associateBy { it.id }
+    val titles = mutableListOf<String>()
+    val visited = mutableSetOf<String>()
+    var currentId: String? = chapterId
+    while (currentId != null && visited.add(currentId)) {
+        val chapter = chaptersById[currentId] ?: break
+        if (chapter.id != subject.rootChapterId) {
+            titles += chapter.title
+        }
+        currentId = chapter.parentId
+    }
+    return (listOf(subject.name) + titles.asReversed()).joinToString(" / ")
+}
+
+@Composable
+private fun FrameworkHeader(
+    subject: FrameworkSubjectItem?,
+    currentChapter: FrameworkChapterItem?,
+    atRoot: Boolean,
+    breadcrumb: String?,
+    onBack: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        if (subject != null) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = stringResource(R.string.kp_framework_back),
+                )
+            }
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = when {
+                    subject == null -> stringResource(R.string.kp_framework_title)
+                    atRoot -> subject.name
+                    else -> currentChapter?.title.orEmpty()
+                },
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.semantics { heading() },
+            )
+            if (subject == null) {
+                Text(
+                    text = stringResource(R.string.kp_framework_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else if (breadcrumb != null) {
+                Text(
+                    text = breadcrumb,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            } else if (atRoot) {
+                val root = subject.chapters.firstOrNull { it.id == subject.rootChapterId }
+                Text(
+                    text = stringResource(
+                        R.string.kp_framework_root_desc,
+                        root?.totalPointCount ?: 0,
+                        root?.childCount ?: 0,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FrameworkSubjectList(
+    subjects: List<FrameworkSubjectItem>,
+    onSelect: (FrameworkSubjectItem) -> Unit,
+) {
+    val totalPointCount = subjects.sumOf { subject ->
+        subject.chapters.firstOrNull { it.id == subject.rootChapterId }?.totalPointCount ?: 0
+    }
+    val totalHighFrequencyCount = subjects.sumOf { subject ->
+        subject.chapters.firstOrNull { it.id == subject.rootChapterId }?.highFrequencyCount ?: 0
+    }
+    LazyColumn(
+        contentPadding = PaddingValues(
+            start = Spacing.lg,
+            top = Spacing.sm,
+            end = Spacing.lg,
+            bottom = Spacing.xxl,
+        ),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        item(key = "framework_overview") {
+            FrameworkOverviewCard(
+                subjectCount = subjects.size,
+                pointCount = totalPointCount,
+                highFrequencyCount = totalHighFrequencyCount,
+            )
+        }
+        items(subjects, key = { it.id }, contentType = { "frameworkSubject" }) { subject ->
+            val root = subject.chapters.firstOrNull { it.id == subject.rootChapterId }
+            Surface(
+                onClick = { onSelect(subject) },
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateItem(),
+            ) {
+                Row(
+                    modifier = Modifier.padding(Spacing.lg),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                ) {
+                    FrameworkIconBadge(
+                        icon = Icons.Default.AccountTree,
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = subject.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.kp_framework_subject_desc,
+                                root?.totalPointCount ?: 0,
+                                root?.childCount ?: 0,
+                                root?.highFrequencyCount ?: 0,
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FrameworkOverviewCard(
+    subjectCount: Int,
+    pointCount: Int,
+    highFrequencyCount: Int,
+) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(Spacing.lg),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            FrameworkIconBadge(
+                icon = Icons.Default.AccountTree,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.kp_framework_overview_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = stringResource(
+                        R.string.kp_framework_overview_desc,
+                        subjectCount,
+                        pointCount,
+                        highFrequencyCount,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FrameworkIconBadge(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    containerColor: androidx.compose.ui.graphics.Color,
+    contentColor: androidx.compose.ui.graphics.Color,
+) {
+    Surface(
+        modifier = Modifier.size(48.dp),
+        shape = CircleShape,
+        color = containerColor,
+        contentColor = contentColor,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(imageVector = icon, contentDescription = null)
+        }
+    }
+}
+
+@Composable
+private fun FrameworkChapterList(
+    subject: FrameworkSubjectItem,
+    chapterId: String?,
+    onSelectChapter: (String) -> Unit,
+    onNavigateToDetail: (String) -> Unit,
+) {
+    val current = subject.chapters.firstOrNull { it.id == chapterId }
+    val children = subject.chapters
+        .filter { it.parentId == chapterId }
+        .sortedBy { it.sortOrder }
+    val points = chapterId?.let { subject.pointsByChapter[it].orEmpty() }.orEmpty()
+
+    LazyColumn(
+        contentPadding = PaddingValues(
+            start = Spacing.lg,
+            top = Spacing.sm,
+            end = Spacing.lg,
+            bottom = Spacing.xxl,
+        ),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        if (children.isNotEmpty()) {
+            item(key = "chapter_heading") {
+                Text(
+                    text = stringResource(
+                        R.string.kp_framework_subchapter_count,
+                        children.size,
+                    ),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.semantics { heading() },
+                )
+            }
+            items(children, key = { it.id }, contentType = { "frameworkChapter" }) { chapter ->
+                FrameworkChapterCard(
+                    chapter = chapter,
+                    onClick = { onSelectChapter(chapter.id) },
+                    modifier = Modifier.animateItem(),
+                )
+            }
+        }
+        if (points.isNotEmpty()) {
+            item(key = "point_heading") {
+                Text(
+                    text = stringResource(R.string.kp_framework_points_title, points.size),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .padding(top = Spacing.sm)
+                        .semantics { heading() },
+                )
+            }
+            items(points, key = { it.id }, contentType = { "knowledgeItem" }) { point ->
+                KnowledgePointCard(
+                    item = point,
+                    onClick = { onNavigateToDetail(point.id) },
+                    showSubject = false,
+                    modifier = Modifier.animateItem(),
+                )
+            }
+        }
+        if (children.isEmpty() && points.isEmpty()) {
+            item(key = "chapter_empty") {
+                EmptyState(
+                    icon = Icons.Default.AccountTree,
+                    title = stringResource(R.string.kp_framework_empty),
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FrameworkChapterCard(
+    chapter: FrameworkChapterItem,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(Spacing.lg),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            FrameworkIconBadge(
+                icon = Icons.Default.AccountTree,
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = chapter.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    itemVerticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(
+                            R.string.kp_framework_points_count,
+                            chapter.totalPointCount,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (chapter.childCount > 0) {
+                        Text(
+                            text = "·",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.kp_framework_children_count,
+                                chapter.childCount,
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (chapter.highFrequencyCount > 0) {
+                        WenyanInfoChip(
+                            text = stringResource(
+                                R.string.kp_framework_high_frequency,
+                                chapter.highFrequencyCount,
+                            ),
+                            variant = ChipVariant.PRIMARY,
+                        )
+                    }
+                }
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -397,6 +982,7 @@ private fun KnowledgePointCard(
     item: KnowledgePointItem,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    showSubject: Boolean = true,
 ) {
     TonalCard(
         modifier = modifier
@@ -408,43 +994,59 @@ private fun KnowledgePointCard(
             // 视障用户才能识别卡片可点击。原 .clickable 无 role，TalkBack 不朗读"按钮"。
             .clickable(role = Role.Button, onClick = onClick),
     ) {
-        // v0.8.3 修复（P2-K-1）：加 verticalArrangement.spacedBy 让 title/subject/summary 之间有呼吸感
-        Column(
+        Row(
             modifier = Modifier.padding(Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.titleMedium,
-                // P1-1 修复：长标题限 2 行 + 省略号，保持列表卡片高度一致
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            // v0.8.20 P1-2: 科目 + 考频 chip 同行展示(FlowRow 自动换行)。
-            // 考频用 PRIMARY/SECONDARY/TERTIARY chip 突出高频考点,
-            // 与详情页 HeaderSection 的 freqVariant 映射一致。
-            // NEVER 不展示 chip(避免"未考"chip 干扰浏览,无考频信息比"未考"标签更克制)。
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 Text(
-                    text = item.subject,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.secondary,
+                    text = item.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    // P1-1 修复：长标题限 2 行 + 省略号，保持列表卡片高度一致
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 val (freqLabel, freqVariant) = examFrequencyChip(item.examFrequency)
-                if (freqLabel != null) {
-                    WenyanInfoChip(text = freqLabel, variant = freqVariant)
+                // 框架页已经在标题和面包屑中表达科目上下文，避免每张卡重复显示；
+                // 列表模式保留科目标签，方便跨科目搜索结果快速辨认。
+                if (showSubject || freqLabel != null) {
+                    // v0.8.20 P1-2: 科目 + 考频 chip 同行展示(FlowRow 自动换行)。
+                    // NEVER 不展示 chip，保持无考频信息时的克制感。
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    ) {
+                        if (showSubject) {
+                            Text(
+                                text = item.subject,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.secondary,
+                            )
+                        }
+                        if (freqLabel != null) {
+                            WenyanInfoChip(text = freqLabel, variant = freqVariant)
+                        }
+                    }
+                }
+                if (item.summary.isNotBlank()) {
+                    Text(
+                        text = item.summary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        // P1-1 修复：长摘要限 3 行 + 省略号，点击进详情看全文
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
-            Text(
-                text = item.summary,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                // P1-1 修复：长摘要限 3 行 + 省略号，点击进详情看全文
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
