@@ -29,6 +29,23 @@ class KnowledgeFrameworkTest {
     }
 
     @Test
+    fun `框架注册表覆盖四科且全量映射闭合`() {
+        val definitions = KnowledgeFrameworkRegistry.definitions
+
+        assertEquals(4, definitions.size)
+        assertEquals(
+            setOf("中国现当代文学", "中国古代文学", "外国文学", "文学理论"),
+            definitions.map { it.subjectName }.toSet(),
+        )
+        assertEquals(960, definitions.sumOf { it.assignments.size })
+        assertEquals(
+            960,
+            definitions.flatMap { it.assignments.keys }.toSet().size,
+        )
+        assertTrue(definitions.all { it.legacyChapterIds.isNotEmpty() })
+    }
+
+    @Test
     fun `框架节点 ID 唯一且父级全部存在`() {
         val ids = KnowledgeFramework.nodes.map { it.id }
 
