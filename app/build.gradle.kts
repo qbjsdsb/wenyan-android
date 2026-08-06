@@ -142,7 +142,8 @@ android {
         //   →"横幅有新卡、正文无卡片"；改 shareIn(replay=1) 只重放真实查询 + VM 空列表不冻结会话双保险。
         //   翻转 300ms→420ms emphasized + 正反面操作区 AnimatedContent fade-through 替代双 AnimatedVisibility
         //   消除高度跳动。合并 PR #3，CI 3 次全绿。）
-        versionCode = 64
+        // v0.9.40=65（四科知识框架整理：现当代、古代、外国、文学理论共 960 个知识点的教材式框架浏览、稳定归类与导入校验；合并 PR #7。）
+        versionCode = 65
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         //   数据一致性修复（B1/B2/B3）：
@@ -217,7 +218,8 @@ android {
         // v0.9.37：布局与性能深度优化（见 versionCode 注释）
         // v0.9.38：学习完整性与来源可信度修复（见 versionCode 注释）
         // v0.9.39：知识卡片空队列竞态修复 + 翻转动画平滑化（见 versionCode 注释）
-        versionName = "0.9.39"
+        // v0.9.40：四科知识框架整理与知识点浏览体验优化（见 versionCode 注释）
+        versionName = "0.9.40"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
