@@ -194,7 +194,12 @@ private fun PracticeQuestionContent(
     ) {
         LazyColumn(
             modifier = Modifier.widthIn(max = MaxContentWidth.compact),
-            contentPadding = PaddingValues(Spacing.lg),
+            contentPadding = PaddingValues(
+                start = Spacing.lg,
+                top = Spacing.lg,
+                end = Spacing.lg,
+                bottom = Spacing.xxl,
+            ),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             item(key = "meta") {
