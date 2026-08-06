@@ -239,13 +239,19 @@ class SeedDataLoader @Inject constructor(
      * 知识点创建记录，**不覆盖用户 FSRS 学习进度**（stability/difficulty/nextReviewAt）。
      */
     private suspend fun importToDatabase(seedData: SeedData, isUpgrade: Boolean = false) {
-        val modernPointIds = seedData.knowledgePoints
-            .filter { it.subject == KnowledgeFramework.SUBJECT_NAME }
-            .map { it.id }
-            .toSet()
-        val frameworkErrors = KnowledgeFramework.validate(modernPointIds)
-        check(modernPointIds.isEmpty() || frameworkErrors.isEmpty()) {
-            "现当代文学知识框架校验失败: ${frameworkErrors.joinToString("；")}"
+        val frameworkErrors = KnowledgeFrameworkRegistry.definitions.flatMap { framework ->
+            val pointIds = seedData.knowledgePoints
+                .filter { it.subject == framework.subjectName }
+                .map { it.id }
+                .toSet()
+            if (pointIds.isEmpty()) {
+                emptyList()
+            } else {
+                framework.validate(pointIds).map { "${framework.subjectName}: $it" }
+            }
+        }
+        check(frameworkErrors.isEmpty()) {
+            "知识框架校验失败: ${frameworkErrors.joinToString("；")}"
         }
 
         database.withTransaction {
@@ -286,9 +292,10 @@ class SeedDataLoader @Inject constructor(
                     sortOrder = 0,
                 ),
             )
-            if (seed.name == KnowledgeFramework.SUBJECT_NAME && seed.code == KnowledgeFramework.SUBJECT_CODE) {
-                // 现当代文学使用经过人工核对的多级框架，不再依赖标题关键词猜测。
-                allChapters += KnowledgeFramework.nodes.map { node ->
+            val framework = KnowledgeFrameworkRegistry.find(seed.code, seed.name)
+            if (framework != null) {
+                // 已完成审核的科目使用显式多级框架，不再依赖标题关键词猜测。
+                allChapters += framework.nodes.map { node ->
                     ChapterEntity(
                         id = node.id,
                         subjectId = seed.id,
@@ -335,9 +342,10 @@ class SeedDataLoader @Inject constructor(
                 ?: return@mapNotNull null
             val subjectSeed = seedData.subjects.first { it.name == seed.subject }
             // 现当代文学必须命中显式框架；其余科目暂沿用兼容规则。
-            val chapterId = if (seed.subject == KnowledgeFramework.SUBJECT_NAME) {
-                KnowledgeFramework.assignments[seed.id]
-                    ?: error("现当代文学知识点 ${seed.id} 没有框架归属")
+            val framework = KnowledgeFrameworkRegistry.find(subjectSeed.code, seed.subject)
+            val chapterId = if (framework != null) {
+                framework.assignments[seed.id]
+                    ?: error("${framework.subjectName}知识点 ${seed.id} 没有框架归属")
             } else {
                 val periodChapterId = matchPeriodChapter(
                     subjectName = seed.subject,
@@ -1166,3 +1174,4 @@ data class WritingMaterialSeed(
     val source: String? = null,
     val tags: String? = null,
 )
+
