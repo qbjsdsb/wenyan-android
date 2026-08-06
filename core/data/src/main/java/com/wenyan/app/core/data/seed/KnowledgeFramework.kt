@@ -161,9 +161,8 @@ object KnowledgeFramework {
 /**
  * 已注册的科目框架入口。
  *
- * 现阶段只有现当代文学完成显式整理，但导入器不再依赖某一个具体 object 的特殊判断。
- * 后续古代文学、外国文学和文学理论完成审核后，只需向这里注册定义即可复用同一套
- * 章节导入、校验和浏览链路。
+ * 每个已完成审核的科目都在这里注册。导入器不再依赖某一个具体 object 的特殊判断，
+ * 章节导入、校验、旧节点清理和浏览链路由同一套逻辑复用。
  */
 data class RegisteredKnowledgeFramework(
     val subjectCode: String,
@@ -171,6 +170,8 @@ data class RegisteredKnowledgeFramework(
     val nodes: List<FrameworkNode>,
     val assignments: Map<String, String>,
     val validate: (Set<String>) -> List<String>,
+    /** 旧版按时段生成的节点；只清理没有任何知识点引用的节点。 */
+    val legacyChapterIds: List<String> = emptyList(),
 )
 
 object KnowledgeFrameworkRegistry {
@@ -182,6 +183,15 @@ object KnowledgeFrameworkRegistry {
             nodes = KnowledgeFramework.nodes,
             assignments = KnowledgeFramework.assignments,
             validate = KnowledgeFramework::validate,
+            legacyChapterIds = (0..6).map { "chapter_modern_$it" },
+        ),
+        RegisteredKnowledgeFramework(
+            subjectCode = AncientKnowledgeFramework.SUBJECT_CODE,
+            subjectName = AncientKnowledgeFramework.SUBJECT_NAME,
+            nodes = AncientKnowledgeFramework.nodes,
+            assignments = AncientKnowledgeFramework.assignments,
+            validate = AncientKnowledgeFramework::validate,
+            legacyChapterIds = (0..7).map { "chapter_ancient_$it" },
         ),
     )
 
@@ -199,4 +209,3 @@ data class FrameworkNode(
     val title: String,
     val sortOrder: Int,
 )
-
