@@ -201,6 +201,14 @@ object KnowledgeFrameworkRegistry {
             validate = ForeignKnowledgeFramework::validate,
             legacyChapterIds = (0..7).map { "chapter_foreign_$it" },
         ),
+        RegisteredKnowledgeFramework(
+            subjectCode = TheoryKnowledgeFramework.SUBJECT_CODE,
+            subjectName = TheoryKnowledgeFramework.SUBJECT_NAME,
+            nodes = TheoryKnowledgeFramework.nodes,
+            assignments = TheoryKnowledgeFramework.assignments,
+            validate = TheoryKnowledgeFramework::validate,
+            legacyChapterIds = (0..5).map { "chapter_theory_$it" },
+        ),
     )
 
     private val byCode = definitions.associateBy { it.subjectCode }
