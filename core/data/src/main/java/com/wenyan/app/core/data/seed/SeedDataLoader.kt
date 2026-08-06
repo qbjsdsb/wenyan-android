@@ -36,7 +36,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /** 提升此值可在 seed 内容版本不变时触发一次安全重导。 */
-internal const val CURRENT_SEED_IMPORT_SCHEMA_VERSION = 2
+internal const val CURRENT_SEED_IMPORT_SCHEMA_VERSION = 3
 
 /**
  * 种子数据加载器（阶段2：数据管线接通）。
@@ -273,9 +273,9 @@ class SeedDataLoader @Inject constructor(
         // 构建 subjectName → subjectId 映射（供知识点/真题映射）
         val subjectNameToId = seedData.subjects.associate { it.name to it.id }
 
-        // 步骤2（ADR-001 B1.3 章节树）：为每科创建根章节 + 文学史时段子章节
+        // 步骤2（ADR-001 B1.3 章节树）：为每科创建根章节 + 已审核的显式框架
         // 根章节：parentId=null，title=科目名（不再叫"默认章节"，作为章节树根）
-        // 子章节：parentId=根章节ID，title=时段名（如"先秦文学"），按 PERIOD_CHAPTERS 预定义
+        // 显式框架可以有多级节点；尚未完成审核的科目暂使用 PERIOD_CHAPTERS 兼容分组。
         val allChapters = mutableListOf<ChapterEntity>()
         // subjectName → 根章节ID 映射（供知识点兜底分配）
         val subjectNameToRootChapterId = mutableMapOf<String, String>()
@@ -305,7 +305,7 @@ class SeedDataLoader @Inject constructor(
                     )
                 }
             } else {
-                // 其他三科保留原有时段规则，待后续按同一标准逐科整理。
+                // 尚未完成显式审核的科目保留原有时段规则，避免提前改变数据语义。
                 val periods = PERIOD_CHAPTERS[seed.name] ?: emptyList()
                 for ((idx, period) in periods.withIndex()) {
                     allChapters.add(
@@ -327,7 +327,7 @@ class SeedDataLoader @Inject constructor(
         // 构建 subjectName → chapterId 映射（兼容旧逻辑，指向根章节）
         val subjectNameToChapterId = subjectNameToRootChapterId.toMap()
 
-        // 步骤3：导入知识点（按 subject + tags/title 匹配到时段子章节，未匹配留根章节）
+        // 步骤3：导入知识点（已审核科目使用显式归属，其他科目暂按兼容规则兜底）
         // 注意：若知识点 subject 不在 subjects 列表中，跳过该知识点（避免外键约束失败）
 
         // v0.9.1 修复：基于 tags 派生知识点间关联关系（relatedIds）。
@@ -341,7 +341,7 @@ class SeedDataLoader @Inject constructor(
             val rootChapterId = subjectNameToChapterId[seed.subject]
                 ?: return@mapNotNull null
             val subjectSeed = seedData.subjects.first { it.name == seed.subject }
-            // 现当代文学必须命中显式框架；其余科目暂沿用兼容规则。
+            // 已审核科目必须命中显式框架；尚未审核科目才允许使用兼容规则。
             val framework = KnowledgeFrameworkRegistry.find(subjectSeed.code, seed.subject)
             val chapterId = if (framework != null) {
                 framework.assignments[seed.id]
@@ -386,17 +386,17 @@ class SeedDataLoader @Inject constructor(
             knowledgePointDao.insertAll(knowledgePointEntities)
         }
 
-        // v2 框架升级：旧版现当代“时段”节点不再作为主框架。仅删除已经没有知识点引用的
-        // 旧节点；若存在用户自行创建的知识点，则保留节点，避免级联删除用户内容。
-        if (KnowledgeFramework.SUBJECT_CODE == "modern") {
-            PERIOD_CHAPTERS[KnowledgeFramework.SUBJECT_NAME].orEmpty()
-                .indices
-                .map { "chapter_modern_$it" }
-                .forEach { legacyChapterId ->
-                    if (knowledgePointDao.countByChapter(legacyChapterId) == 0) {
-                        chapterDao.deleteById(legacyChapterId)
-                    }
+        // v3 框架升级：已审核科目的旧版“时段”节点不再作为主框架。仅删除已经没有
+        // 知识点引用的旧节点；若存在用户自行创建的知识点，则保留节点，避免外键级联
+        // 删除用户内容。MemoRecord 只引用知识点 ID，不因章节重归类而改变。
+        KnowledgeFrameworkRegistry.definitions
+            .flatMap { it.legacyChapterIds }
+            .distinct()
+            .forEach { legacyChapterId ->
+                if (knowledgePointDao.countByChapter(legacyChapterId) == 0) {
+                    chapterDao.deleteById(legacyChapterId)
                 }
+            }
         }
 
         // 步骤3.1：导入可追溯教材来源。旧 seed 常用“其他”占位，这种值不写入来源表，
@@ -1174,4 +1174,3 @@ data class WritingMaterialSeed(
     val source: String? = null,
     val tags: String? = null,
 )
-
