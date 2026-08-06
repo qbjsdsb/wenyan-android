@@ -110,9 +110,9 @@ object AncientKnowledgeFramework {
 
         addAll(mapPoints("ancient_wei_jin_social", 233..233, 237..247, 269..269))
         addAll(mapPoints("ancient_wei_jin_jianan", 24..25, 92..93, 104..106, 263..268, 270..282))
-        addAll(mapPoints("ancient_wei_jin_poetry", 26..26, 28..31, 107..108, 912..912))
+        addAll(mapPoints("ancient_wei_jin_poetry", 26..31, 107..108, 912..912))
         addAll(mapPoints("ancient_wei_jin_fiction", 94..95))
-        addAll(mapPoints("ancient_wei_jin_theory", 27..27, 32..32, 109..109, 234..236, 248..253))
+        addAll(mapPoints("ancient_wei_jin_theory", 32..32, 109..109, 234..236, 248..253))
         addAll(mapPoints("ancient_wei_jin_buddhism", 254..262))
 
         addAll(mapPoints("ancient_sui_tang_initial", 33..37, 96..96, 110..112, 911..911))
@@ -139,9 +139,9 @@ object AncientKnowledgeFramework {
 
         addAll(mapPoints("ancient_ming_overview", 60..60))
         addAll(mapPoints("ancient_ming_fiction", 61..63, 65..66, 364..368, 377..379))
-        addAll(mapPoints("ancient_ming_drama", 64..64, 374..376))
+        addAll(mapPoints("ancient_ming_drama", 64..64, 131..131, 374..376))
         addAll(mapPoints("ancient_ming_movements", 67..70, 380..380))
-        addAll(mapPoints("ancient_ming_poetry", 71..71, 131..132, 369..373, 381..381))
+        addAll(mapPoints("ancient_ming_poetry", 71..71, 132..132, 369..373, 381..381))
 
         addAll(mapPoints("ancient_qing_poetry_prose", 72..72, 74..74, 82..82, 133..135, 382..388, 394..396, 418..423))
         addAll(mapPoints("ancient_qing_ci", 73..73, 389..393, 424..426))
