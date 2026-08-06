@@ -381,7 +381,7 @@ class SeedDataLoader @Inject constructor(
         // v2 框架升级：旧版现当代“时段”节点不再作为主框架。仅删除已经没有知识点引用的
         // 旧节点；若存在用户自行创建的知识点，则保留节点，避免级联删除用户内容。
         if (KnowledgeFramework.SUBJECT_CODE == "modern") {
-            PERIOD_CHAPTERS[KnowledgeFramework.SUBJECT_NAME]
+            PERIOD_CHAPTERS[KnowledgeFramework.SUBJECT_NAME].orEmpty()
                 .indices
                 .map { "chapter_modern_$it" }
                 .forEach { legacyChapterId ->
