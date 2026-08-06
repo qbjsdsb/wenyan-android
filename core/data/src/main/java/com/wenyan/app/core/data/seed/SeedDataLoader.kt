@@ -397,7 +397,6 @@ class SeedDataLoader @Inject constructor(
                     chapterDao.deleteById(legacyChapterId)
                 }
             }
-        }
 
         // 步骤3.1：导入可追溯教材来源。旧 seed 常用“其他”占位，这种值不写入来源表，
         // 防止 UI/AI 把占位文本包装成精确引用。App 管理的来源先删后建，种子升级时
