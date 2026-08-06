@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="wenyan_window_background">#F5F1E8</color>
-    <!-- v7.4：启动图标背景硬编码 #1A1A1A 在 ic_launcher_background.xml；此常量已不再引用，保留以兼容旧脚本 -->
-    <color name="wenyan_launcher_background">#1A1A1A</color>
+    <!-- v8 启动图标深墨色背景：中性、稳定，与暖纸色书页形成克制对比。 -->
+    <color name="wenyan_launcher_background">#202124</color>
 </resources>

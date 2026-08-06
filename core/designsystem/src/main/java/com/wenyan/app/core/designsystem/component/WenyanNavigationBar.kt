@@ -73,7 +73,7 @@ fun WenyanNavigationBar(
     val translationY by animateDpAsState(
         targetValue = if (visible) 0.dp else navHeight,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
+            dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessMedium,
         ),
         label = "navBarTranslationY",

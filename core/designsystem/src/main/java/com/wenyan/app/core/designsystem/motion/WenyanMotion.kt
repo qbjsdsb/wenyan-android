@@ -47,8 +47,11 @@ object WenyanMotion {
     /** 中时长（页面切换、卡片翻转、Tab 切换、fade 配合） */
     const val DurationMedium = 300
 
-    /** Push/Pop 位移弹簧：dampingRatio=0.8f 轻微过冲，StiffnessMediumLow 让运动稍慢有重量感 */
-    private const val PushPopDampingRatio = 0.8f
+    /**
+     * Push/Pop 位移弹簧：无过冲但保留柔和的减速感。
+     * 页面导航是方向性很强的动作，避免回弹能让返回更自然、更稳重。
+     */
+    private val PushPopDampingRatio = Spring.DampingRatioNoBouncy
     private val PushPopSpringSpec = spring<IntOffset>(
         dampingRatio = PushPopDampingRatio,
         stiffness = Spring.StiffnessMediumLow,

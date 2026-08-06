@@ -108,7 +108,9 @@ fun KnowledgePointDetailScreen(
     ExpressiveScaffold(
         topBar = {
             WenyanLargeTopAppBar(
-                title = uiState.point?.title ?: stringResource(R.string.kp_detail_title),
+                // 详情正文首段已经展示完整知识点标题；顶栏保留稳定的页面标题，
+                // 避免长标题在展开态重复占据两行，收起时也更容易识别当前页面。
+                title = stringResource(R.string.kp_detail_title),
                 subtitle = subtitle,
                 onBack = onBack,
                 scrollBehavior = scrollBehavior,
@@ -173,7 +175,12 @@ fun KnowledgePointDetailScreen(
                                     state = listState,
                                     modifier = Modifier
                                         .widthIn(max = MaxContentWidth.comfortable),
-                                    contentPadding = PaddingValues(Spacing.lg),
+                                    contentPadding = PaddingValues(
+                                        start = Spacing.lg,
+                                        top = Spacing.lg,
+                                        end = Spacing.lg,
+                                        bottom = Spacing.xxl,
+                                    ),
                                     verticalArrangement = Arrangement.spacedBy(Spacing.lg),
                                 ) {
                                     item(key = "header", contentType = "header") {

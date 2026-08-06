@@ -179,7 +179,12 @@ fun EssayDetailScreen(
                                 LazyColumn(
                                     modifier = Modifier
                                         .widthIn(max = MaxContentWidth.comfortable)
-                                        .padding(Spacing.lg),
+                                        .padding(
+                                            start = Spacing.lg,
+                                            top = Spacing.lg,
+                                            end = Spacing.lg,
+                                            bottom = Spacing.xxl,
+                                        ),
                                     state = listState,
                                     verticalArrangement = Arrangement.spacedBy(Spacing.lg),
                                 ) {
