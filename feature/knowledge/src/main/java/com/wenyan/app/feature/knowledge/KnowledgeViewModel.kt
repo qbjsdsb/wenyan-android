@@ -205,7 +205,10 @@ class KnowledgeViewModel @Inject constructor(
         val pointsByChapter = points
             .filter { it.chapterId.isNotBlank() }
             .groupBy { it.chapterId }
-            .mapValues { (_, items) -> items.map(::toUiItem) }
+            // 框架页遵循 seed 中稳定的知识点 ID 顺序，而不是沿用 updated_at DESC。
+            // 种子导入时多个知识点可能共享同一时间戳，直接依赖数据库平局排序会让
+            // 同一专题每次打开的顺序不稳定，破坏教材式阅读路径。
+            .mapValues { (_, items) -> orderFrameworkPoints(items.map(::toUiItem)) }
         val chaptersBySubject = chapters.groupBy { it.subjectId }
 
         val subjectItems = subjects.map { subject ->
@@ -352,11 +355,24 @@ class KnowledgeViewModel @Inject constructor(
                 id = item.id,
                 title = item.title,
                 subject = item.subjectName ?: "未知科目",
-                summary = item.summary ?: item.coreConclusion.take(100),
+                // 空字符串和全空白摘要与 null 具有相同的“未提供”语义，统一使用核心结论兜底。
+                summary = item.summary
+                    ?.trim()
+                    ?.takeIf { it.isNotEmpty() }
+                    ?: item.coreConclusion.trim().take(100),
                 // v0.8.20 P1-2 新增:透传考频,列表卡片展示高频/中频/低频标签,
                 // 用户浏览时快速识别高频考点(无需点进详情页查看)
                 examFrequency = item.examFrequency,
             )
+
+        /**
+         * 框架页知识点的稳定教材顺序。
+         *
+         * seed 使用零填充知识点 ID（如 kp_00001），按 ID 排序即可恢复导入顺序；
+         * 对用户自建 ID 也能提供确定性的退化顺序，不改变列表模式的“最近更新优先”。
+         */
+        internal fun orderFrameworkPoints(points: List<KnowledgePointItem>): List<KnowledgePointItem> =
+            points.sortedBy { it.id }
     }
 }
 
