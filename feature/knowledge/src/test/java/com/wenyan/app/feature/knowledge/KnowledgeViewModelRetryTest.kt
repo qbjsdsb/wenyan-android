@@ -64,6 +64,7 @@ class KnowledgeViewModelRetryTest {
         return KnowledgeViewModel(
             savedStateHandle = savedStateHandle,
             knowledgeRepository = buildKnowledgeRepository(knowledgePointDao, FakeDataSourceDao()),
+            chapterRepository = FakeChapterRepository(),
         )
     }
 
@@ -171,6 +172,7 @@ class KnowledgeViewModelRetryTest {
         val viewModel = KnowledgeViewModel(
             savedStateHandle = savedStateHandle,
             knowledgeRepository = buildKnowledgeRepository(knowledgePointDao, FakeDataSourceDao()),
+            chapterRepository = FakeChapterRepository(),
         )
         backgroundScope.launch { viewModel.uiState.collect { } }
         advanceUntilIdle()
@@ -191,6 +193,7 @@ class KnowledgeViewModelRetryTest {
         val viewModel = KnowledgeViewModel(
             savedStateHandle = savedStateHandle,
             knowledgeRepository = buildKnowledgeRepository(knowledgePointDao, FakeDataSourceDao()),
+            chapterRepository = FakeChapterRepository(),
         )
         backgroundScope.launch { viewModel.uiState.collect { } }
         advanceUntilIdle()
@@ -207,6 +210,7 @@ class KnowledgeViewModelRetryTest {
         val viewModel = KnowledgeViewModel(
             savedStateHandle = savedStateHandle,
             knowledgeRepository = buildKnowledgeRepository(knowledgePointDao, FakeDataSourceDao()),
+            chapterRepository = FakeChapterRepository(),
         )
         backgroundScope.launch { viewModel.uiState.collect { } }
         advanceUntilIdle()

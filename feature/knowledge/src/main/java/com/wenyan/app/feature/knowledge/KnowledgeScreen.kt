@@ -4,7 +4,12 @@ import androidx.compose.ui.res.stringResource
 import com.wenyan.app.feature.knowledge.R
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
+import androidx.activity.compose.BackHandler
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.semantics.Role
@@ -35,6 +40,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
@@ -48,10 +55,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
@@ -97,6 +108,10 @@ fun KnowledgeScreen(
     // v0.8.17 修复 M1:订阅独立 selectedCategory StateFlow,error/loading 态下
     // 也能立即响应分类切换,与 uiState.selectedCategory(仅在 success 分支更新)解耦
     val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
+    val frameworkState by viewModel.frameworkUiState.collectAsStateWithLifecycle()
+    var browseModeName by rememberSaveable { mutableStateOf(KnowledgeBrowseMode.FRAMEWORK.name) }
+    val browseMode = KnowledgeBrowseMode.entries.find { it.name == browseModeName }
+        ?: KnowledgeBrowseMode.FRAMEWORK
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
     )
@@ -138,33 +153,48 @@ fun KnowledgeScreen(
                         modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                     )
 
-                    // v0.8.19 P1-UI-1: 搜索框
-                    // v0.9.25 修复：错误态下禁用搜索/分类（原实现可输入/点击高亮，但数据流已终止不重载）
-                    val filterEnabled = uiState.error == null
-                    SearchBar(
-                        query = searchQuery,
-                        onQueryChange = viewModel::updateSearchQuery,
-                        onClear = viewModel::clearSearch,
-                        enabled = filterEnabled,
+                    BrowseModeSwitcher(
+                        mode = browseMode,
+                        onModeChange = { browseModeName = it.name },
+                        modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
                     )
 
-                    // 分类标签行
-                    // v0.8.17 修复 M1:用独立 selectedCategory StateFlow,error/loading 态下也有反馈
-                    CategoryChips(
-                        selectedCategory = selectedCategory,
-                        enabled = filterEnabled,
-                        onCategorySelected = viewModel::selectCategory,
-                    )
+                    if (browseMode == KnowledgeBrowseMode.LIST) {
+                        // v0.8.19 P1-UI-1: 搜索框
+                        // v0.9.25 修复：错误态下禁用搜索/分类（原实现可输入/点击高亮，但数据流已终止不重载）
+                        val filterEnabled = uiState.error == null
+                        SearchBar(
+                            query = searchQuery,
+                            onQueryChange = viewModel::updateSearchQuery,
+                            onClear = viewModel::clearSearch,
+                            enabled = filterEnabled,
+                        )
+
+                        // 分类标签行
+                        // v0.8.17 修复 M1:用独立 selectedCategory StateFlow,error/loading 态下也有反馈
+                        CategoryChips(
+                            selectedCategory = selectedCategory,
+                            enabled = filterEnabled,
+                            onCategorySelected = viewModel::selectCategory,
+                        )
+                    }
                 }
             }
 
             Crossfade(
-                targetState = Triple(uiState.isLoading, uiState.error, uiState.knowledgePoints.isEmpty()),
+                targetState = Triple(browseMode, uiState.isLoading, uiState.error),
                 animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
                 label = "knowledge_state",
                 modifier = Modifier.fillMaxSize(),
-            ) { (isLoading, error, isEmpty) ->
+            ) { (mode, isLoading, error) ->
                 when {
+                    mode == KnowledgeBrowseMode.FRAMEWORK -> {
+                        FrameworkBrowser(
+                            state = frameworkState,
+                            onNavigateToDetail = onNavigateToDetail,
+                            onRetry = viewModel::retry,
+                        )
+                    }
                     isLoading -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -187,7 +217,7 @@ fun KnowledgeScreen(
                             )
                         }
                     }
-                    isEmpty -> {
+                    uiState.knowledgePoints.isEmpty() -> {
                         // v0.8.19 P1-UI-1: 区分"无搜索结果"和"无数据"两种空态
                         // v0.8.20 P1-3 修复:搜索 + 分类叠加下 0 结果时,提示用户切换分类
                         // (如"鲁迅"在"古代文学"分类下搜不到,但切换到"现当代文学"可找到)
@@ -222,6 +252,365 @@ fun KnowledgeScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+private enum class KnowledgeBrowseMode {
+    FRAMEWORK,
+    LIST,
+}
+
+@Composable
+private fun BrowseModeSwitcher(
+    mode: KnowledgeBrowseMode,
+    onModeChange: (KnowledgeBrowseMode) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        FilterChip(
+            selected = mode == KnowledgeBrowseMode.FRAMEWORK,
+            onClick = { onModeChange(KnowledgeBrowseMode.FRAMEWORK) },
+            label = { Text(stringResource(R.string.kp_mode_framework)) },
+            leadingIcon = {
+                Icon(imageVector = Icons.Default.AccountTree, contentDescription = null)
+            },
+        )
+        FilterChip(
+            selected = mode == KnowledgeBrowseMode.LIST,
+            onClick = { onModeChange(KnowledgeBrowseMode.LIST) },
+            label = { Text(stringResource(R.string.kp_mode_list)) },
+            leadingIcon = {
+                Icon(imageVector = Icons.Default.Inbox, contentDescription = null)
+            },
+        )
+    }
+}
+
+/**
+ * 框架浏览器：科目总览 → 根章节 → 子专题 → 知识点。
+ *
+ * 只展示当前层级，避免把四层树一次性铺在手机屏幕上；系统返回键与页面返回按钮
+ * 共享同一条父级路径，进入详情后仍复用原有知识点详情导航。
+ */
+@Composable
+private fun FrameworkBrowser(
+    state: FrameworkUiState,
+    onNavigateToDetail: (String) -> Unit,
+    onRetry: () -> Unit,
+) {
+    var selectedSubjectId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedChapterId by rememberSaveable { mutableStateOf<String?>(null) }
+    val selectedSubject = state.subjects.firstOrNull { it.id == selectedSubjectId }
+    val rootChapterId = selectedSubject?.rootChapterId
+    val currentChapterId = selectedChapterId ?: rootChapterId
+    val currentChapter = selectedSubject?.chapters?.firstOrNull { it.id == currentChapterId }
+
+    BackHandler(enabled = selectedSubject != null) {
+        if (currentChapter != null && currentChapter.id != rootChapterId) {
+            selectedChapterId = currentChapter.parentId ?: rootChapterId
+        } else {
+            selectedSubjectId = null
+            selectedChapterId = null
+        }
+    }
+
+    when {
+        state.isLoading -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                WenyanLoadingIndicator()
+            }
+        }
+        state.error != null -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                ErrorState(
+                    icon = Icons.Default.CloudOff,
+                    title = stringResource(R.string.kp_framework_load_failed),
+                    message = state.error,
+                    onRetry = onRetry,
+                )
+            }
+        }
+        state.subjects.isEmpty() -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                EmptyState(
+                    icon = Icons.Default.AccountTree,
+                    title = stringResource(R.string.kp_framework_no_data),
+                )
+            }
+        }
+        else -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .widthIn(max = MaxContentWidth.comfortable),
+                ) {
+                    FrameworkHeader(
+                        subject = selectedSubject,
+                        currentChapter = currentChapter,
+                        atRoot = currentChapter?.id == rootChapterId,
+                        onBack = {
+                            if (currentChapter != null && currentChapter.id != rootChapterId) {
+                                selectedChapterId = currentChapter.parentId ?: rootChapterId
+                            } else {
+                                selectedSubjectId = null
+                                selectedChapterId = null
+                            }
+                        },
+                    )
+                    AnimatedContent(
+                        targetState = currentChapterId ?: "framework_home",
+                        transitionSpec = {
+                            fadeIn(animationSpec = tween(WenyanMotion.DurationMedium)) togetherWith
+                                fadeOut(animationSpec = tween(WenyanMotion.DurationShort))
+                        },
+                        label = "framework_navigation",
+                        modifier = Modifier.fillMaxSize(),
+                    ) { chapterId ->
+                        if (selectedSubject == null) {
+                            FrameworkSubjectList(
+                                subjects = state.subjects,
+                                onSelect = { subject ->
+                                    selectedSubjectId = subject.id
+                                    selectedChapterId = subject.rootChapterId
+                                },
+                            )
+                        } else {
+                            FrameworkChapterList(
+                                subject = selectedSubject,
+                                chapterId = chapterId,
+                                onSelectChapter = { selectedChapterId = it },
+                                onNavigateToDetail = onNavigateToDetail,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FrameworkHeader(
+    subject: FrameworkSubjectItem?,
+    currentChapter: FrameworkChapterItem?,
+    atRoot: Boolean,
+    onBack: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        if (subject != null) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = stringResource(R.string.kp_framework_back),
+                )
+            }
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = currentChapter?.title ?: stringResource(R.string.kp_framework_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (subject == null) {
+                Text(
+                    text = stringResource(R.string.kp_framework_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else if (atRoot) {
+                Text(
+                    text = stringResource(R.string.kp_framework_home),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FrameworkSubjectList(
+    subjects: List<FrameworkSubjectItem>,
+    onSelect: (FrameworkSubjectItem) -> Unit,
+) {
+    LazyColumn(
+        contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        items(subjects, key = { it.id }, contentType = { "frameworkSubject" }) { subject ->
+            val root = subject.chapters.firstOrNull { it.id == subject.rootChapterId }
+            Surface(
+                onClick = { onSelect(subject) },
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateItem(),
+            ) {
+                Row(
+                    modifier = Modifier.padding(Spacing.lg),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AccountTree,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = subject.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.kp_framework_subject_desc,
+                                root?.totalPointCount ?: 0,
+                                root?.highFrequencyCount ?: 0,
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FrameworkChapterList(
+    subject: FrameworkSubjectItem,
+    chapterId: String,
+    onSelectChapter: (String) -> Unit,
+    onNavigateToDetail: (String) -> Unit,
+) {
+    val current = subject.chapters.firstOrNull { it.id == chapterId }
+    val children = subject.chapters
+        .filter { it.parentId == chapterId }
+        .sortedBy { it.sortOrder }
+    val points = subject.pointsByChapter[chapterId].orEmpty()
+
+    LazyColumn(
+        contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        if (children.isNotEmpty()) {
+            item(key = "chapter_heading") {
+                Text(
+                    text = stringResource(
+                        R.string.kp_framework_subchapter_count,
+                        current?.title.orEmpty(),
+                        children.size,
+                    ),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            items(children, key = { it.id }, contentType = { "frameworkChapter" }) { chapter ->
+                FrameworkChapterCard(
+                    chapter = chapter,
+                    onClick = { onSelectChapter(chapter.id) },
+                )
+            }
+        }
+        if (points.isNotEmpty()) {
+            item(key = "point_heading") {
+                Text(
+                    text = stringResource(R.string.kp_framework_points_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = Spacing.sm),
+                )
+            }
+            items(points, key = { it.id }, contentType = { "knowledgeItem" }) { point ->
+                KnowledgePointCard(
+                    item = point,
+                    onClick = { onNavigateToDetail(point.id) },
+                )
+            }
+        }
+        if (children.isEmpty() && points.isEmpty()) {
+            item(key = "chapter_empty") {
+                Text(
+                    text = stringResource(R.string.kp_framework_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = Spacing.xl),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FrameworkChapterCard(
+    chapter: FrameworkChapterItem,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(Spacing.lg),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            Icon(
+                imageVector = Icons.Default.AccountTree,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = chapter.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = stringResource(
+                        R.string.kp_framework_chapter_desc,
+                        chapter.totalPointCount,
+                        chapter.childCount,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (chapter.highFrequencyCount > 0) {
+                WenyanInfoChip(
+                    text = stringResource(R.string.kp_framework_high_frequency, chapter.highFrequencyCount),
+                    variant = ChipVariant.PRIMARY,
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

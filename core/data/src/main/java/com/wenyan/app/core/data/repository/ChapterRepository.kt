@@ -23,6 +23,9 @@ interface ChapterRepository {
     /** 观察指定科目的根章节（parentId IS NULL，按 sortOrder ASC） */
     fun observeRootChapters(subjectId: String): Flow<List<ChapterEntity>>
 
+    /** 观察指定科目的全部章节（用于构建框架浏览的内存索引）。 */
+    fun observeChapters(subjectId: String): Flow<List<ChapterEntity>>
+
     /** 观察指定父章节的直接子章节（按 sortOrder ASC） */
     fun observeChildren(parentId: String): Flow<List<ChapterEntity>>
 

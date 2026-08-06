@@ -36,7 +36,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /** 提升此值可在 seed 内容版本不变时触发一次安全重导。 */
-internal const val CURRENT_SEED_IMPORT_SCHEMA_VERSION = 1
+internal const val CURRENT_SEED_IMPORT_SCHEMA_VERSION = 2
 
 /**
  * 种子数据加载器（阶段2：数据管线接通）。
@@ -238,7 +238,17 @@ class SeedDataLoader @Inject constructor(
      * 无论 DataStore 判断为首次安装还是升级，都查询已有 MemoRecord 的 point_id，仅为缺失
      * 知识点创建记录，**不覆盖用户 FSRS 学习进度**（stability/difficulty/nextReviewAt）。
      */
-    private suspend fun importToDatabase(seedData: SeedData, isUpgrade: Boolean = false) = database.withTransaction {
+    private suspend fun importToDatabase(seedData: SeedData, isUpgrade: Boolean = false) {
+        val modernPointIds = seedData.knowledgePoints
+            .filter { it.subject == KnowledgeFramework.SUBJECT_NAME }
+            .map { it.id }
+            .toSet()
+        val frameworkErrors = KnowledgeFramework.validate(modernPointIds)
+        check(modernPointIds.isEmpty() || frameworkErrors.isEmpty()) {
+            "现当代文学知识框架校验失败: ${frameworkErrors.joinToString("；")}"
+        }
+
+        database.withTransaction {
         val now = System.currentTimeMillis()
 
         // 步骤1：导入科目
@@ -276,18 +286,31 @@ class SeedDataLoader @Inject constructor(
                     sortOrder = 0,
                 ),
             )
-            // 为该科目生成时段子章节（chapter ID 由 matchPeriodChapter 按 subjectCode+idx 生成）
-            val periods = PERIOD_CHAPTERS[seed.name] ?: emptyList()
-            for ((idx, period) in periods.withIndex()) {
-                allChapters.add(
+            if (seed.name == KnowledgeFramework.SUBJECT_NAME && seed.code == KnowledgeFramework.SUBJECT_CODE) {
+                // 现当代文学使用经过人工核对的多级框架，不再依赖标题关键词猜测。
+                allChapters += KnowledgeFramework.nodes.map { node ->
                     ChapterEntity(
-                        id = "chapter_${seed.code}_$idx",
+                        id = node.id,
                         subjectId = seed.id,
-                        parentId = rootChapterId,
-                        title = period.title,
-                        sortOrder = idx + 1,
-                    ),
-                )
+                        parentId = node.parentId ?: rootChapterId,
+                        title = node.title,
+                        sortOrder = node.sortOrder,
+                    )
+                }
+            } else {
+                // 其他三科保留原有时段规则，待后续按同一标准逐科整理。
+                val periods = PERIOD_CHAPTERS[seed.name] ?: emptyList()
+                for ((idx, period) in periods.withIndex()) {
+                    allChapters.add(
+                        ChapterEntity(
+                            id = "chapter_${seed.code}_$idx",
+                            subjectId = seed.id,
+                            parentId = rootChapterId,
+                            title = period.title,
+                            sortOrder = idx + 1,
+                        ),
+                    )
+                }
             }
         }
         if (allChapters.isNotEmpty()) {
@@ -310,14 +333,20 @@ class SeedDataLoader @Inject constructor(
         val knowledgePointEntities = seedData.knowledgePoints.mapNotNull { seed ->
             val rootChapterId = subjectNameToChapterId[seed.subject]
                 ?: return@mapNotNull null
-            // ADR-001 B1.3：按 tags + title 匹配时段子章节，未匹配留根
-            val periodChapterId = matchPeriodChapter(
-                subjectName = seed.subject,
-                subjectCode = seedData.subjects.first { it.name == seed.subject }.code,
-                title = seed.title,
-                tags = seed.tags,
-            )
-            val chapterId = periodChapterId ?: rootChapterId
+            val subjectSeed = seedData.subjects.first { it.name == seed.subject }
+            // 现当代文学必须命中显式框架；其余科目暂沿用兼容规则。
+            val chapterId = if (seed.subject == KnowledgeFramework.SUBJECT_NAME) {
+                KnowledgeFramework.assignments[seed.id]
+                    ?: error("现当代文学知识点 ${seed.id} 没有框架归属")
+            } else {
+                val periodChapterId = matchPeriodChapter(
+                    subjectName = seed.subject,
+                    subjectCode = subjectSeed.code,
+                    title = seed.title,
+                    tags = seed.tags,
+                )
+                periodChapterId ?: rootChapterId
+            }
             KnowledgePointEntity(
                 id = seed.id,
                 chapterId = chapterId,
@@ -347,6 +376,19 @@ class SeedDataLoader @Inject constructor(
         }
         if (knowledgePointEntities.isNotEmpty()) {
             knowledgePointDao.insertAll(knowledgePointEntities)
+        }
+
+        // v2 框架升级：旧版现当代“时段”节点不再作为主框架。仅删除已经没有知识点引用的
+        // 旧节点；若存在用户自行创建的知识点，则保留节点，避免级联删除用户内容。
+        if (KnowledgeFramework.SUBJECT_CODE == "modern") {
+            PERIOD_CHAPTERS[KnowledgeFramework.SUBJECT_NAME]
+                .indices
+                .map { "chapter_modern_$it" }
+                .forEach { legacyChapterId ->
+                    if (knowledgePointDao.countByChapter(legacyChapterId) == 0) {
+                        chapterDao.deleteById(legacyChapterId)
+                    }
+                }
         }
 
         // 步骤3.1：导入可追溯教材来源。旧 seed 常用“其他”占位，这种值不写入来源表，
@@ -465,6 +507,7 @@ class SeedDataLoader @Inject constructor(
 
         // 步骤7：保留科目代码历史
         examCodeHistoryDao.insertAll(ExamCodeHistoryData.EXAM_CODE_HISTORY)
+        }
     }
 
     companion object {

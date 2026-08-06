@@ -49,6 +49,20 @@
     <!-- 真题背题 · 名词解释/简答（v0.9.33 新增） -->
     <string name="kp_quiz_entry_title">真题背题</string>
     <string name="kp_quiz_entry_desc">名词解释 · 简答专项，练“记得住”（论述题见论述题 Tab）</string>
+    <string name="kp_mode_framework">框架</string>
+    <string name="kp_mode_list">列表</string>
+    <string name="kp_framework_title">知识框架</string>
+    <string name="kp_framework_desc">按教材脉络逐层梳理，点开专题查看知识点</string>
+    <string name="kp_framework_subject_desc">%1$d 个知识点 · %2$d 个高频考点</string>
+    <string name="kp_framework_chapter_desc">%1$d 个知识点 · %2$d 个子专题</string>
+    <string name="kp_framework_high_frequency">高频 %1$d</string>
+    <string name="kp_framework_back">返回上一级</string>
+    <string name="kp_framework_home">全部科目</string>
+    <string name="kp_framework_points_title">本专题知识点</string>
+    <string name="kp_framework_subchapter_count">%1$s · %2$d 个子专题</string>
+    <string name="kp_framework_empty">这个专题暂时没有直接知识点，请进入下一级专题</string>
+    <string name="kp_framework_load_failed">框架加载失败</string>
+    <string name="kp_framework_no_data">暂无框架数据</string>
     <string name="kp_quiz_list_title">真题背题</string>
     <string name="kp_quiz_list_count">共 %1$d 题</string>
     <string name="kp_quiz_list_filtered_count">%1$d / %2$d 题</string>

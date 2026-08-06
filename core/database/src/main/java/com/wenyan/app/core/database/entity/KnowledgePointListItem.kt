@@ -5,7 +5,7 @@ import androidx.room.ColumnInfo
 /**
  * 知识点列表展示投影（v0.9.37 P1-2）。
  *
- * 列表流只查询展示列（id/title/summary/core_conclusion/exam_frequency/subject_name），
+ * 列表流只查询展示列（id/chapter_id/title/summary/core_conclusion/exam_frequency/subject_name），
  * 避免 [KnowledgePointEntity] 全字段 `SELECT *` 反复传输 full_content / study_text /
  * multi_perspectives / related_ids 等大文本列——960 行大文本反序列化在内存与 CPU 上
  * 是纯浪费（列表卡片只用 title/summary/考频/科目）。
@@ -26,4 +26,7 @@ data class KnowledgePointListItem(
     val examFrequency: String,
     @ColumnInfo(name = "subject_name")
     val subjectName: String?,
+    /** 所属章节 ID，供框架浏览模式聚合知识点；列表卡片本身不展示该字段。 */
+    @ColumnInfo(name = "chapter_id")
+    val chapterId: String = "",
 )

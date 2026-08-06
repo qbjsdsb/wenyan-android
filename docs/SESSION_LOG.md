@@ -6800,3 +6800,13 @@ while (retryCount <= maxRetries) {
 - **验证**：`git diff --check` 通过；本机 JDK 17 可用，但无 Gradle 8.14.4 缓存且网络策略禁止
   下载 `services.gradle.org`，完整 `testDebugUnitTest` / `assembleDebug` 交由 PR GitHub Actions 验证。
 - **分支**：`agent/fix-card-queue-animation`。
+
+## 2026-08-06：知识框架第一阶段（进行中）
+
+- 完成中国现当代文学 181 个知识点的稳定章节归属与 38 个框架节点，采用显式映射而非关键词猜测。
+- 完成知识点页“框架 / 列表”双模式：框架按科目 → 章节 → 专题 → 知识点逐层进入，保留原有搜索与筛选。
+- 导入结构版本升级为 2；章节使用稳定 ID，重新导入通过 Upsert，保留 MemoRecord、FSRS 排程和复习历史。
+- 增加框架完整性测试，静态校验结果为 181/181 个现当代知识点已归类。
+- 本地容器无法下载 Gradle 8.14.4，后续由 GitHub Actions 执行完整 Android 编译与回归测试。
+- 本次改动待 PR CI 验证后继续推进其他三科归类。
+

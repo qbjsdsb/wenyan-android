@@ -152,6 +152,7 @@ class FakeKnowledgePointDao(
 /** 从关联实体映射为 lean 展示投影（v0.9.37 P1-2）。 */
 private fun KnowledgePointWithSubject.toListItem() = KnowledgePointListItem(
     id = point.id,
+    chapterId = point.chapterId,
     title = point.title,
     summary = point.summary,
     coreConclusion = point.coreConclusion,
@@ -359,6 +360,9 @@ class FakeChapterRepository(
 
     override fun observeRootChapters(subjectId: String): Flow<List<com.wenyan.app.core.database.entity.ChapterEntity>> =
         throw UnsupportedOperationException("observeRootChapters not used in essay list tests")
+
+    override fun observeChapters(subjectId: String): Flow<List<com.wenyan.app.core.database.entity.ChapterEntity>> =
+        throw UnsupportedOperationException("observeChapters not used in essay list tests")
 
     override fun observeChildren(parentId: String): Flow<List<com.wenyan.app.core.database.entity.ChapterEntity>> =
         throw UnsupportedOperationException("observeChildren not used in essay list tests")
