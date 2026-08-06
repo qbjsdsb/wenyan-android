@@ -62,7 +62,7 @@
     <string name="kp_framework_high_frequency">高频 %1$d</string>
     <string name="kp_framework_back">返回上一级</string>
     <string name="kp_framework_home">全部科目</string>
-    <string name="kp_framework_points_title">本专题知识点</string>
+    <string name="kp_framework_points_title">本专题知识点 · %1$d</string>
     <string name="kp_framework_subchapter_count">%1$d 个子专题</string>
     <string name="kp_framework_empty">这个专题暂时没有直接知识点，请进入下一级专题</string>
     <string name="kp_framework_load_failed">框架加载失败</string>
