@@ -36,6 +36,10 @@ class TheoryKnowledgeFrameworkTest {
         )
         assertEquals(
             "theory_work_poetry",
+            TheoryKnowledgeFramework.assignments["kp_00740"],
+        )
+        assertEquals(
+            "theory_work_poetry",
             TheoryKnowledgeFramework.assignments["kp_00764"],
         )
         assertEquals(
