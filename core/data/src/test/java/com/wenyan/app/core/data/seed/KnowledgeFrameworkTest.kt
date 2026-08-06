@@ -13,7 +13,11 @@ class KnowledgeFrameworkTest {
 
         assertEquals(KnowledgeFramework.SUBJECT_NAME, byCode?.subjectName)
         assertEquals(KnowledgeFramework.nodes, byName?.nodes)
-        assertTrue(KnowledgeFrameworkRegistry.find("ancient", "中国古代文学") == null)
+        assertTrue(KnowledgeFrameworkRegistry.find("modern", "中国古代文学") == null)
+        assertEquals(
+            AncientKnowledgeFramework.SUBJECT_NAME,
+            KnowledgeFrameworkRegistry.find("ancient", "中国古代文学")?.subjectName,
+        )
     }
 
     @Test
@@ -51,4 +55,3 @@ class KnowledgeFrameworkTest {
         assertTrue(errors.any { it.startsWith("框架包含不存在的知识点") })
     }
 }
-
