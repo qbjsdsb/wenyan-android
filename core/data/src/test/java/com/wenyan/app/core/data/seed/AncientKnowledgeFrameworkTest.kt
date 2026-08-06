@@ -66,6 +66,38 @@ class AncientKnowledgeFrameworkTest {
     }
 
     @Test
+    fun `一级章节覆盖审计后的 465 个知识点`() {
+        val nodeById = AncientKnowledgeFramework.nodes.associateBy { it.id }
+
+        fun rootOf(nodeId: String): String {
+            var current = nodeId
+            while (true) {
+                current = nodeById[current]?.parentId ?: return current
+            }
+        }
+
+        val counts = AncientKnowledgeFramework.assignments.values
+            .groupingBy(::rootOf)
+            .eachCount()
+
+        assertEquals(
+            mapOf(
+                "ancient_research" to 15,
+                "ancient_pre_qin" to 53,
+                "ancient_qin_han" to 63,
+                "ancient_wei_jin" to 70,
+                "ancient_sui_tang" to 23,
+                "ancient_song_liao_jin" to 50,
+                "ancient_yuan" to 60,
+                "ancient_ming" to 32,
+                "ancient_qing" to 65,
+                "ancient_near_modern" to 34,
+            ),
+            counts,
+        )
+    }
+
+    @Test
     fun `框架缺少或多出知识点时校验明确报告`() {
         val errors = AncientKnowledgeFramework.validate(
             AncientKnowledgeFramework.assignments.keys
