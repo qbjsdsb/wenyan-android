@@ -27,6 +27,10 @@ class AncientKnowledgeFrameworkTest {
             AncientKnowledgeFramework.assignments["kp_00254"],
         )
         assertEquals(
+            "ancient_wei_jin_poetry",
+            AncientKnowledgeFramework.assignments["kp_00027"],
+        )
+        assertEquals(
             "ancient_wei_jin_social",
             AncientKnowledgeFramework.assignments["kp_00269"],
         )
@@ -41,6 +45,10 @@ class AncientKnowledgeFrameworkTest {
         assertEquals(
             "ancient_qing_fiction",
             AncientKnowledgeFramework.assignments["kp_00914"],
+        )
+        assertEquals(
+            "ancient_ming_drama",
+            AncientKnowledgeFramework.assignments["kp_00131"],
         )
         assertEquals(
             "ancient_sui_tang_fiction",
