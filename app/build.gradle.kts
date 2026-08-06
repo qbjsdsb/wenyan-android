@@ -119,17 +119,17 @@ android {
         //   全屏页——ImmersiveSystemBars 隐藏状态栏+导航栏（项目首个沉浸式先例，滑动边缘
         //   临时唤出自动隐藏）；无顶栏零 insets Scaffold 内容占满全屏；左上角半透明圆形
         //   浮动退出按钮；共享卡片页 CardsViewModel（hiltViewModel getBackStackEntry）
-        //   保持同一复习会话；横屏双栏变体：卡片放宽 560dp + 右操作栏 280dp 单列竖排
-        //   评分按钮（用户"一个个竖着排列"偏好）；竖屏放宽最大宽度上限；
-        //   Leech 警告/加入错题本/Snackbar 全镜像卡片页；全量 583 测试通过
-        //   （+4 全屏横屏布局测试）。versionName "0.9.36"）
+        //   保持同一复习会话；横屏双栏变体：卡片放宽 560dp + 右操作栏 280dp 单列竖排评分按钮；
+        //   竖屏放宽最大宽度上限（compact→comfortable）；顶栏全屏入口（有卡可复习时显示）；
+        //   Leech 警告/加入错题本/Snackbar 全镜像；ImmersiveSystemBars 离开组合自动恢复；
+        //   全量 583 测试通过（+4 全屏横屏布局测试）。versionName "0.9.36"）
         // v0.9.37=62（布局与性能深度优化：P0-1 种子加载版本检查前置（老用户冷启动
         //   不再全量解析 5.3MB JSON）；P0-2 卡片页拆卡缓存（评分后不再全量重拆数千张卡）
         //   + 今日队列 stateIn 共享热流（消除双份订阅）+ 拆卡移出主线程；P0-3 完成态
         //   语义合并修复（3 个按钮恢复 TalkBack 独立操作）；P1-1 shrinkResources 开启
         //   （APK 5.87MB→5.15MB，-12.1%）；P1-2 列表 lean 投影 DAO（列表流不再加载
         //   full_content/study_text 大文本列）；P1-4 论述题详情改 LazyColumn（懒加载）；
-        //   P1-6 Retrofit 按 baseUrl 缓存；P1-7 聊天历史保留上限（200 条/会话）；
+        //   P1-6 Retrofit 按服务商 baseUrl 缓存；P1-7 聊天历史保留上限（200 条/会话）；
         //   P1-9 卡片首帧 id 生成移出主线程；P1-10 OkHttp keep 规则收窄；P2 系列 6 项
         //   （设置页边距/停止按钮无障碍/@Immutable 补齐/update{} 原子/友好错误/proguard 注释）；
         //   全量 594 测试通过（+11：种子轻量解析 3 + 完成态无障碍 4 + 缓存键 4）。
@@ -143,7 +143,8 @@ android {
         //   翻转 300ms→420ms emphasized + 正反面操作区 AnimatedContent fade-through 替代双 AnimatedVisibility
         //   消除高度跳动。合并 PR #3，CI 3 次全绿。）
         // v0.9.40=65（四科知识框架整理：现当代、古代、外国、文学理论共 960 个知识点的教材式框架浏览、稳定归类与导入校验；合并 PR #7。）
-        versionCode = 65
+        // v0.9.41=66（修复详情页逐级返回栈 + 全局界面动效精修 + 图标 v8；合并 PR #8。）
+        versionCode = 66
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         //   数据一致性修复（B1/B2/B3）：
@@ -219,7 +220,8 @@ android {
         // v0.9.38：学习完整性与来源可信度修复（见 versionCode 注释）
         // v0.9.39：知识卡片空队列竞态修复 + 翻转动画平滑化（见 versionCode 注释）
         // v0.9.40：四科知识框架整理与知识点浏览体验优化（见 versionCode 注释）
-        versionName = "0.9.40"
+        // v0.9.41：修复逐级返回 + 全局动效精修 + 图标 v8（见 versionCode 注释）
+        versionName = "0.9.41"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
