@@ -73,17 +73,9 @@ fun WenyanNavHost(
                 }
             },
             onNavigateToDetail = { pointId ->
-                // P0 修正：详情间跳转（detail→detail）时弹出现有 detail 入口，
-                // 避免 back stack 无界增长（用户在关联知识点间跳转 N 次后需按 N 次返回）。
-                // popUpTo 匹配 nav graph 中的 knowledge_detail/{pointId} 目标：
-                // - 列表→详情（back stack 无 detail）：popUpTo 为 no-op，安全
-                // - 详情→详情（back stack 有 detail）：弹出当前 detail，再压入新 detail
-                navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId") {
-                    popUpTo("$ROUTE_KNOWLEDGE_DETAIL/{pointId}") {
-                        inclusive = true
-                    }
-                    launchSingleTop = true
-                }
+                // 详情之间跳转必须保留完整历史：A → B 后返回应回到 A，
+                // 而不是因为清除了 A 直接跳回知识点列表。
+                navController.navigateToKnowledgeDetail(pointId)
             },
             onNavigateToQuizPractice = {
                 navController.navigate(ROUTE_QUIZ_PRACTICE) {
@@ -93,7 +85,9 @@ fun WenyanNavHost(
         )
         // v0.9.33：真题背题子路由（名词解释/简答专项）
         quizPracticeDestination(
-            onBack = { navController.popBackStack() },
+            onBack = {
+                navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_KNOWLEDGE)
+            },
             onNavigateToDetail = { questionId, type, subject, year ->
                 val typeParam = type ?: FILTER_ALL
                 val subjectParam = subject ?: FILTER_ALL
@@ -107,7 +101,9 @@ fun WenyanNavHost(
             },
         )
         quizPracticeDetailDestination(
-            onBack = { navController.popBackStack() },
+            onBack = {
+                navController.popBackStackOrNavigateTo(ROUTE_QUIZ_PRACTICE)
+            },
         )
         // v0.9.9：真题 → 论述题迁移，essayTabDestination 替换 quizDestination
         // 顶级 Tab 使用 NavHost 默认 Tab fade transition（与 cards/wrongAnswer/settings 一致）
@@ -137,12 +133,7 @@ fun WenyanNavHost(
             onNavigateToDetail = { pointId ->
                 // v0.8.8 P0：Leech 警告"查看知识点"按钮跳转详情
                 // （原 cardsDestination 漏传此参数，导致按钮点击后对话框关闭但不导航）
-                navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId") {
-                    popUpTo("$ROUTE_KNOWLEDGE_DETAIL/{pointId}") {
-                        inclusive = true
-                    }
-                    launchSingleTop = true
-                }
+                navController.navigateToKnowledgeDetail(pointId)
             },
             // v0.9.36 全屏模式：Push 进入全屏沉浸页（共享卡片页 ViewModel）
             onNavigateToFullscreen = {
@@ -153,7 +144,9 @@ fun WenyanNavHost(
         )
         // v0.9.36 全屏沉浸页子路由（共享卡片页 ViewModel，保持同一复习会话）
         cardsFullscreenDestination(
-            onBack = { navController.popBackStack() },
+            onBack = {
+                navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_CARDS)
+            },
             onNavigateToAiAssistant = {
                 navController.navigate(ROUTE_AI_ASSISTANT) {
                     launchSingleTop = true
@@ -169,12 +162,7 @@ fun WenyanNavHost(
                 }
             },
             onNavigateToDetail = { pointId ->
-                navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId") {
-                    popUpTo("$ROUTE_KNOWLEDGE_DETAIL/{pointId}") {
-                        inclusive = true
-                    }
-                    launchSingleTop = true
-                }
+                navController.navigateToKnowledgeDetail(pointId)
             },
             // 关键：与卡片页共享同一 CardsViewModel（同 backStackEntry → 同一会话状态）。
             // 通过 @Composable provider 延迟到 composable 内容内求值（NavHost builder 非 composable 上下文）
@@ -207,7 +195,9 @@ fun WenyanNavHost(
             },
         )
         aiAssistantDestination(
-            onBack = { navController.popBackStack() },
+            onBack = {
+                navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_KNOWLEDGE)
+            },
             onNavigateToApiConfig = {
                 // P1 修正：子路由需 launchSingleTop，防止快速双击重复压栈
                 navController.navigate(ROUTE_API_CONFIG) {
@@ -216,25 +206,26 @@ fun WenyanNavHost(
             },
         )
         apiConfigDestination(
-            onBack = { navController.popBackStack() },
+            onBack = {
+                navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_SETTINGS)
+            },
         )
         aboutDestination(
-            onBack = { navController.popBackStack() },
+            onBack = {
+                navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_SETTINGS)
+            },
         )
         updateCheckDestination(
-            onBack = { navController.popBackStack() },
+            onBack = {
+                navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_SETTINGS)
+            },
         )
         knowledgeDetailDestination(
-            onBack = { navController.popBackStack() },
+            onBack = {
+                navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_KNOWLEDGE)
+            },
             onNavigateToDetail = { pointId ->
-                // P0 修正：详情间跳转（detail→detail）时弹出现有 detail 入口，
-                // 避免 back stack 无界增长（用户在关联知识点间跳转 N 次后需按 N 次返回）。
-                navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId") {
-                    popUpTo("$ROUTE_KNOWLEDGE_DETAIL/{pointId}") {
-                        inclusive = true
-                    }
-                    launchSingleTop = true
-                }
+                navController.navigateToKnowledgeDetail(pointId)
             },
             onNavigateToEssay = { essayId ->
                 // v0.9.8：知识点详情 → 论述题详情，Push/Pop slide + launchSingleTop
@@ -244,17 +235,39 @@ fun WenyanNavHost(
             },
         )
         essayDetailDestination(
-            onBack = { navController.popBackStack() },
+            onBack = {
+                navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_ESSAY)
+            },
             onNavigateToKnowledgeDetail = { pointId ->
                 // v0.9.8：论述题详情 → 知识点详情（双向串联）
-                navController.navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId") {
-                    popUpTo("$ROUTE_KNOWLEDGE_DETAIL/{pointId}") {
-                        inclusive = true
-                    }
-                    launchSingleTop = true
-                }
+                navController.navigateToKnowledgeDetail(pointId)
             },
         )
+    }
+}
+
+/**
+ * 进入知识点详情时保留当前页面。
+ *
+ * 详情页之间是一个真正的浏览路径：列表 → A → B → C，
+ * 每次返回都应该严格回到上一个页面。因此这里不能使用 popUpTo 清理旧详情。
+ * launchSingleTop 仍然保留，用来抑制同一详情页的连续重复点击。
+ */
+private fun NavHostController.navigateToKnowledgeDetail(pointId: String) {
+    navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId") {
+        launchSingleTop = true
+    }
+}
+
+/**
+ * 优先弹出真实的上一页；只有在深链或进程恢复导致没有历史页面时才使用兜底路由。
+ * 正常浏览路径不会触发兜底，因此不会改变用户已经形成的返回顺序。
+ */
+private fun NavHostController.popBackStackOrNavigateTo(fallbackRoute: String) {
+    if (popBackStack()) return
+    navigate(fallbackRoute) {
+        launchSingleTop = true
+        restoreState = true
     }
 }
 
