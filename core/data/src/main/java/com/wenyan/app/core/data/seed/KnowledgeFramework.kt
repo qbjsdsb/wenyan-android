@@ -158,9 +158,45 @@ object KnowledgeFramework {
         groups.flatMap { group -> group.map { "kp_${it.toString().padStart(5, '0')}" to nodeId } }
 }
 
+/**
+ * 已注册的科目框架入口。
+ *
+ * 现阶段只有现当代文学完成显式整理，但导入器不再依赖某一个具体 object 的特殊判断。
+ * 后续古代文学、外国文学和文学理论完成审核后，只需向这里注册定义即可复用同一套
+ * 章节导入、校验和浏览链路。
+ */
+data class RegisteredKnowledgeFramework(
+    val subjectCode: String,
+    val subjectName: String,
+    val nodes: List<FrameworkNode>,
+    val assignments: Map<String, String>,
+    val validate: (Set<String>) -> List<String>,
+)
+
+object KnowledgeFrameworkRegistry {
+
+    val definitions: List<RegisteredKnowledgeFramework> = listOf(
+        RegisteredKnowledgeFramework(
+            subjectCode = KnowledgeFramework.SUBJECT_CODE,
+            subjectName = KnowledgeFramework.SUBJECT_NAME,
+            nodes = KnowledgeFramework.nodes,
+            assignments = KnowledgeFramework.assignments,
+            validate = KnowledgeFramework::validate,
+        ),
+    )
+
+    private val byCode = definitions.associateBy { it.subjectCode }
+    private val byName = definitions.associateBy { it.subjectName }
+
+    fun find(subjectCode: String, subjectName: String): RegisteredKnowledgeFramework? =
+        byCode[subjectCode]?.takeIf { it.subjectName == subjectName }
+            ?: byName[subjectName]?.takeIf { it.subjectCode == subjectCode }
+}
+
 data class FrameworkNode(
     val id: String,
     val parentId: String?,
     val title: String,
     val sortOrder: Int,
 )
+
