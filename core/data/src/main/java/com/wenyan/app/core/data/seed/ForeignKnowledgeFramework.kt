@@ -161,8 +161,8 @@ object ForeignKnowledgeFramework {
 
         addAll(mapPoints("foreign_realism_overview", 553..553))
         addAll(mapPoints("foreign_realism_france", 554..557))
-        addAll(mapPoints("foreign_realism_britain", 558..560, 927..927))
-        addAll(mapPoints("foreign_realism_russia", 561..568, 928..928))
+        addAll(mapPoints("foreign_realism_britain", 558..561, 927..927))
+        addAll(mapPoints("foreign_realism_russia", 562..568, 928..928))
         addAll(mapPoints("foreign_realism_drama", 569..570))
         addAll(mapPoints("foreign_realism_naturalism", 571..574))
         addAll(mapPoints("foreign_realism_america", 576..576))
