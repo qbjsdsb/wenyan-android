@@ -275,7 +275,7 @@ class SeedDataLoader @Inject constructor(
 
         // 步骤2（ADR-001 B1.3 章节树）：为每科创建根章节 + 已审核的显式框架
         // 根章节：parentId=null，title=科目名（不再叫"默认章节"，作为章节树根）
-        // 显式框架可以有多级节点；尚未完成审核的科目暂使用 PERIOD_CHAPTERS 兼容分组。
+        // 显式框架可以有多级节点；未来新增且尚未注册框架的科目暂使用 PERIOD_CHAPTERS 兼容分组。
         val allChapters = mutableListOf<ChapterEntity>()
         // subjectName → 根章节ID 映射（供知识点兜底分配）
         val subjectNameToRootChapterId = mutableMapOf<String, String>()
@@ -305,7 +305,7 @@ class SeedDataLoader @Inject constructor(
                     )
                 }
             } else {
-                // 尚未完成显式审核的科目保留原有时段规则，避免提前改变数据语义。
+                // 尚未注册显式框架的科目保留原有时段规则，避免提前改变数据语义。
                 val periods = PERIOD_CHAPTERS[seed.name] ?: emptyList()
                 for ((idx, period) in periods.withIndex()) {
                     allChapters.add(
@@ -327,7 +327,7 @@ class SeedDataLoader @Inject constructor(
         // 构建 subjectName → chapterId 映射（兼容旧逻辑，指向根章节）
         val subjectNameToChapterId = subjectNameToRootChapterId.toMap()
 
-        // 步骤3：导入知识点（已审核科目使用显式归属，其他科目暂按兼容规则兜底）
+        // 步骤3：导入知识点（已注册科目使用显式归属，未来新增科目按兼容规则兜底）
         // 注意：若知识点 subject 不在 subjects 列表中，跳过该知识点（避免外键约束失败）
 
         // v0.9.1 修复：基于 tags 派生知识点间关联关系（relatedIds）。
@@ -341,7 +341,7 @@ class SeedDataLoader @Inject constructor(
             val rootChapterId = subjectNameToChapterId[seed.subject]
                 ?: return@mapNotNull null
             val subjectSeed = seedData.subjects.first { it.name == seed.subject }
-            // 已审核科目必须命中显式框架；尚未审核科目才允许使用兼容规则。
+            // 已注册科目必须命中显式框架；未注册科目才允许使用兼容规则.
             val framework = KnowledgeFrameworkRegistry.find(subjectSeed.code, seed.subject)
             val chapterId = if (framework != null) {
                 framework.assignments[seed.id]
