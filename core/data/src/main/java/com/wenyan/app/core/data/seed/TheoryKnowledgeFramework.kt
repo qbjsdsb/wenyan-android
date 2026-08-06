@@ -77,8 +77,8 @@ object TheoryKnowledgeFramework {
         addAll(mapPoints("theory_creation_truth", 867..869))
         addAll(mapPoints("theory_creation_types", 870..873))
 
-        addAll(mapPoints("theory_work_genre", 740..742, 761..763, 874..876))
-        addAll(mapPoints("theory_work_poetry", 764..772))
+        addAll(mapPoints("theory_work_genre", 741..742, 761..763, 874..876))
+        addAll(mapPoints("theory_work_poetry", 740..740, 764..772))
         addAll(mapPoints("theory_work_text", 749..760, 877..881))
         addAll(mapPoints("theory_work_narrative", 773..781, 882..884))
         addAll(mapPoints("theory_work_drama", 782..784))
