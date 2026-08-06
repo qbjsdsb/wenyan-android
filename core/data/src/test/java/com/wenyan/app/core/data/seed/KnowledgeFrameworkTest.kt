@@ -32,7 +32,7 @@ class KnowledgeFrameworkTest {
 
     @Test
     fun `种子缺少知识点时校验明确报告未归类`() {
-        val errors = KnowledgeFramework.validate(setOf("kp_00578"))
+        val errors = KnowledgeFramework.validate(setOf("kp_00578", "kp_99999"))
 
         assertTrue(errors.any { it.startsWith("知识点未归类") })
         assertTrue(errors.any { it.startsWith("框架包含不存在的知识点") })
