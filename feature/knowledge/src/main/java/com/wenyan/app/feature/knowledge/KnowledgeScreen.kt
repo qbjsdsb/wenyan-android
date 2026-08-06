@@ -21,12 +21,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.CompositionLocalProvider
 import com.wenyan.app.core.designsystem.component.LocalLazyListState
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -53,18 +55,23 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -261,32 +268,35 @@ private enum class KnowledgeBrowseMode {
     LIST,
 }
 
+private data class FrameworkDestination(
+    val subjectId: String?,
+    val chapterId: String?,
+)
+
 @Composable
 private fun BrowseModeSwitcher(
     mode: KnowledgeBrowseMode,
     onModeChange: (KnowledgeBrowseMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    SingleChoiceSegmentedButtonRow(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        FilterChip(
-            selected = mode == KnowledgeBrowseMode.FRAMEWORK,
-            onClick = { onModeChange(KnowledgeBrowseMode.FRAMEWORK) },
-            label = { Text(stringResource(R.string.kp_mode_framework)) },
-            leadingIcon = {
-                Icon(imageVector = Icons.Default.AccountTree, contentDescription = null)
-            },
+        val modes = listOf(
+            KnowledgeBrowseMode.FRAMEWORK to R.string.kp_mode_framework,
+            KnowledgeBrowseMode.LIST to R.string.kp_mode_list,
         )
-        FilterChip(
-            selected = mode == KnowledgeBrowseMode.LIST,
-            onClick = { onModeChange(KnowledgeBrowseMode.LIST) },
-            label = { Text(stringResource(R.string.kp_mode_list)) },
-            leadingIcon = {
-                Icon(imageVector = Icons.Default.Inbox, contentDescription = null)
-            },
-        )
+        modes.forEachIndexed { index, (itemMode, labelRes) ->
+            SegmentedButton(
+                selected = mode == itemMode,
+                onClick = { onModeChange(itemMode) },
+                shape = SegmentedButtonDefaults.itemShape(
+                    index = index,
+                    count = modes.size,
+                ),
+                label = { Text(stringResource(labelRes)) },
+            )
+        }
     }
 }
 
@@ -304,23 +314,43 @@ private fun FrameworkBrowser(
 ) {
     var selectedSubjectId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedChapterId by rememberSaveable { mutableStateOf<String?>(null) }
+    var navigationDirection by rememberSaveable { mutableStateOf(1) }
     val selectedSubject = state.subjects.firstOrNull { it.id == selectedSubjectId }
     val rootChapterId = selectedSubject?.rootChapterId
     val currentChapterId = selectedChapterId ?: rootChapterId
     val currentChapter = selectedSubject?.chapters?.firstOrNull { it.id == currentChapterId }
-    val breadcrumb = if (selectedSubject != null && currentChapter != null && currentChapter.id != rootChapterId) {
+    val atRoot = selectedSubject != null && (currentChapter == null || currentChapter.id == rootChapterId)
+    val breadcrumb = if (selectedSubject != null && currentChapter != null && !atRoot) {
         buildFrameworkBreadcrumb(selectedSubject, currentChapter.id)
     } else {
         null
     }
 
-    BackHandler(enabled = selectedSubject != null) {
-        if (currentChapter != null && currentChapter.id != rootChapterId) {
+    // 数据库重导或进程恢复后，旧的导航 ID 可能已经不再存在。只在数据加载完成后校正，
+    // 避免初次加载时把 rememberSaveable 中的路径误清空。
+    LaunchedEffect(state.subjects, state.isLoading) {
+        if (!state.isLoading && state.subjects.isNotEmpty()) {
+            if (selectedSubjectId != null && selectedSubject == null) {
+                selectedSubjectId = null
+                selectedChapterId = null
+            } else if (selectedSubject != null && selectedChapterId != null && currentChapter == null) {
+                selectedChapterId = rootChapterId
+            }
+        }
+    }
+
+    fun goBack() {
+        navigationDirection = -1
+        if (currentChapter != null && !atRoot) {
             selectedChapterId = currentChapter.parentId ?: rootChapterId
         } else {
             selectedSubjectId = null
             selectedChapterId = null
         }
+    }
+
+    BackHandler(enabled = selectedSubject != null) {
+        goBack()
     }
 
     when {
@@ -360,39 +390,42 @@ private fun FrameworkBrowser(
                     FrameworkHeader(
                         subject = selectedSubject,
                         currentChapter = currentChapter,
-                        atRoot = currentChapter?.id == rootChapterId,
+                        atRoot = atRoot,
                         breadcrumb = breadcrumb,
-                        onBack = {
-                            if (currentChapter != null && currentChapter.id != rootChapterId) {
-                                selectedChapterId = currentChapter.parentId ?: rootChapterId
-                            } else {
-                                selectedSubjectId = null
-                                selectedChapterId = null
-                            }
-                        },
+                        onBack = { goBack() },
                     )
                     AnimatedContent(
-                        targetState = currentChapterId ?: "framework_home",
+                        targetState = FrameworkDestination(selectedSubjectId, currentChapterId),
                         transitionSpec = {
-                            fadeIn(animationSpec = tween(WenyanMotion.DurationMedium)) togetherWith
-                                fadeOut(animationSpec = tween(WenyanMotion.DurationShort))
+                            if (navigationDirection > 0) {
+                                WenyanMotion.PushEnterTransition togetherWith WenyanMotion.PushExitTransition
+                            } else {
+                                WenyanMotion.PopEnterTransition togetherWith WenyanMotion.PopExitTransition
+                            }
                         },
                         label = "framework_navigation",
                         modifier = Modifier.fillMaxSize(),
-                    ) { chapterId ->
-                        if (selectedSubject == null) {
+                    ) { destination ->
+                        // 使用 AnimatedContent 自己的目标快照，避免进入下一层时旧页面也被
+                        // 外层 selectedSubject 立即改写，导致过渡期间内容“闪”成同一页。
+                        val destinationSubject = state.subjects.firstOrNull { it.id == destination.subjectId }
+                        if (destinationSubject == null) {
                             FrameworkSubjectList(
                                 subjects = state.subjects,
                                 onSelect = { subject ->
+                                    navigationDirection = 1
                                     selectedSubjectId = subject.id
                                     selectedChapterId = subject.rootChapterId
                                 },
                             )
                         } else {
                             FrameworkChapterList(
-                                subject = selectedSubject,
-                                chapterId = chapterId,
-                                onSelectChapter = { selectedChapterId = it },
+                                subject = destinationSubject,
+                                chapterId = destination.chapterId,
+                                onSelectChapter = {
+                                    navigationDirection = 1
+                                    selectedChapterId = it
+                                },
                                 onNavigateToDetail = onNavigateToDetail,
                             )
                         }
@@ -446,9 +479,14 @@ private fun FrameworkHeader(
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = currentChapter?.title ?: stringResource(R.string.kp_framework_title),
+                text = when {
+                    subject == null -> stringResource(R.string.kp_framework_title)
+                    atRoot -> subject.name
+                    else -> currentChapter?.title.orEmpty()
+                },
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.semantics { heading() },
             )
             if (subject == null) {
                 Text(
@@ -465,8 +503,13 @@ private fun FrameworkHeader(
                     overflow = TextOverflow.Ellipsis,
                 )
             } else if (atRoot) {
+                val root = subject.chapters.firstOrNull { it.id == subject.rootChapterId }
                 Text(
-                    text = stringResource(R.string.kp_framework_home),
+                    text = stringResource(
+                        R.string.kp_framework_root_desc,
+                        root?.totalPointCount ?: 0,
+                        root?.childCount ?: 0,
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -480,16 +523,34 @@ private fun FrameworkSubjectList(
     subjects: List<FrameworkSubjectItem>,
     onSelect: (FrameworkSubjectItem) -> Unit,
 ) {
+    val totalPointCount = subjects.sumOf { subject ->
+        subject.chapters.firstOrNull { it.id == subject.rootChapterId }?.totalPointCount ?: 0
+    }
+    val totalHighFrequencyCount = subjects.sumOf { subject ->
+        subject.chapters.firstOrNull { it.id == subject.rootChapterId }?.highFrequencyCount ?: 0
+    }
     LazyColumn(
-        contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.sm),
+        contentPadding = PaddingValues(
+            start = Spacing.lg,
+            top = Spacing.sm,
+            end = Spacing.lg,
+            bottom = Spacing.xxl,
+        ),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
+        item(key = "framework_overview") {
+            FrameworkOverviewCard(
+                subjectCount = subjects.size,
+                pointCount = totalPointCount,
+                highFrequencyCount = totalHighFrequencyCount,
+            )
+        }
         items(subjects, key = { it.id }, contentType = { "frameworkSubject" }) { subject ->
             val root = subject.chapters.firstOrNull { it.id == subject.rootChapterId }
             Surface(
                 onClick = { onSelect(subject) },
                 shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surfaceContainer,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
                 modifier = Modifier
                     .fillMaxWidth()
                     .animateItem(),
@@ -499,10 +560,10 @@ private fun FrameworkSubjectList(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.AccountTree,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                    FrameworkIconBadge(
+                        icon = Icons.Default.AccountTree,
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
@@ -514,6 +575,7 @@ private fun FrameworkSubjectList(
                             text = stringResource(
                                 R.string.kp_framework_subject_desc,
                                 root?.totalPointCount ?: 0,
+                                root?.childCount ?: 0,
                                 root?.highFrequencyCount ?: 0,
                             ),
                             style = MaterialTheme.typography.bodySmall,
@@ -532,9 +594,70 @@ private fun FrameworkSubjectList(
 }
 
 @Composable
+private fun FrameworkOverviewCard(
+    subjectCount: Int,
+    pointCount: Int,
+    highFrequencyCount: Int,
+) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(Spacing.lg),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            FrameworkIconBadge(
+                icon = Icons.Default.AccountTree,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.kp_framework_overview_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = stringResource(
+                        R.string.kp_framework_overview_desc,
+                        subjectCount,
+                        pointCount,
+                        highFrequencyCount,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FrameworkIconBadge(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    containerColor: androidx.compose.ui.graphics.Color,
+    contentColor: androidx.compose.ui.graphics.Color,
+) {
+    Surface(
+        modifier = Modifier.size(48.dp),
+        shape = CircleShape,
+        color = containerColor,
+        contentColor = contentColor,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(imageVector = icon, contentDescription = null)
+        }
+    }
+}
+
+@Composable
 private fun FrameworkChapterList(
     subject: FrameworkSubjectItem,
-    chapterId: String,
+    chapterId: String?,
     onSelectChapter: (String) -> Unit,
     onNavigateToDetail: (String) -> Unit,
 ) {
@@ -542,10 +665,15 @@ private fun FrameworkChapterList(
     val children = subject.chapters
         .filter { it.parentId == chapterId }
         .sortedBy { it.sortOrder }
-    val points = subject.pointsByChapter[chapterId].orEmpty()
+    val points = chapterId?.let { subject.pointsByChapter[it].orEmpty() }.orEmpty()
 
     LazyColumn(
-        contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.sm),
+        contentPadding = PaddingValues(
+            start = Spacing.lg,
+            top = Spacing.sm,
+            end = Spacing.lg,
+            bottom = Spacing.xxl,
+        ),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         if (children.isNotEmpty()) {
@@ -553,17 +681,18 @@ private fun FrameworkChapterList(
                 Text(
                     text = stringResource(
                         R.string.kp_framework_subchapter_count,
-                        current?.title.orEmpty(),
                         children.size,
                     ),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.semantics { heading() },
                 )
             }
             items(children, key = { it.id }, contentType = { "frameworkChapter" }) { chapter ->
                 FrameworkChapterCard(
                     chapter = chapter,
                     onClick = { onSelectChapter(chapter.id) },
+                    modifier = Modifier.animateItem(),
                 )
             }
         }
@@ -573,7 +702,9 @@ private fun FrameworkChapterList(
                     text = stringResource(R.string.kp_framework_points_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(top = Spacing.sm),
+                    modifier = Modifier
+                        .padding(top = Spacing.sm)
+                        .semantics { heading() },
                 )
             }
             items(points, key = { it.id }, contentType = { "knowledgeItem" }) { point ->
@@ -585,59 +716,84 @@ private fun FrameworkChapterList(
         }
         if (children.isEmpty() && points.isEmpty()) {
             item(key = "chapter_empty") {
-                Text(
-                    text = stringResource(R.string.kp_framework_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = Spacing.xl),
+                EmptyState(
+                    icon = Icons.Default.AccountTree,
+                    title = stringResource(R.string.kp_framework_empty),
                 )
             }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FrameworkChapterCard(
     chapter: FrameworkChapterItem,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Surface(
         onClick = onClick,
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier.padding(Spacing.lg),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            Icon(
-                imageVector = Icons.Default.AccountTree,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
+            FrameworkIconBadge(
+                icon = Icons.Default.AccountTree,
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = chapter.title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                Text(
-                    text = stringResource(
-                        R.string.kp_framework_chapter_desc,
-                        chapter.totalPointCount,
-                        chapter.childCount,
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (chapter.highFrequencyCount > 0) {
-                WenyanInfoChip(
-                    text = stringResource(R.string.kp_framework_high_frequency, chapter.highFrequencyCount),
-                    variant = ChipVariant.PRIMARY,
-                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    itemVerticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(
+                            R.string.kp_framework_points_count,
+                            chapter.totalPointCount,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (chapter.childCount > 0) {
+                        Text(
+                            text = "·",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.kp_framework_children_count,
+                                chapter.childCount,
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (chapter.highFrequencyCount > 0) {
+                        WenyanInfoChip(
+                            text = stringResource(
+                                R.string.kp_framework_high_frequency,
+                                chapter.highFrequencyCount,
+                            ),
+                            variant = ChipVariant.PRIMARY,
+                        )
+                    }
+                }
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
