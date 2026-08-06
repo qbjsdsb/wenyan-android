@@ -23,6 +23,10 @@ class ForeignKnowledgeFrameworkTest {
             ForeignKnowledgeFramework.assignments["kp_00575"],
         )
         assertEquals(
+            "foreign_realism_britain",
+            ForeignKnowledgeFramework.assignments["kp_00561"],
+        )
+        assertEquals(
             "foreign_ancient_tragedy",
             ForeignKnowledgeFramework.assignments["kp_00577"],
         )
