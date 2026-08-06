@@ -18,6 +18,14 @@ class KnowledgeFrameworkTest {
             AncientKnowledgeFramework.SUBJECT_NAME,
             KnowledgeFrameworkRegistry.find("ancient", "中国古代文学")?.subjectName,
         )
+        assertEquals(
+            ForeignKnowledgeFramework.SUBJECT_NAME,
+            KnowledgeFrameworkRegistry.find("foreign", "外国文学")?.subjectName,
+        )
+        assertEquals(
+            TheoryKnowledgeFramework.SUBJECT_NAME,
+            KnowledgeFrameworkRegistry.find("theory", "文学理论")?.subjectName,
+        )
     }
 
     @Test
