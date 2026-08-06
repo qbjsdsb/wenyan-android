@@ -146,7 +146,8 @@ fun WenyanAdaptiveNavigation(
                     val bottomOffset by animateDpAsState(
                         targetValue = if (barVisible) 0.dp else bottomHideDistance,
                         animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            // 导航栏显隐不应有回弹，否则页面滚动时会产生多余的视觉重量。
+                            dampingRatio = Spring.DampingRatioNoBouncy,
                             stiffness = Spring.StiffnessMedium,
                         ),
                         label = "bottomNavGroupOffset",
