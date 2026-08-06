@@ -165,13 +165,15 @@ class KnowledgeViewModel @Inject constructor(
 
         viewModelScope.launch {
             _retryTrigger
-                .flatMapLatest { observeFramework() }
-                .catch { e ->
-                    Timber.e(e, "loadKnowledgeFramework failed")
-                    _frameworkUiState.value = _frameworkUiState.value.copy(
-                        isLoading = false,
-                        error = friendlyErrorMessage(e),
-                    )
+                .flatMapLatest {
+                    observeFramework()
+                        .catch { e ->
+                            Timber.e(e, "loadKnowledgeFramework failed")
+                            _frameworkUiState.value = _frameworkUiState.value.copy(
+                                isLoading = false,
+                                error = friendlyErrorMessage(e),
+                            )
+                        }
                 }
                 .collect { _frameworkUiState.value = it }
         }

@@ -147,12 +147,6 @@ fun KnowledgeScreen(
                 Column(
                     modifier = Modifier.widthIn(max = MaxContentWidth.comfortable),
                 ) {
-                    // v0.9.33 新增：真题背题入口卡（名词解释/简答专项，位于搜索框上方）
-                    QuizPracticeEntryCard(
-                        onClick = onNavigateToQuizPractice,
-                        modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                    )
-
                     BrowseModeSwitcher(
                         mode = browseMode,
                         onModeChange = { browseModeName = it.name },
@@ -160,6 +154,12 @@ fun KnowledgeScreen(
                     )
 
                     if (browseMode == KnowledgeBrowseMode.LIST) {
+                        // 真题背题属于平铺练习入口，放在列表模式中，避免削弱框架首页的整体结构。
+                        QuizPracticeEntryCard(
+                            onClick = onNavigateToQuizPractice,
+                            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                        )
+
                         // v0.8.19 P1-UI-1: 搜索框
                         // v0.9.25 修复：错误态下禁用搜索/分类（原实现可输入/点击高亮，但数据流已终止不重载）
                         val filterEnabled = uiState.error == null
@@ -308,6 +308,11 @@ private fun FrameworkBrowser(
     val rootChapterId = selectedSubject?.rootChapterId
     val currentChapterId = selectedChapterId ?: rootChapterId
     val currentChapter = selectedSubject?.chapters?.firstOrNull { it.id == currentChapterId }
+    val breadcrumb = if (selectedSubject != null && currentChapter != null && currentChapter.id != rootChapterId) {
+        buildFrameworkBreadcrumb(selectedSubject, currentChapter.id)
+    } else {
+        null
+    }
 
     BackHandler(enabled = selectedSubject != null) {
         if (currentChapter != null && currentChapter.id != rootChapterId) {
@@ -356,6 +361,7 @@ private fun FrameworkBrowser(
                         subject = selectedSubject,
                         currentChapter = currentChapter,
                         atRoot = currentChapter?.id == rootChapterId,
+                        breadcrumb = breadcrumb,
                         onBack = {
                             if (currentChapter != null && currentChapter.id != rootChapterId) {
                                 selectedChapterId = currentChapter.parentId ?: rootChapterId
@@ -397,11 +403,30 @@ private fun FrameworkBrowser(
     }
 }
 
+private fun buildFrameworkBreadcrumb(
+    subject: FrameworkSubjectItem,
+    chapterId: String,
+): String {
+    val chaptersById = subject.chapters.associateBy { it.id }
+    val titles = mutableListOf<String>()
+    val visited = mutableSetOf<String>()
+    var currentId: String? = chapterId
+    while (currentId != null && visited.add(currentId)) {
+        val chapter = chaptersById[currentId] ?: break
+        if (chapter.id != subject.rootChapterId) {
+            titles += chapter.title
+        }
+        currentId = chapter.parentId
+    }
+    return (listOf(subject.name) + titles.asReversed()).joinToString(" / ")
+}
+
 @Composable
 private fun FrameworkHeader(
     subject: FrameworkSubjectItem?,
     currentChapter: FrameworkChapterItem?,
     atRoot: Boolean,
+    breadcrumb: String?,
     onBack: () -> Unit,
 ) {
     Row(
@@ -430,6 +455,14 @@ private fun FrameworkHeader(
                     text = stringResource(R.string.kp_framework_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else if (breadcrumb != null) {
+                Text(
+                    text = breadcrumb,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             } else if (atRoot) {
                 Text(

@@ -25,8 +25,11 @@ class KnowledgeFrameworkTest {
         assertEquals(181, KnowledgeFramework.assignments.size)
         assertTrue(KnowledgeFramework.validate(KnowledgeFramework.assignments.keys).isEmpty())
         assertEquals("modern_history", KnowledgeFramework.assignments["kp_00578"])
-        assertEquals("modern_first_lu", KnowledgeFramework.assignments["kp_00614"])
-        assertEquals("modern_since_poetry", KnowledgeFramework.assignments["kp_00922"])
+        assertEquals("modern_first_prose", KnowledgeFramework.assignments["kp_00612"])
+        assertEquals("modern_first_movements", KnowledgeFramework.assignments["kp_00954"])
+        assertEquals("modern_third_war", KnowledgeFramework.assignments["kp_00922"])
+        assertEquals("modern_seventeen_other", KnowledgeFramework.assignments["kp_00644"])
+        assertEquals("modern_since_history", KnowledgeFramework.assignments["kp_00707"])
         assertEquals("modern_hongkong", KnowledgeFramework.assignments["kp_00958"])
     }
 
