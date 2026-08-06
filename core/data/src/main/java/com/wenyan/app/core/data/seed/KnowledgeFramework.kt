@@ -193,6 +193,14 @@ object KnowledgeFrameworkRegistry {
             validate = AncientKnowledgeFramework::validate,
             legacyChapterIds = (0..7).map { "chapter_ancient_$it" },
         ),
+        RegisteredKnowledgeFramework(
+            subjectCode = ForeignKnowledgeFramework.SUBJECT_CODE,
+            subjectName = ForeignKnowledgeFramework.SUBJECT_NAME,
+            nodes = ForeignKnowledgeFramework.nodes,
+            assignments = ForeignKnowledgeFramework.assignments,
+            validate = ForeignKnowledgeFramework::validate,
+            legacyChapterIds = (0..7).map { "chapter_foreign_$it" },
+        ),
     )
 
     private val byCode = definitions.associateBy { it.subjectCode }
