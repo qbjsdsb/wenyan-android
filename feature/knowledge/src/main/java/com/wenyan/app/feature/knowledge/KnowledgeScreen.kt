@@ -254,7 +254,12 @@ fun KnowledgeScreen(
                         KnowledgeList(
                             items = uiState.knowledgePoints,
                             onNavigateToDetail = onNavigateToDetail,
-                            contentPadding = PaddingValues(Spacing.lg),
+                            contentPadding = PaddingValues(
+                                start = Spacing.lg,
+                                top = Spacing.lg,
+                                end = Spacing.lg,
+                                bottom = Spacing.xxl,
+                            ),
                         )
                     }
                 }
@@ -699,7 +704,7 @@ private fun FrameworkChapterList(
         if (points.isNotEmpty()) {
             item(key = "point_heading") {
                 Text(
-                    text = stringResource(R.string.kp_framework_points_title),
+                    text = stringResource(R.string.kp_framework_points_title, points.size),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
@@ -711,6 +716,8 @@ private fun FrameworkChapterList(
                 KnowledgePointCard(
                     item = point,
                     onClick = { onNavigateToDetail(point.id) },
+                    showSubject = false,
+                    modifier = Modifier.animateItem(),
                 )
             }
         }
@@ -975,6 +982,7 @@ private fun KnowledgePointCard(
     item: KnowledgePointItem,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    showSubject: Boolean = true,
 ) {
     TonalCard(
         modifier = modifier
@@ -986,43 +994,59 @@ private fun KnowledgePointCard(
             // 视障用户才能识别卡片可点击。原 .clickable 无 role，TalkBack 不朗读"按钮"。
             .clickable(role = Role.Button, onClick = onClick),
     ) {
-        // v0.8.3 修复（P2-K-1）：加 verticalArrangement.spacedBy 让 title/subject/summary 之间有呼吸感
-        Column(
+        Row(
             modifier = Modifier.padding(Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.titleMedium,
-                // P1-1 修复：长标题限 2 行 + 省略号，保持列表卡片高度一致
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            // v0.8.20 P1-2: 科目 + 考频 chip 同行展示(FlowRow 自动换行)。
-            // 考频用 PRIMARY/SECONDARY/TERTIARY chip 突出高频考点,
-            // 与详情页 HeaderSection 的 freqVariant 映射一致。
-            // NEVER 不展示 chip(避免"未考"chip 干扰浏览,无考频信息比"未考"标签更克制)。
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 Text(
-                    text = item.subject,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.secondary,
+                    text = item.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    // P1-1 修复：长标题限 2 行 + 省略号，保持列表卡片高度一致
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 val (freqLabel, freqVariant) = examFrequencyChip(item.examFrequency)
-                if (freqLabel != null) {
-                    WenyanInfoChip(text = freqLabel, variant = freqVariant)
+                // 框架页已经在标题和面包屑中表达科目上下文，避免每张卡重复显示；
+                // 列表模式保留科目标签，方便跨科目搜索结果快速辨认。
+                if (showSubject || freqLabel != null) {
+                    // v0.8.20 P1-2: 科目 + 考频 chip 同行展示(FlowRow 自动换行)。
+                    // NEVER 不展示 chip，保持无考频信息时的克制感。
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    ) {
+                        if (showSubject) {
+                            Text(
+                                text = item.subject,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.secondary,
+                            )
+                        }
+                        if (freqLabel != null) {
+                            WenyanInfoChip(text = freqLabel, variant = freqVariant)
+                        }
+                    }
+                }
+                if (item.summary.isNotBlank()) {
+                    Text(
+                        text = item.summary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        // P1-1 修复：长摘要限 3 行 + 省略号，点击进详情看全文
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
-            Text(
-                text = item.summary,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                // P1-1 修复：长摘要限 3 行 + 省略号，点击进详情看全文
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
