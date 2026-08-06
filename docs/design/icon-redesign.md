@@ -1,7 +1,7 @@
 # 文研 App 启动图标设计
 
 > 版本：v8（2026-08-06）  
-> 状态：✅ 已实施，等待 PR #8 的完整 CI 验证  
+> 状态：✅ 已实施；运行时资源已由 GitHub Actions #421 验证  
 > 目标：克制、精致、清晰，具备 Google 产品常见的简洁几何感，同时保留文研的“阅读与文学”语义。
 
 ## 1. 为什么重做
@@ -70,11 +70,12 @@ ic_launcher_background.xml 改为引用 @color/wenyan_launcher_background，颜�
 - 检查 foreground、monochrome、background 的资源引用关系没有改变 adaptive-icon 结构；
 - 检查 Splash 仍使用同一份前景 vector，避免冷启动和桌面图标风格分裂。
 
-### 待 CI 完成的工程检查
+### 工程验证（GitHub Actions #421）
 
-- testDebugUnitTest
-- assembleDebug
-- APK 资源打包成功且没有 vector XML 解析错误
+- ✅ testDebugUnitTest
+- ✅ assembleDebug
+- ✅ APK 资源打包成功且没有 vector XML 解析错误
+- ✅ Debug APK 上传成功
 
 ### 真机验收重点
 
