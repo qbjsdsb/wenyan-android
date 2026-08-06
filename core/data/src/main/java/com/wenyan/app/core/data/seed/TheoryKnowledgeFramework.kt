@@ -102,49 +102,8 @@ object TheoryKnowledgeFramework {
     val assignments: Map<String, String> = assignmentPairs.toMap()
 
     /** 返回导入前必须解决的框架数据问题。空列表表示通过。 */
-    fun validate(pointIds: Set<String>): List<String> {
-        val errors = mutableListOf<String>()
-        val nodeIds = nodes.map { it.id }.toSet()
-        if (nodeIds.size != nodes.size) errors += "章节节点 ID 重复"
-        if (nodes.any { it.id.isBlank() || it.title.isBlank() }) errors += "章节节点 ID 或标题为空"
-        val danglingParents = nodes
-            .filter { it.parentId != null && it.parentId !in nodeIds }
-            .map { "${it.id}→${it.parentId}" }
-        if (danglingParents.isNotEmpty()) {
-            errors += "章节父节点不存在: ${danglingParents.joinToString()}"
-        }
-        val duplicateAssignmentIds = assignmentPairs
-            .groupingBy { it.first }
-            .eachCount()
-            .filterValues { it > 1 }
-            .keys
-        if (duplicateAssignmentIds.isNotEmpty()) {
-            errors += "知识点重复归属: ${duplicateAssignmentIds.sorted().joinToString()}"
-        }
-
-        val missing = pointIds.filterNot(assignments::containsKey).sorted()
-        if (missing.isNotEmpty()) errors += "知识点未归类: ${missing.joinToString()}"
-
-        val stale = assignments.keys.filterNot(pointIds::contains).sorted()
-        if (stale.isNotEmpty()) errors += "框架包含不存在的知识点: ${stale.joinToString()}"
-
-        val danglingNodes = assignments.values.filterNot(nodeIds::contains).distinct().sorted()
-        if (danglingNodes.isNotEmpty()) errors += "归属节点不存在: ${danglingNodes.joinToString()}"
-
-        val nodeById = nodes.associateBy { it.id }
-        for (node in nodes) {
-            val seen = mutableSetOf<String>()
-            var current: String? = node.id
-            while (current != null) {
-                if (!seen.add(current)) {
-                    errors += "章节树存在循环: ${node.id}"
-                    break
-                }
-                current = nodeById[current]?.parentId
-            }
-        }
-        return errors.distinct()
-    }
+    fun validate(pointIds: Set<String>): List<String> =
+        KnowledgeFrameworkValidator.validate(nodes, assignmentPairs, assignments, pointIds)
 
     private fun mapPoints(nodeId: String, vararg groups: Iterable<Int>): List<Pair<String, String>> =
         groups.flatMap { group -> group.map { "kp_${it.toString().padStart(5, '0')}" to nodeId } }
