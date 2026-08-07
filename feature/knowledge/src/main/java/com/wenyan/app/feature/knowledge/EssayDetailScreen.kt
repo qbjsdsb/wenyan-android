@@ -95,7 +95,7 @@ import androidx.compose.ui.tooling.preview.Preview
  * 9. 知识盲点区（knowledgeGaps：项目暂无知识点提醒）— notes.knowledgeGaps 有数据时显示
  * 10. 关联知识点区（relatedPoints：点击跳转知识点详情）— 有数据时显示
  *
- * 优雅降级：angle/notes 为 null（131/134 道未填充）→ 隐藏对应区块，
+ * 优雅降级：angle/notes 为空或解析失败 → 隐藏对应区块，
  * 仅显示题目信息 + 正文 + 答题框架 + 关联知识点。
  *
  * 参考链接用 [LocalUriHandler] 打开系统默认浏览器（CustomTabsIntent 需额外依赖，
