@@ -75,7 +75,7 @@ import com.wenyan.app.core.designsystem.theme.WenyanTheme
  * v0.9.23：删除年份显示与年份筛选（用户需求"论述题不要年份"）。
  *
  * 数据流：[EssayListViewModel] combine(observeAllEssays, observeSubjects, 2个筛选StateFlow)
- * 筛选在内存完成（134 题规模 < 5ms）。
+ * 筛选在内存完成（当前数据量下 < 5ms）。
  *
  * 设计依据：用户需求"增加论述题板块融合在知识点板块"，入口放在知识点 Tab，
  * 与知识点详情页的"相关论述题"区块形成双入口（列表浏览 + 知识点关联跳转）。
