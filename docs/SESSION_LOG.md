@@ -6975,3 +6975,17 @@ while (retryCount <= maxRetries) {
 ### 环境限制
 
 本地容器仍未缓存 Gradle 8.14.4 Wrapper，且无法从当前网络策略下载；本轮最终编译与 APK 产物以 GitHub Actions 为准。
+
+---
+
+## 2026-08-07 会话：v0.9.42 发布（教材内容增量）
+
+- **背景**：远程 GitHub 在本地 v0.9.37 之后推进到 v0.9.41（v0.9.38 种子安全/来源落库、v0.9.39 修复我 v0.9.37 stateIn 竞态 → shareIn(replay=1)、v0.9.40 四科知识框架、v0.9.41 返回栈/动效/图标 v8）；本地同步后核对 PR #9（content/yuan-shishuo-completion）内容质量 8 项全过
+- **发布 v0.9.42**（versionCode 67，seed 2.26.0）：
+  - 内容升级合并（PR #9）：知识点 960→1101（+141：现当代75/古代33/外国33），真题 485→564（+79，2023-2026），四科框架覆盖 498/256/157/190
+  - 版本号与 CHANGELOG 已在远程就绪，本地同步后直接打 tag v0.9.42 推送
+  - CI 首次推送 ~14 分钟生成 Release #69（冷缓存），网页代理核验 + APK 实测通过：
+    versionCode 67 / 0.9.42 / targetSdk 35 / 正式签名 3fefd8a0… / sha256 `0217a76f…` 两资产一致 / 5,565,520 字节
+  - 全量 **631 单测 0 失败** + assembleDebug/Release 通过
+- **receipt**：`docs/release-receipts/v0.9.42-release-receipt.md`
+- **下次继续**：路线图——复习提醒通知（WorkManager）/ 学习统计页（review_logs 就绪）/ 知识图谱 Graph 视图

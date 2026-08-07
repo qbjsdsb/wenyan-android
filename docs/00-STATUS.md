@@ -5,7 +5,11 @@
 
 ## ✅ 当前状态
 
-**v0.9.37 已发布**（2026-08-06，Release #67）：布局与性能深度优化（versionCode 62）。推送后 ~14 分钟生成 Release（CI 冷缓存较慢，非异常），APK 已下载实测核验通过。
+**v0.9.42 已发布**（2026-08-07，Release #69）：教材内容增量（versionCode 67）。合并 PR #9——知识点 960→1101（+141），真题 485→564（+79），seed 2.18.0→2.26.0；四科框架覆盖 498/256/157/190；APK 已下载实测核验通过。
+- **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.42
+- **receipt**：`docs/release-receipts/v0.9.42-release-receipt.md`
+- APK 实测：versionCode 67 / versionName "0.9.42" / targetSdk 35 / 正式签名（3fefd8a0…）/ 5.31MB
+- 全量 **631 单测 0 失败** + assembleDebug/Release 通过
 - **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.37
 - **receipt**：`docs/release-receipts/v0.9.37-release-receipt.md`
 - P0：种子加载版本检查前置 / 卡片页拆卡缓存 + 共享热流 + 移出主线程 / 完成态无障碍修复
@@ -112,9 +116,9 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **7055446**（布局与性能深度优化，2026-08-06） |
-| 最新 Release | **v0.9.37**（2026-08-06，Release #67，性能深度优化，APK 已实测核验）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.37 |
-| versionCode / versionName | **62 / "0.9.37"** |
+| 最新 commit | **be4e6ef**（Merge PR #9 内容升级，2026-08-07） |
+| 最新 Release | **v0.9.42**（2026-08-07，Release #69，教材内容增量，APK 已实测核验）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.42 |
+| versionCode / versionName | **67 / "0.9.42"** |
 | 知识点 | **1101 个（seed 2.26.0，当前内容分支；main 发布版仍为 960）** |
 | 真题 | **564 道** |
 | 论述题 | **134 道**（v0.9.23 起删年份显示，数据层 year 保留） |
