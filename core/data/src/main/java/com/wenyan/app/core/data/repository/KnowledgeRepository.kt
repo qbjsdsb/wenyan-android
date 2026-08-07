@@ -204,13 +204,13 @@ class KnowledgeRepository @Inject constructor(
     /**
      * 观察与某知识点关联的论述题（v0.9.8 新增）。
      *
-     * 实现：先查全部 ESSAY 题（[ExamQuestionDao.observeAllEssays]，134 题），
+     * 实现：先查全部 ESSAY 题（[ExamQuestionDao.observeAllEssays]），
      * 在内存中按 `relatedPointIds.contains(pointId)` 过滤。
      *
      * 内存过滤而非 SQL LIKE 的原因（与 [ExamQuestionDao.observeAllEssays] 注释一致）：
      * - SQL LIKE 对 JSON 数组无原生支持，"kp_1" 会误匹配 "kp_10/kp_100" 子串
      * - 内存过滤精确匹配 List<String> contains
-     * - 134 题规模下内存过滤 < 5ms，无性能差异
+     * - 当前数据量下内存过滤 < 5ms，无性能差异
      *
      * @param pointId 知识点 ID
      * @return 关联该知识点的论述题列表（按年份倒序），无关联时返回空列表

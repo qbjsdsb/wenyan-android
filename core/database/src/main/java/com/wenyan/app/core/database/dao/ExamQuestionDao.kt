@@ -61,13 +61,13 @@ interface ExamQuestionDao {
     /**
      * 查询所有论述题（v0.9.8 论述题板块新增）。
      *
-     * 返回全部 134 道 ESSAY 题按年份倒序，调用方在内存中按 `related_point_ids`
-     * 过滤出与某知识点关联的题目（134 题内存过滤 < 5ms，无需 SQL LIKE）。
+     * 返回全部 ESSAY 题按年份倒序，调用方在内存中按 `related_point_ids`
+     * 过滤出与某知识点关联的题目（当前数据量下无需 SQL LIKE）。
      *
      * 不在 SQL 层用 `related_point_ids LIKE '%pointId%'` 的原因：
      * - SQL LIKE 对 JSON 数组无原生支持，会出现 "kp_1" 误匹配 "kp_10/kp_100" 子串
      * - 内存过滤可精确匹配 List<String> contains
-     * - 134 题规模下性能无差异
+     * - 当前数据量下性能无差异
      */
     @Query("SELECT * FROM exam_questions WHERE question_type = 'ESSAY' ORDER BY year DESC, exam_paper_code ASC")
     fun observeAllEssays(): Flow<List<ExamQuestionEntity>>

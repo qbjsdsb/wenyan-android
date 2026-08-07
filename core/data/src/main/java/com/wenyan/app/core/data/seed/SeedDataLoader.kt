@@ -725,8 +725,8 @@ class SeedDataLoader @Inject constructor(
          * 已在 seed_data.json 中手工标注 `related_point_ids` 的题目（如示例题）不会被覆盖
          * （调用方在导入时优先使用 seed 值，仅 seed 为 null 时才用本函数派生结果）。
          *
-         * 复杂度：O(E × K × T) 其中 E=134 论述题，K=910 知识点，T=平均 tag 数 ~5，
-         * 约 60 万次字符串 contains 操作，可接受（< 100ms）。
+         * 复杂度：O(E × K × T)，其中 E 为 ESSAY 题数、K 为知识点数、T 为平均 tag 数，
+         * 运行时随种子规模增长，当前规模下可接受（< 100ms）。
          *
          * 放在 companion object 中以便单元测试直接调用（与 [computeRelatedIdsByTags] 一致）。
          *

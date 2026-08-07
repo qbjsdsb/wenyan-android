@@ -1,5 +1,6 @@
 package com.wenyan.app.navigation
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -251,11 +252,32 @@ fun WenyanNavHost(
  *
  * 详情页之间是一个真正的浏览路径：列表 → A → B → C，
  * 每次返回都应该严格回到上一个页面。因此这里不能使用 popUpTo 清理旧详情。
- * launchSingleTop 仍然保留，用来抑制同一详情页的连续重复点击。
+ *
+ * 不能对“详情页 → 另一个详情页”统一使用 [launchSingleTop]：
+ * `knowledge_detail/{pointId}` 是同一个动态目的地，singleTop 会把不同知识点
+ * 当作同一顶层目的地处理，导致关联知识点点击后不入栈（用户仍停留在原详情页）。
+ * 只有从列表/其他页面进入详情时才启用 singleTop；详情页内部跳转必须正常压栈。
  */
 private fun NavHostController.navigateToKnowledgeDetail(pointId: String) {
-    navigate("$ROUTE_KNOWLEDGE_DETAIL/$pointId") {
-        launchSingleTop = true
+    val normalizedPointId = pointId.trim()
+    if (normalizedPointId.isBlank()) return
+
+    val currentEntry = currentBackStackEntry
+    val currentPointId = currentEntry?.arguments?.getString(ARG_KNOWLEDGE_POINT_ID)
+
+    // 同一详情页重复点击不产生无意义的栈项；不同知识点即使属于同一路由，
+    // 也必须保留浏览历史，保证 A → B 后返回仍回到 A。
+    if (shouldSkipKnowledgeDetailNavigation(
+            currentDestinationRoute = currentEntry?.destination?.route,
+            currentPointId = currentPointId,
+            targetPointId = normalizedPointId,
+        )
+    ) {
+        return
+    }
+
+    navigate("$ROUTE_KNOWLEDGE_DETAIL/${Uri.encode(normalizedPointId)}") {
+        launchSingleTop = shouldUseKnowledgeDetailSingleTop(currentEntry?.destination?.route)
     }
 }
 
@@ -482,7 +504,10 @@ private fun NavGraphBuilder.knowledgeDetailDestination(
     onNavigateToEssay: (String) -> Unit,
 ) {
     composable(
-        route = "$ROUTE_KNOWLEDGE_DETAIL/{pointId}",
+        route = ROUTE_KNOWLEDGE_DETAIL_PATTERN,
+        arguments = listOf(
+            navArgument(ARG_KNOWLEDGE_POINT_ID) { type = NavType.StringType },
+        ),
         enterTransition = { WenyanMotion.PushEnterTransition },
         exitTransition = { WenyanMotion.PushExitTransition },
         popEnterTransition = { WenyanMotion.PopEnterTransition },
@@ -519,6 +544,9 @@ private fun NavGraphBuilder.essayDetailDestination(
 private const val ROUTE_API_CONFIG = "api_config"
 private const val ROUTE_AI_ASSISTANT = "aiassistant"
 private const val ROUTE_KNOWLEDGE_DETAIL = "knowledge_detail"
+private const val ARG_KNOWLEDGE_POINT_ID = "pointId"
+internal const val ROUTE_KNOWLEDGE_DETAIL_PATTERN =
+    "$ROUTE_KNOWLEDGE_DETAIL/{$ARG_KNOWLEDGE_POINT_ID}"
 private const val ROUTE_ABOUT = "about"
 private const val ROUTE_ESSAY_DETAIL = "essay_detail"
 // v0.9.11：检查更新子路由
@@ -528,4 +556,24 @@ private const val ROUTE_QUIZ_PRACTICE = "quiz_practice"
 private const val ROUTE_QUIZ_PRACTICE_DETAIL = "quiz_practice_detail"
 // v0.9.36：知识卡片全屏沉浸页子路由
 private const val ROUTE_CARDS_FULLSCREEN = "cards_fullscreen"
+
+/** 导航回归测试使用的纯策略：空 ID 或当前详情页重复点击都不应产生新栈项。 */
+internal fun shouldSkipKnowledgeDetailNavigation(
+    currentDestinationRoute: String?,
+    currentPointId: String?,
+    targetPointId: String,
+): Boolean {
+    val normalizedTarget = targetPointId.trim()
+    return normalizedTarget.isBlank() || (
+        currentDestinationRoute == ROUTE_KNOWLEDGE_DETAIL_PATTERN &&
+            currentPointId == normalizedTarget
+        )
+}
+
+/**
+ * 列表/其他页面进入详情时可以抑制快速重复点击；详情页之间跳转不能 singleTop，
+ * 否则不同 pointId 会被错误折叠成同一个动态目的地。
+ */
+internal fun shouldUseKnowledgeDetailSingleTop(currentDestinationRoute: String?): Boolean =
+    currentDestinationRoute != ROUTE_KNOWLEDGE_DETAIL_PATTERN
 private const val FILTER_ALL = "ALL"

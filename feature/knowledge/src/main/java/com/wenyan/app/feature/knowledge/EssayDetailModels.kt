@@ -25,7 +25,7 @@ import timber.log.Timber
  * }
  * ```
  *
- * 所有字段可空：未填充 angle JSON 的论述题（131/134 道）解析后各字段为 null，
+ * 所有字段可空：未填充 angle JSON 的论述题解析后各字段为 null，
  * UI 优雅降级（隐藏审题思路区块）。
  */
 @Serializable
@@ -163,7 +163,7 @@ data class EssayReferenceLink(
 /**
  * 知识盲点检测（项目暂无的知识点提醒）。
  *
- * 当论述题涉及的知识点不在项目 910 个知识点库中时，
+ * 当论述题涉及的知识点不在项目当前知识点库中时，
  * 提醒用户该知识点缺失，建议补充。
  *
  * @param author 涉及的作家/概念名（如"萧红"）
