@@ -33,8 +33,8 @@ import javax.inject.Inject
  * - 原 `val pointId: String = savedStateHandle["pointId"] ?: ""` 是一次性读取,
  *   后续不观察 SavedStateHandle 变化。同路由实例下 pointId 变化不更新。
  * - 现改为 `savedStateHandle.getStateFlow("pointId", "")`,在 flatMapLatest 中订阅,
- *   pointId 变化时自动重新订阅详情 Flow。当前架构下路由用 launchSingleTop + popUpTo
- *   每次新建 ViewModel 实例,影响有限,但提升健壮性,为未来 SharedViewModel 复用铺路。
+ *   pointId 变化时自动重新订阅详情 Flow。当前导航会为详情路径保留独立的 back stack entry，
+ *   该观察仍提升了状态恢复和未来 SharedViewModel 复用时的健壮性。
  *
  * v0.8.19 P1-REL-1 新增错题关联:
  * - 注入 [WrongAnswerRepository],combine 到 [uiState]
