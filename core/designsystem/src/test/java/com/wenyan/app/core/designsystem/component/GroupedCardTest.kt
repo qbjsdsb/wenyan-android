@@ -5,10 +5,13 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -81,6 +84,29 @@ class GroupedCardTest {
         }
         composeRule.onNodeWithText("AMOLED 纯黑模式").assertIsDisplayed()
         composeRule.onNodeWithText("深色模式下使用纯黑背景，节省 OLED 电量").assertIsDisplayed()
+    }
+
+    @Test
+    fun clickableItem_exposesClickAction_andInvokesCallback() {
+        var clicked = false
+        composeRule.setContent {
+            MaterialTheme {
+                Surface {
+                    GroupedCard(title = "关联知识点") {
+                        GroupedCardItem(
+                            title = "《新诗集》与早期白话诗的生成",
+                            onClick = { clicked = true },
+                        )
+                    }
+                }
+            }
+        }
+
+        composeRule
+            .onNodeWithText("《新诗集》与早期白话诗的生成")
+            .assertHasClickAction()
+            .performClick()
+        assertTrue("可点击关联项应触发 onClick", clicked)
     }
 
     @Test
