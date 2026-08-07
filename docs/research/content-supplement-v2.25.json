@@ -1,0 +1,1619 @@
+{
+  "batch": "content-v2.25-dingfan-niezhenzhao",
+  "base_version": "2.24.0",
+  "target_version": "2.25.0",
+  "seed_written": true,
+  "base_knowledge_point_count": 1023,
+  "new_knowledge_point_count": 78,
+  "result_knowledge_point_count": 1101,
+  "old_ids_preserved": true,
+  "exam_question_count_unchanged": true,
+  "writing_material_count_unchanged": true,
+  "counts_by_subject": {
+    "中国现当代文学": 45,
+    "外国文学": 33
+  },
+  "source_files": [
+    "聂珍钊《外国文学史》上册（用户提供 OCR）",
+    "丁帆《中国新文学史》上册",
+    "丁帆《中国新文学史》下册"
+  ],
+  "cards": [
+    {
+      "id": "kp_01024",
+      "title": "《海上花列传》的都市人情叙事",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_history_late_qing",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第39页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "39",
+        "ocr_physical_pages": [
+          55
+        ],
+        "anchors": [
+          "海上花列传",
+          "吴语"
+        ]
+      }
+    },
+    {
+      "id": "kp_01025",
+      "title": "《新诗集》与早期白话诗的生成",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_first_poetry",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第56页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "56",
+        "ocr_physical_pages": [
+          72
+        ],
+        "anchors": [
+          "新诗集",
+          "白话诗"
+        ]
+      }
+    },
+    {
+      "id": "kp_01026",
+      "title": "朱湘《采莲曲》的新月格律实验",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_first_poetry",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第76页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "76",
+        "ocr_physical_pages": [
+          92
+        ],
+        "anchors": [
+          "朱湘",
+          "采莲曲"
+        ]
+      }
+    },
+    {
+      "id": "kp_01027",
+      "title": "废名诗歌的古典化与现代性",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_first_poetry",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第81页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "81",
+        "ocr_physical_pages": [
+          97
+        ],
+        "anchors": [
+          "废名",
+          "诗"
+        ]
+      }
+    },
+    {
+      "id": "kp_01028",
+      "title": "现代乡土小说的初潮与地域经验",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_first_fiction",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第138页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "138",
+        "ocr_physical_pages": [
+          154
+        ],
+        "anchors": [
+          "现代乡土小说",
+          "王鲁彦"
+        ]
+      }
+    },
+    {
+      "id": "kp_01029",
+      "title": "吴组缃乡土小说的社会结构与叙事技巧",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_first_fiction",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第144页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "144",
+        "ocr_physical_pages": [
+          160
+        ],
+        "anchors": [
+          "吴组缃",
+          "一千八百担"
+        ]
+      }
+    },
+    {
+      "id": "kp_01030",
+      "title": "艾芜《南行记》的流浪叙事",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_first_fiction",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第147页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "147",
+        "ocr_physical_pages": [
+          163
+        ],
+        "anchors": [
+          "艾芜",
+          "南行记"
+        ]
+      }
+    },
+    {
+      "id": "kp_01031",
+      "title": "林语堂“论语”派小品文的闲适与讽刺",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_first_prose",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第181页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "181",
+        "ocr_physical_pages": [
+          197
+        ],
+        "anchors": [
+          "林语堂",
+          "论语"
+        ]
+      }
+    },
+    {
+      "id": "kp_01032",
+      "title": "萧乾《梦之谷》的京派都市书写",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_second_styles",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第205页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "205",
+        "ocr_physical_pages": [
+          221
+        ],
+        "anchors": [
+          "萧乾",
+          "梦之谷"
+        ]
+      }
+    },
+    {
+      "id": "kp_01033",
+      "title": "师陀《果园城记》的城镇人生",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_second_styles",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第207页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "207",
+        "ocr_physical_pages": [
+          223
+        ],
+        "anchors": [
+          "师陀",
+          "果园城记"
+        ]
+      }
+    },
+    {
+      "id": "kp_01034",
+      "title": "施蛰存与《现代》杂志的都市现代性",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_second_styles",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第191页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "191",
+        "ocr_physical_pages": [
+          207
+        ],
+        "anchors": [
+          "施蛰存",
+          "现代"
+        ]
+      }
+    },
+    {
+      "id": "kp_01035",
+      "title": "萧红《呼兰河传》的散文化叙事",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_third_war",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第326–327页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "326–327",
+        "ocr_physical_pages": [
+          342,
+          343
+        ],
+        "anchors": [
+          "萧红",
+          "呼兰河传"
+        ]
+      }
+    },
+    {
+      "id": "kp_01036",
+      "title": "卞之琳《鱼目集》的非个人化诗学",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_first_poetry",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第262页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "262",
+        "ocr_physical_pages": [
+          278
+        ],
+        "anchors": [
+          "卞之琳",
+          "鱼目集"
+        ]
+      }
+    },
+    {
+      "id": "kp_01037",
+      "title": "冯至《十四行集》的生命哲思",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_first_poetry",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第264页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "264",
+        "ocr_physical_pages": [
+          280
+        ],
+        "anchors": [
+          "冯至",
+          "十四行集"
+        ]
+      }
+    },
+    {
+      "id": "kp_01038",
+      "title": "七月派与胡风的现实主义诗学",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_third_war",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第336页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "336",
+        "ocr_physical_pages": [
+          352
+        ],
+        "anchors": [
+          "七月派",
+          "胡风"
+        ]
+      }
+    },
+    {
+      "id": "kp_01039",
+      "title": "抗战讽刺小说的现实批判",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_third_war",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第303、306页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "303、306",
+        "ocr_physical_pages": [
+          319,
+          322
+        ],
+        "anchors": [
+          "夏衍",
+          "沙汀"
+        ]
+      }
+    },
+    {
+      "id": "kp_01040",
+      "title": "艾青诗歌的土地意象与抗战经验",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_third_war",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第339页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "339",
+        "ocr_physical_pages": [
+          355
+        ],
+        "anchors": [
+          "艾青",
+          "北方"
+        ]
+      }
+    },
+    {
+      "id": "kp_01041",
+      "title": "赵树理《小二黑结婚》的大众化叙事",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_third_war",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第350页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "350",
+        "ocr_physical_pages": [
+          366
+        ],
+        "anchors": [
+          "赵树理",
+          "小二黑结婚"
+        ]
+      }
+    },
+    {
+      "id": "kp_01042",
+      "title": "赖和、杨逵与台湾乡土写实",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_taiwan",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第364页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "364",
+        "ocr_physical_pages": [
+          380
+        ],
+        "anchors": [
+          "赖和",
+          "杨逵"
+        ]
+      }
+    },
+    {
+      "id": "kp_01043",
+      "title": "白先勇《台北人》的历史记忆",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_taiwan",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第377–378页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "377–378",
+        "ocr_physical_pages": [
+          393,
+          394
+        ],
+        "anchors": [
+          "白先勇",
+          "台北人"
+        ]
+      }
+    },
+    {
+      "id": "kp_01044",
+      "title": "聂华苓的离散书写与故土记忆",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_diaspora",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第426页",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "426",
+        "ocr_physical_pages": [
+          442
+        ],
+        "anchors": [
+          "聂华苓",
+          "桑青与桃红"
+        ]
+      }
+    },
+    {
+      "id": "kp_01045",
+      "title": "胡风“主观战斗精神”与现实主义",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_seventeen_system",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第13、16页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "13、16",
+        "ocr_physical_pages": [
+          32,
+          35
+        ],
+        "anchors": [
+          "胡风",
+          "主观战斗精神"
+        ]
+      }
+    },
+    {
+      "id": "kp_01046",
+      "title": "萧也牧小说的生活化写实",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_seventeen_other",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第16页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "16",
+        "ocr_physical_pages": [
+          35
+        ],
+        "anchors": [
+          "萧也牧",
+          "我们夫妇之间"
+        ]
+      }
+    },
+    {
+      "id": "kp_01047",
+      "title": "郭小川政治抒情诗的个人立场",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_seventeen_poetry",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第18页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "18",
+        "ocr_physical_pages": [
+          37
+        ],
+        "anchors": [
+          "郭小川",
+          "望星空"
+        ]
+      }
+    },
+    {
+      "id": "kp_01048",
+      "title": "百花文学与“第四种剧本”",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_seventeen_system",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第55、67页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "55、67",
+        "ocr_physical_pages": [
+          74,
+          86
+        ],
+        "anchors": [
+          "百花文学",
+          "第四种剧本"
+        ]
+      }
+    },
+    {
+      "id": "kp_01049",
+      "title": "刘宾雁报告文学的社会批判",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_seventeen_other",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第57页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "57",
+        "ocr_physical_pages": [
+          76
+        ],
+        "anchors": [
+          "刘宾雁",
+          "报告文学"
+        ]
+      }
+    },
+    {
+      "id": "kp_01050",
+      "title": "王蒙《活动变人形》的历史反思",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_new_restore",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第181页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "181",
+        "ocr_physical_pages": [
+          200
+        ],
+        "anchors": [
+          "王蒙",
+          "活动变人形"
+        ]
+      }
+    },
+    {
+      "id": "kp_01051",
+      "title": "宗璞小说的知识分子与文化记忆",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_seventeen_other",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第63页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "63",
+        "ocr_physical_pages": [
+          82
+        ],
+        "anchors": [
+          "宗璞",
+          "红豆"
+        ]
+      }
+    },
+    {
+      "id": "kp_01052",
+      "title": "文革民间写作与赵振开的地下表达",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_cultural_underground",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第81、83页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "81、83",
+        "ocr_physical_pages": [
+          100,
+          102
+        ],
+        "anchors": [
+          "赵振开",
+          "波动"
+        ]
+      }
+    },
+    {
+      "id": "kp_01053",
+      "title": "灰娃诗歌的个体记忆",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_new_poetry",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第118页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "118",
+        "ocr_physical_pages": [
+          137
+        ],
+        "anchors": [
+          "灰娃"
+        ]
+      }
+    },
+    {
+      "id": "kp_01054",
+      "title": "多多诗歌的历史感与语言实验",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_new_poetry",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第126页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "126",
+        "ocr_physical_pages": [
+          145
+        ],
+        "anchors": [
+          "多多",
+          "居民"
+        ]
+      }
+    },
+    {
+      "id": "kp_01055",
+      "title": "昌耀诗歌的高原生命意识",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_new_poetry",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第139页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "139",
+        "ocr_physical_pages": [
+          158
+        ],
+        "anchors": [
+          "昌耀",
+          "高原"
+        ]
+      }
+    },
+    {
+      "id": "kp_01056",
+      "title": "于坚、韩东与口语诗的日常转向",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_new_poetry",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第144页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "144",
+        "ocr_physical_pages": [
+          163
+        ],
+        "anchors": [
+          "于坚",
+          "韩东"
+        ]
+      }
+    },
+    {
+      "id": "kp_01057",
+      "title": "张枣《镜中》的现代抒情",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_new_poetry",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第151页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "151",
+        "ocr_physical_pages": [
+          170
+        ],
+        "anchors": [
+          "张枣",
+          "镜中"
+        ]
+      }
+    },
+    {
+      "id": "kp_01058",
+      "title": "杨争光、郑义、李佩甫的乡土叙事",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_since_history",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第218页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "218",
+        "ocr_physical_pages": [
+          237
+        ],
+        "anchors": [
+          "杨争光",
+          "李佩甫"
+        ]
+      }
+    },
+    {
+      "id": "kp_01059",
+      "title": "阿城《遍地风流》的地方性经验",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_since_history",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第226页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "226",
+        "ocr_physical_pages": [
+          245
+        ],
+        "anchors": [
+          "阿城",
+          "遍地风流"
+        ]
+      }
+    },
+    {
+      "id": "kp_01060",
+      "title": "秦文君儿童文学的成长视角",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_since_popular",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第324、327页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "324、327",
+        "ocr_physical_pages": [
+          343,
+          346
+        ],
+        "anchors": [
+          "秦文君",
+          "十六岁的少女"
+        ]
+      }
+    },
+    {
+      "id": "kp_01061",
+      "title": "黄蓓佳儿童文学的现实关怀",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_since_popular",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第324页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "324",
+        "ocr_physical_pages": [
+          343
+        ],
+        "anchors": [
+          "黄蓓佳",
+          "儿童文学"
+        ]
+      }
+    },
+    {
+      "id": "kp_01062",
+      "title": "刘庆邦《神木》的底层叙事",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_since_history",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第337、342页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "337、342",
+        "ocr_physical_pages": [
+          356,
+          361
+        ],
+        "anchors": [
+          "刘庆邦",
+          "神木"
+        ]
+      }
+    },
+    {
+      "id": "kp_01063",
+      "title": "李锐“厚土系列”与乡土历史",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_since_history",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第349页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "349",
+        "ocr_physical_pages": [
+          368
+        ],
+        "anchors": [
+          "李锐",
+          "厚土"
+        ]
+      }
+    },
+    {
+      "id": "kp_01064",
+      "title": "过士行“闲人”三部曲的戏剧观",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_since_popular",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第366页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "366",
+        "ocr_physical_pages": [
+          385
+        ],
+        "anchors": [
+          "过士行",
+          "闲人"
+        ]
+      }
+    },
+    {
+      "id": "kp_01065",
+      "title": "迟子建《世界上所有的夜晚》的创伤书写",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_since_women",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第377–378页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "377–378",
+        "ocr_physical_pages": [
+          396,
+          397
+        ],
+        "anchors": [
+          "迟子建",
+          "世界上所有的夜晚"
+        ]
+      }
+    },
+    {
+      "id": "kp_01066",
+      "title": "金仁顺《春香》的性别与传统重述",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_since_women",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第393–394页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "393–394",
+        "ocr_physical_pages": [
+          412,
+          413
+        ],
+        "anchors": [
+          "金仁顺",
+          "春香"
+        ]
+      }
+    },
+    {
+      "id": "kp_01067",
+      "title": "苇岸《大地上的事情》的生态书写",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_since_new_century",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第401、407页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "401、407",
+        "ocr_physical_pages": [
+          420,
+          426
+        ],
+        "anchors": [
+          "苇岸",
+          "大地上的事情"
+        ]
+      }
+    },
+    {
+      "id": "kp_01068",
+      "title": "周晓枫《斑纹》的动物叙事",
+      "subject": "中国现当代文学",
+      "framework_node": "modern_since_new_century",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第401、409页",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "401、409",
+        "ocr_physical_pages": [
+          420,
+          428
+        ],
+        "anchors": [
+          "周晓枫",
+          "斑纹"
+        ]
+      }
+    },
+    {
+      "id": "kp_01069",
+      "title": "古代世界文学的神话思维与文明谱系",
+      "subject": "外国文学",
+      "framework_node": "foreign_overview",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第10页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "10",
+        "ocr_physical_pages": [
+          21
+        ],
+        "anchors": [
+          "古代文学",
+          "神话"
+        ]
+      }
+    },
+    {
+      "id": "kp_01070",
+      "title": "古埃及文学与《亡灵书》",
+      "subject": "外国文学",
+      "framework_node": "foreign_ancient_myth",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第12–13页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "12–13",
+        "ocr_physical_pages": [
+          23,
+          24
+        ],
+        "anchors": [
+          "古埃及",
+          "亡灵书"
+        ]
+      }
+    },
+    {
+      "id": "kp_01071",
+      "title": "古巴比伦《吉尔伽美什》的生死主题",
+      "subject": "外国文学",
+      "framework_node": "foreign_ancient_epic",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第14、16页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "14、16",
+        "ocr_physical_pages": [
+          25,
+          27
+        ],
+        "anchors": [
+          "古巴比伦",
+          "吉尔伽美什"
+        ]
+      }
+    },
+    {
+      "id": "kp_01072",
+      "title": "希伯来文学与《旧约》的宗教伦理",
+      "subject": "外国文学",
+      "framework_node": "foreign_ancient_myth",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第16页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "16",
+        "ocr_physical_pages": [
+          27
+        ],
+        "anchors": [
+          "希伯来文学",
+          "旧约"
+        ]
+      }
+    },
+    {
+      "id": "kp_01073",
+      "title": "古印度文学与吠陀—奥义书传统",
+      "subject": "外国文学",
+      "framework_node": "foreign_ancient_myth",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第20–21页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "20–21",
+        "ocr_physical_pages": [
+          31,
+          32
+        ],
+        "anchors": [
+          "古印度文学",
+          "奥义书"
+        ]
+      }
+    },
+    {
+      "id": "kp_01074",
+      "title": "《摩诃婆罗多》的史诗结构与宗教伦理",
+      "subject": "外国文学",
+      "framework_node": "foreign_ancient_epic",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第30页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "30",
+        "ocr_physical_pages": [
+          41
+        ],
+        "anchors": [
+          "摩诃婆罗多",
+          "婆罗多"
+        ]
+      }
+    },
+    {
+      "id": "kp_01075",
+      "title": "《罗摩衍那》的理想人格与叙事传统",
+      "subject": "外国文学",
+      "framework_node": "foreign_ancient_epic",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第33页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "33",
+        "ocr_physical_pages": [
+          44
+        ],
+        "anchors": [
+          "罗摩衍那",
+          "罗摩"
+        ]
+      }
+    },
+    {
+      "id": "kp_01076",
+      "title": "古希腊文学的发展分期与人本意识",
+      "subject": "外国文学",
+      "framework_node": "foreign_ancient_myth",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第24–25页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "24–25",
+        "ocr_physical_pages": [
+          35,
+          36
+        ],
+        "anchors": [
+          "古希腊文学",
+          "人本"
+        ]
+      }
+    },
+    {
+      "id": "kp_01077",
+      "title": "希腊戏剧的起源与悲剧结构",
+      "subject": "外国文学",
+      "framework_node": "foreign_ancient_tragedy",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第49页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "49",
+        "ocr_physical_pages": [
+          60
+        ],
+        "anchors": [
+          "希腊戏剧",
+          "悲剧"
+        ]
+      }
+    },
+    {
+      "id": "kp_01078",
+      "title": "古罗马诗歌与戏剧的继承转化",
+      "subject": "外国文学",
+      "framework_node": "foreign_ancient_comedy_rome",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第61页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "61",
+        "ocr_physical_pages": [
+          72
+        ],
+        "anchors": [
+          "古罗马",
+          "诗歌"
+        ]
+      }
+    },
+    {
+      "id": "kp_01079",
+      "title": "中古亚洲文学的宗教与世俗双重传统",
+      "subject": "外国文学",
+      "framework_node": "foreign_medieval_overview",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第72页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "72",
+        "ocr_physical_pages": [
+          83
+        ],
+        "anchors": [
+          "亚洲文学",
+          "中古"
+        ]
+      }
+    },
+    {
+      "id": "kp_01080",
+      "title": "《一千零一夜》的成书过程与框架结构",
+      "subject": "外国文学",
+      "framework_node": "foreign_medieval_overview",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第107页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "107",
+        "ocr_physical_pages": [
+          118
+        ],
+        "anchors": [
+          "一千零一夜",
+          "成书"
+        ]
+      }
+    },
+    {
+      "id": "kp_01081",
+      "title": "《一千零一夜》的思想内容与艺术特色",
+      "subject": "外国文学",
+      "framework_node": "foreign_medieval_overview",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第107、109页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "107、109",
+        "ocr_physical_pages": [
+          118,
+          120
+        ],
+        "anchors": [
+          "一千零一夜",
+          "艺术特色"
+        ]
+      }
+    },
+    {
+      "id": "kp_01082",
+      "title": "紫式部《源氏物语》的物哀书写",
+      "subject": "外国文学",
+      "framework_node": "foreign_medieval_overview",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第117页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "117",
+        "ocr_physical_pages": [
+          128
+        ],
+        "anchors": [
+          "紫式部",
+          "源氏物语"
+        ]
+      }
+    },
+    {
+      "id": "kp_01083",
+      "title": "中世纪欧洲英雄史诗与骑士文学",
+      "subject": "外国文学",
+      "framework_node": "foreign_medieval_overview",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第93、101页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "93、101",
+        "ocr_physical_pages": [
+          104,
+          112
+        ],
+        "anchors": [
+          "欧洲文学",
+          "英雄史诗"
+        ]
+      }
+    },
+    {
+      "id": "kp_01084",
+      "title": "但丁《神曲》的三界结构与转型意义",
+      "subject": "外国文学",
+      "framework_node": "foreign_medieval_dante",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第121、123页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "121、123",
+        "ocr_physical_pages": [
+          132,
+          134
+        ],
+        "anchors": [
+          "但丁",
+          "神曲"
+        ]
+      }
+    },
+    {
+      "id": "kp_01085",
+      "title": "14—16世纪人文主义文学的历史谱系",
+      "subject": "外国文学",
+      "framework_node": "foreign_renaissance_overview",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第130、133页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "130、133",
+        "ocr_physical_pages": [
+          141,
+          144
+        ],
+        "anchors": [
+          "文艺复兴运动",
+          "人文主义文学"
+        ]
+      }
+    },
+    {
+      "id": "kp_01086",
+      "title": "拉伯雷《巨人传》的狂欢化人文主义",
+      "subject": "外国文学",
+      "framework_node": "foreign_renaissance_overview",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第155页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "155",
+        "ocr_physical_pages": [
+          166
+        ],
+        "anchors": [
+          "拉伯雷",
+          "巨人传"
+        ]
+      }
+    },
+    {
+      "id": "kp_01087",
+      "title": "莎士比亚《哈姆莱特》的悲剧结构与人文主义",
+      "subject": "外国文学",
+      "framework_node": "foreign_renaissance_shakespeare",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第169页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "169",
+        "ocr_physical_pages": [
+          180
+        ],
+        "anchors": [
+          "哈姆莱特",
+          "莎士比亚"
+        ]
+      }
+    },
+    {
+      "id": "kp_01088",
+      "title": "17世纪欧洲古典主义文学的秩序观",
+      "subject": "外国文学",
+      "framework_node": "foreign_classicism",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第187页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "187",
+        "ocr_physical_pages": [
+          198
+        ],
+        "anchors": [
+          "17世纪",
+          "古典主义"
+        ]
+      }
+    },
+    {
+      "id": "kp_01089",
+      "title": "弥尔顿《失乐园》的撒旦形象与史诗结构",
+      "subject": "外国文学",
+      "framework_node": "foreign_classicism",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第211、213页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "211、213",
+        "ocr_physical_pages": [
+          222,
+          224
+        ],
+        "anchors": [
+          "失乐园",
+          "撒旦"
+        ]
+      }
+    },
+    {
+      "id": "kp_01090",
+      "title": "菲尔丁《汤姆·琼斯》的现实主义叙事",
+      "subject": "外国文学",
+      "framework_node": "foreign_enlightenment_overview",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第238、240页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "238、240",
+        "ocr_physical_pages": [
+          249,
+          251
+        ],
+        "anchors": [
+          "菲尔丁",
+          "汤姆·琼斯"
+        ]
+      }
+    },
+    {
+      "id": "kp_01091",
+      "title": "卢梭《新爱洛依丝》的书信体与感伤主义",
+      "subject": "外国文学",
+      "framework_node": "foreign_enlightenment_rousseau",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第246–247页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "246–247",
+        "ocr_physical_pages": [
+          257,
+          258
+        ],
+        "anchors": [
+          "卢梭",
+          "新爱洛依丝"
+        ]
+      }
+    },
+    {
+      "id": "kp_01092",
+      "title": "歌德《浮士德》的浮士德形象",
+      "subject": "外国文学",
+      "framework_node": "foreign_enlightenment_goethe",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第255、258页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "255、258",
+        "ocr_physical_pages": [
+          266,
+          269
+        ],
+        "anchors": [
+          "歌德",
+          "浮士德"
+        ]
+      }
+    },
+    {
+      "id": "kp_01093",
+      "title": "海涅《德国，一个冬天的童话》的政治讽刺",
+      "subject": "外国文学",
+      "framework_node": "foreign_romanticism_overview",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第284、287页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "284、287",
+        "ocr_physical_pages": [
+          295,
+          298
+        ],
+        "anchors": [
+          "海涅",
+          "一个冬天的童话"
+        ]
+      }
+    },
+    {
+      "id": "kp_01094",
+      "title": "拜伦长篇叙事诗的讽刺结构",
+      "subject": "外国文学",
+      "framework_node": "foreign_romanticism_byron",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第291、296页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "291、296",
+        "ocr_physical_pages": [
+          302,
+          307
+        ],
+        "anchors": [
+          "拜伦",
+          "长篇叙事诗"
+        ]
+      }
+    },
+    {
+      "id": "kp_01095",
+      "title": "雨果《巴黎圣母院》的美丑对照",
+      "subject": "外国文学",
+      "framework_node": "foreign_romanticism_hugo_dumas",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第302、309页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "302、309",
+        "ocr_physical_pages": [
+          313,
+          320
+        ],
+        "anchors": [
+          "巴黎圣母院",
+          "美丑"
+        ]
+      }
+    },
+    {
+      "id": "kp_01096",
+      "title": "普希金《叶甫盖尼·奥涅金》的“多余人”形象",
+      "subject": "外国文学",
+      "framework_node": "foreign_romanticism_overview",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第312、318页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "312、318",
+        "ocr_physical_pages": [
+          323,
+          329
+        ],
+        "anchors": [
+          "叶甫盖尼·奥涅金",
+          "多余人"
+        ]
+      }
+    },
+    {
+      "id": "kp_01097",
+      "title": "惠特曼《草叶集》的自由诗形式",
+      "subject": "外国文学",
+      "framework_node": "foreign_romanticism_overview",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第319–320页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "319–320",
+        "ocr_physical_pages": [
+          330,
+          331
+        ],
+        "anchors": [
+          "惠特曼",
+          "草叶集"
+        ]
+      }
+    },
+    {
+      "id": "kp_01098",
+      "title": "斯丹达尔《红与黑》的于连形象",
+      "subject": "外国文学",
+      "framework_node": "foreign_realism_france",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第344、347页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "344、347",
+        "ocr_physical_pages": [
+          355,
+          358
+        ],
+        "anchors": [
+          "斯丹达尔",
+          "于连"
+        ]
+      }
+    },
+    {
+      "id": "kp_01099",
+      "title": "巴尔扎克《高老头》的金钱关系",
+      "subject": "外国文学",
+      "framework_node": "foreign_realism_france",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第352–353页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "352–353",
+        "ocr_physical_pages": [
+          363,
+          364
+        ],
+        "anchors": [
+          "巴尔扎克",
+          "高老头"
+        ]
+      }
+    },
+    {
+      "id": "kp_01100",
+      "title": "狄更斯《双城记》的历史叙事与人道主义",
+      "subject": "外国文学",
+      "framework_node": "foreign_realism_britain",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第363、365页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "363、365",
+        "ocr_physical_pages": [
+          374,
+          376
+        ],
+        "anchors": [
+          "狄更斯",
+          "双城记"
+        ]
+      }
+    },
+    {
+      "id": "kp_01101",
+      "title": "19世纪中期现实主义文学的历史语境",
+      "subject": "外国文学",
+      "framework_node": "foreign_realism_overview",
+      "textbook_source": "聂珍钊《外国文学史》（用户提供上册，2015年第一版），第329页",
+      "source_evidence": {
+        "file": "file_090.json",
+        "file_name": "外国文学史（上）_13811329.pdf",
+        "edition": "2015年7月第1版（用户提供教材 OCR）",
+        "print_pages": "329",
+        "ocr_physical_pages": [
+          340
+        ],
+        "anchors": [
+          "19世纪中期",
+          "现实主义"
+        ]
+      }
+    }
+  ],
+  "known_limits": [
+    "本批是按目录和 OCR 锚点复核的独立专题增量，不宣称丁帆上下册已经逐作家、逐作品穷尽。",
+    "聂珍钊上册来源是用户提供的 2015 年 7 月第 1 版 OCR；本批不把它伪标为官方 2018 年第二版。",
+    "候选卡的 framework_node、OCR 页码和 source_evidence 只用于审核，合并后不进入 App seed。"
+  ]
+}

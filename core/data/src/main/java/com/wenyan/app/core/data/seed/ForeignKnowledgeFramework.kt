@@ -7,7 +7,7 @@ package com.wenyan.app.core.data.seed
  * 关键词分组。框架先按历史阶段建立主路径，再在阶段下按文学思潮、地域和作家
  * 作品细分；每个知识点只保留一个主要归属，交叉关系继续由 tags/relatedIds 表达。
  *
- * 这份配置覆盖外国文学的 124 个知识点，并特别处理了古希腊悲剧、自然主义、
+ * 这份配置覆盖外国文学的 157 个知识点，并特别处理了古希腊悲剧、自然主义、
  * 象征主义、英语现代主义以及补充知识点等容易被顺序规则误判的边界。
  */
 object ForeignKnowledgeFramework {
@@ -168,6 +168,26 @@ object ForeignKnowledgeFramework {
         addAll(mapPoints("foreign_realism_america", 576..576))
 
         addAll(mapPoints("foreign_overview", 938..938))
+
+        addAll(mapPoints("foreign_overview", listOf(1069)))
+        addAll(mapPoints("foreign_ancient_myth", 1070..1073, listOf(1076)))
+        addAll(mapPoints("foreign_ancient_epic", 1074..1075))
+        addAll(mapPoints("foreign_ancient_tragedy", listOf(1077)))
+        addAll(mapPoints("foreign_ancient_comedy_rome", listOf(1078)))
+        addAll(mapPoints("foreign_medieval_overview", 1079..1083))
+        addAll(mapPoints("foreign_medieval_dante", listOf(1084)))
+        addAll(mapPoints("foreign_renaissance_overview", listOf(1085, 1086)))
+        addAll(mapPoints("foreign_renaissance_shakespeare", listOf(1087)))
+        addAll(mapPoints("foreign_classicism", listOf(1088, 1089)))
+        addAll(mapPoints("foreign_enlightenment_overview", listOf(1090)))
+        addAll(mapPoints("foreign_enlightenment_rousseau", listOf(1091)))
+        addAll(mapPoints("foreign_enlightenment_goethe", listOf(1092)))
+        addAll(mapPoints("foreign_romanticism_overview", listOf(1093, 1096, 1097)))
+        addAll(mapPoints("foreign_romanticism_byron", listOf(1094)))
+        addAll(mapPoints("foreign_romanticism_hugo_dumas", listOf(1095)))
+        addAll(mapPoints("foreign_realism_france", listOf(1098, 1099)))
+        addAll(mapPoints("foreign_realism_britain", listOf(1100)))
+        addAll(mapPoints("foreign_realism_overview", listOf(1101)))
     }
 
     val assignments: Map<String, String> = assignmentPairs.toMap()

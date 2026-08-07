@@ -1,0 +1,200 @@
+{
+  "batch_id": "yuan_shishuo_v2.19.0",
+  "base_version": "2.18.0",
+  "target_version": "2.19.0",
+  "errors": [],
+  "old_count": 960,
+  "new_count": 983,
+  "added_count": 23,
+  "source_supplement_count": 10,
+  "assignments": [
+    {
+      "id": "kp_00961",
+      "title": "《论语》的语录体与文学性",
+      "node": "ancient_pre_qin_thinkers"
+    },
+    {
+      "id": "kp_00962",
+      "title": "《墨子》的说理艺术与《公输》叙事",
+      "node": "ancient_pre_qin_thinkers"
+    },
+    {
+      "id": "kp_00963",
+      "title": "《晏子春秋》的叙事艺术",
+      "node": "ancient_pre_qin_history"
+    },
+    {
+      "id": "kp_00964",
+      "title": "《穆天子传》的神话游历叙事",
+      "node": "ancient_pre_qin_history"
+    },
+    {
+      "id": "kp_00965",
+      "title": "《玉台新咏》的编纂与文学史意义",
+      "node": "ancient_wei_jin_poetry"
+    },
+    {
+      "id": "kp_00966",
+      "title": "北朝文学的风格特征与南北融合",
+      "node": "ancient_wei_jin_social"
+    },
+    {
+      "id": "kp_00967",
+      "title": "隋唐文学的社会文化背景",
+      "node": "ancient_sui_tang_initial"
+    },
+    {
+      "id": "kp_00968",
+      "title": "张若虚与初唐诗歌审美转型",
+      "node": "ancient_sui_tang_initial"
+    },
+    {
+      "id": "kp_00969",
+      "title": "刘禹锡与柳宗元的诗歌",
+      "node": "ancient_sui_tang_middle_late"
+    },
+    {
+      "id": "kp_00970",
+      "title": "元白诗派的诗歌主张与审美",
+      "node": "ancient_sui_tang_middle_late"
+    },
+    {
+      "id": "kp_00971",
+      "title": "晚唐小品文的讽刺传统",
+      "node": "ancient_sui_tang_middle_late"
+    },
+    {
+      "id": "kp_00972",
+      "title": "唐代笔记小说",
+      "node": "ancient_sui_tang_fiction"
+    },
+    {
+      "id": "kp_00973",
+      "title": "杨万里与诚斋体",
+      "node": "ancient_song_southern"
+    },
+    {
+      "id": "kp_00974",
+      "title": "范成大的田园诗",
+      "node": "ancient_song_southern"
+    },
+    {
+      "id": "kp_00975",
+      "title": "南宋后期词坛的醇雅转向",
+      "node": "ancient_song_southern"
+    },
+    {
+      "id": "kp_00976",
+      "title": "理学诗派与朱熹的诗歌创作",
+      "node": "ancient_song_southern"
+    },
+    {
+      "id": "kp_00977",
+      "title": "明代三灯丛话",
+      "node": "ancient_ming_fiction"
+    },
+    {
+      "id": "kp_00978",
+      "title": "吴江派与汤沈之争",
+      "node": "ancient_ming_drama"
+    },
+    {
+      "id": "kp_00979",
+      "title": "清初白话小说",
+      "node": "ancient_qing_fiction"
+    },
+    {
+      "id": "kp_00980",
+      "title": "清中叶文学的多元格局",
+      "node": "ancient_qing_poetry_prose"
+    },
+    {
+      "id": "kp_00981",
+      "title": "同光体诗歌",
+      "node": "ancient_near_modern_poetry_prose"
+    },
+    {
+      "id": "kp_00982",
+      "title": "小说界革命与晚清新小说",
+      "node": "ancient_near_modern_fiction"
+    },
+    {
+      "id": "kp_00983",
+      "title": "中国三大英雄史诗",
+      "node": "ancient_near_modern_overview"
+    }
+  ],
+  "source_changes": {
+    "kp_00265": {
+      "title": "太康文学",
+      "old_sources": [],
+      "new_sources": [
+        "袁世硕《中国古代文学史》（第二版）上册，第三编第二章，pp.268–279"
+      ]
+    },
+    "kp_00107": {
+      "title": "左思咏史诗",
+      "old_sources": [],
+      "new_sources": [
+        "袁世硕《中国古代文学史》（第二版）上册，第三编第二章第三节，pp.276–279"
+      ]
+    },
+    "kp_00253": {
+      "title": "玄言诗与理趣",
+      "old_sources": [],
+      "new_sources": [
+        "袁世硕《中国古代文学史》（第二版）上册，第三编第二章第四节，pp.279–283"
+      ]
+    },
+    "kp_00268": {
+      "title": "宫体诗",
+      "old_sources": [],
+      "new_sources": [
+        "袁世硕《中国古代文学史》（第二版）上册，第三编第四章，pp.308–315"
+      ]
+    },
+    "kp_00033": {
+      "title": "初唐四杰与陈子昂",
+      "old_sources": [],
+      "new_sources": [
+        "袁世硕《中国古代文学史》（第二版）中册，第四编第一章，pp.25–41"
+      ]
+    },
+    "kp_00039": {
+      "title": "韩愈、柳宗元与古文运动",
+      "old_sources": [],
+      "new_sources": [
+        "袁世硕《中国古代文学史》（第二版）中册，第四编第七章，pp.104–119"
+      ]
+    },
+    "kp_00042": {
+      "title": "唐代传奇小说",
+      "old_sources": [],
+      "new_sources": [
+        "袁世硕《中国古代文学史》（第二版）中册，第四编第八章，pp.120–125"
+      ]
+    },
+    "kp_00065": {
+      "title": "《金瓶梅》与世情小说",
+      "old_sources": [],
+      "new_sources": [
+        "袁世硕《中国古代文学史》（第二版）下册，第八编第八章，pp.102–116"
+      ]
+    },
+    "kp_00137": {
+      "title": "黄遵宪与诗界革命",
+      "old_sources": [],
+      "new_sources": [
+        "袁世硕《中国古代文学史》（第二版）下册，第九编第五章，pp.308–318"
+      ]
+    },
+    "kp_00138": {
+      "title": "梁启超与文学革新",
+      "old_sources": [],
+      "new_sources": [
+        "袁世硕《中国古代文学史》（第二版）下册，第九编第六章，pp.328–345"
+      ]
+    }
+  },
+  "old_ids_preserved": true
+}

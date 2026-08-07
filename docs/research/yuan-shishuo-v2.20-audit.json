@@ -1,0 +1,64 @@
+{
+  "batch_id": "yuan_shishuo_v2.20.0",
+  "base_version": "2.19.0",
+  "target_version": "2.20.0",
+  "errors": [],
+  "old_count": 983,
+  "new_count": 993,
+  "added_count": 10,
+  "source_supplement_count": 0,
+  "assignments": [
+    {
+      "id": "kp_00984",
+      "title": "《周易》卦爻辞的象征与文学性",
+      "node": "ancient_pre_qin_history"
+    },
+    {
+      "id": "kp_00985",
+      "title": "《老子》与《孙子》的文学表达",
+      "node": "ancient_pre_qin_thinkers"
+    },
+    {
+      "id": "kp_00986",
+      "title": "韩孟诗派的尚奇与以文为诗",
+      "node": "ancient_sui_tang_middle_late"
+    },
+    {
+      "id": "kp_00987",
+      "title": "《长恨歌》等唐代叙事抒情长篇",
+      "node": "ancient_sui_tang_middle_late"
+    },
+    {
+      "id": "kp_00988",
+      "title": "南宋前期爱国词与南渡诗歌",
+      "node": "ancient_song_southern"
+    },
+    {
+      "id": "kp_00989",
+      "title": "南宋后期词人群与宋末词风",
+      "node": "ancient_song_southern"
+    },
+    {
+      "id": "kp_00990",
+      "title": "辽西夏金文学的多民族交融",
+      "node": "ancient_liao_jin"
+    },
+    {
+      "id": "kp_00991",
+      "title": "元代散文的简明说理与叙事化",
+      "node": "ancient_yuan_poetry"
+    },
+    {
+      "id": "kp_00992",
+      "title": "明代台阁体与山林诗的风格分野",
+      "node": "ancient_ming_poetry"
+    },
+    {
+      "id": "kp_00993",
+      "title": "晚清谴责小说的新闻化倾向与艺术困境",
+      "node": "ancient_near_modern_fiction"
+    }
+  ],
+  "source_changes": {},
+  "old_ids_preserved": true
+}

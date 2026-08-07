@@ -7,8 +7,8 @@ import org.junit.Test
 class AncientKnowledgeFrameworkTest {
 
     @Test
-    fun `465 个古代文学知识点均有且仅有一个显式归属`() {
-        assertEquals(465, AncientKnowledgeFramework.assignments.size)
+    fun `498 个古代文学知识点均有且仅有一个显式归属`() {
+        assertEquals(498, AncientKnowledgeFramework.assignments.size)
         assertTrue(AncientKnowledgeFramework.validate(AncientKnowledgeFramework.assignments.keys).isEmpty())
     }
 
@@ -54,6 +54,38 @@ class AncientKnowledgeFrameworkTest {
             "ancient_sui_tang_fiction",
             AncientKnowledgeFramework.assignments["kp_00960"],
         )
+        assertEquals(
+            "ancient_pre_qin_thinkers",
+            AncientKnowledgeFramework.assignments["kp_00961"],
+        )
+        assertEquals(
+            "ancient_wei_jin_poetry",
+            AncientKnowledgeFramework.assignments["kp_00965"],
+        )
+        assertEquals(
+            "ancient_sui_tang_fiction",
+            AncientKnowledgeFramework.assignments["kp_00972"],
+        )
+        assertEquals(
+            "ancient_near_modern_fiction",
+            AncientKnowledgeFramework.assignments["kp_00982"],
+        )
+        assertEquals(
+            "ancient_pre_qin_history",
+            AncientKnowledgeFramework.assignments["kp_00984"],
+        )
+        assertEquals(
+            "ancient_sui_tang_middle_late",
+            AncientKnowledgeFramework.assignments["kp_00986"],
+        )
+        assertEquals(
+            "ancient_song_southern",
+            AncientKnowledgeFramework.assignments["kp_00989"],
+        )
+        assertEquals(
+            "ancient_near_modern_fiction",
+            AncientKnowledgeFramework.assignments["kp_00993"],
+        )
     }
 
     @Test
@@ -74,7 +106,7 @@ class AncientKnowledgeFrameworkTest {
     }
 
     @Test
-    fun `一级章节覆盖审计后的 465 个知识点`() {
+    fun `一级章节覆盖审计后的 498 个知识点`() {
         val nodeById = AncientKnowledgeFramework.nodes.associateBy { it.id }
 
         fun rootOf(nodeId: String): String {
@@ -91,15 +123,15 @@ class AncientKnowledgeFrameworkTest {
         assertEquals(
             mapOf(
                 "ancient_research" to 15,
-                "ancient_pre_qin" to 53,
+                "ancient_pre_qin" to 59,
                 "ancient_qin_han" to 63,
-                "ancient_wei_jin" to 70,
-                "ancient_sui_tang" to 23,
-                "ancient_song_liao_jin" to 50,
-                "ancient_yuan" to 60,
-                "ancient_ming" to 32,
-                "ancient_qing" to 65,
-                "ancient_near_modern" to 34,
+                "ancient_wei_jin" to 72,
+                "ancient_sui_tang" to 31,
+                "ancient_song_liao_jin" to 57,
+                "ancient_yuan" to 61,
+                "ancient_ming" to 35,
+                "ancient_qing" to 67,
+                "ancient_near_modern" to 38,
             ),
             counts,
         )

@@ -1,0 +1,93 @@
+{
+  "audit_id": "nie_zhenzhao_version_and_extraction_v2.21.0",
+  "generated_at": "2026-08-07",
+  "base_seed_version": "2.20.0",
+  "base_seed_count": 993,
+  "base_foreign_count": 124,
+  "scope": "版本核对、上册OCR完整性、抽取产物与目录覆盖；不写入种子",
+  "constraints": [
+    "旧知识点ID不变",
+    "不以2015第一版页码冒充2018第二版页码",
+    "自动抽取候选必须经过人工和来源核验",
+    "取得可靠第二版证据前不导入上册候选"
+  ],
+  "ocr_sources": [
+    {
+      "file_id": "file_090",
+      "role": "聂珍钊上册主干候选",
+      "file_name": "外国文学史（上）_13811329.pdf",
+      "relative_path": "4.外国文学/外国文学史（上）_13811329.pdf",
+      "pages": 402,
+      "characters": 350097,
+      "mean_ocr_score": 0.9936,
+      "ocr_status": "VERIFIED",
+      "edition": "2015年7月第1版",
+      "isbn": "978-7-04-042107-1",
+      "copyright_physical_page": 4,
+      "knowledge_output_present": false
+    },
+    {
+      "file_id": "file_089",
+      "role": "聂珍钊下册主干候选",
+      "file_name": "外国文学史  下_13811135_聂珍钊主编；郑克鲁，蒋承勇副主编_2015.07.pdf",
+      "relative_path": "4.外国文学/外国文学史  下_13811135_聂珍钊主编；郑克鲁，蒋承勇副主编_2015.07.pdf",
+      "pages": 334,
+      "characters": 290601,
+      "mean_ocr_score": 0.9923,
+      "ocr_status": "VERIFIED",
+      "edition": "2015年7月第1版",
+      "isbn": "978-7-04-042108-8",
+      "copyright_physical_page": 3,
+      "knowledge_output_present": true,
+      "knowledge_output_count": 67
+    },
+    {
+      "file_id": "file_128",
+      "role": "郑克鲁上册补充候选",
+      "file_name": "（郑克鲁)外国文学史_上册.pdf",
+      "relative_path": "4.外国文学/（郑克鲁)外国文学史_上册.pdf",
+      "pages": 443,
+      "edition": "2006年修订版",
+      "knowledge_output_present": true,
+      "knowledge_output_count": 53
+    }
+  ],
+  "cross_validation": {
+    "nie_lower_source_candidates": 64,
+    "zheng_upper_source_candidates": 53,
+    "nie_upper_source_candidates": 0,
+    "seed_foreign_count": 124,
+    "note": "交叉验证候选来源与App种子来源字段不是同一层；这里只用于确认抽取覆盖，不把候选直接视为最终卡片。"
+  },
+  "edition_check": {
+    "archive_edition": "2015 first edition",
+    "target_edition": "2018 second edition",
+    "target_upper_isbn": "978-7-04-050106-3",
+    "target_lower_isbn": "978-7-04-050107-0",
+    "target_publication_date": "2018-08-08",
+    "official_upper_url": "https://xuanshu.hep.com.cn/front/book/findBookDetails?bookId=5b45c963f18f967ee7f3722a",
+    "official_lower_url": "https://xuanshu.hep.com.cn/front/book/findBookDetails?bookId=5b45c9d0f18f967ee7f37248",
+    "toc_relation": "公开第二版目录与压缩包上册目录的章、节结构基本一致；尚无可用于逐页迁移的版本对照。"
+  },
+  "high_priority_gaps": [
+    "古代东方文学概述（古埃及、古巴比伦、希伯来、古印度）",
+    "《摩诃婆罗多》与《罗摩衍那》",
+    "《一千零一夜》",
+    "紫式部与《源氏物语》",
+    "拉伯雷与《巨人传》",
+    "弥尔顿与《失乐园》",
+    "菲尔丁与《汤姆·琼斯》",
+    "海涅",
+    "雨果《巴黎圣母院》",
+    "惠特曼与《草叶集》",
+    "狄更斯《双城记》"
+  ],
+  "write_status": {
+    "seed_modified": false,
+    "new_foreign_ids": 0,
+    "old_ids_changed": 0,
+    "exam_questions_changed": false,
+    "writing_materials_changed": false
+  },
+  "next_gate": "完成2018第二版原文或可靠逐专题版本对照后，再抽取、人工复核、去重、登记外国文学框架并做写入前后字段级验收。"
+}
