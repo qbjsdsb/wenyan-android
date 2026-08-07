@@ -682,7 +682,7 @@ private fun examFrequencyChip(examFrequency: String): Pair<String, ChipVariant> 
  * 相关论述题区块（v0.9.8 新增，论述题板块核心入口）。
  *
  * 设计目标（对应 docs/design/essay-module-design.md 1.2 节"知识点串联器"）：
- * 把 910 个孤立知识点通过 134 道论述题串联成答题网络。
+ * 把知识点通过已收录的论述题串联成答题网络。
  * 用户在知识点详情页看到"这道题考过这个知识点"，点击进入论述题详情页
  * 查看审题思路 + 答题框架 + 依据 + 交叉验证链接。
  *
