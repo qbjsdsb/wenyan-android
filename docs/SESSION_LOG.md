@@ -7017,3 +7017,18 @@ while (retryCount <= maxRetries) {
 - 独立只读全量审计通过：1101 knowledge points / 564 exam questions / 909 writing materials；142 道 ESSAY 中 134 道 angle/notes 完整、8 道按可选字段正常缺省，JSON 解析错误、悬空关联、重复 ID、跨科目关联均为 0。
 - 精确复现 `SeedDataLoader` 关系算法：1043 个关系源、4168 条边；新增 78 个知识点中 70 个有关系、233 条边，8 个无共享标签，符合规则。
 - 本地 Android 全量构建未能启动：Gradle Wrapper 需要从 `services.gradle.org` 下载 8.14.4，当前网络不可达；未将该环境限制误报为构建通过，应以推送后的 GitHub Actions `testDebugUnitTest` + `assembleDebug` 作为发布闸门。
+
+---
+
+## 2026-08-07 会话：v0.9.43 发布（关联知识点导航修复）
+
+- **背景**：远程出现新分支 `fix/related-knowledge-navigation`（PR #10，17 提交：4 功能 + 13 基线对齐）
+- **合并流程（严谨）**：
+  - merge-tree 预检无冲突 → worktree 分支全量测试通过 → --no-ff 合并（707274c）
+  - 合并后主工作区复验：636 单测 0 失败 + Debug/Release 构建通过
+  - **发现并行合并**：远程 main 已由他人更新（fdfca32）——与本地合并内容 diff 为空（等价），本地对齐远程
+- **发布 v0.9.43**（versionCode 68）：tag 推送 → ~14 分钟生成 Release #70
+  - APK 实测：versionCode 68 / 0.9.43 / targetSdk 35 / 正式签名 3fefd8a0… / sha256 `2f1340fa…` 两资产一致
+- **本版内容**：详情页 A→B 关联跳转不入栈修复（launchSingleTop 折叠动态路由 → 策略化单栈判定）、同点防重复、路径编码；新增导航策略测试 + GroupedCard 测试
+- **receipt**：`docs/release-receipts/v0.9.43-release-receipt.md`
+- **下次继续**：路线图——复习提醒通知（WorkManager）/ 学习统计页（review_logs 就绪）/ 知识图谱 Graph 视图

@@ -1,9 +1,15 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-08-07（真题核正 v2.26：2025 年 805 外国文学题目归码并校正）
+> 最后更新：2026-08-07（v0.9.43 已发布并完成 APK 核验）
 
 ## ✅ 当前状态
+
+**v0.9.43 已发布**（2026-08-07，Release #70）：关联知识点导航修复（versionCode 68）。详情页 A→B 关联跳转不入栈修复（launchSingleTop 折叠动态路由）+ 同点防重复栈项 + 路径编码；新增导航策略/GroupedCard 测试；APK 已下载实测核验通过。
+- **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.43
+- **receipt**：`docs/release-receipts/v0.9.43-release-receipt.md`
+- APK 实测：versionCode 68 / versionName "0.9.43" / targetSdk 35 / 正式签名（3fefd8a0…）
+- 全量 **636 单测 0 失败** + assembleDebug/Release 通过
 
 **v0.9.42 已发布**（2026-08-07，Release #69）：教材内容增量（versionCode 67）。合并 PR #9——知识点 960→1101（+141），真题 485→564（+79），seed 2.18.0→2.26.0；四科框架覆盖 498/256/157/190；APK 已下载实测核验通过。
 - **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.42
@@ -117,8 +123,8 @@
 | 项 | 值 |
 |----|-----|
 | 最新 commit | **cd06696**（v0.9.42 发布文档，2026-08-07） |
-| 最新 Release | **v0.9.42**（2026-08-07，Release #69，教材内容增量，APK 已实测核验）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.42 |
-| versionCode / versionName | **67 / "0.9.42"** |
+| 最新 Release | **v0.9.43**（2026-08-07，Release #70，导航修复，APK 已实测核验）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.43 |
+| versionCode / versionName | **68 / "0.9.43"** |
 | 知识点 | **1101 个（seed 2.26.0）** |
 | 真题 | **564 道** |
 | 论述题 | **142 道**（v0.9.23 起删年份显示，数据层 year 保留） |
