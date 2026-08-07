@@ -37,9 +37,9 @@ class KnowledgeFrameworkTest {
             setOf("中国现当代文学", "中国古代文学", "外国文学", "文学理论"),
             definitions.map { it.subjectName }.toSet(),
         )
-        assertEquals(1023, definitions.sumOf { it.assignments.size })
+        assertEquals(1101, definitions.sumOf { it.assignments.size })
         assertEquals(
-            1023,
+            1101,
             definitions.flatMap { it.assignments.keys }.toSet().size,
         )
         assertTrue(definitions.all { it.legacyChapterIds.isNotEmpty() })
@@ -60,8 +60,8 @@ class KnowledgeFrameworkTest {
     }
 
     @Test
-    fun `211 个现当代知识点均有且仅有一个显式归属`() {
-        assertEquals(211, KnowledgeFramework.assignments.size)
+    fun `256 个现当代知识点均有且仅有一个显式归属`() {
+        assertEquals(256, KnowledgeFramework.assignments.size)
         assertTrue(KnowledgeFramework.validate(KnowledgeFramework.assignments.keys).isEmpty())
         assertEquals("modern_history", KnowledgeFramework.assignments["kp_00578"])
         assertEquals("modern_first_prose", KnowledgeFramework.assignments["kp_00612"])
