@@ -51,7 +51,7 @@ import javax.inject.Inject
  * - 用户答题文本 + AI 三阶段引导结果 + 自评状态（Phase 3）
  *
  * 优雅降级：
- * - angle/notes 为 null（131/134 道论述题未填充）→ 隐藏对应区块
+ * - angle/notes 为空或解析失败 → 隐藏对应区块
  * - JSON 解析失败 → 隐藏对应区块 + Timber.w 日志
  * - 关联知识点查询失败 → 空列表
  * - AI 引导失败 → aiGuideError 展示 + 重试按钮，已 emit 的阶段仍展示
