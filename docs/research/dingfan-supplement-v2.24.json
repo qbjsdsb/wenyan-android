@@ -1,0 +1,254 @@
+{
+  "batch": "dingfan-v2.24.0",
+  "base_version": "2.23.0",
+  "target_version": "2.24.0",
+  "seed_written": true,
+  "base_knowledge_point_count": 1013,
+  "new_knowledge_point_count": 10,
+  "result_knowledge_point_count": 1023,
+  "old_ids_preserved": true,
+  "exam_question_count_unchanged": true,
+  "writing_material_count_unchanged": true,
+  "source_edition": "2013年4月第1版",
+  "source_files": [
+    "file_132.json（丁帆《中国新文学史》下册）"
+  ],
+  "cards": [
+    {
+      "id": "kp_01014",
+      "title": "刘绍棠的运河文学与乡土传奇",
+      "framework_node": "modern_since_history",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第五章第一节，印刷页179–180",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "179–180",
+        "ocr_physical_pages": [
+          198,
+          199
+        ],
+        "anchors": [
+          "刘绍棠",
+          "蒲柳人家",
+          "运河文学"
+        ]
+      }
+    },
+    {
+      "id": "kp_01015",
+      "title": "冯骥才民俗小说与文化困境",
+      "framework_node": "modern_since_history",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第五章第三节，印刷页190–192",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "190–192",
+        "ocr_physical_pages": [
+          209,
+          210,
+          211
+        ],
+        "anchors": [
+          "冯骥才",
+          "三寸金莲",
+          "民俗文化"
+        ]
+      }
+    },
+    {
+      "id": "kp_01016",
+      "title": "叶兆言“夜泊秦淮”与生命悲剧意识",
+      "framework_node": "modern_since_history",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第五章第三节，印刷页193–195",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "193–195",
+        "ocr_physical_pages": [
+          212,
+          213,
+          214
+        ],
+        "anchors": [
+          "叶兆言",
+          "夜泊秦淮",
+          "生命悲剧"
+        ]
+      }
+    },
+    {
+      "id": "kp_01017",
+      "title": "新时期日常世俗小说与城市经验",
+      "framework_node": "modern_since_realism",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第五章第三节，印刷页196–203",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "196–203",
+        "ocr_physical_pages": [
+          215,
+          216,
+          217,
+          218,
+          219,
+          220,
+          221,
+          222
+        ],
+        "anchors": [
+          "刘震云",
+          "方方",
+          "世俗生活"
+        ]
+      }
+    },
+    {
+      "id": "kp_01018",
+      "title": "孔捷生的自然文学与生命反思",
+      "framework_node": "modern_since_history",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第五章第四节，印刷页203–207",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "203–207",
+        "ocr_physical_pages": [
+          223,
+          224,
+          225,
+          226
+        ],
+        "anchors": [
+          "孔捷生",
+          "大林莽",
+          "自然与生命"
+        ]
+      }
+    },
+    {
+      "id": "kp_01019",
+      "title": "刘恒乡土叙事中的食与色",
+      "framework_node": "modern_since_history",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第五章第五节，印刷页215–218",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "215–218",
+        "ocr_physical_pages": [
+          234,
+          235,
+          236,
+          237
+        ],
+        "anchors": [
+          "刘恒",
+          "狗日的粮食",
+          "伏羲伏羲"
+        ]
+      }
+    },
+    {
+      "id": "kp_01020",
+      "title": "李杭育、郑万隆的地方性寻根小说",
+      "framework_node": "modern_new_root",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第六章第一节，印刷页230–233",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "230–233",
+        "ocr_physical_pages": [
+          249,
+          250,
+          251,
+          252
+        ],
+        "anchors": [
+          "李杭育",
+          "郑万隆",
+          "寻根小说"
+        ]
+      }
+    },
+    {
+      "id": "kp_01021",
+      "title": "北村宗教叙事与信仰困境",
+      "framework_node": "modern_since_history",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第六章第五节，印刷页259–263",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "259–263",
+        "ocr_physical_pages": [
+          278,
+          279,
+          280,
+          281,
+          282
+        ],
+        "anchors": [
+          "北村",
+          "施洗的河",
+          "基督教义"
+        ]
+      }
+    },
+    {
+      "id": "kp_01022",
+      "title": "孙甘露的诗化先锋小说",
+      "framework_node": "modern_new_avant",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第八章第二节，印刷页309–312",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "309–312",
+        "ocr_physical_pages": [
+          328,
+          329,
+          330,
+          331
+        ],
+        "anchors": [
+          "孙甘露",
+          "请女人猜谜",
+          "蒙太奇"
+        ]
+      }
+    },
+    {
+      "id": "kp_01023",
+      "title": "80年代戏剧的形式革新与社会反思",
+      "framework_node": "modern_new_avant",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第八章第四节，印刷页319–324",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "319–324",
+        "ocr_physical_pages": [
+          338,
+          341,
+          342,
+          343
+        ],
+        "anchors": [
+          "沙叶新",
+          "李龙云",
+          "魏明伦",
+          "心理时间"
+        ]
+      }
+    }
+  ],
+  "known_limits": [
+    "下册印刷页125—320的自动知识点文件没有覆盖正文，本批优先补入高频和结构性专题，但不声称完成全部逐作家卡。",
+    "本批为人工整理的答题卡，仍需与框架映射、种子解析和 Kotlin 直接校验一起验收。"
+  ]
+}

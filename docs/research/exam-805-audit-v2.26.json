@@ -1,0 +1,49 @@
+{
+  "batch_id": "exam-805-audit-v2.26",
+  "generated_at": "2026-08-07T00:00:00.000000",
+  "base_exam_count": 564,
+  "target_exam_count": 564,
+  "operation": "correct_existing_records",
+  "source_confidence": "MEDIUM",
+  "source": {
+    "2025_question_page": "https://www.kaoyany.top/post/235365.html",
+    "2024_2025_index_page": "https://www.sohu.com/a/937459976_121133964",
+    "local_attachment": "tools_unpacked/output/file_208.json",
+    "local_attachment_year_limit": 2022
+  },
+  "corrected_question_ids": [
+    "eq_0533",
+    "eq_0534",
+    "eq_0535",
+    "eq_0536",
+    "eq_0537",
+    "eq_0538",
+    "eq_0539",
+    "eq_0540",
+    "eq_0541"
+  ],
+  "correction": {
+    "year": 2025,
+    "subject": "外国文学",
+    "old_exam_paper_code": "801",
+    "new_exam_paper_code": "805",
+    "term_questions_listed": 5,
+    "term_questions_claimed_by_source_header": 6,
+    "short_questions_listed": 4,
+    "term_score": 5,
+    "short_score": 15
+  },
+  "not_imported": [
+    {
+      "year": 2024,
+      "exam_paper_code": "805",
+      "reason": "只有回忆版条目，未找到可同时复现完整题干、题型和分值的正文或原卷。"
+    },
+    {
+      "year": 2025,
+      "exam_paper_code": "805",
+      "reason": "公开页面的名词解释数量与题型标题不一致，未猜写缺失的第 6 题及页面未展示的其他题目。"
+    }
+  ],
+  "verification_script": "tools/content_supplement/verify_exam_805_v2_26.py"
+}

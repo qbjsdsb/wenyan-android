@@ -57,10 +57,12 @@ object KnowledgeFramework {
         FrameworkNode("modern_since_women", "modern_since90", "女性、私人化与身体写作", 3),
         FrameworkNode("modern_since_popular", "modern_since90", "通俗文学、儿童文学与戏剧", 4),
         FrameworkNode("modern_since_poetry", "modern_since90", "诗歌、散文与大众文化", 5),
+        FrameworkNode("modern_since_new_century", "modern_since90", "新世纪文学与文学生态", 6),
 
         FrameworkNode("modern_taiwan_hk", null, "台港文学与跨地域书写", 4),
         FrameworkNode("modern_taiwan", "modern_taiwan_hk", "台湾文学", 1),
         FrameworkNode("modern_hongkong", "modern_taiwan_hk", "香港文学", 2),
+        FrameworkNode("modern_diaspora", "modern_taiwan_hk", "海外华文与离散写作", 3),
     )
 
     /**
@@ -105,6 +107,41 @@ object KnowledgeFramework {
 
         addAll(mapPoints("modern_taiwan", listOf(956, 957)))
         addAll(mapPoints("modern_hongkong", listOf(958, 959)))
+
+        addAll(mapPoints("modern_first_prose", listOf(994)))
+        addAll(mapPoints("modern_first_poetry", listOf(995)))
+        addAll(mapPoints("modern_third_war", listOf(996, 997, 998, 999)))
+        addAll(mapPoints("modern_seventeen_rural", listOf(1000)))
+        addAll(mapPoints("modern_diaspora", listOf(1001)))
+        addAll(mapPoints("modern_since_poetry", listOf(1002, 1003, 1004, 1009, 1010)))
+        addAll(mapPoints("modern_since_history", listOf(1005, 1006, 1011, 1012, 1013)))
+        addAll(mapPoints("modern_since_women", listOf(1007)))
+        addAll(mapPoints("modern_since_new_century", listOf(1008)))
+        addAll(mapPoints("modern_since_history", listOf(1014, 1015, 1016, 1018, 1019, 1021)))
+        addAll(mapPoints("modern_since_realism", listOf(1017)))
+        addAll(mapPoints("modern_new_root", listOf(1020)))
+        addAll(mapPoints("modern_new_avant", listOf(1022, 1023)))
+
+        addAll(mapPoints("modern_history_late_qing", listOf(1024)))
+        addAll(mapPoints("modern_first_poetry", listOf(1025, 1026, 1027, 1036, 1037)))
+        addAll(mapPoints("modern_first_movements", listOf(1028, 1029, 1030)))
+        addAll(mapPoints("modern_first_prose", listOf(1031)))
+        addAll(mapPoints("modern_second_styles", listOf(1032, 1033, 1034)))
+        addAll(mapPoints("modern_third_war", listOf(1035, 1038, 1039, 1040, 1041)))
+        addAll(mapPoints("modern_taiwan", listOf(1042, 1043)))
+        addAll(mapPoints("modern_diaspora", listOf(1044)))
+
+        addAll(mapPoints("modern_seventeen_system", listOf(1045, 1048)))
+        addAll(mapPoints("modern_seventeen_other", listOf(1046, 1049, 1051)))
+        addAll(mapPoints("modern_seventeen_poetry", listOf(1047)))
+        addAll(mapPoints("modern_new_restore", listOf(1050)))
+        addAll(mapPoints("modern_cultural_underground", listOf(1052)))
+        addAll(mapPoints("modern_new_poetry", listOf(1053, 1054, 1055, 1056, 1057)))
+        addAll(mapPoints("modern_since_history", listOf(1058, 1059, 1063)))
+        addAll(mapPoints("modern_since_popular", listOf(1060, 1061, 1064)))
+        addAll(mapPoints("modern_since_realism", listOf(1062)))
+        addAll(mapPoints("modern_since_women", listOf(1065, 1066)))
+        addAll(mapPoints("modern_since_new_century", listOf(1067, 1068)))
     }
 
     val assignments: Map<String, String> = assignmentPairs.toMap()

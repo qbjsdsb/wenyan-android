@@ -1,0 +1,91 @@
+{
+  "batch_id": "yuan_shishuo_v2.19.0",
+  "base_version": "2.18.0",
+  "target_version": "2.19.0",
+  "base_count": 960,
+  "first_new_id": "kp_00961",
+  "generated_at": "2026-08-07T00:00:00.000000",
+  "description": "袁世硕《中国古代文学史》（第二版）三册第一批来源补全与新增专题证据。页码为教材印刷页码；ocr_physical_pages 是压缩包 OCR 的物理页码，用于复核原文锚点。",
+  "source_supplements": [
+    {
+      "id": "kp_00265",
+      "expected_title": "太康文学",
+      "source": "袁世硕《中国古代文学史》（第二版）上册，第三编第二章，pp.268–279",
+      "ocr_file": "file_083.json",
+      "ocr_physical_pages": [276, 287],
+      "anchor_terms": ["文风华丽", "清靡", "繁缛"]
+    },
+    {
+      "id": "kp_00107",
+      "expected_title": "左思咏史诗",
+      "source": "袁世硕《中国古代文学史》（第二版）上册，第三编第二章第三节，pp.276–279",
+      "ocr_file": "file_083.json",
+      "ocr_physical_pages": [284, 287],
+      "anchor_terms": ["左思与寒士文学", "寒士文学", "咏史诗"]
+    },
+    {
+      "id": "kp_00253",
+      "expected_title": "玄言诗与理趣",
+      "source": "袁世硕《中国古代文学史》（第二版）上册，第三编第二章第四节，pp.279–283",
+      "ocr_file": "file_083.json",
+      "ocr_physical_pages": [288, 289],
+      "anchor_terms": ["玄言诗", "老庄思想"]
+    },
+    {
+      "id": "kp_00268",
+      "expected_title": "宫体诗",
+      "source": "袁世硕《中国古代文学史》（第二版）上册，第三编第四章，pp.308–315",
+      "ocr_file": "file_083.json",
+      "ocr_physical_pages": [316, 317],
+      "anchor_terms": ["宫体诗", "萧纲", "徐陵"]
+    },
+    {
+      "id": "kp_00033",
+      "expected_title": "初唐四杰与陈子昂",
+      "source": "袁世硕《中国古代文学史》（第二版）中册，第四编第一章，pp.25–41",
+      "ocr_file": "file_082.json",
+      "ocr_physical_pages": [35, 39],
+      "anchor_terms": ["初唐四杰", "陈子昂", "汉魏风骨"]
+    },
+    {
+      "id": "kp_00039",
+      "expected_title": "韩愈、柳宗元与古文运动",
+      "source": "袁世硕《中国古代文学史》（第二版）中册，第四编第七章，pp.104–119",
+      "ocr_file": "file_082.json",
+      "ocr_physical_pages": [114, 117, 129],
+      "anchor_terms": ["古文运动", "韩愈", "柳宗元"]
+    },
+    {
+      "id": "kp_00042",
+      "expected_title": "唐代传奇小说",
+      "source": "袁世硕《中国古代文学史》（第二版）中册，第四编第八章，pp.120–125",
+      "ocr_file": "file_082.json",
+      "ocr_physical_pages": [130, 132, 134],
+      "anchor_terms": ["唐传奇", "中国古代文言小说的成熟"]
+    },
+    {
+      "id": "kp_00065",
+      "expected_title": "《金瓶梅》与世情小说",
+      "source": "袁世硕《中国古代文学史》（第二版）下册，第八编第八章，pp.102–116",
+      "ocr_file": "file_084.json",
+      "ocr_physical_pages": [112, 115],
+      "anchor_terms": ["世情小说", "写实小说", "《金瓶梅》"]
+    },
+    {
+      "id": "kp_00137",
+      "expected_title": "黄遵宪与诗界革命",
+      "source": "袁世硕《中国古代文学史》（第二版）下册，第九编第五章，pp.308–318",
+      "ocr_file": "file_084.json",
+      "ocr_physical_pages": [318, 323, 327],
+      "anchor_terms": ["诗界革命", "黄遵宪", "同光体"]
+    },
+    {
+      "id": "kp_00138",
+      "expected_title": "梁启超与文学革新",
+      "source": "袁世硕《中国古代文学史》（第二版）下册，第九编第六章，pp.328–345",
+      "ocr_file": "file_084.json",
+      "ocr_physical_pages": [338, 345],
+      "anchor_terms": ["小说界革命", "梁启超", "新小说"]
+    }
+  ]
+}

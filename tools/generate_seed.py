@@ -89,10 +89,18 @@ EXAM_CODE_HISTORY = [
     {
         "exam_code": "805",
         "subject_name": "古代文学",
-        "valid_from_year": 1998,
+        "valid_from_year": 2017,
+        "valid_to_year": 2022,
+        "direction": "专二",
+        "note": "2017—2022年古代文学方向专二",
+    },
+    {
+        "exam_code": "805",
+        "subject_name": "外国文学",
+        "valid_from_year": 2023,
         "valid_to_year": 2025,
         "direction": "专二",
-        "note": "古代文学方向专二",
+        "note": "2023—2025年外国文学方向专二（805）",
     },
     {
         "exam_code": "806",

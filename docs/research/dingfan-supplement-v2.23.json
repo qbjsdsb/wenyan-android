@@ -1,0 +1,497 @@
+{
+  "batch": "dingfan-v2.23.0",
+  "base_version": "2.22.0",
+  "target_version": "2.23.0",
+  "seed_written": true,
+  "base_knowledge_point_count": 993,
+  "new_knowledge_point_count": 20,
+  "result_knowledge_point_count": 1013,
+  "old_ids_preserved": true,
+  "exam_question_count_unchanged": true,
+  "writing_material_count_unchanged": true,
+  "source_edition": "2013年4月第1版",
+  "source_files": [
+    "file_131.json（丁帆《中国新文学史》上册）",
+    "file_132.json（丁帆《中国新文学史》下册）"
+  ],
+  "cards": [
+    {
+      "id": "kp_00994",
+      "title": "叶圣陶《稻草人》与“儿童本位”的张力",
+      "framework_node": "modern_first_prose",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第五章第五节，印刷页115–117",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "115–117",
+        "ocr_physical_pages": [
+          131,
+          132,
+          133
+        ],
+        "anchors": [
+          "儿童本位",
+          "《稻草人》"
+        ]
+      }
+    },
+    {
+      "id": "kp_00995",
+      "title": "九叶诗派与穆旦的现代主义诗学",
+      "framework_node": "modern_first_poetry",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第五章第二节，印刷页266–270",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "266–270",
+        "ocr_physical_pages": [
+          282,
+          283,
+          284,
+          285,
+          286
+        ],
+        "anchors": [
+          "九叶诗人",
+          "穆旦",
+          "中国新诗派"
+        ]
+      }
+    },
+    {
+      "id": "kp_00996",
+      "title": "张天翼《华威先生》的抗战讽刺艺术",
+      "framework_node": "modern_third_war",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第七章第一节，印刷页305–306",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "305–306",
+        "ocr_physical_pages": [
+          321,
+          322
+        ],
+        "anchors": [
+          "张天翼",
+          "《华威先生》"
+        ]
+      }
+    },
+    {
+      "id": "kp_00997",
+      "title": "巴金《家》与青春悲剧",
+      "framework_node": "modern_third_war",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第七章第三节，印刷页321–323",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "321–323",
+        "ocr_physical_pages": [
+          337,
+          338,
+          339
+        ],
+        "anchors": [
+          "《家》",
+          "激流三部曲"
+        ]
+      }
+    },
+    {
+      "id": "kp_00998",
+      "title": "东北流亡作家群与抗战乡土叙事",
+      "framework_node": "modern_third_war",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第七章第四节，印刷页326–336",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "326–336",
+        "ocr_physical_pages": [
+          342,
+          343,
+          344,
+          345,
+          346,
+          347,
+          348,
+          349,
+          350,
+          351,
+          352
+        ],
+        "anchors": [
+          "东北作家群",
+          "九一八事变",
+          "黑土地"
+        ]
+      }
+    },
+    {
+      "id": "kp_00999",
+      "title": "路翎《财主底儿女们》与精神悲剧",
+      "framework_node": "modern_third_war",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第七章第五节，印刷页346–348",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "346–348",
+        "ocr_physical_pages": [
+          362,
+          363,
+          364
+        ],
+        "anchors": [
+          "路翎",
+          "财主底儿女们"
+        ]
+      }
+    },
+    {
+      "id": "kp_01000",
+      "title": "丁玲《太阳照在桑干河上》与土改叙事",
+      "framework_node": "modern_seventeen_rural",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第七章第六节，印刷页357–359",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "357–359",
+        "ocr_physical_pages": [
+          373,
+          374
+        ],
+        "anchors": [
+          "丁玲",
+          "太阳照在桑干河上"
+        ]
+      }
+    },
+    {
+      "id": "kp_01001",
+      "title": "离散写作与侨寓文学",
+      "framework_node": "modern_diaspora",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）上册，第十章，印刷页419–435",
+      "source_evidence": {
+        "file": "file_131.json",
+        "file_name": "中国新文学史 上册_13442287.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "419–435",
+        "ocr_physical_pages": [
+          435,
+          436,
+          437,
+          451
+        ],
+        "anchors": [
+          "离散写作",
+          "侨寓文学",
+          "文化冲突"
+        ]
+      }
+    },
+    {
+      "id": "kp_01002",
+      "title": "海子诗歌与精神家园",
+      "framework_node": "modern_since_poetry",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第四章第二节，印刷页131–137",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "131–137",
+        "ocr_physical_pages": [
+          149,
+          150,
+          152,
+          153,
+          154,
+          155,
+          156
+        ],
+        "anchors": [
+          "海子",
+          "精神荒原"
+        ]
+      }
+    },
+    {
+      "id": "kp_01003",
+      "title": "“盘峰诗会”与“知识分子写作”论争",
+      "framework_node": "modern_since_poetry",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第四章第四节，印刷页152–159",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "152–159",
+        "ocr_physical_pages": [
+          170,
+          171,
+          172,
+          173,
+          174,
+          175,
+          176,
+          177,
+          178
+        ],
+        "anchors": [
+          "知识分子写作",
+          "民间写作",
+          "盘峰"
+        ]
+      }
+    },
+    {
+      "id": "kp_01004",
+      "title": "西川诗歌与知识分子写作",
+      "framework_node": "modern_since_poetry",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第四章第四节，印刷页157–159",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "157–159",
+        "ocr_physical_pages": [
+          176,
+          177,
+          178
+        ],
+        "anchors": [
+          "西川",
+          "在哈尔盖仰望星空",
+          "像译诗"
+        ]
+      }
+    },
+    {
+      "id": "kp_01005",
+      "title": "贾平凹乡土叙事与文化焦虑",
+      "framework_node": "modern_since_history",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第五章第一节，印刷页170–175",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "170–175",
+        "ocr_physical_pages": [
+          189,
+          190,
+          191,
+          192,
+          193,
+          194
+        ],
+        "anchors": [
+          "贾平凹",
+          "废都",
+          "文化废墟"
+        ]
+      }
+    },
+    {
+      "id": "kp_01006",
+      "title": "张炜《九月寓言》与精神家园",
+      "framework_node": "modern_since_history",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第五章第五节，印刷页212–214",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "212–214",
+        "ocr_physical_pages": [
+          229,
+          231,
+          232,
+          233,
+          234
+        ],
+        "anchors": [
+          "张炜",
+          "九月寓言",
+          "野地"
+        ]
+      }
+    },
+    {
+      "id": "kp_01007",
+      "title": "女性主义写作的主题谱系",
+      "framework_node": "modern_since_women",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第十章，印刷页375–378",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "375–378",
+        "ocr_physical_pages": [
+          394,
+          395,
+          396,
+          397
+        ],
+        "anchors": [
+          "女性主义",
+          "女性写作",
+          "身体经验"
+        ]
+      }
+    },
+    {
+      "id": "kp_01008",
+      "title": "新世纪文学的多元态势与大众化转向",
+      "framework_node": "modern_since_new_century",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第十一章，印刷页399–419",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "399–419",
+        "ocr_physical_pages": [
+          418,
+          419,
+          420,
+          437,
+          438
+        ],
+        "anchors": [
+          "新的文学态势",
+          "生态文学",
+          "新世纪文学"
+        ]
+      }
+    },
+    {
+      "id": "kp_01009",
+      "title": "“文革”后诗歌的四种审美路径",
+      "framework_node": "modern_since_poetry",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第四章，印刷页115–159",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "115–159",
+        "ocr_physical_pages": [
+          134,
+          149,
+          156,
+          163,
+          171,
+          178
+        ],
+        "anchors": [
+          "个体生命感悟",
+          "知识分子写作",
+          "西川"
+        ]
+      }
+    },
+    {
+      "id": "kp_01010",
+      "title": "第三代诗歌与口语化诗语",
+      "framework_node": "modern_since_poetry",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第四章第三节，印刷页144–151",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "144–151",
+        "ocr_physical_pages": [
+          163,
+          164,
+          165,
+          166,
+          167,
+          168,
+          169,
+          170
+        ],
+        "anchors": [
+          "于坚",
+          "韩东",
+          "张枣"
+        ]
+      }
+    },
+    {
+      "id": "kp_01011",
+      "title": "新时期乡土小说与家族村落叙事",
+      "framework_node": "modern_since_history",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第五章，印刷页161–221",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "161–221（家族与村落部分核心为210–214）",
+        "ocr_physical_pages": [
+          229,
+          231,
+          232,
+          233,
+          234
+        ],
+        "anchors": [
+          "家族",
+          "张炜",
+          "九月寓言"
+        ]
+      }
+    },
+    {
+      "id": "kp_01012",
+      "title": "新历史小说与历史叙事的多义性",
+      "framework_node": "modern_since_history",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第九章，印刷页335–374（李洱部分核心为346–349）",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "335–374（李洱部分核心为346–349）",
+        "ocr_physical_pages": [
+          355,
+          365,
+          367,
+          368
+        ],
+        "anchors": [
+          "花腔",
+          "新历史小说",
+          "多义性"
+        ]
+      }
+    },
+    {
+      "id": "kp_01013",
+      "title": "生态文学与西部文学",
+      "framework_node": "modern_since_history",
+      "textbook_source": "丁帆《中国新文学史》（2013年第一版）下册，第十一章第一节，印刷页399–409",
+      "source_evidence": {
+        "file": "file_132.json",
+        "file_name": "中国新文学史 下册_13253973.pdf",
+        "edition": "2013年4月第1版",
+        "print_pages": "399–409",
+        "ocr_physical_pages": [
+          418,
+          419,
+          420,
+          424,
+          426
+        ],
+        "anchors": [
+          "生态文学",
+          "西部文学",
+          "自然风物"
+        ]
+      }
+    }
+  ],
+  "known_limits": [
+    "下册印刷页125—320的自动知识点文件没有覆盖正文，本批优先补入高频和结构性专题，但不声称完成全部逐作家卡。",
+    "本批为人工整理的答题卡，仍需与框架映射、种子解析和 Kotlin 直接校验一起验收。"
+  ]
+}

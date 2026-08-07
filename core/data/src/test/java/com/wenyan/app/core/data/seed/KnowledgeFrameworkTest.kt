@@ -37,9 +37,9 @@ class KnowledgeFrameworkTest {
             setOf("中国现当代文学", "中国古代文学", "外国文学", "文学理论"),
             definitions.map { it.subjectName }.toSet(),
         )
-        assertEquals(960, definitions.sumOf { it.assignments.size })
+        assertEquals(1101, definitions.sumOf { it.assignments.size })
         assertEquals(
-            960,
+            1101,
             definitions.flatMap { it.assignments.keys }.toSet().size,
         )
         assertTrue(definitions.all { it.legacyChapterIds.isNotEmpty() })
@@ -60,8 +60,8 @@ class KnowledgeFrameworkTest {
     }
 
     @Test
-    fun `181 个现当代知识点均有且仅有一个显式归属`() {
-        assertEquals(181, KnowledgeFramework.assignments.size)
+    fun `256 个现当代知识点均有且仅有一个显式归属`() {
+        assertEquals(256, KnowledgeFramework.assignments.size)
         assertTrue(KnowledgeFramework.validate(KnowledgeFramework.assignments.keys).isEmpty())
         assertEquals("modern_history", KnowledgeFramework.assignments["kp_00578"])
         assertEquals("modern_first_prose", KnowledgeFramework.assignments["kp_00612"])
@@ -70,6 +70,15 @@ class KnowledgeFrameworkTest {
         assertEquals("modern_seventeen_other", KnowledgeFramework.assignments["kp_00644"])
         assertEquals("modern_since_history", KnowledgeFramework.assignments["kp_00707"])
         assertEquals("modern_hongkong", KnowledgeFramework.assignments["kp_00958"])
+        assertEquals("modern_first_prose", KnowledgeFramework.assignments["kp_00994"])
+        assertEquals("modern_third_war", KnowledgeFramework.assignments["kp_00998"])
+        assertEquals("modern_diaspora", KnowledgeFramework.assignments["kp_01001"])
+        assertEquals("modern_since_new_century", KnowledgeFramework.assignments["kp_01008"])
+        assertEquals("modern_since_history", KnowledgeFramework.assignments["kp_01013"])
+        assertEquals("modern_since_history", KnowledgeFramework.assignments["kp_01014"])
+        assertEquals("modern_since_realism", KnowledgeFramework.assignments["kp_01017"])
+        assertEquals("modern_new_root", KnowledgeFramework.assignments["kp_01020"])
+        assertEquals("modern_new_avant", KnowledgeFramework.assignments["kp_01023"])
     }
 
     @Test

@@ -3,6 +3,15 @@
 > **遇到编译失败/运行错误时必读。** 记录已尝试但失败的方案，避免重复踩坑。
 > **新会话遇到错误时，第一步查本文件。**
 
+## #016 内容补充合并后的 OCR 辅助字段误读
+
+- **日期**：2026-08-07（袁世硕第二批内容审计）
+- **现象**：写入后校验脚本直接从 `seed_data.json` 读取 `ocr_file`，得到 `KeyError`。
+- **根因**：`ocr_file`、`ocr_physical_pages`、`anchor_terms` 是合并脚本的审计辅助字段，故意不写入 App 的 seed schema；App 只保存经过核验的教材来源字符串。把候选审计结构误当成运行时数据结构会产生假失败。
+- **修复**：写入后按候选文件保存的 OCR 证据，对照当前 seed 的标题和新 ID 复核；确认 10 条新卡的 ID 连续、来源字段正确、所有 OCR 锚点均可复现。
+- **教训**：来源证据分为“候选/审计层”和“App 运行层”两种结构。验证脚本必须明确读取层级，不能要求 seed 保留不会被导入的内部字段。
+- **相关文件**：`tools/content_supplement/merge_yuan_shishuo_v2_19.py`、`tools/content_supplement/yuan_shishuo_cards_second_v2_20.json`、`app/src/main/assets/seed_data.json`
+
 ## #001 materialkolor 4.1.1 + Kotlin 2.0.20 不兼容
 
 - **日期**：2026-07-12
@@ -267,6 +276,72 @@
   3. **沙箱内存配置应保守**——cgroup 限制下用 1536m heap + 768m metaspace + 单 worker 是稳定配置
   4. **工厂函数不能用作类型**——Kotlin 中 `fun FakeXxx() = Xxx()` 定义的 `FakeXxx` 是函数，不是类型；变量类型应用返回类型 `Xxx`
 - **相关文件**：`gradlew`、`gradlew.bat`、`gradle/wrapper/gradle-wrapper.jar`、`app/build.gradle.kts`、`gradle.properties`、`feature/cards/src/test/java/com/wenyan/app/feature/cards/CardsViewModelTest.kt`
+
+---
+
+## #017 丁帆补充脚本默认 OCR 根目录少了一层 output
+
+- **日期**：2026-08-07
+- **现象**：丁帆 v2.23 合并脚本第一次 dry-run 报告所有 OCR 文件不存在，不能复现页码和锚点。
+- **根因**：压缩包实际路径为 `tools_unpacked/output/file_131.json`、`file_132.json`，脚本默认路径误写成 `tools_unpacked/file_*.json`。
+- **已尝试修复**：
+  - ❌ 第一次 dry-run — 仅定位到路径层，不写入任何种子数据。
+  - ✅ 将默认 OCR 根目录修正为 `tools_unpacked/output`，重新执行后 20/20 条页面与锚点检查通过。
+- **教训**：OCR 证据校验必须先验证真实目录结构；路径层失败不能被解释为教材缺页。
+- **相关文件**：`tools/content_supplement/merge_dingfan_v2_23.py`、`tools_unpacked/output/file_131.json`、`tools_unpacked/output/file_132.json`
+
+---
+
+## #018 直接 Kotlin 框架编译未显式传入标准库
+
+- **日期**：2026-08-07
+- **现象**：首次用 Gradle 分发包中的 Kotlin 编译器直接编译四科框架时，出现大量 `cannot access built-in declaration` 和 `找不到 kotlin-stdlib` 报错。
+- **根因**：编译器启动时没有自动定位其 Kotlin home；标准库虽然在 Gradle 分发包中，但未作为编译 classpath 传入。
+- **已尝试修复**：
+  - ❌ 首次直接调用 `K2JVMCompiler` — 环境 classpath 不完整，未能判定源码结果。
+  - ✅ 使用 `-no-stdlib -no-reflect` 并显式加入 `kotlin-stdlib-1.9.22.jar`，四科框架编译通过；临时 Kotlin 入口实测 `frameworks=4 modern=201 total=1013 errors=0`。
+- **教训**：直接编译验证必须把编译器运行 classpath 与源码编译 classpath 分开明确配置。
+- **相关文件**：四科 `*KnowledgeFramework.kt`、`KnowledgeFrameworkValidator.kt`
+
+---
+
+## #019 离线 Gradle 被 Kotlin DSL 插件缓存阻塞
+
+- **日期**：2026-08-07
+- **现象**：使用压缩包附带的 Gradle 8.7、离线模式和单 worker 执行 `:core:data:test`，配置阶段失败。
+- **根因**：本地缓存没有 `org.gradle.kotlin.kotlin-dsl:4.3.0` 插件；项目 wrapper 声明的 Gradle 8.14.4 也无法从 `services.gradle.org` 下载。
+- **已尝试修复**：
+  - ❌ Gradle 8.7 `--offline` — 在 `build-logic/build.gradle.kts` 第 2 行停止，尚未进入源码编译和单元测试。
+  - ✅ 使用直接 Kotlin 编译器验证四科框架 — 编译和实际 `validate` 通过，但不能替代完整 Android 测试。
+- **教训**：构建环境阻塞必须与数据/源码失败分开报告；离线 Gradle 配置失败不等于测试失败。
+- **相关文件**：`build-logic/build.gradle.kts`、`gradle/wrapper/gradle-wrapper.properties`
+
+---
+
+## #020 真题 v2.22 验证器把后续合法版本误判为错误
+
+- **日期**：2026-08-07
+- **现象**：丁帆 v2.23 写入后再次运行真题 `--verify-applied`，报告 seed 版本为 `2.23.0` 而非 `2.22.0`。
+- **根因**：验证器把批次目标版本当成整个种子的永久版本，没有考虑后续内容批次会继续升级 metadata version。
+- **已尝试修复**：
+  - ❌ 旧验证逻辑 — 产生 1 个版本误报，但没有修改数据。
+  - ✅ 改为检查 v2.22 真题补充记录是否仍存在，并重新验证 79 道真题，errors=0。
+- **教训**：增量批次验证应校验自身变更记录和数据实体，不应锁死后续批次的全局版本号。
+
+---
+
+## #021 v2.24 内容批次的完整 Gradle 测试仍被插件缓存阻塞
+
+- **日期**：2026-08-07
+- **现象**：丁帆 v2.24 合并后重新运行 `:core:data:test`，Gradle 在配置阶段失败，未进入 Kotlin 源码编译和单元测试。
+- **根因**：离线缓存仍缺少 `org.gradle.kotlin.kotlin-dsl:4.3.0`；当前环境不能访问插件仓库补齐该依赖。
+- **已尝试修复**：
+  - ❌ Gradle 8.7 `--offline`、单 worker、受控 JVM 内存 — `build-logic/build.gradle.kts` 第 2 行停止，退出码 1。
+  - ✅ 直接 Kotlin 编译四科框架并运行实际校验 — `frameworks=4 modern=211 total=1023 errors=0`。
+- **结论**：这是构建环境依赖阻塞，不是本批 JSON、框架源码或数据校验失败；完整 Android 单测仍需在插件缓存可用或网络恢复后补跑。
+- **教训**：每个内容批次都要重新记录当前构建边界，不能沿用旧批次的“已构建”结论。
+- **相关文件**：`build-logic/build.gradle.kts`、`core/data/src/main/java/com/wenyan/app/core/data/seed/KnowledgeFramework.kt`
+- **相关文件**：`tools/content_supplement/merge_exam_2023_2026_v2_22.py`、`app/src/main/assets/seed_data.json`
 
 ---
 

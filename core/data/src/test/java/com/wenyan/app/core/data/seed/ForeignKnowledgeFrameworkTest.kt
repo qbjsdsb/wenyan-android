@@ -7,8 +7,8 @@ import org.junit.Test
 class ForeignKnowledgeFrameworkTest {
 
     @Test
-    fun `124 个外国文学知识点均有且仅有一个显式归属`() {
-        assertEquals(124, ForeignKnowledgeFramework.assignments.size)
+    fun `157 个外国文学知识点均有且仅有一个显式归属`() {
+        assertEquals(157, ForeignKnowledgeFramework.assignments.size)
         assertTrue(ForeignKnowledgeFramework.validate(ForeignKnowledgeFramework.assignments.keys).isEmpty())
     }
 
@@ -69,14 +69,14 @@ class ForeignKnowledgeFrameworkTest {
 
         assertEquals(
             mapOf(
-                "foreign_overview" to 1,
-                "foreign_ancient" to 10,
-                "foreign_medieval" to 3,
-                "foreign_renaissance" to 5,
-                "foreign_classicism" to 2,
-                "foreign_enlightenment" to 4,
-                "foreign_romanticism" to 5,
-                "foreign_realism" to 25,
+                "foreign_overview" to 2,
+                "foreign_ancient" to 19,
+                "foreign_medieval" to 9,
+                "foreign_renaissance" to 8,
+                "foreign_classicism" to 4,
+                "foreign_enlightenment" to 7,
+                "foreign_romanticism" to 10,
+                "foreign_realism" to 29,
                 "foreign_late_nineteenth" to 18,
                 "foreign_modernism" to 19,
                 "foreign_late_twentieth" to 32,
