@@ -6989,3 +6989,31 @@ while (retryCount <= maxRetries) {
   - 全量 **631 单测 0 失败** + assembleDebug/Release 通过
 - **receipt**：`docs/release-receipts/v0.9.42-release-receipt.md`
 - **下次继续**：路线图——复习提醒通知（WorkManager）/ 学习统计页（review_logs 就绪）/ 知识图谱 Graph 视图
+
+## 2026-08-07：修复发布版关联知识点无法打开
+
+### 本轮结论
+
+- 用户反馈：新增知识点详情页的“关联知识点”列表能展示但点不开。
+- 根因定位：`app/src/main/java/com/wenyan/app/navigation/WenyanNavHost.kt` 对动态路由
+  `knowledge_detail/{pointId}` 统一启用 `launchSingleTop`。从详情 A 点击详情 B 时，
+  两者属于同一个导航目的地 ID，B 没有按浏览路径正常入栈，表现为关联项点击无效/仍停留在原详情。
+- 数据核查：当前 seed 2.26.0 共 1101 个知识点；新增 78 个中 70 个有派生关联、233 条边，
+  悬空关联 ID 和跨学科误连均为 0。8 个无共享标签的新增知识点没有关联项，属于预期数据状态。
+
+### 已实施修复
+
+- 详情页内部跳转不再使用 `launchSingleTop`，不同知识点保留 A → B → C 的返回历史。
+- 同一详情页重复点击、空白 ID 做保护；从列表等非详情页进入时仍保留 `launchSingleTop` 防重复点击。
+- 显式声明 `pointId` 为 String 导航参数，并对动态 ID 做 URI 编码。
+- 新增导航策略单元测试和 `GroupedCardItem` 点击回归测试，确认 UI 回调确实触发。
+- 版本提升至 `versionCode 68 / versionName 0.9.43`，并补充 CHANGELOG。
+- 顺手清理源码中已过时的 134/910 规模与旧 `launchSingleTop + popUpTo` 架构注释，避免后续维护误判当前数据和返回栈行为。
+
+### 验证与限制
+
+- `git diff --check` 通过。
+- seed 内容关系静态审计通过：1101 points / 78 new / 70 related sources / 233 edges / 0 dangling。
+- 独立只读全量审计通过：1101 knowledge points / 564 exam questions / 909 writing materials；142 道 ESSAY 中 134 道 angle/notes 完整、8 道按可选字段正常缺省，JSON 解析错误、悬空关联、重复 ID、跨科目关联均为 0。
+- 精确复现 `SeedDataLoader` 关系算法：1043 个关系源、4168 条边；新增 78 个知识点中 70 个有关系、233 条边，8 个无共享标签，符合规则。
+- 本地 Android 全量构建未能启动：Gradle Wrapper 需要从 `services.gradle.org` 下载 8.14.4，当前网络不可达；未将该环境限制误报为构建通过，应以推送后的 GitHub Actions `testDebugUnitTest` + `assembleDebug` 作为发布闸门。
