@@ -26,10 +26,10 @@ import javax.inject.Inject
  * 论述题列表 ViewModel（v0.9.8 Phase 2 新增）。
  *
  * 职责：
- * - 从 [KnowledgeRepository.observeAllEssays] 获取全部论述题（134 道）
+ * - 从 [KnowledgeRepository.observeAllEssays] 获取全部论述题
  * - 从 [ChapterRepository.observeSubjects] 获取科目列表（subj_xx → 科目名映射）
  * - 提供二维筛选：科目 / 仅显示有审题思路的题（v0.9.23：年份筛选已删除）
- * - 筛选在内存完成（134 题规模 < 5ms，与 observeRelatedEssays 策略一致）
+ * - 筛选在内存完成（当前数据量下 < 5ms，与 observeRelatedEssays 策略一致）
  *
  * 筛选状态独立 StateFlow，UI 可即时响应筛选切换（与 KnowledgeViewModel.selectedCategory
  * 解耦策略一致，避免 error/loading 态下筛选无反馈）。
