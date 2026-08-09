@@ -71,7 +71,7 @@ writing_materials
 | exam questions | 564 | exam_questions 数组长度 |
 | ESSAY questions | 142 | question_type == ESSAY |
 | writing materials | 909 | writing_materials 数组长度 |
-| seed SHA-256 | d6385911bf31fbecaf168d5e882ec0bfc32be32c333fe14a28fc19db2726446 | 整个文件摘要 |
+| seed SHA-256 | d6385911bf31fbec8af168d5e882ec0bfc32be32c333fe14a28fc19db2726446 | 整个文件摘要 |
 
 当前 seed 的真题年份范围为 2007—2026，题型包括 ANALYSIS、ESSAY、MULTIPLE_CHOICE、SHORT_ANSWER、TERM_EXPLANATION 和 WRITING。这些是当前事实，不代表未来版本永远不能增加题型；增加题型必须先更新 schema 和测试，而不是静默接受任意字符串。
 
