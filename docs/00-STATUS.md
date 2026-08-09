@@ -1,7 +1,7 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-08-09（v0.9.43 已发布；PR-00 正在统一可复算文档基线）
+> 最后更新：2026-08-09（v0.9.43 已发布；PR-00 已由 PR #11 建立，本次复核恢复历史日志完整性）
 
 ## ✅ 当前状态
 
@@ -122,7 +122,7 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **c1df65e**（v0.9.43 发布文档，2026-08-07） |
+| PR-00 产品基线 commit | **c1df65e**（v0.9.43 发布文档，PR-00 以此产品状态复算） |
 | 最新 Release | **v0.9.43**（2026-08-07，Release #70，导航修复，APK 已实测核验）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.43 |
 | versionCode / versionName | **68 / "0.9.43"** |
 | 知识点 | **1101 个（seed 2.26.0）** |
@@ -139,7 +139,7 @@
 | R8 | **已启用并随 v0.9.32 发布**（APK 6.11MB，需 emulator 冒烟实测） |
 | 启动图标 | **v7.5 双色页精进**（v0.9.27 起：米色右页+页脚厚度+缩进+主题镂空，纯矢量） |
 | 崩溃上报 | **未接入**（需 Firebase/Sentry 配置） |
-| 阻塞 | **远程 CI/release receipt 已记录 636 个 JVM unit test 与 Debug/Release 构建通过；本 PR 本地默认 Gradle 用户目录无法创建 wrapper 锁文件，改用临时目录后因 `services.gradle.org` 网络不可达而未进入测试/构建** |
+| 阻塞 | **PR-00 无产品代码阻塞；PR #11 的 Android Build & Test Run #433 已成功。当前仅修复该 PR 意外截断的历史会话日志，不开始 PR-01。** |
 
 > **统计口径与复算命令**：知识点、真题、论述题和写作材料均统计 `app/src/main/assets/seed_data.json` 的对应数组；论述题按 `question_type == "ESSAY"` 筛选；JVM unit test 只统计 `app/src/test`、`core`、`feature` 中的 `@Test`，不含 `app/src/androidTest`。完整命令和当前系统表见 [docs/architecture/current-system.md](architecture/current-system.md)。
 

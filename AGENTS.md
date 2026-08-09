@@ -8,7 +8,9 @@
 
 **技术栈**：Kotlin 2.3.10 / Jetpack Compose（BOM 2025.12.00）/ Material 3 Expressive（material3 1.5.0-alpha18）/ Hilt 2.57.1 / Room 2.7.0 / FSRS-6 自实现 / 多模块架构（参考 Google Now in Android）
 
-**仓库**：`qbjsdsb/wenyan-android`（private）
+**仓库**：`qbjsdsb/wenyan-android`（public）
+
+> **当前事实来源（2026-08-09）**：新任务以 [docs/00-STATUS.md](docs/00-STATUS.md)、[当前系统基线](docs/architecture/current-system.md)、仓库实际代码和 `.github/workflows/` 为准。本文件后半部保留的大段旧版本、D 盘、CodeBuddy、OCR 和图谱记录仅用于历史恢复，不能覆盖这些当前来源。
 
 ## 2. 快速恢复（新会话必读，3 步 5 分钟）
 
@@ -31,6 +33,9 @@ docs/
 ├── 02-VERSION-MATRIX.md         # 版本兼容性矩阵（避坑）
 ├── 03-FAILED-ATTEMPTS.md        # 失败方案档案（不重复踩坑）
 ├── SESSION_LOG.md               # 会话日志（持续更新）
+├── architecture/
+│   └── current-system.md        # PR-00 可复算系统基线
+├── decisions/                   # 当前架构与数据保护决定
 │
 ├── design/                      # 设计文档
 │   ├── app-design.md            # App 主设计（定位/功能/架构）
@@ -74,10 +79,17 @@ tools/                           # Python 管线脚本
 
 ## 4. 硬约束（不可违反）
 
+### 4.1 当前仓库与 Android 约束
+
 - **所有代码和修改必须存储在 GitHub** — Trae 云端不保留记忆，仓库即记忆
 - **PKCS12 keystore 要求 storepass = keypass** — 否则 Gradle Android 签名失败
 - **Release 由 push tag 触发** — `git tag vX.Y.Z && git push origin vX.Y.Z`
-- **Release 前删除旧 orphan tag** — 旧 tag 指向的 commit 不存在会导致失败
+- **只处理已确认的同名失败 tag** — 删除或移动 tag 前必须解析准确 tag 和 commit；禁止批量删除或凭旧记录删除 tag
+
+### 4.2 历史 Windows/OCR/Node 工作站约束
+
+> 以下规则只在任务明确维护旧 Windows OCR 或历史 Node 中间件时适用。普通 Android、文档、CI 和内容审计任务不得假定存在 `D:\wenyan`、`ocr` conda 环境、Koa 服务或旧沙箱配置。
+
 - **不修改 route 文件**（中间件重构时）
 - **所有中间件使用 async/await**，不用 callback
 - **使用 Koa 2.x**（Express 已弃用）
@@ -111,9 +123,10 @@ tools/                           # Python 管线脚本
 - 纯测试代码改动（新增/修改测试）
 - 纯文档改动（docs/ 或 AGENTS.md）
 
-**本地验证最低标准**（push 前必须通过）：
-- `assembleDebug` SUCCESSFUL
-- `testDebugUnitTest` 全绿（若有测试改动）
+**本地验证最低标准**（push 前必须如实报告）：
+- Android 源码、依赖或构建配置改动：`assembleDebug` SUCCESSFUL
+- 业务逻辑或测试改动：相关测试及 `testDebugUnitTest` 全绿
+- 纯文档改动：运行文档/链接/复算门禁与 `git diff --check`；Android 构建可以不重复运行，但必须说明未运行原因并以远程 CI 为最终补充证据
 
 **Release tag 流程**：
 1. 确认本地 `assembleDebug` + `testDebugUnitTest` 全绿
@@ -135,7 +148,9 @@ tools/                           # Python 管线脚本
 | key password | GitHub Secrets: `KEY_PASSWORD`（与 KEYSTORE_PASSWORD 相同） |
 | LLM API key | 本地环境变量配置 |
 
-### 沙箱推送通道（2026-08-02 新增，CodeBuddy 环境）
+### 历史沙箱推送通道（2026-08-02，CodeBuddy 环境）
+
+> **ARCHIVED**：下述主机、凭据位置和有效期只描述当时的 CodeBuddy 沙箱。新环境不得据此假定凭据存在、读取旧凭据文件或改写 remote；应先检查当前 Git remote 与已授权的 GitHub 连接。
 
 **背景**：沙箱网络无法直连 github.com（TLS 握手被中间设备掐断），api.github.com / SSH 亦不可达。经排查，**ghfast.top 镜像可透传 git 协议（含 git-receive-pack 写操作）**，配合 GitHub PAT 可正常 clone / push / 打 tag。
 
@@ -153,7 +168,7 @@ git tag vX.Y.Z && git push origin vX.Y.Z   # 打 tag 触发 Release
 
 **安全**：PAT 只存沙箱本地（~/.git-credentials 权限 600），绝不写入仓库。
 
-### 沙箱构建环境（2026-08-02 新增，CodeBuddy 环境）
+### 历史沙箱构建环境（2026-08-02，CodeBuddy 环境）
 
 **背景**：沙箱无法直连任何 Google 官方源（services.gradle.org / dl.google.com / repo1 / maven.google.com，TLS 全部被中间设备掐断）。构建必须全链路走国内镜像。已配置完成，新会话直接用：
 
@@ -187,7 +202,9 @@ export PATH=/opt/jdk17/bin:$PATH
 - commit message 说清"为什么改"，不只是"改了什么"
 - 用户偏好：中文交流、严谨验证、反复检查、有趣的教学风格、M3 谷歌味道 UI
 
-## 7. 当前状态（2026-08-01）
+## 7. 历史状态快照（2026-08-01）
+
+> **ARCHIVED**：本节及后续阶段/优先级记录是 2026-08-01 的恢复快照，不是当前待办。当前版本、阻塞和下一工单只看 [docs/00-STATUS.md](docs/00-STATUS.md) 与已批准的实施计划。
 
 **✅ v0.9.18 悬浮底部导航栏 + 知识卡片手动加入错题本（已发布）** — 双功能发布。**悬浮导航栏**：响应用户需求"ksunext 底部悬浮"，Surface 包裹 NavigationBar（圆角 16dp + tonalElevation 3dp + 水平间距 16dp + 底部 8dp 留空），BottomGradientScrim 缩短至 80dp（原 120dp），减少遮挡面积 20%。**手动加入错题本**：响应用户需求"在知识卡片里面加一个按钮，可以把卡片手动加入错题本"，5 层实现（SOURCE_CARD_MANUAL 常量 / `addToWrongAnswerBook()` 防重入+防重复+NonCancellable 原子写入 / `AddToWrongAnswerButton` 三态 UI / `isCurrentCardInWrongBook` sibling 感知 / 10+ 新测试）。**CI 修复**：3 轮编译错误修复 + 14 个测试失败修复（移除 Dispatchers.IO，与 rateCard() 模式一致）。CI 全绿后正确打 tag v0.9.18 → commit `7ec209da`。**Release 2026-08-01T18:46:10Z 成功发布**，APK 19,475,344 bytes SHA-256 `3d968ad5...0561f5`。Exception E1（debug 签名 fallback）。设计文档：[docs/plans/floating-navigation-bar.md](docs/plans/floating-navigation-bar.md) + [docs/plans/cards-add-to-wrong-answer-book.md](docs/plans/cards-add-to-wrong-answer-book.md)。**待 emulator 实测**：验证悬浮导航栏 + 手动加入错题本 + 启动图标 v4 三项功能。
 
@@ -250,7 +267,7 @@ export PATH=/opt/jdk17/bin:$PATH
 - CI 阻塞：GitHub Actions 账单问题，38+ commit 待 CI 验证（不影响 Release，已通过本地构建 + gh 上传绕过）
 - 详见 [docs/00-STATUS.md](docs/00-STATUS.md) + [docs/SESSION_LOG.md](docs/SESSION_LOG.md) 最后一节
 
-## 8. 项目阶段总览
+## 8. 历史项目阶段总览
 
 | 阶段 | 状态 | 说明 |
 |------|------|------|
@@ -288,7 +305,7 @@ export PATH=/opt/jdk17/bin:$PATH
 | v0.9.6 关于与教程精简重构 + 代码卫生审计 | ✅ 完成 + 已发布（2026-07-31） | 响应用户反馈重构 AboutTutorialScreen.kt：7 章 430 行 → 5 节 ~384 行（HeroCard / QuickStart / Modules / Principles 可折叠 / About）。默认视图简洁，深度原理用 ExpandableInfoItem + AnimatedVisibility 按需展开。竖屏友好：MaxContentWidth.compact 限宽。同时修复 4 项代码卫生问题：CardsScreen.kt 弃用图标、FriendlyErrorMessage.kt 冗余 !!、CardsViewModel.kt 2 处 !!、导航 Preview 移除已删除 graph 模块引用。本地验证全绿（403 tests）。**PRR ✅ READY TO RELEASE + RBR ✅ PASS**。Release v0.9.6 已发布（debug 签名 Exception E1）。Debug APK SHA-256 `36237a66...2ff100` / 27,522,631 bytes / Release APK SHA-256 `8661d97b...8d356c` / 19,169,788 bytes |
 | v0.9.8 论述题板块 | ✅ 完成（2026-07-31，待发布） | 响应用户需求增加论述题板块串联知识点。**Phase 0 数据层**：ExamQuestionDao.observeAllEssays + KnowledgeRepository.observeRelatedEssays/observeEssayById/getKnowledgePointsByIds + SeedDataLoader.computeExamQuestionRelatedPoints + seed 2.13.1→2.14.0 + 3 道示例题。**Phase 1 UI 层**：知识点详情页"相关论述题"区块 + 论述题详情页 10 区块结构 + EssayDetailViewModel（JSON 解析 + 关联知识点聚合）+ EssayDetailModels（kotlinx.serialization 优雅降级）+ ROUTE_ESSAY_DETAIL 双向导航。**Phase 2 列表页 + 入口**：EssayListScreen + EssayListViewModel（三维筛选：年份/科目/审题思路 + retryTrigger 重试）+ 知识点列表 EssayEntryCard 入口 + ROUTE_ESSAY_LIST 子路由 + FakeChapterRepository。本地验证全绿（469 tests, 0 failures） |
 
-## 9. 下一步优先级
+## 9. 历史下一步优先级
 
 1. **P0**：跑 emulator 实测 v2.16.0（已 commit c951b2e，待发布）— 验证知识点补充：①seed 2.16.0 触发重导后 935 知识点正确导入 ②25 个新增知识点（kp_00911-kp_00935）可浏览/搜索 ③新增知识点按学科正确分类（古代4/现当代8/外国6/文论7）④eq_0100 knowledgeGaps 空数组正常渲染（无 OCR 错误条目）⑤论述题详情页"关联知识点"区块正确派生（16/134 题关联新增知识点）
 2. **P0**：跑 emulator 实测 v0.9.9（已发布，最新版）— 验证论述题板块完整功能：①知识点列表顶部 EssayEntryCard 入口可点击 → 论述题列表页 ②列表页三维筛选（年份/科目/仅显示有审题思路）正常 ③论述题详情页 11 区块结构渲染（题目/审题/论证/框架/依据/交叉验证/参考链接/知识盲点/关联知识点/AI 审题助手）④关联知识点点击跳转 ⑤AI 审题助手苏格拉底三阶段引导（需配置 LLM API key）+ 自评三档（AGAIN 回写错题本）⑥seed 2.15.0 触发重导后 134 道论述题 angle+notes 正确填充 ⑦知识点详情页"相关论述题"区块渲染
