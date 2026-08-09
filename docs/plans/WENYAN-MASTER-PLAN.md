@@ -5,24 +5,26 @@
 > 仓库：qbjsdsb/wenyan-android
 > 产品：面向南京师范大学中国现当代文学考研的离线优先复习 App
 
-本文是文研 Android 后续重构的总控计划。它把已有调研、项目约束和 Luna 工单流程固定为仓库内可引用的正式文件。具体工单的可执行边界和验收标准，以对应的 docs/plans/PR-*.md 为准；当前第一份细化工单是 docs/plans/PR-01A.md。
+本文是文研 Android 后续重构的总控计划。它把已有调研、项目约束和 Luna 工单流程固定为仓库内可引用的正式文件。具体工单的可执行边界和验收标准，以对应的 docs/plans/PR-*.md 为准；PR-01A 已完成，当前第一个未完成工单是 docs/plans/PR-01B.md。
+
+需要在 Codex Cloud 中一次授权连续完成复习 MVP 时，使用 docs/plans/CLOUD-MVP-EXECUTION.md；执行断点写入 docs/plans/CLOUD-MVP-PROGRESS.md。连续模式只减少人工等待次数，不降低迁移、测试、数据、来源和发布门槛。
 
 ## 1. 当前基线与状态
 
 ### 1.1 Git 基线
 
-本次修复建立的 PR-01A 文档工作树核对结果：
+2026-08-09 云端启动准备复核结果：
 
 | 项目 | 值 |
 | --- | --- |
-| 执行工作树 | /workspace/scratch/58688d6ea5d5/wenyan-android-pr01a-docs |
-| 当前分支 | agent/pr-01a-doc-blocker |
-| 当前 HEAD | 2436e6822a6a60bc58cba30176220cb13c91e191 |
-| 起始点 | origin/main |
-| 前置阶段 | PR-00 已合并的文档/系统基线 |
-| PR-01A 状态 | 审计引擎已实施，当前进行本地严格自审；尚未提交或推送 |
+| 远端基线 | main@205eb5c2ded5451e461167c7462f2e6348f76bd1 |
+| PR-00 | 已由 PR #11 建立；历史日志恢复由云端启动准备分支承接 |
+| PR-01A | 已由 PR #13 合并；确定性 seed audit 与 baseline 已进入 main |
+| PR-01A merge commit | 205eb5c2ded5451e461167c7462f2e6348f76bd1 |
+| 当前第一个未完成工单 | PR-01B：把 seed 审计与未漂移检查接入普通 Android CI |
+| 连续 MVP 终点 | PR-08C 后的 C24 闭环验收 |
 
-c1df65e860bc1e9f9deb046d63f4a05ac14f2883 是 PR-00 复算产品和数据的起始基线；它不是后续每个 PR 永远固定的 HEAD。每个新工单必须从当时已经合并的最新 main 新开独立分支。
+c1df65e860bc1e9f9deb046d63f4a05ac14f2883 仍是 PR-00 复算产品和数据的起始基线；它不是后续每个 PR 永远固定的 HEAD。普通单工单必须从当时已经合并的最新 main 新开独立分支；显式启用 Cloud MVP 连续模式时，则从最新 main 建一个云端分支，以原子 checkpoint commits 依次推进，最终只创建 Draft PR。
 
 ### 1.2 产品和 seed 快照
 
@@ -38,7 +40,7 @@ c1df65e860bc1e9f9deb046d63f4a05ac14f2883 是 PR-00 复算产品和数据的起�
 | 真题 | 564 | exam_questions 数组长度 |
 | 论述题 | 142 | question_type == ESSAY |
 | 写作材料 | 909 | writing_materials 数组长度 |
-| seed SHA-256 | d6385911bf31fbecaf168d5e882ec0bfc32be32c333fe14a28fc19db2726446 | seed_data.json 文件摘要 |
+| seed SHA-256 | d6385911bf31fbec8af168d5e882ec0bfc32be32c333fe14a28fc19db2726446 | seed_data.json 文件摘要 |
 
 当前已知的数据债务也必须由 PR-01A 重新计算，不得把这里的数字硬编码成“通过”：
 
@@ -94,6 +96,8 @@ c1df65e860bc1e9f9deb046d63f4a05ac14f2883 是 PR-00 复算产品和数据的起�
 
 ## 4. Luna 工单协议
 
+### 4.1 常规单工单模式
+
 每个 PR 只完成一个明确目标，固定遵循以下流程：
 
 1. 从最新已合并 main 新开独立分支；
@@ -106,6 +110,12 @@ c1df65e860bc1e9f9deb046d63f4a05ac14f2883 是 PR-00 复算产品和数据的起�
 8. 合并后关闭当前对话，下一工单重新从最新 main 开始。
 
 任何工单都不得直接推送 main、强推历史、打 tag、发布 APK 或顺手开始下一工单。CI 失败时先诊断根因，不得删测试、放宽审计、修改 baseline 或改 seed 来“变绿”。
+
+### 4.2 Codex Cloud 连续 MVP 模式
+
+只有用户明确要求执行 docs/plans/CLOUD-MVP-EXECUTION.md 时，才允许在一个独立云端分支中连续执行 PR-01B 到 PR-08C。该授权仅把每个工单的人工等待点改成自动 checkpoint；每个 checkpoint 仍须只做一个目标、测试先行、严格自审、形成原子 commit 并更新进度日志。
+
+连续模式不得并行写同一工作树，不得跳过 migration 或全量测试，不得自动 Ready、合并、打 tag、发布。触发执行合同列出的停止条件时，必须停在最后一个已通过 checkpoint，不得靠扩大范围或降低门槛继续。
 
 ## 5. 产品目标
 
@@ -163,7 +173,7 @@ PR-01A 的正式边界见 docs/plans/PR-01A.md。其核心要求如下：
 - 两次审计报告必须字节完全一致；
 - seed 文件内容和 SHA-256 必须保持不变。
 
-PR-01A 已按本总合同完成本地实现：新增只读审计 CLI、版本化 schema、确定性 baseline、最小 fixture 和回归测试；正式 seed、Android 产品代码、Gradle、CI 和用户数据均未修改。当前处于本地严格自审阶段，尚未提交或推送。
+PR-01A 已按本总合同完成并由 PR #13 合并：新增只读审计 CLI、版本化 schema、确定性 baseline、最小 fixture 和回归测试；正式 seed、Android 产品代码、Gradle、CI 和用户数据均未修改。合并 commit 为 205eb5c2ded5451e461167c7462f2e6348f76bd1。下一阶段是 PR-01B，正式合同见 docs/plans/PR-01B.md。
 
 ## 8. 未来实施的回滚和停工规则
 
@@ -199,3 +209,13 @@ PR-01A 已按本总合同完成本地实现：新增只读审计 CLI、版本化
 - ID 集合前后相同。
 
 产品阶段还要增加 Compose、导航、横屏、进程恢复或真机证据。报告必须区分“未运行”“运行失败”“运行通过”，不能把未运行写成通过。
+
+## 10. Cloud MVP 执行入口
+
+- 连续执行合同：docs/plans/CLOUD-MVP-EXECUTION.md
+- 续跑状态：docs/plans/CLOUD-MVP-PROGRESS.md
+- 当前起点：PR-01B
+- 授权终点：PR-08C 与 C24 闭环验收
+- 最终远端动作：一个 Draft PR；不得 Ready、合并、打 tag 或发布
+
+Cloud MVP 的内部数据库版本计划为：v11 内容溯源、v12 LearningUnit、v13 DailyPlan、v14 PracticeAttempt、v15 WritingSession。若最新 main 已占用版本号，按实际顺延并记录，禁止覆盖已有 migration。
