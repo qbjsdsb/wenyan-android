@@ -1,7 +1,7 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-08-07（v0.9.43 已发布并完成 APK 核验）
+> 最后更新：2026-08-09（v0.9.43 已发布；PR-00 正在统一可复算文档基线）
 
 ## ✅ 当前状态
 
@@ -122,7 +122,7 @@
 
 | 项 | 值 |
 |----|-----|
-| 最新 commit | **cd06696**（v0.9.42 发布文档，2026-08-07） |
+| 最新 commit | **c1df65e**（v0.9.43 发布文档，2026-08-07） |
 | 最新 Release | **v0.9.43**（2026-08-07，Release #70，导航修复，APK 已实测核验）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.43 |
 | versionCode / versionName | **68 / "0.9.43"** |
 | 知识点 | **1101 个（seed 2.26.0）** |
@@ -135,11 +135,13 @@
 | 图谱 | **已移除**（v0.9.3） |
 | AI 服务商 | DeepSeek/通义/智谱/月之暗面/自定义（v0.9.23 修复 URL 拼接） |
 | 更新日志机制 | **CHANGELOG.md** + release.yml 动态读取（v0.9.23 起） |
-| 单测 | **583 个 0 失败**（v0.9.36 验证，全屏横屏 +4） |
+| 单测 | **636 个 JVM unit test 0 失败**（v0.9.43 release receipt；不含 instrumentation test） |
 | R8 | **已启用并随 v0.9.32 发布**（APK 6.11MB，需 emulator 冒烟实测） |
 | 启动图标 | **v7.5 双色页精进**（v0.9.27 起：米色右页+页脚厚度+缩进+主题镂空，纯矢量） |
 | 崩溃上报 | **未接入**（需 Firebase/Sentry 配置） |
-| 阻塞 | **内容分支的 Gradle wrapper 无法访问 `services.gradle.org`，完整 Android 单测待可用构建缓存或网络后运行；静态数据与直接 Kotlin 框架校验已完成** |
+| 阻塞 | **远程 CI/release receipt 已记录 636 个 JVM unit test 与 Debug/Release 构建通过；本 PR 本地默认 Gradle 用户目录无法创建 wrapper 锁文件，改用临时目录后因 `services.gradle.org` 网络不可达而未进入测试/构建** |
+
+> **统计口径与复算命令**：知识点、真题、论述题和写作材料均统计 `app/src/main/assets/seed_data.json` 的对应数组；论述题按 `question_type == "ESSAY"` 筛选；JVM unit test 只统计 `app/src/test`、`core`、`feature` 中的 `@Test`，不含 `app/src/androidTest`。完整命令和当前系统表见 [docs/architecture/current-system.md](architecture/current-system.md)。
 
 ## ✅ v0.9.32 发布验证记录（2026-08-04，Release #62）
 

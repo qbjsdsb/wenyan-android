@@ -2,6 +2,8 @@
 
 > GitHub Actions 工作流配置说明。
 
+> **OBSOLETE（2026-08-09）**：本页保留旧 CI 说明和恢复线索，不是当前命令的权威来源。当前流程以 [android.yml](../../.github/workflows/android.yml) 和 [release.yml](../../.github/workflows/release.yml) 为准；当前 Gradle 版本和 `testDebugUnitTest`/`assembleDebug`/`assembleRelease` 入口可能与下文不同。不要删除下文历史命令，若需恢复旧环境请先核对工作流。
+
 ## 1. 工作流文件
 
 ### `.github/workflows/android.yml` — 主 CI

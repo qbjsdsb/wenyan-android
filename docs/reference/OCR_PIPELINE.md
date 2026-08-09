@@ -2,6 +2,8 @@
 
 > 本地运行 OCR 管线的完整指南。云端 AI 不直接运行此管线，但需理解流程以理解 seed_data.json 的来源。
 
+> **ARCHIVED / OBSOLETE（2026-08-09）**：下文的 `D:\wenyan`、Windows 路径、OCR 中间产物和旧脚本流程属于历史工作站恢复资料，不是当前 Android 构建或正式 seed 发布的唯一依据。保留原命令以便追溯；当前 seed 统计与发布边界以 [当前系统基线](../architecture/current-system.md) 和 [AI/OCR 内容审核闸门](../decisions/003-ai-ocr-review-gate.md) 为准。
+
 ## 1. 管线流程
 
 ```
