@@ -1,0 +1,306 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "wenyan-seed-legacy-1",
+  "schema_version": "wenyan-seed-legacy-1",
+  "title": "Wenyan seed legacy shape",
+  "description": "Versioned schema for the current read-only seed audit contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "metadata",
+    "subjects",
+    "knowledge_points",
+    "exam_questions",
+    "writing_materials"
+  ],
+  "properties": {
+    "metadata": { "$ref": "#/$defs/metadata" },
+    "subjects": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/subject" }
+    },
+    "knowledge_points": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/knowledge_point" }
+    },
+    "exam_questions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/exam_question" }
+    },
+    "writing_materials": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/writing_material" }
+    }
+  },
+  "$defs": {
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1
+    },
+    "subject_name": {
+      "type": "string",
+      "enum": [
+        "中国古代文学",
+        "中国现当代文学",
+        "外国文学",
+        "文学理论"
+      ]
+    },
+    "content_status": {
+      "type": "string",
+      "enum": [
+        "REVIEWED",
+        "LEGACY_UNVERIFIED",
+        "AI_DRAFT",
+        "REJECTED",
+        "DRAFT"
+      ]
+    },
+    "source_status": {
+      "type": "string",
+      "enum": [
+        "OFFICIAL_ORIGINAL",
+        "USER_CONFIRMED",
+        "SECONDARY_RECOLLECTION",
+        "UNKNOWN",
+        "LEGACY_UNVERIFIED"
+      ]
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["description", "fixes", "generated_at", "source", "version"],
+      "properties": {
+        "description": { "$ref": "#/$defs/non_empty_string" },
+        "fixes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/non_empty_string" }
+        },
+        "generated_at": { "$ref": "#/$defs/non_empty_string" },
+        "source": { "$ref": "#/$defs/non_empty_string" },
+        "version": { "$ref": "#/$defs/non_empty_string" }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "id", "name"],
+      "properties": {
+        "code": { "$ref": "#/$defs/non_empty_string" },
+        "id": {
+          "type": "string",
+          "pattern": "^subj_[0-9]+$"
+        },
+        "name": { "$ref": "#/$defs/subject_name" }
+      }
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "normalized", "type"],
+      "properties": {
+        "name": { "$ref": "#/$defs/non_empty_string" },
+        "normalized": { "$ref": "#/$defs/non_empty_string" },
+        "type": {
+          "type": "string",
+          "enum": [
+            "AUTHOR",
+            "CHARACTER",
+            "CONCEPT",
+            "EVENT",
+            "GENRE",
+            "IMAGE",
+            "LOCATION",
+            "MAGAZINE",
+            "MOVEMENT",
+            "PERIODICAL",
+            "PERSON",
+            "PUBLICATION",
+            "SCHOOL",
+            "WORK"
+          ]
+        }
+      }
+    },
+    "relation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["from", "to"],
+          "properties": {
+            "from": { "$ref": "#/$defs/non_empty_string" },
+            "relation": { "$ref": "#/$defs/non_empty_string" },
+            "to": { "$ref": "#/$defs/non_empty_string" },
+            "type": { "$ref": "#/$defs/non_empty_string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["subject", "predicate", "object", "metadata"],
+          "properties": {
+            "subject": { "$ref": "#/$defs/non_empty_string" },
+            "predicate": { "$ref": "#/$defs/non_empty_string" },
+            "object": { "$ref": "#/$defs/non_empty_string" },
+            "metadata": { "type": ["null", "object"] }
+          }
+        }
+      ]
+    },
+    "knowledge_point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "conflict_flag",
+        "core_conclusion",
+        "difficulty",
+        "entities",
+        "exam_frequency",
+        "full_content",
+        "id",
+        "merged_at",
+        "relations",
+        "source_count",
+        "study_text",
+        "subject",
+        "summary",
+        "tags",
+        "textbook_sources",
+        "title"
+      ],
+      "properties": {
+        "conflict_flag": { "type": "boolean" },
+        "core_conclusion": { "$ref": "#/$defs/non_empty_string" },
+        "difficulty": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "entities": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/entity" }
+        },
+        "exam_frequency": {
+          "type": "string",
+          "enum": ["HIGH", "MEDIUM", "LOW", "NEVER"]
+        },
+        "full_content": { "$ref": "#/$defs/non_empty_string" },
+        "id": {
+          "type": "string",
+          "pattern": "^kp_[0-9]+$"
+        },
+        "merged_at": { "$ref": "#/$defs/non_empty_string" },
+        "relations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/relation" }
+        },
+        "source_count": { "type": "integer", "minimum": 0 },
+        "study_text": { "$ref": "#/$defs/non_empty_string" },
+        "subject": { "$ref": "#/$defs/subject_name" },
+        "summary": { "$ref": "#/$defs/non_empty_string" },
+        "tags": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/non_empty_string" }
+        },
+        "textbook_sources": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "title": { "$ref": "#/$defs/non_empty_string" },
+        "content_status": { "$ref": "#/$defs/content_status" },
+        "status": { "$ref": "#/$defs/content_status" },
+        "review_status": { "$ref": "#/$defs/content_status" },
+        "source_status": { "$ref": "#/$defs/source_status" },
+        "published": { "type": "boolean" },
+        "source_ref": { "type": "string" },
+        "source": { "type": "string" }
+      }
+    },
+    "exam_question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "answer_framework",
+        "content",
+        "exam_paper_code",
+        "id",
+        "question_type",
+        "score",
+        "subject",
+        "year"
+      ],
+      "properties": {
+        "answer_framework": { "$ref": "#/$defs/non_empty_string" },
+        "angle": { "type": ["null", "string"] },
+        "content": { "$ref": "#/$defs/non_empty_string" },
+        "exam_paper_code": { "$ref": "#/$defs/non_empty_string" },
+        "id": {
+          "type": "string",
+          "pattern": "^eq_[0-9]+b?$"
+        },
+        "notes": { "type": ["null", "string"] },
+        "question_type": {
+          "type": "string",
+          "enum": [
+            "ANALYSIS",
+            "ESSAY",
+            "MULTIPLE_CHOICE",
+            "SHORT_ANSWER",
+            "TERM_EXPLANATION",
+            "WRITING"
+          ]
+        },
+        "related_point_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^kp_[0-9]+$"
+          }
+        },
+        "score": { "type": "integer", "minimum": 0 },
+        "subject": { "$ref": "#/$defs/subject_name" },
+        "year": { "type": "integer", "minimum": 1900, "maximum": 2100 },
+        "content_status": { "$ref": "#/$defs/content_status" },
+        "status": { "$ref": "#/$defs/content_status" },
+        "review_status": { "$ref": "#/$defs/content_status" },
+        "source_status": { "$ref": "#/$defs/source_status" },
+        "published": { "type": "boolean" },
+        "source": { "type": "string" },
+        "source_ref": { "type": "string" },
+        "exam_source": { "type": "string" },
+        "source_evidence": {
+          "type": ["null", "string", "object", "array"]
+        },
+        "sample_essay": { "type": "string" }
+      }
+    },
+    "writing_material": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "category",
+        "content",
+        "created_at",
+        "id",
+        "source",
+        "sub_category",
+        "tags"
+      ],
+      "properties": {
+        "category": { "$ref": "#/$defs/subject_name" },
+        "content": { "$ref": "#/$defs/non_empty_string" },
+        "created_at": { "$ref": "#/$defs/non_empty_string" },
+        "id": {
+          "type": "string",
+          "pattern": "^wm_[0-9]+$"
+        },
+        "source": { "type": "string" },
+        "sub_category": { "$ref": "#/$defs/non_empty_string" },
+        "tags": { "$ref": "#/$defs/non_empty_string" },
+        "content_status": { "$ref": "#/$defs/content_status" },
+        "status": { "$ref": "#/$defs/content_status" },
+        "review_status": { "$ref": "#/$defs/content_status" },
+        "source_status": { "$ref": "#/$defs/source_status" },
+        "published": { "type": "boolean" }
+      }
+    }
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "metadata": {
+    "description": "最小化 PR-01A 测试 seed",
+    "fixes": [],
+    "generated_at": "2026-01-01T00:00:00.000000",
+    "source": "fixture",
+    "version": "fixture-1.0.0"
+  },
+  "subjects": [
+    {
+      "code": "ancient",
+      "id": "subj_01",
+      "name": "中国古代文学"
+    }
+  ],
+  "knowledge_points": [
+    {
+      "conflict_flag": false,
+      "core_conclusion": "最小化测试结论。",
+      "difficulty": 2,
+      "entities": [
+        {
+          "name": "测试作品",
+          "normalized": "测试作品",
+          "type": "WORK"
+        }
+      ],
+      "exam_frequency": "HIGH",
+      "full_content": "最小化测试正文。",
+      "id": "kp_00001",
+      "merged_at": "2026-01-01T00:00:00.000000",
+      "relations": [
+        {
+          "from": "测试作者",
+          "relation": "AUTHORED",
+          "to": "测试作品"
+        }
+      ],
+      "source_count": 1,
+      "study_text": "最小化测试背诵文本。",
+      "subject": "中国古代文学",
+      "summary": "最小化测试摘要。",
+      "tags": ["测试"],
+      "textbook_sources": ["测试教材，第 1 页"],
+      "title": "最小化测试知识点"
+    }
+  ],
+  "exam_questions": [
+    {
+      "answer_framework": "最小化测试答案框架。",
+      "content": "测试真题题干",
+      "exam_paper_code": "fixture",
+      "id": "eq_0001",
+      "question_type": "TERM_EXPLANATION",
+      "score": 5,
+      "subject": "中国古代文学",
+      "year": 2026
+    }
+  ],
+  "writing_materials": [
+    {
+      "category": "中国古代文学",
+      "content": "最小化测试写作材料。",
+      "created_at": "2026-01-01T00:00:00.000000",
+      "id": "wm_0001",
+      "source": "测试教材，第 1 页",
+      "sub_category": "测试专题",
+      "tags": "测试"
+    }
+  ]
+}
