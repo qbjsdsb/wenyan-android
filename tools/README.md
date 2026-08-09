@@ -62,3 +62,27 @@ python generate_seed.py --input output/cross_validated/ --output ../app/src/main
 - **核心教材 DPI=200，参考书 DPI=150**
 - **4 进程并行**
 - **断点续传**：pipeline_runner.py 自动跳过已完成文件
+
+## PR-01A：只读 seed 审计
+
+PR-01A 的审计器只读取 seed、schema 和 baseline，不会修改
+`app/src/main/assets/seed_data.json`，也不会自动更新 baseline。它使用 Python
+标准库，输出不含运行时间、机器绝对路径或教材正文的确定性 JSON 报告。
+
+```bash
+python -m tools.content_pipeline.audit_seed \
+  --seed app/src/main/assets/seed_data.json \
+  --schema content/schema/seed.schema.json \
+  --baseline content/baselines/seed-baseline.json \
+  --report /tmp/wenyan-seed-audit.json \
+  --as-of-year 2026
+```
+
+首次建立或经人工审阅后更新 baseline 时，必须显式使用
+`--write-baseline PATH`；普通审计不会写入 baseline。退出码为 0 表示 schema、
+引用、ID、噪声和 ratchet 检查均通过；已记录的 legacy debt 会保留在报告中，
+新增债务、旧 ID 删除和未批准的跨科关系会返回非 0。
+
+```bash
+python -m unittest discover -s tools/tests -p 'test*.py'
+```
