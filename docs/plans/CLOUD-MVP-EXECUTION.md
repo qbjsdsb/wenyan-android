@@ -86,8 +86,8 @@
 
 - Repository：qbjsdsb/wenyan-android
 - Base branch：最新 main
-- Model：Luna
-- Reasoning：界面提供的最高单代理档位
+- Model：由 Codex Cloud 自动选择；当前云端聊天不支持手动更改默认模型，不要把 Luna 或其他模型作为启动前置条件
+- Reasoning：使用云端提供的默认设置；若界面不提供调节项，不因此停工
 - Agent internet：关闭；本 MVP 不需要运行时联网检索
 - Secrets：不配置发布签名、GitHub PAT 或 LLM API key
 - 同一时间只运行一个写任务
@@ -867,7 +867,7 @@ Draft PR 不得写“全部通过”，除非所有对应命令真实运行。CI
 
 ## 11. 可直接发送的云端启动语
 
-合并云端启动准备 PR 后，在 Codex Cloud 选择 qbjsdsb/wenyan-android、最新 main、Luna 最高单代理推理档，发送：
+合并云端启动准备 PR 后，在 Codex Cloud 选择 qbjsdsb/wenyan-android 和最新 main；模型由 Codex Cloud 自动选择，不要尝试把 Luna 作为云端模型，也不要因无法手动更改默认模型而停工。发送：
 
 ~~~text
 请在 Codex Cloud 中连续执行 docs/plans/CLOUD-MVP-EXECUTION.md。
