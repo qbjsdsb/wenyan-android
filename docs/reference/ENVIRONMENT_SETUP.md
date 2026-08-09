@@ -2,6 +2,8 @@
 
 > 本地与 CI 环境的配置说明。云端 AI 主要用 CI 环境；本地 AI 用本地环境。
 
+> **ARCHIVED / OBSOLETE（2026-08-09）**：本页混合记录旧 Android 工具链和个人 D 盘 OCR 环境，版本、路径与命令可能已失效；内容保留用于恢复历史环境。当前 Android 模块、版本和验证入口以 [当前系统基线](../architecture/current-system.md) 与仓库 workflow 为准。
+
 ## 1. Android 开发环境（云端 AI 适用）
 
 ### JDK 17

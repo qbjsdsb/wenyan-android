@@ -6,6 +6,8 @@
 - **Specialist**: migration-and-deprecation（staff-engineer-mode 2.1.0）
 - **Reversibility**: 两向门（Two-way door）— 见第 7 节
 
+> **OBSOLETE STATUS（2026-08-09）**：顶部“Accepted（待实施）”是历史快照。本 ADR 的迁移已经在 v0.9.0 及后续数据库迁移中实施；当前是否恢复图谱以 [决策 004：知识图谱 UI 暂缓恢复](../decisions/004-knowledge-graph-deferred.md) 为准。本文只保留原始决策与恢复信息，不再作为待办清单。
+
 ---
 
 ## 1. 决策问题（Decision Question）

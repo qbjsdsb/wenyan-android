@@ -2,6 +2,8 @@
 
 > 发布新版本 APK 的完整流程。
 
+> **ARCHIVED / OBSOLETE（2026-08-09）**：本页保留旧 Windows/D 盘操作路径和历史流程说明；实际触发顺序、Gradle 命令和签名闸门以仓库的 [release.yml](../../.github/workflows/release.yml) 为准。不要据下文旧版本号或命令判断当前发布状态。
+
 ## 1. 前置条件
 
 - 代码已 push 到 `main` 分支

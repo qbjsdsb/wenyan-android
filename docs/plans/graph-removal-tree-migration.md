@@ -6,6 +6,8 @@
 - **执行原则**: expand/contract（并行变更）— 先添加新路径，验证等价，再移除旧路径
 - **回滚策略**: 每个 Batch 独立 commit，`git revert <commit>` 即可回滚该批次
 
+> **ARCHIVED / COMPLETED（2026-08-09）**：本文件是 v0.9.0 迁移期间的历史任务清单。代码当前已经完成对应迁移，本文中的旧模块、旧表和旧行号不应当作现状；保留它们用于回滚与审计。当前图谱路线以 [决策 004：知识图谱 UI 暂缓恢复](../decisions/004-knowledge-graph-deferred.md) 为准。
+
 ---
 
 ## 0. 使用清单（Usage Inventory）
