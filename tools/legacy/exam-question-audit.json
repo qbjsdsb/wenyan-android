@@ -1,0 +1,95 @@
+{
+  "archive": {
+    "compressed_bytes": 204502835,
+    "manifest_categories": {
+      "南师现当代研究生必读书目": 12,
+      "古代文学": 10,
+      "复试真题与导师信息": 4,
+      "外国文学": 44,
+      "文学理论": 8,
+      "文学真题": 42,
+      "文学评论": 45,
+      "未分类": 6,
+      "现当代文学": 5,
+      "考研信息": 32
+    },
+    "manifest_completed": 172,
+    "manifest_file_types": {
+      "doc": 3,
+      "docx": 31,
+      "image": 4,
+      "pdf": 153,
+      "xls": 13,
+      "xlsx": 3,
+      "zip": 1
+    },
+    "manifest_scanned_at": "2026-07-10T10:49:45.243010",
+    "manifest_skipped": 36,
+    "manifest_total": 208,
+    "name": "tools.zip",
+    "sha256": "32cd115bd8e177966702f911ff2dbee011c42af7c76568fdd9959a2f72e3e15c"
+  },
+  "disposition": "quarantine_until_original_or_user_confirmed_source",
+  "distribution": {
+    "by_answer_status": {
+      "HAS_ANSWER": 460,
+      "NO_ANSWER": 21
+    },
+    "by_content_source": {
+      "TEXTBOOK_OCR": 481
+    },
+    "by_ocr_status": {
+      "VERIFIED": 481
+    },
+    "by_question_type": {
+      "ESSAY": 130,
+      "SHORT_ANSWER": 159,
+      "TERM_EXPLANATION": 176,
+      "UNKNOWN": 14,
+      "WRITING": 2
+    },
+    "by_subject": {
+      "中国古代文学": 198,
+      "中国现当代文学": 107,
+      "外国文学": 119,
+      "文学理论": 57
+    },
+    "by_year": {
+      "2007": 19,
+      "2008": 19,
+      "2009": 19,
+      "2010": 23,
+      "2011": 24,
+      "2012": 23,
+      "2013": 45,
+      "2014": 46,
+      "2015": 81,
+      "2016": 67,
+      "2017": 24,
+      "2018": 21,
+      "2019": 21,
+      "2020": 14,
+      "2021": 13,
+      "2022": 22
+    }
+  },
+  "format": "wenyan-tools-legacy-curated-v1",
+  "purpose": "历史真题 OCR 结果的结构审计；不作为正式题库或答案来源。",
+  "quality_flags": {
+    "ad_or_watermark_hits": 460,
+    "missing_analysis_text": 21,
+    "missing_score": 481,
+    "noise_categories": [
+      "联系方式",
+      "商业店铺/广告",
+      "扫描水印"
+    ]
+  },
+  "raw_artifact": {
+    "name": "output/exam_questions.json",
+    "source_file": "真题.pdf",
+    "total_questions": 481,
+    "year_range": "2007-2022"
+  },
+  "text_fields_included": false
+}
