@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.wenyan.app.core.database.entity.ExamQuestionEntity
 import com.wenyan.app.core.database.entity.PracticeErrorReason
 import com.wenyan.app.core.database.entity.PracticeAttemptEntity
+import com.wenyan.app.core.database.entity.PracticeRepairState
 import com.wenyan.app.core.data.repository.PracticeAttemptStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CompletableDeferred
@@ -248,6 +249,56 @@ class QuizPracticeDetailViewModelTest {
 
         val saved = store.values.values.single()
         assertTrue(saved.completedAt != null)
+        assertEquals("GOOD", saved.selfRating)
+    }
+
+    @Test
+    fun `旧的较低阶段快照不能覆盖已经完成的记录`() = runTest(dispatcher) {
+        val store = FakePracticeAttemptStore()
+        store.values["attempt-1"] = PracticeAttemptEntity(
+            id = "attempt-1",
+            questionId = "q1",
+            pointId = null,
+            learningUnitId = null,
+            sessionId = "session-1",
+            attemptType = "EXAM_OUTLINE",
+            userKeywords = "关键词",
+            outline = "完整提纲",
+            body = "正文",
+            startedAt = 1L,
+            revealedAt = 2L,
+            completedAt = 4L,
+            elapsedMs = 0L,
+            selfRating = "GOOD",
+            errorReasons = emptyList(),
+            repairState = PracticeRepairState.NONE.name,
+            createdAt = 1L,
+            updatedAt = 4L,
+        )
+        val handle = SavedStateHandle(
+            mapOf(
+                "questionId" to "q1",
+                "practice_session_id" to "session-1",
+                "practice_attempt_id" to "attempt-1",
+                "practice_attempt_stage" to "REVEALED",
+                "practice_show_answer" to true,
+                "practice_outline" to "完整提纲",
+            ),
+        )
+        val examDao = FakeExamQuestionDao(initialEssays = listOf(entity("q1", reviewed = true)))
+        val vm = QuizPracticeDetailViewModel(
+            savedStateHandle = handle,
+            knowledgeRepository = buildKnowledgeRepository(FakeKnowledgePointDao(), FakeDataSourceDao(), examDao),
+            wrongAnswerRepository = FakeKnowledgeWrongAnswerRepository(),
+            practiceAttemptStore = store,
+        )
+        subscribeCurrentQuestion(vm)
+
+        vm.assess(com.wenyan.app.core.database.entity.PracticeSelfRating.GOOD, emptySet())
+        advanceUntilIdle()
+
+        val saved = store.values.getValue("attempt-1")
+        assertEquals(4L, saved.completedAt)
         assertEquals("GOOD", saved.selfRating)
     }
 

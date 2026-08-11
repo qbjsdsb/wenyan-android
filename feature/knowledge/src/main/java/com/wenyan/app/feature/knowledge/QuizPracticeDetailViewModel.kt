@@ -142,6 +142,8 @@ class QuizPracticeDetailViewModel @Inject constructor(
     private var loadJob: Job? = null
     private var restoreJob: Job? = null
     private val persistMutex = Mutex()
+    private var persistGeneration = 0L
+    private val persistedGenerations = mutableMapOf<String, Long>()
 
     private fun loadQuestions() {
         loadJob?.cancel()
@@ -398,27 +400,53 @@ class QuizPracticeDetailViewModel @Inject constructor(
         val now = currentTimeMillis()
         val attemptId = savedStateHandle.get<String>(KEY_ATTEMPT_ID)
             ?: "attempt-${java.util.UUID.randomUUID()}".also { savedStateHandle[KEY_ATTEMPT_ID] = it }
+        val requestedGeneration = ++persistGeneration
         viewModelScope.launch {
             runCatching {
                 // assess() and completeAttempt() are separate transitions, but their persistence
-                // jobs can overlap. Serialize the read-modify-write sequence so a later completed
-                // state cannot be overwritten by an older state that read the same prior row.
+                // jobs can overlap. Serialize the read-modify-write sequence, discard stale
+                // snapshots for the same attempt, and never downgrade a persisted stage.
                 persistMutex.withLock {
+                    if (requestedGeneration < (persistedGenerations[attemptId] ?: Long.MIN_VALUE)) return@withLock
                     val existing = practiceAttemptStore.get(attemptId)
+                    val existingStage = existing?.let(::persistedStage) ?: PracticeAttemptStage.ANSWERING
+                    val effectiveStage = maxOf(state.stage, existingStage)
+                    val effectiveDraft = if (existingStage > state.stage) {
+                        PracticeDraft(existing.userKeywords, existing.outline, existing.body)
+                    } else {
+                        state.draft
+                    }
+                    val effectiveRating = if (state.stage >= PracticeAttemptStage.ASSESSED) {
+                        state.rating?.name ?: existing?.selfRating
+                    } else {
+                        existing?.selfRating
+                    }
+                    val effectiveErrors = if (state.stage >= PracticeAttemptStage.ASSESSED) {
+                        state.errors
+                    } else {
+                        existing?.errorReasons.orEmpty().mapNotNull(PracticeErrorReason::fromDb).toSet()
+                    }
+                    val effectiveRepairState = if (state.stage >= PracticeAttemptStage.ASSESSED) {
+                        state.repairState
+                    } else {
+                        PracticeRepairState.fromDb(existing?.repairState.orEmpty())
+                    }
                     practiceAttemptStore.save(
                         PracticeAttemptEntity(
                             id = attemptId, questionId = question.id,
                             pointId = question.relatedPointIds?.singleOrNull(), learningUnitId = null,
                             sessionId = sessionId, attemptType = PracticeAttemptType.EXAM_OUTLINE.name,
-                            userKeywords = state.draft.keywords, outline = state.draft.outline, body = state.draft.body,
+                            userKeywords = effectiveDraft.keywords, outline = effectiveDraft.outline, body = effectiveDraft.body,
                             startedAt = existing?.startedAt ?: now,
-                            revealedAt = if (state.stage >= PracticeAttemptStage.REVEALED) existing?.revealedAt ?: now else null,
-                            completedAt = if (state.stage == PracticeAttemptStage.COMPLETED) existing?.completedAt ?: now else null,
-                            elapsedMs = existing?.elapsedMs ?: 0L, selfRating = state.rating?.name,
-                            errorReasons = state.errors.map { it.name }.sorted(), repairState = state.repairState.name,
+                            revealedAt = if (effectiveStage >= PracticeAttemptStage.REVEALED) existing?.revealedAt ?: now else null,
+                            completedAt = if (effectiveStage == PracticeAttemptStage.COMPLETED) existing?.completedAt ?: now else null,
+                            elapsedMs = existing?.elapsedMs ?: 0L,
+                            selfRating = effectiveRating,
+                            errorReasons = effectiveErrors.map { it.name }.sorted(), repairState = effectiveRepairState.name,
                             createdAt = existing?.createdAt ?: now, updatedAt = now,
                         ),
                     )
+                    persistedGenerations[attemptId] = requestedGeneration
                 }
             }.onFailure { Timber.e(it, "persist practice attempt failed") }
         }
@@ -469,7 +497,7 @@ class QuizPracticeDetailViewModel @Inject constructor(
             attemptStage.value != PracticeAttemptStage.ANSWERING.name || _showAnswer.value ||
             selectedRating.value != null || selectedErrors.value.isNotEmpty()
 
-    private fun restoredStage(attempt: PracticeAttemptEntity): PracticeAttemptStage = when {
+    private fun persistedStage(attempt: PracticeAttemptEntity): PracticeAttemptStage = when {
         attempt.completedAt != null -> PracticeAttemptStage.COMPLETED
         attempt.selfRating != null -> PracticeAttemptStage.ASSESSED
         attempt.revealedAt != null -> PracticeAttemptStage.REVEALED
@@ -477,6 +505,8 @@ class QuizPracticeDetailViewModel @Inject constructor(
             PracticeAttemptStage.SAVED
         else -> PracticeAttemptStage.ANSWERING
     }
+
+    private fun restoredStage(attempt: PracticeAttemptEntity): PracticeAttemptStage = persistedStage(attempt)
 
     internal var currentTimeMillis: () -> Long = System::currentTimeMillis
 
