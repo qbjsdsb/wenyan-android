@@ -8,6 +8,37 @@
 > release.yml 会自动读取当前 tag 对应的日志作为 GitHub Release 正文，
 > App 内"检查更新"界面展示的更新日志即来源于此。**务必随版本更新，不要遗漏。**
 
+## [v0.9.44] - 2026-08-11
+
+学习单元 / 每日计划 / 练习 / 写作四大功能上线（合并 PR #16）。
+
+### 学习单元（Learning Units）
+
+- 新增学习单元生成器与同步器：按教材章节稳定派生学习单元，跨种子升级保留用户进度
+- 新增学习单元记录表与 FSRS 单元级评分支持，知识进度仓库落地
+
+### 每日计划（Daily Planner）
+
+- 新增每日计划与任务模型：确定性日计划生成（每日任务），今日任务集中展示
+- 计划仓库与导航联动，"今日"成为新的顶级 Tab 入口
+
+### 练习与写作（Practice & Writing）
+
+- 新增练习会话规划器与练习尝试工作流，练习修复调度
+- 新增写作会话引擎与自动保存、写作证据仓库，支持离线写作
+
+### 数据与导航
+
+- **数据库升级 v8 → v15**：新增 6 张表（learning_units / learning_unit_records / daily_plans / daily_tasks / practice_attempts / writing_sessions）+ data_sources 溯源字段扩展 + MIGRATION_8_9…14_15 全量迁移
+- 导航新增 today / training / my 三个顶级目的地，NavigationHubScreens 上线，启动目的地与路由更新
+- TopLevelDestination 帮助函数与 WenyanNavHost 逻辑调整，应用组合层内存/性能小幅优化
+
+### 工程与 CI
+
+- CI seed 审计改为确定性执行（两次运行 + cmp 比对），上传审计产物，启用 Python 3.12
+- 测试顺序调整：先跑单元测试再 assemble APK；单元测试与迁移测试（v8→v15）大量补充
+- GitHub Actions 单测与构建通过（PR #16 build check ✅）
+
 ## [v0.9.43] - 2026-08-07
 
 修复新增知识点详情页中“关联知识点”点击后无法打开的问题。

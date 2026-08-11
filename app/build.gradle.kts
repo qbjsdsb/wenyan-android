@@ -146,7 +146,8 @@ android {
         // v0.9.41=66（修复详情页逐级返回栈 + 全局界面动效精修 + 图标 v8；合并 PR #8。）
         // v0.9.42=67（教材与真题内容增量；四科框架覆盖基线更新至 1101 条；修复发布前校验。）
         // v0.9.43=68（修复关联知识点详情跳转：不同知识点正常入栈、同一点重复点击去重；补充导航与点击回归测试。）
-        versionCode = 68
+        // v0.9.44=69（学习单元/每日计划/练习/写作四大功能：DB schema v8→v15、today/training/my 新导航、CI seed 确定性审计；合并 PR #16。）
+        versionCode = 69
         // P1-M1 修正：versionName 与实际版本对齐（原 "0.1.0" 误标三版未更新）
         // v0.9.19：紧凑玻璃风格导航栏 + 种子加载 300s+重试机制
         //   数据一致性修复（B1/B2/B3）：
@@ -225,7 +226,8 @@ android {
         // v0.9.41：修复逐级返回 + 全局动效精修 + 图标 v8（见 versionCode 注释）
         // v0.9.42：教材/真题内容增量与框架覆盖校验修复（见 versionCode 注释）
         // v0.9.43：关联知识点动态详情导航修复与回归测试（见 versionCode 注释）
-        versionName = "0.9.43"
+        // v0.9.44：学习单元/每日计划/练习/写作四大功能（见 versionCode 注释）
+        versionName = "0.9.44"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
