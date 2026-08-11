@@ -1,0 +1,2965 @@
+{
+  "archive": {
+    "compressed_bytes": 204502835,
+    "manifest_categories": {
+      "南师现当代研究生必读书目": 12,
+      "古代文学": 10,
+      "复试真题与导师信息": 4,
+      "外国文学": 44,
+      "文学理论": 8,
+      "文学真题": 42,
+      "文学评论": 45,
+      "未分类": 6,
+      "现当代文学": 5,
+      "考研信息": 32
+    },
+    "manifest_completed": 172,
+    "manifest_file_types": {
+      "doc": 3,
+      "docx": 31,
+      "image": 4,
+      "pdf": 153,
+      "xls": 13,
+      "xlsx": 3,
+      "zip": 1
+    },
+    "manifest_scanned_at": "2026-07-10T10:49:45.243010",
+    "manifest_skipped": 36,
+    "manifest_total": 208,
+    "name": "tools.zip",
+    "sha256": "32cd115bd8e177966702f911ff2dbee011c42af7c76568fdd9959a2f72e3e15c"
+  },
+  "completed_sources": [
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2016年南京师范大学文学院硕士复试名单公示.xls",
+      "file_type": "xls",
+      "hash": "d43eacb92489a6a8d32e6d207b00e5b0",
+      "id": "file_001",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2016/2016年南京师范大学文学院硕士复试名单公示.xls",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2016年南京师范大学文学院硕士复试名单公示（含双985调剂生）.xls",
+      "file_type": "xls",
+      "hash": "8f253d49184722d76c2439f6dbc08b43",
+      "id": "file_002",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2016/2016年南京师范大学文学院硕士复试名单公示（含双985调剂生）.xls",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2016年南京师范大学文学院硕士研究生拟录取名单公示.xls",
+      "file_type": "xls",
+      "hash": "f277ef961acbf7be82c6c410a1459947",
+      "id": "file_003",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2016/2016年南京师范大学文学院硕士研究生拟录取名单公示.xls",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2016年南京师范大学文学院考研复试分数线.docx",
+      "file_type": "docx",
+      "hash": "42058a16a08be3cb63ab675417cf0672",
+      "id": "file_004",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2016/2016年南京师范大学文学院考研复试分数线.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2017年南京师范大学文学院硕士复试名单公示（含调剂生）.docx",
+      "file_type": "docx",
+      "hash": "ab29f99d3e3e3fc8ace7cab5b90e0f56",
+      "id": "file_005",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2017/2017年南京师范大学文学院硕士复试名单公示（含调剂生）.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2017年南京师范大学文学院硕士复试成绩公示（需修改）.docx",
+      "file_type": "docx",
+      "hash": "33ac18e3fb76a7c32b811cad9d79dd5c",
+      "id": "file_006",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2017/2017年南京师范大学文学院硕士复试成绩公示（需修改）.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2017年南京师范大学文学院硕士拟录取名单公示.docx",
+      "file_type": "docx",
+      "hash": "cea87f7f455e820bbb50582d62746a48",
+      "id": "file_007",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2017/2017年南京师范大学文学院硕士拟录取名单公示.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2017年南京师范大学文学院硕士研究生复试名单.docx",
+      "file_type": "docx",
+      "hash": "6d99070fac57df4acd8caa40ce91707c",
+      "id": "file_008",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2017/2017年南京师范大学文学院硕士研究生复试名单.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2017年南京师范大学文学院硕士研究生复试录取工作办法.docx",
+      "file_type": "docx",
+      "hash": "6bae2c625024b758e0dd26f574944ef2",
+      "id": "file_009",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2017/2017年南京师范大学文学院硕士研究生复试录取工作办法.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2017年南京师范大学文学院考研复试分数线.docx",
+      "file_type": "docx",
+      "hash": "fcad1f48d62df6570ccdc9fbdcf93fec",
+      "id": "file_010",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2017/2017年南京师范大学文学院考研复试分数线.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2018年南京师范大学文学院考研招生目录及参考书目.docx",
+      "file_type": "docx",
+      "hash": "204f681a0c17d589ff4dab78677fe14c",
+      "id": "file_011",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2018/2018年南京师范大学文学院考研招生目录及参考书目.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2018年文学院硕士复试名单公示（不含调剂生）.pdf",
+      "file_type": "pdf",
+      "hash": "f7702d264d34b29fc547ef0edfc64ca7",
+      "id": "file_012",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "1.考研信息/2018/2018年文学院硕士复试名单公示（不含调剂生）.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2018年文学院硕士复试名单公示（不含调剂生）.xls",
+      "file_type": "xls",
+      "hash": "41aae5e311b395cc7f3e1c6a81fe79a5",
+      "id": "file_013",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2018/2018年文学院硕士复试名单公示（不含调剂生）.xls",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2018年文学院硕士复试成绩公示.xls",
+      "file_type": "xls",
+      "hash": "3ed20e926919f3375f075878a9260614",
+      "id": "file_014",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2018/2018年文学院硕士复试成绩公示.xls",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2018年文学院硕士拟录取名单公示.xls",
+      "file_type": "xls",
+      "hash": "9620adeb43b4a7dc43dc904a9cce1d1c",
+      "id": "file_015",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2018/2018年文学院硕士拟录取名单公示.xls",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2019年南京师范大学文学院硕士研究生复试录取工作办法.docx",
+      "file_type": "docx",
+      "hash": "5e03bbe850c228702b480d2d4daa6fcf",
+      "id": "file_016",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2019/2019年南京师范大学文学院硕士研究生复试录取工作办法.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2019年南京师范大学文学院硕士研究生复试录取工作办法.pdf",
+      "file_type": "pdf",
+      "hash": "9cf3c081ff74adbd53271fa83728d6f0",
+      "id": "file_017",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "1.考研信息/2019/2019年南京师范大学文学院硕士研究生复试录取工作办法.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2019年南京师范大学文学院考研招生目录及参考书目.docx",
+      "file_type": "docx",
+      "hash": "e8a6882868fc3a8a59d98a0cde12e78e",
+      "id": "file_018",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2019/2019年南京师范大学文学院考研招生目录及参考书目.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2019年南京师范大学文学院考研招生目录及参考书目.pdf",
+      "file_type": "pdf",
+      "hash": "00f5b88fb2abb373a33880d8b78dae7f",
+      "id": "file_019",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "1.考研信息/2019/2019年南京师范大学文学院考研招生目录及参考书目.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2019年文学院硕士复试名单公示（不含调剂生）.xls",
+      "file_type": "xls",
+      "hash": "5d2f6a1eadf95f88029f35acc2029ba7",
+      "id": "file_020",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2019/2019年文学院硕士复试名单公示（不含调剂生）.xls",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2019年文学院硕士复试成绩公示.xls",
+      "file_type": "xls",
+      "hash": "ad3b16c2bc147ba4b34bb052d61e0a80",
+      "id": "file_021",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2019/2019年文学院硕士复试成绩公示.xls",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2019年文学院硕士拟录取名单公示.xls",
+      "file_type": "xls",
+      "hash": "dc4cd4d06aec30cb601bdcf472a62ab8",
+      "id": "file_022",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2019/2019年文学院硕士拟录取名单公示.xls",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "南京师范大学文学院2019年硕士研究生调剂复试名单公示.xls",
+      "file_type": "xls",
+      "hash": "c6b8f8342d8a9aec2446e306fdcf4bb0",
+      "id": "file_023",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2019/南京师范大学文学院2019年硕士研究生调剂复试名单公示.xls",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "文学院2019年硕士推免生拟录取名单-1_729.xlsx",
+      "file_type": "xlsx",
+      "hash": "bb67988dd9a9ae7df8c859554a89c664",
+      "id": "file_024",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2019/文学院2019年硕士推免生拟录取名单-1_729.xlsx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "文学院2019年硕士推免生拟录取名单.docx",
+      "file_type": "docx",
+      "hash": "05de57f7aff5fce8377560cdc3288eda",
+      "id": "file_025",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2019/文学院2019年硕士推免生拟录取名单.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "文学院2019年硕士推免生拟录取名单.pdf",
+      "file_type": "pdf",
+      "hash": "3481a7bf9f682e013f1a0ee612d94ca9",
+      "id": "file_026",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "1.考研信息/2019/文学院2019年硕士推免生拟录取名单.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2020年南京师范大学文学院推免生拟录取名单公示.docx",
+      "file_type": "docx",
+      "hash": "5f775eb74e59c2c132b6d15a326010c6",
+      "id": "file_027",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2020/2020年南京师范大学文学院推免生拟录取名单公示.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2020年文学院硕士复试名单公示.xls",
+      "file_type": "xls",
+      "hash": "8fd49b9c58b7348776d75e52169a605b",
+      "id": "file_028",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2020/2020年文学院硕士复试名单公示.xls",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2020年文学院硕士复试成绩公示.xls",
+      "file_type": "xls",
+      "hash": "c37c3aadcd99aedd6c15c13be13edcd8",
+      "id": "file_029",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2020/2020年文学院硕士复试成绩公示.xls",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2020年文学院硕士拟录取名单公示.xls",
+      "file_type": "xls",
+      "hash": "65cedb5c194533cf741ecd1a6df03557",
+      "id": "file_030",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2020/2020年文学院硕士拟录取名单公示.xls",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "2020年文学院硕士推免生拟录取名单.xlsx",
+      "file_type": "xlsx",
+      "hash": "a6cfbc01fc2958e8ffaf9bec690b6c5e",
+      "id": "file_031",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2020/2020年文学院硕士推免生拟录取名单.xlsx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "考研信息",
+      "duplicate_of": null,
+      "file_name": "文学院2021年硕士推免生拟录取名单.xlsx",
+      "file_type": "xlsx",
+      "hash": "c5cd630c2c18e35e2f0b1927226495cf",
+      "id": "file_032",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "1.考研信息/2021/文学院2021年硕士推免生拟录取名单.xlsx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2023年.docx",
+      "file_type": "docx",
+      "hash": "f18d6a218114553f26043d35dfbbf58e",
+      "id": "file_033",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "2.文学真题/20-23真题/2023年.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "20年（专一都一样，附现当代专二）.PNG",
+      "file_type": "image",
+      "hash": "b20a23147cd01410c3340fb1b6829d2a",
+      "id": "file_034",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "2.文学真题/20-23真题/20年（专一都一样，附现当代专二）.PNG",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "PENDING"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "21年（专一都一样，附现当代专二）.jpg",
+      "file_type": "image",
+      "hash": "c901c003200f203cd100b6b1c1cc6f4c",
+      "id": "file_035",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "2.文学真题/20-23真题/21年（专一都一样，附现当代专二）.jpg",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "PENDING"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "22年（专一都一样）.jpg",
+      "file_type": "image",
+      "hash": "bd8b5220ba0df844208b935ff6412efc",
+      "id": "file_036",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "2.文学真题/20-23真题/22年（专一都一样）.jpg",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "PENDING"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2003年.pdf",
+      "file_type": "pdf",
+      "hash": "bd54f6b5eb021ce0d5c7d7a562805f19",
+      "id": "file_037",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/古代文学/2003年.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2004年.pdf",
+      "file_type": "pdf",
+      "hash": "bd61f094d28d21350ac776fc05129da2",
+      "id": "file_038",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/古代文学/2004年.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2005年.pdf",
+      "file_type": "pdf",
+      "hash": "c2b6481a118cc0078a21b217cd5ecac3",
+      "id": "file_039",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/古代文学/2005年.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2006年.pdf",
+      "file_type": "pdf",
+      "hash": "fbdfd09d5ddfc6c80b4cc397235409a8",
+      "id": "file_040",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/古代文学/2006年.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2007年.pdf",
+      "file_type": "pdf",
+      "hash": "7d0e4aed43c3b22038309b7c8d58af4e",
+      "id": "file_041",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/古代文学/2007年.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2008年.pdf",
+      "file_type": "pdf",
+      "hash": "5f431621477f71c18733f86165c830da",
+      "id": "file_042",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/古代文学/2008年.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2009年.pdf",
+      "file_type": "pdf",
+      "hash": "80877dc85c79de2ba82ed98e366eeca4",
+      "id": "file_043",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/古代文学/2009年.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2010年.pdf",
+      "file_type": "pdf",
+      "hash": "fe827017347ba9d018c431c6f6bbf982",
+      "id": "file_044",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/古代文学/2010年.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2011年.pdf",
+      "file_type": "pdf",
+      "hash": "29b1e043a5c774c4a5fee0ec813d343b",
+      "id": "file_045",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/古代文学/2011年.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2012年.pdf",
+      "file_type": "pdf",
+      "hash": "bf28dac52d22ff7da9a65f983e393536",
+      "id": "file_046",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/古代文学/2012年.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2013年.pdf",
+      "file_type": "pdf",
+      "hash": "d3273bcf3d140ffcaa14f4b8038aa6e9",
+      "id": "file_047",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/古代文学/2013年.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2014年.pdf",
+      "file_type": "pdf",
+      "hash": "cfb9124d5b2fc58970de37c5f834567d",
+      "id": "file_048",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/古代文学/2014年.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2015年.pdf",
+      "file_type": "pdf",
+      "hash": "ca1a2271621f698bafad388e5f6bc7ad",
+      "id": "file_049",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/古代文学/2015年.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2016年.pdf",
+      "file_type": "pdf",
+      "hash": "ff3384dd0732a449d99e612978803402",
+      "id": "file_050",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/古代文学/2016年.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2017年.pdf",
+      "file_type": "pdf",
+      "hash": "85978bbeba6ba6f2e0cd60b3194c077e",
+      "id": "file_051",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/古代文学/2017年.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2018年.docx",
+      "file_type": "docx",
+      "hash": "e0d1e2ef96b0cb85228ba72befd0555b",
+      "id": "file_052",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "2.文学真题/古代文学/2018年.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2019年.docx",
+      "file_type": "docx",
+      "hash": "dc7c41c8472b93581644124c2434d8cc",
+      "id": "file_053",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "2.文学真题/古代文学/2019年.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "文艺学真题.docx",
+      "file_type": "docx",
+      "hash": "b7d07c98090bca042cf425b87c9f428b",
+      "id": "file_054",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "2.文学真题/文艺学/文艺学真题.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "文艺学真题.pdf",
+      "file_type": "pdf",
+      "hash": "c5f333f0a13efe9530701d89c223cbc1",
+      "id": "file_055",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/文艺学/文艺学真题.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "00-17.docx",
+      "file_type": "docx",
+      "hash": "1b757754262a927fd183270db87d6ffd",
+      "id": "file_056",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "2.文学真题/比较文学/00-17.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "06以前.doc",
+      "file_type": "doc",
+      "hash": "8485f573c2e2745ea2491d852695552d",
+      "id": "file_057",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "2.文学真题/比较文学/06以前.doc",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "13-17.pdf",
+      "file_type": "pdf",
+      "hash": "58e3aa747d26709711495c82e6fa21f0",
+      "id": "file_058",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/比较文学/13-17.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "18.docx",
+      "file_type": "docx",
+      "hash": "1834f68963d1ca6e3c575fd5a62c5246",
+      "id": "file_059",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "2.文学真题/比较文学/18.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "19.docx",
+      "file_type": "docx",
+      "hash": "bdfbd785da9116f53564cef84b6a219c",
+      "id": "file_060",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "2.文学真题/比较文学/19.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "20.jpg",
+      "file_type": "image",
+      "hash": "15bde52313876faab857a90e28d77a74",
+      "id": "file_061",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "2.文学真题/比较文学/20.jpg",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "PENDING"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "专业二 现代主义与后现代主义真题分析.pdf",
+      "file_type": "pdf",
+      "hash": "abff5647550ac9fe00b9161e288cd9f2",
+      "id": "file_062",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/比较文学/专业二 现代主义与后现代主义真题分析.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "专二讲解.pdf",
+      "file_type": "pdf",
+      "hash": "2a1c9e935b54ade7512c4fe0ac03bf35",
+      "id": "file_063",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/比较文学/专二讲解.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "文学基础讲解.pdf",
+      "file_type": "pdf",
+      "hash": "f264445f2f7e224de3d271c6380b52f4",
+      "id": "file_064",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/比较文学/文学基础讲解.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "某些真题重要答案.pdf",
+      "file_type": "pdf",
+      "hash": "d53e5d9fbcf2bcb43ce8b40e53c395f3",
+      "id": "file_065",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/比较文学/某些真题重要答案.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "01-10(2).pdf",
+      "file_type": "pdf",
+      "hash": "896359060d9d8d5b3550db9692d3eea5",
+      "id": "file_066",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "2.文学真题/现当代/01-10(2).pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "PENDING"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "14-15-17年.pdf",
+      "file_type": "pdf",
+      "hash": "43a11cb2de431a44ab018d402f922d59",
+      "id": "file_067",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "2.文学真题/现当代/14-15-17年.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "14-15年真题及答案.doc",
+      "file_type": "doc",
+      "hash": "48a4e3941e2abcfd071d6137ef8c2416",
+      "id": "file_068",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "2.文学真题/现当代/14-15年真题及答案.doc",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "20-22答案.pdf",
+      "file_type": "pdf",
+      "hash": "0fba5c57e8fddb21cd5dcc0ead5ff6c8",
+      "id": "file_069",
+      "is_duplicate": false,
+      "pdf_type": "ocr_layer",
+      "relative_path": "2.文学真题/现当代/20-22答案.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "PENDING"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2003-2010.pdf",
+      "file_type": "pdf",
+      "hash": "2bc2c3f241483763081577b34eafd97b",
+      "id": "file_070",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "2.文学真题/现当代/2003-2010.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "PENDING"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2011-2013.pdf",
+      "file_type": "pdf",
+      "hash": "f0e24f81c43b055a83f7fe4dd12aaad4",
+      "id": "file_071",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "2.文学真题/现当代/2011-2013.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "PENDING"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2016年现当代文学真题答案.docx",
+      "file_type": "docx",
+      "hash": "10a3b5a98521a0217557fb85557a16a5",
+      "id": "file_072",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "2.文学真题/现当代/2016年现当代文学真题答案.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2018年文学基础答案.docx",
+      "file_type": "docx",
+      "hash": "b85c3c18d05018660ce8c7912674bb00",
+      "id": "file_073",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "2.文学真题/现当代/2018年文学基础答案.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学真题",
+      "duplicate_of": null,
+      "file_name": "2019年文学基础答案.docx",
+      "file_type": "docx",
+      "hash": "a1f67bec396d9582d6b49794f3199d57",
+      "id": "file_074",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "2.文学真题/现当代/2019年文学基础答案.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "古代文学",
+      "duplicate_of": null,
+      "file_name": "中国古代文学史辅导与习题集.pdf",
+      "file_type": "pdf",
+      "hash": "dbb1e1d449cb4e39339a8dc8dc567b1c",
+      "id": "file_075",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "3.古代文学/中国古代文学史辅导与习题集.pdf",
+      "result_summary": {
+        "content_source": null,
+        "ocr_status": null
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "古代文学",
+      "duplicate_of": null,
+      "file_name": "游国恩版本.pdf",
+      "file_type": "pdf",
+      "hash": "8dcc9202a4fff13b2575bd0b5eb026fe",
+      "id": "file_076",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "3.古代文学/游国恩版本.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "古代文学",
+      "duplicate_of": null,
+      "file_name": "袁行霈版(超全完整版)笔记.doc",
+      "file_type": "doc",
+      "hash": "b1386197762537d9c25c1bc3867b3f7a",
+      "id": "file_077",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "3.古代文学/袁行霈版(超全完整版)笔记.doc",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "古代文学",
+      "duplicate_of": null,
+      "file_name": "中国文学史 第1卷 第3版.pdf",
+      "file_type": "pdf",
+      "hash": "33aa8dd796f6e5fbcafa193567b3fabf",
+      "id": "file_078",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "3.古代文学/袁行霈版本/中国文学史 第1卷 第3版.pdf",
+      "result_summary": {
+        "content_source": null,
+        "ocr_status": null
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "古代文学",
+      "duplicate_of": null,
+      "file_name": "中国文学史 第2卷 第3版.pdf",
+      "file_type": "pdf",
+      "hash": "6e0a847b050c8295471ec801d25281f9",
+      "id": "file_079",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "3.古代文学/袁行霈版本/中国文学史 第2卷 第3版.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "古代文学",
+      "duplicate_of": null,
+      "file_name": "中国文学史 第3卷 第3版.pdf",
+      "file_type": "pdf",
+      "hash": "4c69de621138cd45c56c81ec50f2c1c9",
+      "id": "file_080",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "3.古代文学/袁行霈版本/中国文学史 第3卷 第3版.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "古代文学",
+      "duplicate_of": null,
+      "file_name": "中国文学史 第4卷 第3版.pdf",
+      "file_type": "pdf",
+      "hash": "0befcbb0b911ba997d5a2bb303cbd036",
+      "id": "file_081",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "3.古代文学/袁行霈版本/中国文学史 第4卷 第3版.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "古代文学",
+      "duplicate_of": null,
+      "file_name": "中国古代文学史  第2版  中册_14469013.pdf",
+      "file_type": "pdf",
+      "hash": "0fc953869ef10ef1ada3a230db0c71d5",
+      "id": "file_082",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "3.古代文学/马工程教材/中国古代文学史  第2版  中册_14469013.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "古代文学",
+      "duplicate_of": null,
+      "file_name": "中国古代文学史 上 第2版_14480702.pdf",
+      "file_type": "pdf",
+      "hash": "9fc6435988166699772f59537d1fc1f8",
+      "id": "file_083",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "3.古代文学/马工程教材/中国古代文学史 上 第2版_14480702.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "古代文学",
+      "duplicate_of": null,
+      "file_name": "中国古代文学史 第二版 下  14488327.zip",
+      "file_type": "zip",
+      "hash": "0658b3060810c2a02d222a8b0417302a",
+      "id": "file_084",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "3.古代文学/马工程教材/中国古代文学史 第二版 下  14488327.zip",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "外国文学",
+      "duplicate_of": null,
+      "file_name": "《《外国文学史》学习辅导与习题集》_11921596.pdf",
+      "file_type": "pdf",
+      "hash": "cdc83a2873a20cd8c960ec928bb870dc",
+      "id": "file_085",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "4.外国文学/《《外国文学史》学习辅导与习题集》_11921596.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "PENDING"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "外国文学",
+      "duplicate_of": null,
+      "file_name": "《外国文学史》学习辅导与习题集作 者 ：曾艳兵主编；刘伟副主编出版发行  北京：中国人民大学出版社 , 2013.03.pdf",
+      "file_type": "pdf",
+      "hash": "34affe209678731d56575aec076078f8",
+      "id": "file_086",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "4.外国文学/《外国文学史》学习辅导与习题集作 者 ：曾艳兵主编；刘伟副主编出版发行  北京：中国人民大学出版社 , 2013.03.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "外国文学",
+      "duplicate_of": null,
+      "file_name": "外国文学-郑克鲁作品选（上）.pdf",
+      "file_type": "pdf",
+      "hash": "bd2c2747209e550776ecd09e75ad7726",
+      "id": "file_087",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "4.外国文学/外国文学作品选/外国文学-郑克鲁作品选（上）.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "外国文学",
+      "duplicate_of": null,
+      "file_name": "外国文学-马工程作品选（上）.pdf",
+      "file_type": "pdf",
+      "hash": "cb4e5f08a1c25e7e5e92b9b78838b722",
+      "id": "file_088",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "4.外国文学/外国文学作品选/外国文学-马工程作品选（上）.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "外国文学",
+      "duplicate_of": null,
+      "file_name": "外国文学史  下_13811135_聂珍钊主编；郑克鲁，蒋承勇副主编_2015.07.pdf",
+      "file_type": "pdf",
+      "hash": "b38a6a4ee37cac22faed3e515e155e5d",
+      "id": "file_089",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "4.外国文学/外国文学史  下_13811135_聂珍钊主编；郑克鲁，蒋承勇副主编_2015.07.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "外国文学",
+      "duplicate_of": null,
+      "file_name": "外国文学史（上）_13811329.pdf",
+      "file_type": "pdf",
+      "hash": "16259979ff4c5d79c828e2ea2706e324",
+      "id": "file_090",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "4.外国文学/外国文学史（上）_13811329.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "外国文学",
+      "duplicate_of": null,
+      "file_name": "19世纪文学（上）.docx",
+      "file_type": "docx",
+      "hash": "fb38eb199ba73db3c62d5455e701c974",
+      "id": "file_123",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "4.外国文学/外国文学笔记/19世纪文学（上）.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "外国文学",
+      "duplicate_of": null,
+      "file_name": "1—5单元.docx",
+      "file_type": "docx",
+      "hash": "86d580d4ae0a76b6ee3b6a2dcb7f7ba4",
+      "id": "file_124",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "4.外国文学/外国文学笔记/1—5单元.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "外国文学",
+      "duplicate_of": null,
+      "file_name": "20世纪文学（上）.docx",
+      "file_type": "docx",
+      "hash": "84c78d079153b5d556c3e96fc9661460",
+      "id": "file_125",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "4.外国文学/外国文学笔记/20世纪文学（上）.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "外国文学",
+      "duplicate_of": null,
+      "file_name": "20世纪文学（下）.docx",
+      "file_type": "docx",
+      "hash": "c4f9d294768f741a45e42bc27330ad9e",
+      "id": "file_126",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "4.外国文学/外国文学笔记/20世纪文学（下）.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "外国文学",
+      "duplicate_of": null,
+      "file_name": "外国文学补充笔记 .pdf",
+      "file_type": "pdf",
+      "hash": "0f60e6ed6f83bf2340e11fd99d6d8a1b",
+      "id": "file_127",
+      "is_duplicate": false,
+      "pdf_type": "ocr_layer",
+      "relative_path": "4.外国文学/外国文学补充笔记 .pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "PENDING"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "外国文学",
+      "duplicate_of": null,
+      "file_name": "（郑克鲁)外国文学史_上册.pdf",
+      "file_type": "pdf",
+      "hash": "d9a560d7e4ea3ed799a567a10f88647b",
+      "id": "file_128",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "4.外国文学/（郑克鲁)外国文学史_上册.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "现当代文学",
+      "duplicate_of": null,
+      "file_name": "《中国现当代文学史》学习辅导与习题集.pdf",
+      "file_type": "pdf",
+      "hash": "ac5895e45ba4b2dd3dc1ee13bec41603",
+      "id": "file_129",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "5.现当代文学/《中国现当代文学史》学习辅导与习题集.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "现当代文学",
+      "duplicate_of": null,
+      "file_name": "中国当代文学2023【西西】.pdf",
+      "file_type": "pdf",
+      "hash": "587edc91699f758034a972f104f02f17",
+      "id": "file_130",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "5.现当代文学/中国当代文学2023【西西】.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "现当代文学",
+      "duplicate_of": null,
+      "file_name": "中国新文学史 上册_13442287.pdf",
+      "file_type": "pdf",
+      "hash": "9705cb4dad73add21417765d2ae25c35",
+      "id": "file_131",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "5.现当代文学/中国新文学史 上册_13442287.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "现当代文学",
+      "duplicate_of": null,
+      "file_name": "中国新文学史 下册_13253973.pdf",
+      "file_type": "pdf",
+      "hash": "7a53934cb0831344c333b235e04e424d",
+      "id": "file_132",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "5.现当代文学/中国新文学史 下册_13253973.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "现当代文学",
+      "duplicate_of": null,
+      "file_name": "中国现代文学2023【西西】.pdf",
+      "file_type": "pdf",
+      "hash": "e304a5a6bf25e9a0d87d36c20ae4d0b3",
+      "id": "file_133",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "5.现当代文学/中国现代文学2023【西西】.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学理论",
+      "duplicate_of": "file_135",
+      "file_name": "《文学理论导引》.周宪.高等教育2014(1).pdf",
+      "file_type": "pdf",
+      "hash": "79f50db02e4be67050dc7fb1ab99f31f",
+      "id": "file_134",
+      "is_duplicate": true,
+      "pdf_type": "scan_only",
+      "relative_path": "6.文学理论/《文学理论导引》.周宪.高等教育2014(1).pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学理论",
+      "duplicate_of": null,
+      "file_name": "《文学理论导引》.周宪.高等教育2014.pdf",
+      "file_type": "pdf",
+      "hash": "79f50db02e4be67050dc7fb1ab99f31f",
+      "id": "file_135",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "6.文学理论/《文学理论导引》.周宪.高等教育2014.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学理论",
+      "duplicate_of": null,
+      "file_name": "《文学理论教程》学习辅导与习题集_11536473（可复制）.pdf",
+      "file_type": "pdf",
+      "hash": "369ca903f42aaf70740494a7f596c287",
+      "id": "file_137",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "6.文学理论/《文学理论教程》学习辅导与习题集_11536473（可复制）.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学理论",
+      "duplicate_of": null,
+      "file_name": "名词解释.pdf",
+      "file_type": "pdf",
+      "hash": "2471bd5be387fcfee0d2124896b15a89",
+      "id": "file_139",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "6.文学理论/名词解释.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学理论",
+      "duplicate_of": "file_141",
+      "file_name": "文学理论教程第5版-童庆炳_13846822(1).pdf",
+      "file_type": "pdf",
+      "hash": "0d8f7e5ad3db6cb52858cda9822fc92f",
+      "id": "file_140",
+      "is_duplicate": true,
+      "pdf_type": "scan_only",
+      "relative_path": "6.文学理论/文学理论教程第5版-童庆炳_13846822(1).pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学理论",
+      "duplicate_of": null,
+      "file_name": "文学理论教程第5版-童庆炳_13846822.pdf",
+      "file_type": "pdf",
+      "hash": "0d8f7e5ad3db6cb52858cda9822fc92f",
+      "id": "file_141",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "6.文学理论/文学理论教程第5版-童庆炳_13846822.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "专二最最最重要的几本推荐书.docx",
+      "file_type": "docx",
+      "hash": "ef695e5acfb2678473822cf00bb5f97b",
+      "id": "file_142",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "7.文学评论/专二最最最重要的几本推荐书.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "中国当代文学关键词十讲.pdf",
+      "file_type": "pdf",
+      "hash": "dc595f93b397eb2f0f9d859b16e0c677",
+      "id": "file_143",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/关键词/中国当代文学关键词十讲.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "关键词：文化与社会的词汇.pdf",
+      "file_type": "pdf",
+      "hash": "135744e676ea122f1d87f5edd8b88018",
+      "id": "file_144",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/关键词/关键词：文化与社会的词汇.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "文化研究关键词.pdf",
+      "file_type": "pdf",
+      "hash": "625f77444e9c82b2763521d46bef5a6a",
+      "id": "file_145",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/关键词/文化研究关键词.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "西方文论关键词.pdf",
+      "file_type": "pdf",
+      "hash": "f8353369e88e77f8508a2eaa198eb69a",
+      "id": "file_146",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/关键词/西方文论关键词.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "1948：天地玄黄.pdf",
+      "file_type": "pdf",
+      "hash": "4abd78b69dce759997b2aa86fd8c9c7e",
+      "id": "file_147",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/学术专著/1948：天地玄黄.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "“新启蒙”知识档案 80年代中国文化研究.pdf",
+      "file_type": "pdf",
+      "hash": "3ee48137300a903cfdad72fdc8f29a0f",
+      "id": "file_148",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/学术专著/“新启蒙”知识档案 80年代中国文化研究.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "中国现代文学与古典文学的历史联系_王瑶.pdf",
+      "file_type": "pdf",
+      "hash": "524035665518f1111bec1e35ea4d8190",
+      "id": "file_149",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "7.文学评论/学术专著/中国现代文学与古典文学的历史联系_王瑶.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "中国现代文学理论批评概念.pdf",
+      "file_type": "pdf",
+      "hash": "5f6d373f077ed792930143f4771f883a",
+      "id": "file_150",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/学术专著/中国现代文学理论批评概念.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "八十年代：访谈录.pdf",
+      "file_type": "pdf",
+      "hash": "254cae7e1c4265a9dee0d22654945ded",
+      "id": "file_151",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/学术专著/八十年代：访谈录.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "再解读：大众文艺与意识形态 （增订版）.pdf",
+      "file_type": "pdf",
+      "hash": "e800bc8731065017de7a3640666480af",
+      "id": "file_152",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/学术专著/再解读：大众文艺与意识形态 （增订版）.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "当代文学的“历史化”.pdf",
+      "file_type": "pdf",
+      "hash": "fbcc02e89fd8bba3af634c1db1149a57",
+      "id": "file_153",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/学术专著/当代文学的“历史化”.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "心灵革命 现代中国爱情的谱系.pdf",
+      "file_type": "pdf",
+      "hash": "bde18814e962317f41d70c29ea90dd6b",
+      "id": "file_154",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/学术专著/心灵革命 现代中国爱情的谱系.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "想象的共同体 民族主义的起源与散步 增订版=I....pdf",
+      "file_type": "pdf",
+      "hash": "fb5f564c1d2aea30e9096e437011668c",
+      "id": "file_155",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/学术专著/想象的共同体 民族主义的起源与散步 增订版=I....pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "新小说在1985年.pdf",
+      "file_type": "pdf",
+      "hash": "a5bb4837bcfb55c33fe85cbd6fc23e51",
+      "id": "file_156",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/学术专著/新小说在1985年.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "现代性的五副面孔=matri calinescu ...-1.pdf",
+      "file_type": "pdf",
+      "hash": "ff14f398727edf1a4c33807df49c8cea",
+      "id": "file_157",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/学术专著/现代性的五副面孔=matri calinescu ...-1.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "现代的诱惑：书写半殖民地中国的现代主义（1917-....pdf",
+      "file_type": "pdf",
+      "hash": "e33c20856390c99cddc067cad959f346",
+      "id": "file_158",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/学术专著/现代的诱惑：书写半殖民地中国的现代主义（1917-....pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "第二性.pdf",
+      "file_type": "pdf",
+      "hash": "e2ec334fc688fbb9de1dd3e4b4b3252f",
+      "id": "file_159",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/学术专著/第二性.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "重返八十年代.pdf",
+      "file_type": "pdf",
+      "hash": "304b9036b5ba0d5b0ca1b76b195343b5",
+      "id": "file_160",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/学术专著/重返八十年代.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "问题与方法 中国当代文学史研究讲稿（增订本）.pdf",
+      "file_type": "pdf",
+      "hash": "4720080cfc3c08d40d79b9d245c07005",
+      "id": "file_161",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/学术专著/问题与方法 中国当代文学史研究讲稿（增订本）.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "非文学的世纪 20世纪中国文学与政治文化关系史论作 者 ：朱晓进等编著出版发行  南京：南京师范大学出版社 , 2004.04.pdf",
+      "file_type": "pdf",
+      "hash": "3a9bdbdeb0475e0ebd5ba3618c862b77",
+      "id": "file_162",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "7.文学评论/学术专著/非文学的世纪 20世纪中国文学与政治文化关系史论作 者 ：朱晓进等编著出版发行  南京：南京师范大学出版社 , 2004.04.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "中国现代经典短篇小说文本分析作 者 ：刘俐俐著出版发行  北京：北京大学出版社 , 2006.07.pdf",
+      "file_type": "pdf",
+      "hash": "294b04b00f84651e38f3a93b7f3b7c9d",
+      "id": "file_163",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "7.文学评论/小说评论/中国现代经典短篇小说文本分析作 者 ：刘俐俐著出版发行  北京：北京大学出版社 , 2006.07.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "中国现当代文学专题研究 第2版-1.pdf",
+      "file_type": "pdf",
+      "hash": "e68dde958f631f360fa2aa38c642e669",
+      "id": "file_164",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/小说评论/中国现当代文学专题研究 第2版-1.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "众妙之门.pdf",
+      "file_type": "pdf",
+      "hash": "9601b4caa223ada505ebd9dc8c6b1335",
+      "id": "file_165",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "7.文学评论/小说评论/众妙之门.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "现代文学经典  症候式分析_12581740.pdf",
+      "file_type": "pdf",
+      "hash": "a0b814793ebc02eebfb3bba468d675b8",
+      "id": "file_166",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "7.文学评论/小说评论/现代文学经典  症候式分析_12581740.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "文学批评导引（第2版）_13603098.pdf",
+      "file_type": "pdf",
+      "hash": "f5bf476fe9e01b3671016af62d46c6a4",
+      "id": "file_167",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/文学批评方法论/文学批评导引（第2版）_13603098.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "文学评论写作实用教程作 者 ：周志雄编著出版发行  北京：北京交通大学出版社 , 2010.02.pdf",
+      "file_type": "pdf",
+      "hash": "12b8eb29bfa9713a4714511db5b912d2",
+      "id": "file_168",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/文学批评方法论/文学评论写作实用教程作 者 ：周志雄编著出版发行  北京：北京交通大学出版社 , 2010.02.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "西方文论史 第3版作 者 ：马新国主编出版发行  北京：高等教育出版社 , 2008.01.pdf",
+      "file_type": "pdf",
+      "hash": "20b6a78e738c38fa759bcda205cbd9c6",
+      "id": "file_169",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "7.文学评论/文学批评方法论/西方文论史 第3版作 者 ：马新国主编出版发行  北京：高等教育出版社 , 2008.01.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "邱运华：文学批评方法与案例[北大版].pdf",
+      "file_type": "pdf",
+      "hash": "f78ee6d5470afad22ba23684c09197ea",
+      "id": "file_170",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "7.文学评论/文学批评方法论/邱运华：文学批评方法与案例[北大版].pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "中国现代诗导读（1937-1949）.pdf",
+      "file_type": "pdf",
+      "hash": "b67b800134f6b5fdabf57c5ad4a46763",
+      "id": "file_171",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "7.文学评论/诗歌评论/中国现代诗导读（1937-1949）.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "中国现代诗导读（穆旦卷）.pdf",
+      "file_type": "pdf",
+      "hash": "f4fe30e8289cd79a0631646e4ee1906e",
+      "id": "file_172",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/诗歌评论/中国现代诗导读（穆旦卷）.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "中国现当代诗歌名作欣赏.pdf",
+      "file_type": "pdf",
+      "hash": "91f44bab16fc3b021874b44230b2e8f1",
+      "id": "file_173",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/诗歌评论/中国现当代诗歌名作欣赏.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "在北大课堂读诗 .pdf",
+      "file_type": "pdf",
+      "hash": "cd507cebc89be139c5266a4024ca0c38",
+      "id": "file_174",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/诗歌评论/在北大课堂读诗 .pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "现代诗的情感与形式.pdf",
+      "file_type": "pdf",
+      "hash": "93b91ada735b273bd0935ee5026a1779",
+      "id": "file_175",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "7.文学评论/诗歌评论/现代诗的情感与形式.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "1.王朔.docx",
+      "file_type": "docx",
+      "hash": "292b47036f3c98ec2d99a530000135a1",
+      "id": "file_176",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "7.文学评论/鲁迅/关于鲁迅/1.王朔.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "2.余华.docx",
+      "file_type": "docx",
+      "hash": "4b38ecdcd97e63aa570d13b62db28ed2",
+      "id": "file_177",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "7.文学评论/鲁迅/关于鲁迅/2.余华.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "3.残雪.docx",
+      "file_type": "docx",
+      "hash": "dfc7ebe78586fed785dca0cbd5c1640b",
+      "id": "file_178",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "7.文学评论/鲁迅/关于鲁迅/3.残雪.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "4.周令飞《管自己去生活》.pdf",
+      "file_type": "pdf",
+      "hash": "20903e06293ac068748d1a849c27ffff",
+      "id": "file_179",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "7.文学评论/鲁迅/关于鲁迅/4.周令飞《管自己去生活》.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "5.周令飞采访.docx",
+      "file_type": "docx",
+      "hash": "01b7388647a40e9724017556941d23b0",
+      "id": "file_180",
+      "is_duplicate": false,
+      "pdf_type": null,
+      "relative_path": "7.文学评论/鲁迅/关于鲁迅/5.周令飞采访.docx",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "6.鲁迅为什么不写长篇小说_一种文体学解释_余新明.pdf",
+      "file_type": "pdf",
+      "hash": "4b439d62ca9c86214d5c81af1f71af0e",
+      "id": "file_181",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "7.文学评论/鲁迅/关于鲁迅/6.鲁迅为什么不写长篇小说_一种文体学解释_余新明.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "周海婴：鲁迅与我七十年.pdf",
+      "file_type": "pdf",
+      "hash": "646c5928228904b814c0a73712f6cc2f",
+      "id": "file_182",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "7.文学评论/鲁迅/关于鲁迅/周海婴：鲁迅与我七十年.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "陈丹青：笑谈大先生.pdf",
+      "file_type": "pdf",
+      "hash": "7c50b4f2c1136a687d9ebd492d2512c5",
+      "id": "file_183",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "7.文学评论/鲁迅/关于鲁迅/陈丹青：笑谈大先生.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "鲁迅景宋通信集：《两地书》的原信.pdf",
+      "file_type": "pdf",
+      "hash": "d6647dda5153c5eac6b5a5156483b8d1",
+      "id": "file_184",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/鲁迅/关于鲁迅/鲁迅景宋通信集：《两地书》的原信.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "心灵的探寻_12686737.pdf",
+      "file_type": "pdf",
+      "hash": "c8578d545fef0f467a528fe0290d3ee0",
+      "id": "file_185",
+      "is_duplicate": false,
+      "pdf_type": "mixed",
+      "relative_path": "7.文学评论/鲁迅/心灵的探寻_12686737.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "文学评论",
+      "duplicate_of": null,
+      "file_name": "铁屋中的呐喊 李欧梵作品作 者 ：李欧梵出版发行  北京：人民文学出版社 , 2010.09.pdf",
+      "file_type": "pdf",
+      "hash": "5b15003f0cc1e61f1d9c38134250918c",
+      "id": "file_186",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "7.文学评论/鲁迅/铁屋中的呐喊 李欧梵作品作 者 ：李欧梵出版发行  北京：人民文学出版社 , 2010.09.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "复试真题与导师信息",
+      "duplicate_of": null,
+      "file_name": "南师老师基本信息.pdf",
+      "file_type": "pdf",
+      "hash": "c332520b85b59df0ba21e13391dc6447",
+      "id": "file_188",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "8.复试真题与导师信息/南师老师基本信息.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "复试真题与导师信息",
+      "duplicate_of": null,
+      "file_name": "复试真题（03-19）.pdf",
+      "file_type": "pdf",
+      "hash": "d5c64db151d5735acdf4f788689d0916",
+      "id": "file_190",
+      "is_duplicate": false,
+      "pdf_type": "native",
+      "relative_path": "8.复试真题与导师信息/复试真题（03-19）.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_NATIVE",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "南师现当代研究生必读书目",
+      "duplicate_of": null,
+      "file_name": "《中国新文学史编纂史》.pdf",
+      "file_type": "pdf",
+      "hash": "b2d318bd85ec54b028d9601df92523e3",
+      "id": "file_191",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "9.南师现当代研究生必读书目/《中国新文学史编纂史》.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "南师现当代研究生必读书目",
+      "duplicate_of": null,
+      "file_name": "《中国新文学大系导论集》.pdf",
+      "file_type": "pdf",
+      "hash": "5e668c4df259355434d3079c5897cf4b",
+      "id": "file_192",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "9.南师现当代研究生必读书目/《中国新文学大系导论集》.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "南师现当代研究生必读书目",
+      "duplicate_of": null,
+      "file_name": "上海摩登——一种新都市文化在中国1930-1945 李欧梵.pdf",
+      "file_type": "pdf",
+      "hash": "38b989b4012bb55fb2af56c44d9b70d7",
+      "id": "file_193",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "9.南师现当代研究生必读书目/上海摩登——一种新都市文化在中国1930-1945 李欧梵.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "南师现当代研究生必读书目",
+      "duplicate_of": null,
+      "file_name": "二十世纪中国文学史论上.pdf",
+      "file_type": "pdf",
+      "hash": "872ffe48415155fc292d3a83d060670f",
+      "id": "file_194",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "9.南师现当代研究生必读书目/二十世纪中国文学史论上.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "南师现当代研究生必读书目",
+      "duplicate_of": null,
+      "file_name": "二十世纪中国文学史论下.pdf",
+      "file_type": "pdf",
+      "hash": "b0d21a533db99765fa84fd684b11f8ac",
+      "id": "file_195",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "9.南师现当代研究生必读书目/二十世纪中国文学史论下.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "南师现当代研究生必读书目",
+      "duplicate_of": null,
+      "file_name": "在中国发现历史.pdf",
+      "file_type": "pdf",
+      "hash": "70b0189fa877ad4fdf6ec6459ccf0235",
+      "id": "file_196",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "9.南师现当代研究生必读书目/在中国发现历史.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "南师现当代研究生必读书目",
+      "duplicate_of": null,
+      "file_name": "当代文学关键词.pdf",
+      "file_type": "pdf",
+      "hash": "cc508827f0390d99e87d59a68d555fe6",
+      "id": "file_197",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "9.南师现当代研究生必读书目/当代文学关键词.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "南师现当代研究生必读书目",
+      "duplicate_of": null,
+      "file_name": "文学理论入门.pdf",
+      "file_type": "pdf",
+      "hash": "1767f472d8fc47bd87c2e5ce5e74280f",
+      "id": "file_198",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "9.南师现当代研究生必读书目/文学理论入门.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "南师现当代研究生必读书目",
+      "duplicate_of": null,
+      "file_name": "日本现代文学的起源.pdf",
+      "file_type": "pdf",
+      "hash": "9633607e167cb4480b45b9adabbd077a",
+      "id": "file_199",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "9.南师现当代研究生必读书目/日本现代文学的起源.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "南师现当代研究生必读书目",
+      "duplicate_of": null,
+      "file_name": "李泽厚.中国古代思想史论.pdf",
+      "file_type": "pdf",
+      "hash": "418e40b7b76e7a97933b74023d4cee26",
+      "id": "file_200",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "9.南师现当代研究生必读书目/李泽厚.中国古代思想史论.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "南师现当代研究生必读书目",
+      "duplicate_of": null,
+      "file_name": "李泽厚.中国现代思想史论.pdf",
+      "file_type": "pdf",
+      "hash": "01cb8d3b5efa7a960a79ddb2d014336f",
+      "id": "file_201",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "9.南师现当代研究生必读书目/李泽厚.中国现代思想史论.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 0,
+      "category": "南师现当代研究生必读书目",
+      "duplicate_of": null,
+      "file_name": "李泽厚.中国近代思想史论.pdf",
+      "file_type": "pdf",
+      "hash": "4c7ce5d207179edf693437ec981be554",
+      "id": "file_202",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "9.南师现当代研究生必读书目/李泽厚.中国近代思想史论.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "未分类",
+      "duplicate_of": null,
+      "file_name": "丁帆版本现当代笔记.pdf",
+      "file_type": "pdf",
+      "hash": "53a93803ec81aa86850e3346f551ddc5",
+      "id": "file_203",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "丁帆版本现当代笔记.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "未分类",
+      "duplicate_of": null,
+      "file_name": "古代文学笔记.pdf",
+      "file_type": "pdf",
+      "hash": "8641d6b2d79c64f51aa55b2a2b2448e3",
+      "id": "file_204",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "古代文学笔记.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "未分类",
+      "duplicate_of": null,
+      "file_name": "外国文学.pdf",
+      "file_type": "pdf",
+      "hash": "153351c5461a965fb47e62d789935de4",
+      "id": "file_205",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "外国文学.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "未分类",
+      "duplicate_of": null,
+      "file_name": "文学理论笔记.pdf",
+      "file_type": "pdf",
+      "hash": "966ab8b778797630185550c99f4de402",
+      "id": "file_206",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "文学理论笔记.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "未分类",
+      "duplicate_of": null,
+      "file_name": "框架.pdf",
+      "file_type": "pdf",
+      "hash": "8f017e83b9466aab1f90789ba6680da5",
+      "id": "file_207",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "框架.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    },
+    {
+      "attempts": 3,
+      "category": "未分类",
+      "duplicate_of": null,
+      "file_name": "真题.pdf",
+      "file_type": "pdf",
+      "hash": "f4672bcf17a1ae7d061fb4d22b3a6ab4",
+      "id": "file_208",
+      "is_duplicate": false,
+      "pdf_type": "scan_only",
+      "relative_path": "真题.pdf",
+      "result_summary": {
+        "content_source": "TEXTBOOK_OCR",
+        "ocr_status": "VERIFIED"
+      },
+      "status": "completed"
+    }
+  ],
+  "format": "wenyan-tools-legacy-curated-v1",
+  "privacy": {
+    "absolute_paths_removed": true,
+    "ocr_and_document_bodies_removed": true,
+    "skipped_file_names_omitted": true
+  },
+  "purpose": "历史来源索引；仅用于追溯和审计，不是正式内容源。"
+}

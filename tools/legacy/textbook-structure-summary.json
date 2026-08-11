@@ -1,0 +1,443 @@
+{
+  "archive": {
+    "compressed_bytes": 204502835,
+    "manifest_categories": {
+      "南师现当代研究生必读书目": 12,
+      "古代文学": 10,
+      "复试真题与导师信息": 4,
+      "外国文学": 44,
+      "文学理论": 8,
+      "文学真题": 42,
+      "文学评论": 45,
+      "未分类": 6,
+      "现当代文学": 5,
+      "考研信息": 32
+    },
+    "manifest_completed": 172,
+    "manifest_file_types": {
+      "doc": 3,
+      "docx": 31,
+      "image": 4,
+      "pdf": 153,
+      "xls": 13,
+      "xlsx": 3,
+      "zip": 1
+    },
+    "manifest_scanned_at": "2026-07-10T10:49:45.243010",
+    "manifest_skipped": 36,
+    "manifest_total": 208,
+    "name": "tools.zip",
+    "sha256": "32cd115bd8e177966702f911ff2dbee011c42af7c76568fdd9959a2f72e3e15c"
+  },
+  "format": "wenyan-tools-legacy-curated-v1",
+  "purpose": "教材处理质量与章节切分审计；不发布教材目录或正文。",
+  "textbooks": [
+    {
+      "body_chars": 369934,
+      "mean_ocr_score": 0.9771,
+      "pages": 455,
+      "pdf_type": "scan_only",
+      "processed_file": "file_131.json",
+      "segmentation": {
+        "granularity": "节+段落",
+        "recommendation": "按节切块+段落细分（节均9735字仍大，需进一步按段落/小标题切）"
+      },
+      "source_key": "丁帆上",
+      "structure_counts": {
+        "bian": 0,
+        "body_jie_matches": 222,
+        "body_zhang_matches": 205,
+        "jie": 38,
+        "zhang": 10
+      },
+      "total_chars": 373367
+    },
+    {
+      "body_chars": 385239,
+      "mean_ocr_score": 0.9671,
+      "pages": 464,
+      "pdf_type": "scan_only",
+      "processed_file": "file_132.json",
+      "segmentation": {
+        "granularity": "节+段落",
+        "recommendation": "按节切块+段落细分（节均9396字仍大，需进一步按段落/小标题切）"
+      },
+      "source_key": "丁帆下",
+      "structure_counts": {
+        "bian": 0,
+        "body_jie_matches": 250,
+        "body_zhang_matches": 228,
+        "jie": 41,
+        "zhang": 11
+      },
+      "total_chars": 388748
+    },
+    {
+      "body_chars": 403918,
+      "mean_ocr_score": 0.978,
+      "pages": 414,
+      "pdf_type": "scan_only",
+      "processed_file": "file_135.json",
+      "segmentation": {
+        "granularity": "节+段落",
+        "recommendation": "按节切块+段落细分（节均11879字仍大，需进一步按段落/小标题切）"
+      },
+      "source_key": "周宪",
+      "structure_counts": {
+        "bian": 4,
+        "body_jie_matches": 214,
+        "body_zhang_matches": 198,
+        "jie": 34,
+        "zhang": 11
+      },
+      "total_chars": 405174
+    },
+    {
+      "body_chars": 741639,
+      "mean_ocr_score": null,
+      "pages": 674,
+      "pdf_type": "native",
+      "processed_file": "file_076.json",
+      "segmentation": {
+        "granularity": "节",
+        "recommendation": "按节切块（235节，均3155字；章均10906字过大）"
+      },
+      "source_key": "游国恩",
+      "structure_counts": {
+        "bian": 8,
+        "body_jie_matches": 260,
+        "body_zhang_matches": 75,
+        "jie": 235,
+        "zhang": 68
+      },
+      "total_chars": 745898
+    },
+    {
+      "body_chars": 399351,
+      "mean_ocr_score": 0.976,
+      "pages": 426,
+      "pdf_type": "scan_only",
+      "processed_file": "file_141.json",
+      "segmentation": {
+        "granularity": "节+段落",
+        "recommendation": "按节切块+段落细分（节均9076字仍大，需进一步按段落/小标题切）"
+      },
+      "source_key": "童庆炳",
+      "structure_counts": {
+        "bian": 16,
+        "body_jie_matches": 49,
+        "body_zhang_matches": 267,
+        "jie": 44,
+        "zhang": 18
+      },
+      "total_chars": 408269
+    },
+    {
+      "body_chars": 344314,
+      "mean_ocr_score": 0.9936,
+      "pages": 402,
+      "pdf_type": "scan_only",
+      "processed_file": "file_090.json",
+      "segmentation": {
+        "granularity": "节+段落",
+        "recommendation": "按节切块+段落细分（节均14346字仍大，需进一步按段落/小标题切）"
+      },
+      "source_key": "聂珍钊上",
+      "structure_counts": {
+        "bian": 0,
+        "body_jie_matches": 216,
+        "body_zhang_matches": 217,
+        "jie": 24,
+        "zhang": 11
+      },
+      "total_chars": 350097
+    },
+    {
+      "body_chars": 287329,
+      "mean_ocr_score": 0.9923,
+      "pages": 334,
+      "pdf_type": "scan_only",
+      "processed_file": "file_089.json",
+      "segmentation": {
+        "granularity": "节+段落",
+        "recommendation": "按节切块+段落细分（节均10641字仍大，需进一步按段落/小标题切）"
+      },
+      "source_key": "聂珍钊下",
+      "structure_counts": {
+        "bian": 0,
+        "body_jie_matches": 257,
+        "body_zhang_matches": 211,
+        "jie": 27,
+        "zhang": 3
+      },
+      "total_chars": 290601
+    },
+    {
+      "body_chars": 259261,
+      "mean_ocr_score": 0.9796,
+      "pages": 283,
+      "pdf_type": "scan_only",
+      "processed_file": "file_078.json",
+      "segmentation": {
+        "granularity": "章",
+        "recommendation": "按章切块（88章，均2946字）"
+      },
+      "source_key": "袁行霈第1卷",
+      "structure_counts": {
+        "bian": 20,
+        "body_jie_matches": 121,
+        "body_zhang_matches": 135,
+        "jie": 60,
+        "zhang": 88
+      },
+      "total_chars": 265420
+    },
+    {
+      "body_chars": 402134,
+      "mean_ocr_score": 0.9846,
+      "pages": 458,
+      "pdf_type": "scan_only",
+      "processed_file": "file_079.json",
+      "segmentation": {
+        "granularity": "节",
+        "recommendation": "按节切块（87节，均4622字；章均19149字过大）"
+      },
+      "source_key": "袁行霈第2卷",
+      "structure_counts": {
+        "bian": 12,
+        "body_jie_matches": 190,
+        "body_zhang_matches": 252,
+        "jie": 87,
+        "zhang": 21
+      },
+      "total_chars": 409647
+    },
+    {
+      "body_chars": 320629,
+      "mean_ocr_score": 0.9814,
+      "pages": 369,
+      "pdf_type": "scan_only",
+      "processed_file": "file_080.json",
+      "segmentation": {
+        "granularity": "节",
+        "recommendation": "按节切块（95节，均3375字；章均15268字过大）"
+      },
+      "source_key": "袁行霈第3卷",
+      "structure_counts": {
+        "bian": 3,
+        "body_jie_matches": 192,
+        "body_zhang_matches": 200,
+        "jie": 95,
+        "zhang": 21
+      },
+      "total_chars": 328382
+    },
+    {
+      "body_chars": 508725,
+      "mean_ocr_score": 0.9829,
+      "pages": 542,
+      "pdf_type": "scan_only",
+      "processed_file": "file_081.json",
+      "segmentation": {
+        "granularity": "节",
+        "recommendation": "按节切块（113节，均4501字；章均21196字过大）"
+      },
+      "source_key": "袁行霈第4卷",
+      "structure_counts": {
+        "bian": 14,
+        "body_jie_matches": 232,
+        "body_zhang_matches": 342,
+        "jie": 113,
+        "zhang": 24
+      },
+      "total_chars": 519103
+    },
+    {
+      "body_chars": 447586,
+      "mean_ocr_score": 0.9864,
+      "pages": 443,
+      "pdf_type": "scan_only",
+      "processed_file": "file_128.json",
+      "segmentation": {
+        "granularity": "节+段落",
+        "recommendation": "按节切块+段落细分（节均11189字仍大，需进一步按段落/小标题切）"
+      },
+      "source_key": "郑克鲁上",
+      "structure_counts": {
+        "bian": 0,
+        "body_jie_matches": 45,
+        "body_zhang_matches": 16,
+        "jie": 40,
+        "zhang": 8
+      },
+      "total_chars": 450610
+    },
+    {
+      "body_chars": 330427,
+      "mean_ocr_score": 0.9732,
+      "pages": 365,
+      "pdf_type": "scan_only",
+      "processed_file": "file_083.json",
+      "segmentation": {
+        "granularity": "节",
+        "recommendation": "按节切块（91节，均3631字；章均18357字过大）"
+      },
+      "source_key": "马工程上",
+      "structure_counts": {
+        "bian": 3,
+        "body_jie_matches": 92,
+        "body_zhang_matches": 174,
+        "jie": 91,
+        "zhang": 18
+      },
+      "total_chars": 333547
+    },
+    {
+      "body_chars": 343444,
+      "mean_ocr_score": 0.977,
+      "pages": 367,
+      "pdf_type": null,
+      "processed_file": "file_084.json",
+      "segmentation": {
+        "granularity": "节",
+        "recommendation": "按节切块（98节，均3504字；章均14310字过大）"
+      },
+      "source_key": "马工程下",
+      "structure_counts": {
+        "bian": 3,
+        "body_jie_matches": 116,
+        "body_zhang_matches": 233,
+        "jie": 98,
+        "zhang": 24
+      },
+      "total_chars": 347703
+    },
+    {
+      "body_chars": 429014,
+      "mean_ocr_score": 0.982,
+      "pages": 459,
+      "pdf_type": "scan_only",
+      "processed_file": "file_082.json",
+      "segmentation": {
+        "granularity": "节",
+        "recommendation": "按节切块（112节，均3830字；章均15889字过大）"
+      },
+      "source_key": "马工程中",
+      "structure_counts": {
+        "bian": 3,
+        "body_jie_matches": 115,
+        "body_zhang_matches": 221,
+        "jie": 112,
+        "zhang": 27
+      },
+      "total_chars": 433395
+    }
+  ],
+  "toc_catalog": [
+    {
+      "copyright_page_count": 1,
+      "processed_file": "file_131.json",
+      "source_key": "丁帆上",
+      "toc_line_count": 426,
+      "toc_text_included": false
+    },
+    {
+      "copyright_page_count": 1,
+      "processed_file": "file_132.json",
+      "source_key": "丁帆下",
+      "toc_line_count": 426,
+      "toc_text_included": false
+    },
+    {
+      "copyright_page_count": 1,
+      "processed_file": "file_135.json",
+      "source_key": "周宪",
+      "toc_line_count": 150,
+      "toc_text_included": false
+    },
+    {
+      "copyright_page_count": 0,
+      "processed_file": "file_076.json",
+      "source_key": "游国恩",
+      "toc_line_count": 348,
+      "toc_text_included": false
+    },
+    {
+      "copyright_page_count": 1,
+      "processed_file": "file_141.json",
+      "source_key": "童庆炳",
+      "toc_line_count": 396,
+      "toc_text_included": false
+    },
+    {
+      "copyright_page_count": 1,
+      "processed_file": "file_090.json",
+      "source_key": "聂珍钊上",
+      "toc_line_count": 242,
+      "toc_text_included": false
+    },
+    {
+      "copyright_page_count": 1,
+      "processed_file": "file_089.json",
+      "source_key": "聂珍钊下",
+      "toc_line_count": 148,
+      "toc_text_included": false
+    },
+    {
+      "copyright_page_count": 1,
+      "processed_file": "file_078.json",
+      "source_key": "袁行霈第1卷",
+      "toc_line_count": 709,
+      "toc_text_included": false
+    },
+    {
+      "copyright_page_count": 1,
+      "processed_file": "file_079.json",
+      "source_key": "袁行霈第2卷",
+      "toc_line_count": 706,
+      "toc_text_included": false
+    },
+    {
+      "copyright_page_count": 1,
+      "processed_file": "file_080.json",
+      "source_key": "袁行霈第3卷",
+      "toc_line_count": 763,
+      "toc_text_included": false
+    },
+    {
+      "copyright_page_count": 1,
+      "processed_file": "file_081.json",
+      "source_key": "袁行霈第4卷",
+      "toc_line_count": 989,
+      "toc_text_included": false
+    },
+    {
+      "copyright_page_count": 1,
+      "processed_file": "file_128.json",
+      "source_key": "郑克鲁上",
+      "toc_line_count": 226,
+      "toc_text_included": false
+    },
+    {
+      "copyright_page_count": 1,
+      "processed_file": "file_083.json",
+      "source_key": "马工程上",
+      "toc_line_count": 208,
+      "toc_text_included": false
+    },
+    {
+      "copyright_page_count": 1,
+      "processed_file": "file_084.json",
+      "source_key": "马工程下",
+      "toc_line_count": 211,
+      "toc_text_included": false
+    },
+    {
+      "copyright_page_count": 1,
+      "processed_file": "file_082.json",
+      "source_key": "马工程中",
+      "toc_line_count": 212,
+      "toc_text_included": false
+    }
+  ]
+}
