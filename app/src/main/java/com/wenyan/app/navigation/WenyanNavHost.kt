@@ -16,6 +16,7 @@ import com.wenyan.app.feature.aiassistant.ApiConfigScreen
 import com.wenyan.app.feature.cards.CardsFullscreenScreen
 import com.wenyan.app.feature.cards.CardsScreen
 import com.wenyan.app.feature.cards.CardsViewModel
+import com.wenyan.app.feature.cards.CARDS_TARGET_POINT_ID_ARG
 import com.wenyan.app.feature.knowledge.EssayDetailScreen
 import com.wenyan.app.feature.knowledge.EssayListScreen
 import com.wenyan.app.feature.knowledge.KnowledgePointDetailScreen
@@ -28,8 +29,10 @@ import com.wenyan.app.feature.quiz.WrongAnswerScreen
 import com.wenyan.app.feature.settings.AboutTutorialScreen
 import com.wenyan.app.feature.settings.SettingsScreen
 import com.wenyan.app.feature.settings.UpdateCheckScreen
+import com.wenyan.app.feature.today.DailyTaskCompletionViewModel
 import com.wenyan.app.feature.today.TodayDestination
 import com.wenyan.app.feature.today.TodayRoute
+import com.wenyan.app.feature.today.TodayTaskUi
 
 /**
  * 文研App 主导航图。
@@ -59,6 +62,8 @@ fun WenyanNavHost(
     navController: NavHostController,
     modifier: Modifier = Modifier,
 ) {
+    val dailyTaskCompletionViewModel: DailyTaskCompletionViewModel = hiltViewModel()
+
     NavHost(
         navController = navController,
         startDestination = TopLevelDestination.ROUTE_TODAY,
@@ -69,9 +74,17 @@ fun WenyanNavHost(
         popEnterTransition = { WenyanMotion.TabEnterTransition },
         popExitTransition = { WenyanMotion.TabExitTransition },
     ) {
-        todayDestination { destination, contentId ->
-            when (destination) {
-                TodayDestination.CARDS -> navController.navigate(TopLevelDestination.ROUTE_CARDS) { launchSingleTop = true }
+        todayDestination { task ->
+            when (task.destination) {
+                TodayDestination.CARDS -> {
+                    val pointId = task.contentId?.takeIf { it.isNotBlank() }
+                    val route = pointId?.let { dailyCardsRoute(task.id, it) }
+                    if (route == null) {
+                        navController.navigate(TopLevelDestination.ROUTE_CARDS) { launchSingleTop = true }
+                    } else {
+                        navController.navigate(route) { launchSingleTop = true }
+                    }
+                }
                 TodayDestination.QUIZ -> navController.navigate(ROUTE_QUIZ_PRACTICE) { launchSingleTop = true }
                 TodayDestination.WRITING_MATERIALS -> navController.navigate(ROUTE_WRITING_MATERIALS) { launchSingleTop = true }
             }
@@ -166,6 +179,23 @@ fun WenyanNavHost(
                 }
             },
         )
+        dailyCardsDestination(
+            onNavigateToAiAssistant = {
+                navController.navigate(ROUTE_AI_ASSISTANT) { launchSingleTop = true }
+            },
+            onNavigateToKnowledge = {
+                navController.navigate(TopLevelDestination.ROUTE_KNOWLEDGE) {
+                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            onNavigateToDetail = { pointId -> navController.navigateToKnowledgeDetail(pointId) },
+            onNavigateToFullscreen = {
+                navController.navigate(ROUTE_DAILY_CARDS_FULLSCREEN) { launchSingleTop = true }
+            },
+            onDailyTaskFinished = dailyTaskCompletionViewModel::markDone,
+        )
         // v0.9.36 全屏沉浸页子路由（共享卡片页 ViewModel，保持同一复习会话）
         cardsFullscreenDestination(
             onBack = {
@@ -195,6 +225,22 @@ fun WenyanNavHost(
                     navController.getBackStackEntry(TopLevelDestination.ROUTE_CARDS),
                 )
             },
+        )
+        dailyCardsFullscreenDestination(
+            navController = navController,
+            onBack = { navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_TODAY) },
+            onNavigateToAiAssistant = {
+                navController.navigate(ROUTE_AI_ASSISTANT) { launchSingleTop = true }
+            },
+            onNavigateToKnowledge = {
+                navController.navigate(TopLevelDestination.ROUTE_KNOWLEDGE) {
+                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            onNavigateToDetail = { pointId -> navController.navigateToKnowledgeDetail(pointId) },
+            onDailyTaskFinished = dailyTaskCompletionViewModel::markDone,
         )
         // v0.9.0：WrongAnswer 提升为顶级 Tab（原 graphDestination 位置）
         // 不传 onBack → WrongAnswerScreen 顶级模式（无返回箭头）
@@ -273,7 +319,7 @@ fun WenyanNavHost(
 }
 
 private fun NavGraphBuilder.todayDestination(
-    onTaskClick: (TodayDestination, String?) -> Unit,
+    onTaskClick: (TodayTaskUi) -> Unit,
 ) {
     composable(TopLevelDestination.ROUTE_TODAY) { TodayRoute(onTaskClick) }
 }
@@ -433,6 +479,35 @@ private fun NavGraphBuilder.cardsDestination(
     }
 }
 
+private fun NavGraphBuilder.dailyCardsDestination(
+    onNavigateToAiAssistant: () -> Unit,
+    onNavigateToKnowledge: () -> Unit,
+    onNavigateToDetail: (String) -> Unit,
+    onNavigateToFullscreen: () -> Unit,
+    onDailyTaskFinished: (String) -> Unit,
+) {
+    composable(
+        route = ROUTE_DAILY_CARDS_PATTERN,
+        arguments = listOf(
+            navArgument(ARG_DAILY_TASK_ID) { type = NavType.StringType },
+            navArgument(CARDS_TARGET_POINT_ID_ARG) { type = NavType.StringType },
+        ),
+        enterTransition = { WenyanMotion.PushEnterTransition },
+        exitTransition = { WenyanMotion.PushExitTransition },
+        popEnterTransition = { WenyanMotion.PopEnterTransition },
+        popExitTransition = { WenyanMotion.PopExitTransition },
+    ) { backStackEntry ->
+        val taskId = backStackEntry.arguments?.getString(ARG_DAILY_TASK_ID)
+        CardsScreen(
+            onNavigateToAiAssistant = onNavigateToAiAssistant,
+            onNavigateToKnowledge = onNavigateToKnowledge,
+            onNavigateToDetail = onNavigateToDetail,
+            onNavigateToFullscreen = onNavigateToFullscreen,
+            onDailyTaskFinished = { taskId?.let(onDailyTaskFinished) },
+        )
+    }
+}
+
 // v0.9.36：全屏沉浸复习子路由（共享卡片页 CardsViewModel，保持同一复习会话）
 // 子路由用 Push/Pop slide transition（与 AiAssistant 等子路由一致）
 private fun NavGraphBuilder.cardsFullscreenDestination(
@@ -455,6 +530,36 @@ private fun NavGraphBuilder.cardsFullscreenDestination(
             onNavigateToKnowledge = onNavigateToKnowledge,
             onNavigateToDetail = onNavigateToDetail,
             viewModel = viewModelProvider(),
+        )
+    }
+}
+
+private fun NavGraphBuilder.dailyCardsFullscreenDestination(
+    navController: NavHostController,
+    onBack: () -> Unit,
+    onNavigateToAiAssistant: () -> Unit,
+    onNavigateToKnowledge: () -> Unit,
+    onNavigateToDetail: (String) -> Unit,
+    onDailyTaskFinished: (String) -> Unit,
+) {
+    composable(
+        route = ROUTE_DAILY_CARDS_FULLSCREEN,
+        enterTransition = { WenyanMotion.PushEnterTransition },
+        exitTransition = { WenyanMotion.PushExitTransition },
+        popEnterTransition = { WenyanMotion.PopEnterTransition },
+        popExitTransition = { WenyanMotion.PopExitTransition },
+    ) {
+        // This destination is only reachable from the daily-card route, so the previous
+        // entry is the authoritative shared-session owner even when the route has arguments.
+        val dailyEntry = requireNotNull(navController.previousBackStackEntry)
+        val taskId = dailyEntry.arguments?.getString(ARG_DAILY_TASK_ID)
+        CardsFullscreenScreen(
+            onBack = onBack,
+            onNavigateToAiAssistant = onNavigateToAiAssistant,
+            onNavigateToKnowledge = onNavigateToKnowledge,
+            onNavigateToDetail = onNavigateToDetail,
+            onDailyTaskFinished = { taskId?.let(onDailyTaskFinished) },
+            viewModel = hiltViewModel<CardsViewModel>(dailyEntry),
         )
     }
 }
@@ -613,6 +718,19 @@ internal const val ROUTE_QUIZ_PRACTICE = "quiz_practice"
 private const val ROUTE_QUIZ_PRACTICE_DETAIL = "quiz_practice_detail"
 // v0.9.36：知识卡片全屏沉浸页子路由
 private const val ROUTE_CARDS_FULLSCREEN = "cards_fullscreen"
+private const val ROUTE_DAILY_CARDS = "daily_cards"
+private const val ROUTE_DAILY_CARDS_FULLSCREEN = "daily_cards_fullscreen"
+private const val ARG_DAILY_TASK_ID = "dailyTaskId"
+private const val ROUTE_DAILY_CARDS_PATTERN =
+    "$ROUTE_DAILY_CARDS/{$ARG_DAILY_TASK_ID}/{$CARDS_TARGET_POINT_ID_ARG}"
+
+/** Build the exact target-card route; invalid IDs intentionally fall back to the normal card tab. */
+internal fun dailyCardsRoute(taskId: String, pointId: String): String? {
+    val normalizedTaskId = taskId.trim()
+    val normalizedPointId = pointId.trim()
+    if (normalizedTaskId.isBlank() || normalizedPointId.isBlank()) return null
+    return "$ROUTE_DAILY_CARDS/${Uri.encode(normalizedTaskId)}/${Uri.encode(normalizedPointId)}"
+}
 
 /** 导航回归测试使用的纯策略：空 ID 或当前详情页重复点击都不应产生新栈项。 */
 internal fun shouldSkipKnowledgeDetailNavigation(

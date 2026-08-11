@@ -28,13 +28,18 @@ class TodayViewModelTest {
 
     @Test fun `loading then empty consumes persisted source`() = runTest(dispatcher) {
         val values = MutableSharedFlow<DailyPlanWithTasks?>(extraBufferCapacity = 1)
-        val viewModel = TodayViewModel(object : TodayPlanSource { override fun observe(date: String) = values }, dateSource)
+        var ensuredDate: String? = null
+        val viewModel = TodayViewModel(object : TodayPlanSource {
+            override fun observe(date: String) = values
+            override suspend fun ensure(date: String) { ensuredDate = date }
+        }, dateSource)
         viewModel.uiState.test {
             assertTrue(awaitItem().isLoading)
             values.emit(null)
             val empty = awaitItem()
             assertEquals("2026-08-11", empty.date)
             assertTrue(empty.tasks.isEmpty())
+            assertEquals("2026-08-11", ensuredDate)
         }
     }
 

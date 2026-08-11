@@ -48,9 +48,20 @@ internal object TodayPlanMapper {
             estimatedMinutes = tasks.filterNot { it.completed }.sumOf { it.estimatedMinutes },
             tasks = tasks,
             isFinished = tasks.isNotEmpty() && tasks.all { it.completed },
-            infeasibleMessage = value.plan.status.takeIf { it.startsWith("INFEASIBLE") }
-                ?.substringAfter(':', "今日计划无法满足全部约束"),
+            infeasibleMessage = infeasibleMessage(value.plan.status),
         )
+    }
+
+    private fun infeasibleMessage(status: String): String? {
+        if (!status.startsWith("INFEASIBLE")) return null
+        val issue = status.substringAfter(':', "")
+        return when {
+            "EXAM_PASSED" in issue -> "考试日期已过，今日计划未生成"
+            "ZERO_QUOTA" in issue -> "今日任务配额为 0，请调整卡片设置"
+            "NO_TRUSTED_NEW_CONTENT" in issue -> "暂无可信的新内容，先复习已有知识点"
+            "OUTPUT_UNAVAILABLE" in issue -> "当前没有可用的今日学习内容"
+            else -> issue.ifBlank { "今日计划无法满足全部约束" }
+        }
     }
 
     private fun mapTask(task: DailyTaskEntity): TodayTaskUi {
@@ -69,12 +80,28 @@ internal object TodayPlanMapper {
         }
         return TodayTaskUi(
             id = task.id,
-            title = task.stableId,
+            title = displayTitle(task),
             group = group,
             estimatedMinutes = task.estimatedMinutes,
             completed = task.status == "DONE",
             destination = destination,
             contentId = task.contentId,
         )
+    }
+
+    private fun displayTitle(task: DailyTaskEntity): String {
+        val label = when (task.taskType) {
+            "DUE" -> "到期复习"
+            "REPAIR" -> "遗忘修复"
+            "NEW" -> "新学内容"
+            "OUTPUT", "SPECIAL_SESSION" -> "输出训练"
+            "WRITING" -> "专业写作"
+            else -> null
+        }
+        return if (label != null && task.stableId.startsWith("card:")) {
+            listOfNotNull(label, task.contentId).joinToString(" · ")
+        } else {
+            task.stableId
+        }
     }
 }

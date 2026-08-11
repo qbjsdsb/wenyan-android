@@ -169,6 +169,7 @@ fun CardsScreen(
     onNavigateToDetail: (String) -> Unit = {},
     // v0.9.36 全屏模式：顶栏全屏按钮入口（仅当前有卡可复习时显示）
     onNavigateToFullscreen: () -> Unit = {},
+    onDailyTaskFinished: () -> Unit = {},
     viewModel: CardsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -192,6 +193,10 @@ fun CardsScreen(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
     )
+
+    LaunchedEffect(uiState.isFinished) {
+        if (uiState.isFinished) onDailyTaskFinished()
+    }
 
     // errorMessage 非 null 时弹 Snackbar，展示后立即 clearError 避免重组重复弹
     // v0.8.14 P0-8 修复:Leech 警告(AlertDialog)显示时不弹 Snackbar,避免两者同时

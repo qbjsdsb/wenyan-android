@@ -48,6 +48,54 @@ class DailyPlanRepository @Inject constructor(
         requireNotNull(load(date))
     }
 
+    /**
+     * Fill an empty placeholder plan after an earlier source snapshot had no materialized
+     * cards. This is deliberately narrower than rebuild: it refuses to touch any plan that
+     * already has tasks, preserving the same-day immutability contract.
+     */
+    suspend fun fillEmpty(
+        date: String,
+        draft: DailyPlanDraft,
+    ): DailyPlanWithTasks = database.withTransaction {
+        val existing = requireNotNull(load(date))
+        if (existing.plan.status != "EMPTY" || existing.tasks.isNotEmpty() || draft.tasks.isEmpty()) {
+            return@withTransaction existing
+        }
+        require(draft.plan.planDate == date) { "generated plan date mismatch" }
+        require(draft.tasks.all { it.planId == draft.plan.id }) { "task planId mismatch" }
+        require(draft.tasks.map { it.position }.distinct().size == draft.tasks.size) {
+            "task positions must be unique"
+        }
+        val plan = draft.plan.copy(
+            id = existing.plan.id,
+            planDate = existing.plan.planDate,
+            createdAt = existing.plan.createdAt,
+        )
+        database.dailyTaskDao().insertAll(draft.tasks.map { it.copy(planId = existing.plan.id) })
+        database.dailyPlanDao().update(plan)
+        requireNotNull(load(date))
+    }
+
+    /**
+     * Mark one persisted task complete without reviving or mutating legacy states.
+     *
+     * The read and conditional write are one transaction so duplicate completion callbacks
+     * (for example, the normal and fullscreen card destinations both observing the same
+     * session) remain harmless.
+     */
+    suspend fun markDone(
+        taskId: String,
+        now: Long = System.currentTimeMillis(),
+    ): Boolean = database.withTransaction {
+        val taskDao = database.dailyTaskDao()
+        val task = taskDao.getById(taskId) ?: return@withTransaction false
+        when (task.status) {
+            "DONE" -> true
+            "PENDING" -> taskDao.updateStatus(taskId, "DONE", now) == 1
+            else -> false
+        }
+    }
+
     private suspend fun load(date: String): DailyPlanWithTasks? {
         val plan = database.dailyPlanDao().getEntityByDate(date) ?: return null
         return DailyPlanWithTasks(plan, database.dailyTaskDao().getByPlan(plan.id))

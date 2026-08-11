@@ -33,29 +33,34 @@ import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
 
 @Composable
 fun TodayRoute(
-    onTaskClick: (TodayDestination, String?) -> Unit,
+    onTaskClick: (TodayTaskUi) -> Unit,
     viewModel: TodayViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    TodayScreen(state, onTaskClick)
+    TodayScreen(state, onTaskClick, onRetry = viewModel::retry)
 }
 
 @Composable
 fun TodayScreen(
     state: TodayUiState,
-    onTaskClick: (TodayDestination, String?) -> Unit,
+    onTaskClick: (TodayTaskUi) -> Unit,
     onRetry: () -> Unit = {},
 ) {
     when {
         state.isLoading -> WenyanLoadingIndicator(modifier = Modifier.fillMaxSize())
         state.error != null -> ErrorState(Icons.Default.Warning, "加载失败", onRetry, message = state.error)
-        state.tasks.isEmpty() -> EmptyState(Icons.Default.EventNote, "今天还没有学习任务", description = state.infeasibleMessage ?: "计划生成后会显示在这里")
+        state.tasks.isEmpty() -> EmptyState(
+            icon = Icons.Default.EventNote,
+            title = "今天还没有学习任务",
+            description = state.infeasibleMessage ?: "计划生成后会显示在这里",
+            action = { Button(onClick = onRetry) { Text("重新加载今日计划") } },
+        )
         else -> TodayContent(state, onTaskClick)
     }
 }
 
 @Composable
-private fun TodayContent(state: TodayUiState, onTaskClick: (TodayDestination, String?) -> Unit) {
+private fun TodayContent(state: TodayUiState, onTaskClick: (TodayTaskUi) -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -72,7 +77,7 @@ private fun TodayContent(state: TodayUiState, onTaskClick: (TodayDestination, St
                 )
                 state.infeasibleMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 state.nextTask?.let { next ->
-                    Button(onClick = { onTaskClick(next.destination, next.contentId) }) {
+                    Button(onClick = { onTaskClick(next) }) {
                         Icon(Icons.Default.PlayArrow, contentDescription = null)
                         Text("继续学习")
                     }
@@ -91,9 +96,9 @@ private fun TodayContent(state: TodayUiState, onTaskClick: (TodayDestination, St
 }
 
 @Composable
-private fun TodayTaskCard(task: TodayTaskUi, onTaskClick: (TodayDestination, String?) -> Unit) {
+private fun TodayTaskCard(task: TodayTaskUi, onTaskClick: (TodayTaskUi) -> Unit) {
     Card(
-        onClick = { onTaskClick(task.destination, task.contentId) },
+        onClick = { onTaskClick(task) },
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(),
     ) {
@@ -130,7 +135,7 @@ private val previewState = TodayUiState(
 )
 
 @Preview(showBackground = true, fontScale = 2f)
-@Composable private fun TodayLargeFontPreview() = TodayScreen(previewState, onTaskClick = { _, _ -> })
+@Composable private fun TodayLargeFontPreview() = TodayScreen(previewState, onTaskClick = {})
 
 @Preview(showBackground = true, device = "spec:width=900dp,height=500dp,dpi=420")
-@Composable private fun TodayLandscapePreview() = TodayScreen(previewState, onTaskClick = { _, _ -> })
+@Composable private fun TodayLandscapePreview() = TodayScreen(previewState, onTaskClick = {})

@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.wenyan.app.core.database.entity.DailyPlanEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -20,4 +21,7 @@ interface DailyPlanDao {
 
     @Query("SELECT * FROM daily_plans WHERE plan_date = :date LIMIT 1")
     fun observeEntityByDate(date: String): Flow<DailyPlanEntity?>
+
+    @Update
+    suspend fun update(plan: DailyPlanEntity): Int
 }

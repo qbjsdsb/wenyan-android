@@ -66,6 +66,34 @@ class DailyPlanRepositoryTest {
         assertEquals(listOf("DONE", "PENDING"), restored.tasks.map { it.status })
     }
 
+    @Test fun `markDone is idempotent and does not revive non-pending tasks`() = runTest {
+        val plan = repository.getOrCreate(DATE) { draft("plan", listOf(0, 1, 2)) }
+
+        assertEquals(true, repository.markDone(plan.tasks[0].id, now = 20))
+        assertEquals(true, repository.markDone(plan.tasks[0].id, now = 21))
+        db.dailyTaskDao().updateStatus(plan.tasks[1].id, "SUPERSEDED", 21)
+        assertEquals(false, repository.markDone(plan.tasks[1].id, now = 22))
+        assertEquals(false, repository.markDone("missing", now = 23))
+        assertEquals(listOf("DONE", "SUPERSEDED", "PENDING"), db.dailyTaskDao().getByPlan(plan.plan.id).map { it.status })
+        assertEquals(20L, db.dailyTaskDao().getById(plan.tasks[0].id)?.updatedAt)
+    }
+
+    @Test fun `empty placeholder can be filled without changing its plan identity`() = runTest {
+        val emptyDraft = draft("empty", emptyList())
+        val empty = repository.getOrCreate(DATE) {
+            emptyDraft.copy(plan = emptyDraft.plan.copy(status = "EMPTY"))
+        }
+        val replacement = draft("replacement", listOf(0))
+
+        val filled = repository.fillEmpty(DATE, replacement)
+
+        assertEquals(empty.plan.id, filled.plan.id)
+        assertEquals(empty.plan.createdAt, filled.plan.createdAt)
+        assertEquals("ACTIVE", filled.plan.status)
+        assertEquals(listOf("PENDING"), filled.tasks.map { it.status })
+        assertEquals(empty.plan.id, filled.tasks.single().planId)
+    }
+
     @Test fun `task insert failure rolls back new plan`() = runTest {
         val bad = draft("bad", listOf(0, 1)).let { draft ->
             draft.copy(tasks = draft.tasks.map { it.copy(stableId = "duplicate") })
