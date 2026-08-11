@@ -139,7 +139,10 @@ fun EssayListScreen(
                 targetState = Triple(uiState.isLoading, uiState.error, uiState.essays.isEmpty()),
                 animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
                 label = "essay_list_state",
-                modifier = Modifier.fillMaxSize(),
+                // 筛选区和列表区共用 Column 时，列表只应填充剩余高度。
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
             ) { (isLoading, error, isEmpty) ->
                 when {
                     isLoading -> {

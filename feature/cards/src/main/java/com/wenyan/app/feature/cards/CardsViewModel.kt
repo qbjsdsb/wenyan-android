@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wenyan.app.core.common.util.friendlyErrorMessage
 import com.wenyan.app.core.data.cards.CardTemplate
 import com.wenyan.app.core.data.cards.ClozeQuoteCard
 import com.wenyan.app.core.data.cards.DistinctionCard
@@ -644,7 +645,7 @@ class CardsViewModel @Inject constructor(
                     throw e
                 } catch (e: Exception) {
                     // v0.8.12 P1-3:错误优先级调度失败 > 学习进度 > 错题,用 hasSchedulingError 标记
-                    _errorMessage.value = "评分调度失败：${e.message ?: "未知错误"}"
+                    _errorMessage.value = "评分调度失败：${friendlyErrorMessage(e)}"
                     // v0.9.35 审计修复：调度失败回滚 ratedPointIds 标记，
                     // 否则同 pointId 的 sibling 卡本会话永不再触发调度（FSRS 数据永久缺失）
                     if (unitId.isNotBlank()) ratedUnitIds.remove(unitId) else ratedPointIds.remove(pointId)
@@ -710,7 +711,7 @@ class CardsViewModel @Inject constructor(
                         if (currentError == null ||
                             !currentError.startsWith("评分调度失败")
                         ) {
-                            _errorMessage.value = "学习进度记录失败：${e.message ?: "未知错误"}"
+                            _errorMessage.value = "学习进度记录失败：${friendlyErrorMessage(e)}"
                         }
                     }
                 }
@@ -738,7 +739,7 @@ class CardsViewModel @Inject constructor(
                     if (currentError == null ||
                         !currentError.startsWith("评分调度失败")
                     ) {
-                        _errorMessage.value = "错题记录失败：${e.message ?: "未知错误"}"
+                        _errorMessage.value = "错题记录失败：${friendlyErrorMessage(e)}"
                     }
                 }
             }
@@ -986,7 +987,7 @@ class CardsViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Timber.e(e, "addToWrongAnswerBook failed for pointId=$pointId")
-                _errorMessage.value = "错题本记录失败：${e.message ?: "未知错误"}"
+                _errorMessage.value = "错题本记录失败：${friendlyErrorMessage(e)}"
             } finally {
                 _isAddingBookmark.value = false
             }

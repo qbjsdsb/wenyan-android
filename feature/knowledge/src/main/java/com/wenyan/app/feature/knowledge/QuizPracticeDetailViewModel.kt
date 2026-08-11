@@ -280,6 +280,8 @@ class QuizPracticeDetailViewModel @Inject constructor(
                 } else {
                     "已加入错题本，将按 FSRS 安排复习"
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "markDontKnow recordWrongAnswer failed")
                 // 推进已同步完成不回退；仅提示失败（错题本写入失败不影响背诵流程）

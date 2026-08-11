@@ -36,12 +36,11 @@ import com.wenyan.app.feature.today.TodayTaskUi
 /**
  * 文研App 主导航图。
  *
- * 承载 5 个顶级路由的 composable 目的地（底部 NavigationBar）：
+ * 承载 4 个顶级路由的 composable 目的地（底部 NavigationBar）：
+ * - today：今日任务
  * - knowledge：知识点列表
- * - essay：论述题
- * - cards：记忆卡片
- * - wrong_answer：错题本（v0.9.0 起从 quiz 子路由提升为顶级 Tab，占据原 graph 位置）
- * - settings：设置（v0.6 起从子路由提升为顶级 Tab）
+ * - training：训练 Hub（论述题、卡片、练习）
+ * - my：我的 Hub（错题本、设置、AI 助手）
  *
  * 子路由（非顶级目的地）：
  * - aiassistant：AI 助手（v0.6 起从顶级 Tab 降为子路由，Push/Pop slide）
@@ -51,9 +50,9 @@ import com.wenyan.app.feature.today.TodayTaskUi
  *
  * v0.9.0 变更：
  * - 移除 graph 顶级 Tab（feature:graph 模块整体删除，知识点关联改走树结构）
- * - WrongAnswer 从子路由提升为顶级 Tab，删除 quiz TopBar Inbox 入口
+ * - WrongAnswer 从 quiz 子路由迁移为独立入口；现由 my Hub 进入
  *
- * 3 个主屏（knowledge/essay/cards）TopBar 右上角均提供 AI 入口（SmartToy 图标），
+ * 主要学习屏 TopBar 右上角提供 AI 入口（SmartToy 图标），
  * 点击后以子路由 Push 动画进入 AI 助手，避免与底部 NavigationBar 叠加冲突。
  */
 @Composable
@@ -249,8 +248,7 @@ fun WenyanNavHost(
             onNavigateToDetail = { pointId -> navController.navigateToKnowledgeDetail(pointId) },
             onDailyTaskFinished = dailyTaskCompletionViewModel::markDone,
         )
-        // v0.9.0：WrongAnswer 提升为顶级 Tab（原 graphDestination 位置）
-        // 不传 onBack → WrongAnswerScreen 顶级模式（无返回箭头）
+        // 错题本由“我的”或“训练” Hub 进入，保留返回路径。
         wrongAnswerDestination {
             navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_MY)
         }
@@ -593,8 +591,7 @@ private fun NavGraphBuilder.dailyCardsFullscreenDestination(
     }
 }
 
-// v0.9.0：WrongAnswer 顶级 Tab，用 NavHost 默认 Tab fade（无 Push/Pop slide）
-// onBack 为 null 时 WrongAnswerScreen 隐藏返回箭头（顶级模式）
+// 错题本保留独立路由，但当前由 Hub 进入，因此使用返回箭头。
 private fun NavGraphBuilder.wrongAnswerDestination(onBack: () -> Unit) {
     composable(TopLevelDestination.ROUTE_WRONG_ANSWER) {
         WrongAnswerScreen(onBack = onBack)

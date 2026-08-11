@@ -7,6 +7,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -49,6 +50,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -1060,37 +1064,87 @@ private fun EssaySelfRatingSection(
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            WenyanRatingButton(
-                label = "不会",
-                icon = Icons.Default.SentimentDissatisfied,
-                isSelected = selfRating == EssaySelfRating.AGAIN,
-                onClick = { onRateSelf(EssaySelfRating.AGAIN) },
-                containerColor = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.weight(1f),
-            )
-            WenyanRatingButton(
-                label = "尚可",
-                icon = Icons.Default.SentimentNeutral,
-                isSelected = selfRating == EssaySelfRating.GOOD,
-                onClick = { onRateSelf(EssaySelfRating.GOOD) },
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.weight(1f),
-            )
-            WenyanRatingButton(
-                label = "轻松",
-                icon = Icons.Default.SentimentVerySatisfied,
-                isSelected = selfRating == EssaySelfRating.EASY,
-                onClick = { onRateSelf(EssaySelfRating.EASY) },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.weight(1f),
-            )
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            @Composable
+            fun SelfRatingButton(
+                label: String,
+                icon: ImageVector,
+                rating: EssaySelfRating,
+                containerColor: Color,
+                contentColor: Color,
+                modifier: Modifier,
+            ) {
+                WenyanRatingButton(
+                    label = label,
+                    icon = icon,
+                    isSelected = selfRating == rating,
+                    onClick = { onRateSelf(rating) },
+                    containerColor = containerColor,
+                    contentColor = contentColor,
+                    modifier = modifier,
+                )
+            }
+
+            // 三个按钮同时含图标和文字；窄屏/大字号下改为纵向，避免内容被压缩。
+            val stackButtons = maxWidth < 420.dp || LocalDensity.current.fontScale >= 1.3f
+            if (stackButtons) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    SelfRatingButton(
+                        label = "不会",
+                        icon = Icons.Default.SentimentDissatisfied,
+                        rating = EssaySelfRating.AGAIN,
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    SelfRatingButton(
+                        label = "尚可",
+                        icon = Icons.Default.SentimentNeutral,
+                        rating = EssaySelfRating.GOOD,
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    SelfRatingButton(
+                        label = "轻松",
+                        icon = Icons.Default.SentimentVerySatisfied,
+                        rating = EssaySelfRating.EASY,
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    SelfRatingButton(
+                        label = "不会",
+                        icon = Icons.Default.SentimentDissatisfied,
+                        rating = EssaySelfRating.AGAIN,
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.weight(1f),
+                    )
+                    SelfRatingButton(
+                        label = "尚可",
+                        icon = Icons.Default.SentimentNeutral,
+                        rating = EssaySelfRating.GOOD,
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.weight(1f),
+                    )
+                    SelfRatingButton(
+                        label = "轻松",
+                        icon = Icons.Default.SentimentVerySatisfied,
+                        rating = EssaySelfRating.EASY,
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
         }
 
         // 评分后确认信息

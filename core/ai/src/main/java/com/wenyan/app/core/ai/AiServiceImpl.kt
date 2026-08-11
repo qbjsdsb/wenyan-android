@@ -111,7 +111,7 @@ class AiServiceImpl @Inject constructor(
                 val msg = when (code) {
                     401, 403 -> "API Key 无效或已过期（HTTP $code），请检查配置"
                     in 500..599 -> "AI 服务端错误（HTTP $code），请稍后重试"
-                    else -> "API 调用失败（HTTP $code）：${response.message()}"
+                    else -> "API 调用失败（HTTP $code），请重试"
                 }
                 emit(msg)
             }
@@ -124,10 +124,10 @@ class AiServiceImpl @Inject constructor(
         } catch (e: UnknownHostException) {
             emit("无法连接到 AI 服务，请检查网络或 baseUrl 配置")
         } catch (e: SerializationException) {
-            emit("AI 响应解析失败：${e.message}")
+            emit("AI 响应解析失败，请检查服务商配置后重试")
         } catch (e: IOException) {
             // 其他 IO 异常（如 ConnectionResetException）归为网络问题
-            emit("网络错误，请检查网络连接：${e.message}")
+            emit("网络错误，请检查网络连接后重试")
         } catch (e: Exception) {
             // v0.9.37 P2：兜底不向用户泄露裸异常文本（原 ${e.message} 可能含
             // 英文堆栈/URL 等实现细节）；friendlyErrorMessage 映射网络/超时/
@@ -183,7 +183,7 @@ class AiServiceImpl @Inject constructor(
                 val msg = when (code) {
                     401, 403 -> "API Key 无效或已过期（HTTP $code），请检查配置"
                     in 500..599 -> "AI 服务端错误（HTTP $code），请稍后重试"
-                    else -> "API 调用失败（HTTP $code）：${response.message()}"
+                    else -> "API 调用失败（HTTP $code），请重试"
                 }
                 emit(Result.failure(IllegalStateException(msg)))
             }
@@ -194,11 +194,11 @@ class AiServiceImpl @Inject constructor(
         } catch (e: UnknownHostException) {
             emit(Result.failure(UnknownHostException("无法连接到 AI 服务，请检查网络或 baseUrl 配置")))
         } catch (e: SerializationException) {
-            emit(Result.failure(SerializationException("AI 响应解析失败：${e.message}")))
+            emit(Result.failure(IllegalStateException("AI 响应解析失败，请检查服务商配置后重试")))
         } catch (e: IOException) {
-            emit(Result.failure(IOException("网络错误，请检查网络连接：${e.message}")))
+            emit(Result.failure(IOException("网络错误，请检查网络连接后重试")))
         } catch (e: Exception) {
-            emit(Result.failure(e))
+            emit(Result.failure(IllegalStateException("AI 调用失败，请稍后重试")))
         }
     }.flowOn(Dispatchers.IO)
 
@@ -255,14 +255,14 @@ class AiServiceImpl @Inject constructor(
         } catch (e: UnknownHostException) {
             emit(Result.failure(UnknownHostException("无法连接到 AI 服务，请检查网络或 baseUrl 配置")))
         } catch (e: SerializationException) {
-            emit(Result.failure(SerializationException("AI 响应解析失败：${e.message}")))
+            emit(Result.failure(IllegalStateException("AI 响应解析失败，请检查服务商配置后重试")))
         } catch (e: IOException) {
             if (e.message?.contains("Canceled") == true) {
                 throw CancellationException("流式读取被取消")
             }
-            emit(Result.failure(IOException("网络错误，请检查网络连接：${e.message}")))
+            emit(Result.failure(IOException("网络错误，请检查网络连接后重试")))
         } catch (e: Exception) {
-            emit(Result.failure(e))
+            emit(Result.failure(IllegalStateException("AI 调用失败，请稍后重试")))
         }
     }.flowOn(Dispatchers.IO)
 
@@ -309,7 +309,7 @@ class AiServiceImpl @Inject constructor(
                     val msg = when (code) {
                         401, 403 -> "API Key 无效或已过期（HTTP $code），请检查配置"
                         in 500..599 -> "AI 服务端错误（HTTP $code），请稍后重试"
-                        else -> "API 调用失败（HTTP $code）：${response.message}"
+                        else -> "API 调用失败（HTTP $code），请重试"
                     }
                     throw IllegalStateException(msg)
                 }

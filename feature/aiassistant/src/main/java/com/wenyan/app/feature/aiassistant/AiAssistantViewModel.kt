@@ -19,6 +19,7 @@ import com.wenyan.app.core.ai.recall.QuestionType
 import com.wenyan.app.core.ai.recall.RecallChecker
 import com.wenyan.app.core.ai.recall.RecallResult
 import com.wenyan.app.core.ai.recall.RoteCheckResult
+import com.wenyan.app.core.common.util.friendlyErrorMessage
 import com.wenyan.app.core.data.mapper.ChatMessageMapper
 import com.wenyan.app.core.data.repository.ChatRepository
 import com.wenyan.app.core.database.entity.ChatMessageEntity
@@ -104,24 +105,30 @@ class AiAssistantViewModel @Inject constructor(
      */
     private fun launchAiTask(
         showLoading: Boolean = true,
-        block: suspend () -> Unit,
+        block: suspend (generation: Int) -> Unit,
     ) {
         // P1-3 防重入：已有 AI 任务在跑时忽略新任务
         if (aiJob?.isActive == true) {
             Timber.d("launchAiTask skipped: aiJob is active")
             return
         }
+        val taskGeneration = conversationGeneration
         aiJob = viewModelScope.launch {
-            if (showLoading) _uiState.update { it.copy(isLoading = true) }
+            if (showLoading && taskGeneration == conversationGeneration) {
+                _uiState.update { it.copy(isLoading = true) }
+            }
             try {
-                block()
+                block(taskGeneration)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 // 兜底：block 内部已 catch 的不会到这里；这里是双保险
                 Timber.w(e, "AI 任务异常: ${e.message}")
             } finally {
-                if (showLoading) _uiState.update { it.copy(isLoading = false) }
+                // 过期任务不能关闭新会话/新任务的 loading 状态。
+                if (showLoading && taskGeneration == conversationGeneration) {
+                    _uiState.update { it.copy(isLoading = false) }
+                }
                 // v0.9.27 修复（并发竞态）：仅当自己是当前 aiJob 时才清空引用。
                 // 原实现无条件 aiJob = null：任务 A 停止中（CancellationException 分支的
                 // withContext(NonCancellable) DB 写入延迟）isActive 已 false，用户快速发新消息
@@ -188,20 +195,23 @@ class AiAssistantViewModel @Inject constructor(
         }
 
         // v0.9.23 P0-1/P1-3：统一走 launchAiTask（防重入 + 可取消）
-        launchAiTask {
+        launchAiTask { generation ->
             // v0.9.25 修复：sb 提升到 try 外——停止生成（CancellationException）时需要保留已生成的部分内容
             val sb = StringBuilder()
             try {
                 // NF-PP6: 确保当前对话存在,持久化用户消息
-                ensureConversation()
+                ensureConversation(expectedGeneration = generation)
                 val convId = currentConversationId
                 // P0-1 安全空判断：清空/新建对话取消了任务后，这里不应 NPE
                 if (convId == null) {
-                    _uiState.update {
-                        it.copy(errorMessage = "对话创建失败，请重试")
+                    if (generation == conversationGeneration) {
+                        _uiState.update {
+                            it.copy(errorMessage = "对话创建失败，请重试")
+                        }
                     }
                     return@launchAiTask
                 }
+                if (generation != conversationGeneration) return@launchAiTask
                 // v0.9.35 审计修复：多轮上下文须在 appendMessage **之前**提取——
                 // 原实现先持久化当前用户消息再 getRecentMessages，本次提问内容
                 // 在 history 与 user query 中重复注入（浪费 token 且可能误导模型）。
@@ -236,7 +246,7 @@ class AiAssistantViewModel @Inject constructor(
                 // 2. 检查 AI 可用性
                 val available = aiService.isAvailable().first()
                 if (!available) {
-                    addOfflineMessage(ragResult.references)
+                    addOfflineMessage(ragResult.references, expectedGeneration = generation)
                     return@launchAiTask
                 }
 
@@ -251,15 +261,19 @@ class AiAssistantViewModel @Inject constructor(
                             is AiStreamEvent.Delta -> {
                                 sb.append(event.content)
                                 // 流式增量：更新 streamingContent 供 UI 逐字显示
-                                _uiState.update { it.copy(streamingContent = sb.toString()) }
+                                if (generation == conversationGeneration) {
+                                    _uiState.update { it.copy(streamingContent = sb.toString()) }
+                                }
                             }
                             is AiStreamEvent.Complete -> {
                                 tokensUsed = event.usage?.totalTokens
                             }
                         }
                     }.onFailure { e ->
-                        _uiState.update {
-                            it.copy(errorMessage = "请求失败：${e.message ?: "未知错误"}")
+                        if (generation == conversationGeneration) {
+                            _uiState.update {
+                                it.copy(errorMessage = "请求失败：${friendlyErrorMessage(e)}")
+                            }
                         }
                     }
                 }
@@ -272,10 +286,13 @@ class AiAssistantViewModel @Inject constructor(
                         contentSource = CONTENT_SOURCE_AI,
                         references = if (ragResult.hasResults) ragResult.references else emptyList(),
                         tokensUsed = tokensUsed,
+                        expectedGeneration = generation,
                     )
                 }
                 // 流式结束，清空 streamingContent
-                _uiState.update { it.copy(streamingContent = null) }
+                if (generation == conversationGeneration) {
+                    _uiState.update { it.copy(streamingContent = null) }
+                }
             } catch (e: CancellationException) {
                 // v0.9.24 停止生成：用户取消时保留已生成的部分内容
                 // v0.9.25 修复：此前只清 streamingContent，未保存部分内容到消息
@@ -288,14 +305,19 @@ class AiAssistantViewModel @Inject constructor(
                             contentSource = CONTENT_SOURCE_AI,
                             references = emptyList(), // 取消时引用可能未就绪，保持简单
                             tokensUsed = null,
+                            expectedGeneration = generation,
                         )
                     }
                 }
-                _uiState.update { it.copy(streamingContent = null) }
+                if (generation == conversationGeneration) {
+                    _uiState.update { it.copy(streamingContent = null) }
+                }
                 throw e
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(errorMessage = "请求失败：${e.message ?: "未知错误"}", streamingContent = null)
+                if (generation == conversationGeneration) {
+                    _uiState.update {
+                        it.copy(errorMessage = "请求失败：${friendlyErrorMessage(e)}", streamingContent = null)
+                    }
                 }
             }
         }
@@ -323,15 +345,18 @@ class AiAssistantViewModel @Inject constructor(
         }
 
         // v0.9.23 P0-1/P1-3：统一走 launchAiTask（防重入 + 可取消）
-        launchAiTask {
+        launchAiTask { generation ->
             try {
                 // P1-AUDIT-5 修复：持久化用户消息（原实现只更新 UI 未入库，重启后上下文丢失）
-                ensureConversation()
+                ensureConversation(expectedGeneration = generation)
                 val convId = currentConversationId
                 if (convId == null) {
-                    _uiState.update { it.copy(errorMessage = "对话创建失败，请重试") }
+                    if (generation == conversationGeneration) {
+                        _uiState.update { it.copy(errorMessage = "对话创建失败，请重试") }
+                    }
                     return@launchAiTask
                 }
+                if (generation != conversationGeneration) return@launchAiTask
                 chatRepository.appendMessage(
                     conversationId = convId,
                     role = AiRole.USER.name,
@@ -344,13 +369,15 @@ class AiAssistantViewModel @Inject constructor(
                     tokensUsed = null,
                 )
                 socraticTutor.guideEssayAnswer(question, userAnswer).collect { guide ->
-                    addSocraticGuideMessage(guide)
+                    addSocraticGuideMessage(guide, expectedGeneration = generation)
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(errorMessage = "引导失败：${e.message ?: "未知错误"}")
+                if (generation == conversationGeneration) {
+                    _uiState.update {
+                        it.copy(errorMessage = "引导失败：${friendlyErrorMessage(e)}")
+                    }
                 }
             }
         }
@@ -376,15 +403,18 @@ class AiAssistantViewModel @Inject constructor(
         }
 
         // v0.9.23 P0-1/P1-3：统一走 launchAiTask（防重入 + 可取消）
-        launchAiTask {
+        launchAiTask { generation ->
             try {
                 // P1-AUDIT-5 修复：持久化用户消息（原实现只更新 UI 未入库，重启后上下文丢失）
-                ensureConversation()
+                ensureConversation(expectedGeneration = generation)
                 val convId = currentConversationId
                 if (convId == null) {
-                    _uiState.update { it.copy(errorMessage = "对话创建失败，请重试") }
+                    if (generation == conversationGeneration) {
+                        _uiState.update { it.copy(errorMessage = "对话创建失败，请重试") }
+                    }
                     return@launchAiTask
                 }
+                if (generation != conversationGeneration) return@launchAiTask
                 chatRepository.appendMessage(
                     conversationId = convId,
                     role = AiRole.USER.name,
@@ -408,12 +438,15 @@ class AiAssistantViewModel @Inject constructor(
                     content = content,
                     contentSource = CONTENT_SOURCE_AI,
                     references = explanation.references,
+                    expectedGeneration = generation,
                 )
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(errorMessage = "解释失败：${e.message ?: "未知错误"}")
+                if (generation == conversationGeneration) {
+                    _uiState.update {
+                        it.copy(errorMessage = "解释失败：${friendlyErrorMessage(e)}")
+                    }
                 }
             }
         }
@@ -450,15 +483,19 @@ class AiAssistantViewModel @Inject constructor(
         // v0.9.23 P1-3：AI 任务进行中拒绝新任务
         if (aiJob?.isActive == true) return
         // v0.9.23 P1-3：统一走 launchAiTask（防重入 + 可取消）
-        launchAiTask {
+        launchAiTask { generation ->
             try {
                 val result = checkRecall(userAnswer, correctAnswer, questionType)
-                _uiState.update { it.copy(recallResult = result) }
+                if (generation == conversationGeneration) {
+                    _uiState.update { it.copy(recallResult = result) }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(errorMessage = "回忆检测失败：${e.message ?: "未知错误"}")
+                if (generation == conversationGeneration) {
+                    _uiState.update {
+                        it.copy(errorMessage = "回忆检测失败：${friendlyErrorMessage(e)}")
+                    }
                 }
             }
         }
@@ -484,23 +521,27 @@ class AiAssistantViewModel @Inject constructor(
         if (aiJob?.isActive == true) return
         // v0.9.23 P1-3：统一走 launchAiTask（防重入 + 可取消）。
         // 检测不置 isLoading（静默检测，不干扰对话 UI）。
-        launchAiTask(showLoading = false) {
+        launchAiTask(showLoading = false) { generation ->
             try {
                 val result: RoteCheckResult = antiRoteMemorization
                     .checkRoteMemorization(pointId, relatedPointIds)
                     .first()
-                _uiState.update {
-                    if (result.isSuspected) {
-                        it.copy(roteWarning = result.suggestion)
-                    } else {
-                        it.copy(roteWarning = null)
+                if (generation == conversationGeneration) {
+                    _uiState.update {
+                        if (result.isSuspected) {
+                            it.copy(roteWarning = result.suggestion)
+                        } else {
+                            it.copy(roteWarning = null)
+                        }
                     }
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 // 死记硬背检测失败不阻塞主流程，静默忽略
-                _uiState.update { it.copy(roteWarning = null) }
+                if (generation == conversationGeneration) {
+                    _uiState.update { it.copy(roteWarning = null) }
+                }
             }
         }
     }
@@ -538,19 +579,36 @@ class AiAssistantViewModel @Inject constructor(
         // 在 NonCancellable 内把"半截回复"写回已清空的消息列表（幽灵回复）
         aiJob?.cancel()
         conversationGeneration++
+        val cleanupGeneration = conversationGeneration
         val convId = currentConversationId
-        if (convId != null) {
-            viewModelScope.launch {
-                chatRepository.deleteConversation(convId)
-                chatRepository.setCurrentConversation(null)
+        currentConversationId = null
+        viewModelScope.launch {
+            try {
+                if (convId != null) {
+                    chatRepository.deleteConversation(convId)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "delete chat conversation failed: $convId")
             }
-            currentConversationId = null
+            // 用户可能已在删除完成前发送新消息并创建新会话；旧清理不能覆盖新会话。
+            if (cleanupGeneration == conversationGeneration && currentConversationId == null) {
+                chatRepository.setCurrentConversation(null)
+                // setCurrentConversation 挂起期间可能已经创建了新会话；重新读取内存 ID，
+                // 把持久化值校正回新会话，避免旧清理的 null 写入覆盖新会话 ID。
+                currentConversationId?.let { newConversationId ->
+                    chatRepository.setCurrentConversation(newConversationId)
+                }
+            }
         }
         _uiState.update {
             it.copy(
                 messages = emptyList(),
                 errorMessage = null,
                 roteWarning = null,
+                isLoading = false,
+                streamingContent = null,
             )
         }
     }
@@ -567,15 +625,25 @@ class AiAssistantViewModel @Inject constructor(
         // v0.9.35 审计修复：代次递增（同 clearMessages）
         aiJob?.cancel()
         conversationGeneration++
+        val cleanupGeneration = conversationGeneration
         currentConversationId = null
         viewModelScope.launch {
-            chatRepository.setCurrentConversation(null)
+            // 新建后若用户立即发送消息，不能让这个旧的异步清理覆盖新会话 ID。
+            if (cleanupGeneration == conversationGeneration && currentConversationId == null) {
+                chatRepository.setCurrentConversation(null)
+                // 同上：DataStore 写入是挂起操作，必须在返回后再校正一次竞态中的新 ID。
+                currentConversationId?.let { newConversationId ->
+                    chatRepository.setCurrentConversation(newConversationId)
+                }
+            }
         }
         _uiState.update {
             it.copy(
                 messages = emptyList(),
                 errorMessage = null,
                 roteWarning = null,
+                isLoading = false,
+                streamingContent = null,
             )
         }
     }
@@ -612,15 +680,36 @@ class AiAssistantViewModel @Inject constructor(
      * 如果 currentConversationId 为 null,创建新对话并设为当前。
      * 调用方需在协程内调用(内部调用 suspend 方法)。
      */
-    private suspend fun ensureConversation() {
+    private suspend fun ensureConversation(expectedGeneration: Int = conversationGeneration) {
+        if (expectedGeneration != conversationGeneration) return
         if (currentConversationId != null) return
         val newId = chatRepository.createConversation(
             title = "AI 对话",
             apiConfigId = null,
             model = null,
         )
+        if (expectedGeneration != conversationGeneration) {
+            // 创建过程跨越了清空/新建代次，删除孤儿会话，避免它成为可恢复的脏历史。
+            withContext(NonCancellable) {
+                chatRepository.deleteConversation(newId)
+            }
+            return
+        }
         currentConversationId = newId
         chatRepository.setCurrentConversation(newId)
+        // setCurrentConversation 是挂起写入；写入期间可能发生清空/新建。
+        // 若代次已经变化，恢复持久化 currentId 与内存中的新会话一致，并清理孤儿。
+        if (expectedGeneration != conversationGeneration) {
+            withContext(NonCancellable) {
+                if (currentConversationId == newId) {
+                    currentConversationId = null
+                    chatRepository.setCurrentConversation(null)
+                } else {
+                    chatRepository.setCurrentConversation(currentConversationId)
+                }
+                chatRepository.deleteConversation(newId)
+            }
+        }
     }
 
     /**
@@ -630,16 +719,25 @@ class AiAssistantViewModel @Inject constructor(
      * - 返回 null → 无历史,保持 _uiState 空(等用户首次 sendMessage)
      */
     private fun restoreConversationIfNeeded() {
+        val restoreGeneration = conversationGeneration
         viewModelScope.launch {
             try {
                 val convId = chatRepository.loadOrInitCurrent() ?: return@launch
                 // v0.9.23 P0-2 修复：若用户已通过 sendMessage 创建了新会话
                 // （currentConversationId 非 null），不覆盖用户当前会话，
                 // 避免恢复完成时把旧历史灌入并让用户刚发的消息从 UI 消失。
-                if (currentConversationId != null) return@launch
+                // v0.9.37 审计修复：清空/新建对话期间恢复协程也必须失效，
+                // 否则它会在用户明确清空后把旧历史重新写回 UI。
+                if (restoreGeneration != conversationGeneration || currentConversationId != null) {
+                    return@launch
+                }
                 currentConversationId = convId
                 val messages = chatRepository.observeMessages(convId).first()
-                if (messages.isNotEmpty() && currentConversationId == convId) {
+                if (
+                    restoreGeneration == conversationGeneration &&
+                    messages.isNotEmpty() &&
+                    currentConversationId == convId
+                ) {
                     _uiState.update { it.copy(messages = messages.map { it.toAiMessage() }) }
                 }
             } catch (e: CancellationException) {
@@ -657,11 +755,12 @@ class AiAssistantViewModel @Inject constructor(
         references: List<RagReference> = emptyList(),
         stage: SocraticStage? = null,
         tokensUsed: Int? = null,
+        expectedGeneration: Int = conversationGeneration,
     ) {
         // v0.9.35 审计修复：代次快照——若清空/新建对话发生（代次递增），
         // 本次写入视为过期丢弃（幽灵回复防护）；update 内比较保证与
         // clearMessages 的递增在主线程串行一致
-        val generation = conversationGeneration
+        if (expectedGeneration != conversationGeneration) return
         val msg = AiMessage(
             id = nextId(),
             role = AiRole.ASSISTANT,
@@ -672,13 +771,13 @@ class AiAssistantViewModel @Inject constructor(
             tokensUsed = tokensUsed,
         )
         _uiState.update { state ->
-            if (generation != conversationGeneration) state
+            if (expectedGeneration != conversationGeneration) state
             else state.copy(messages = state.messages + msg)
         }
 
         // NF-PP6: 持久化 AI 消息(currentConversationId 应已由 sendMessage 的 ensureConversation 设置)
         val convId = currentConversationId
-        if (convId != null && generation == conversationGeneration) {
+        if (convId != null && expectedGeneration == conversationGeneration) {
             chatRepository.appendMessage(
                 conversationId = convId,
                 role = AiRole.ASSISTANT.name,
@@ -694,7 +793,10 @@ class AiAssistantViewModel @Inject constructor(
     }
 
     /** 添加苏格拉底引导消息（按阶段标注,NF-PP6: 持久化通过 addAssistantMessage） */
-    private suspend fun addSocraticGuideMessage(guide: SocraticGuide) {
+    private suspend fun addSocraticGuideMessage(
+        guide: SocraticGuide,
+        expectedGeneration: Int,
+    ) {
         val prefix = when (guide.stage) {
             SocraticStage.ANALYZE -> "【论证分析】"
             SocraticStage.SUGGEST -> "【改进建议】"
@@ -704,11 +806,15 @@ class AiAssistantViewModel @Inject constructor(
             content = prefix + "\n" + guide.content,
             contentSource = guide.contentSource,
             stage = guide.stage,
+            expectedGeneration = expectedGeneration,
         )
     }
 
     /** 离线降级：AI 不可用时显示友好提示（附 RAG 引用供参考,NF-PP6: 持久化通过 addAssistantMessage） */
-    private suspend fun addOfflineMessage(references: List<RagReference>) {
+    private suspend fun addOfflineMessage(
+        references: List<RagReference>,
+        expectedGeneration: Int,
+    ) {
         val content = buildString {
             append("AI 服务当前不可用，请检查网络连接或 API 配置。\n")
             if (references.isNotEmpty()) {
@@ -723,6 +829,7 @@ class AiAssistantViewModel @Inject constructor(
             content = content,
             contentSource = CONTENT_SOURCE_AI,
             references = references,
+            expectedGeneration = expectedGeneration,
         )
     }
 

@@ -321,7 +321,11 @@ fun AiAssistantScreen(
                 targetState = uiState.messages.isEmpty(),
                 animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
                 label = "ai_state",
-                modifier = Modifier.fillMaxSize(),
+                // 上方可能同时显示死记硬背提示；列表只应占用剩余高度，
+                // 否则 fillMaxSize 会把提示区一并挤出父布局。
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
             ) { isEmpty ->
                 if (isEmpty) {
                     // v0.9.32 功能完善：空状态从单行提示升级为学习问题建议列表，

@@ -7277,3 +7277,10 @@ while (retryCount <= maxRetries) {
 - 修复设置页从“我的”进入后没有返回箭头；清理失效的 LocalLazyListState 注入，改用自适应导航容器的 NestedScrollConnection 实现底栏滚动显隐，并在入口切换时复位可见状态；移除平板外层 Scaffold 的重复 inset。
 - 修复写作编辑器、量规、API 配置表单、素材卡片和卡片字段长文本在短屏/大字号下的溢出风险；未修改 seed、Room schema、migration、稳定 ID 或用户数据。
 - `git diff --check` 通过；本地 Gradle 仍受 wrapper/依赖网络限制，构建与回归测试留待 Cloud CI 验证。
+
+# 2026-08-11 — 全仓库最终审计 / FULL-AUDIT
+
+- 基于 `main@5c1168af` 建立独立分支 `agent/full-audit-20260811`；逐模块复核导航、状态机、持久化、AI 请求、异常边界、更新下载、响应式布局、无障碍和大字号/横屏行为。未修改 seed、Room schema、migration、稳定 ID 或用户数据。
+- 修复 AI 会话代次与取消竞态、恢复历史覆盖、流式幽灵回复、上下文预算、API 地址安全校验、原始异常信息泄露、数据库异常后永久 Loading、更新包 ZIP/长度/SHA-256 完整性和状态动画快照问题。
+- 修复主要列表/筛选/评分/自评/设置选择器在窄屏与大字号下的布局约束，补齐系统导航栏图标对比度、返回路径和测试覆盖；旧路由保持兼容。
+- 本地验证：Python 单测 25/25；seed audit 两次均 `0 error / 0 new debt` 且报告字节一致；`git diff --check` 通过。Android Gradle 编译/单测因当前容器无法取得 Gradle/Android 依赖，留由 Draft PR CI 作为合并门禁。

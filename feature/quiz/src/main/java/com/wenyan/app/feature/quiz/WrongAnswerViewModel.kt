@@ -161,7 +161,7 @@ class WrongAnswerViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _errorMessage.value = "标记失败：${e.message ?: "未知错误"}"
+                _errorMessage.value = "标记失败：${friendlyErrorMessage(e)}"
             }
         }
     }
@@ -178,7 +178,7 @@ class WrongAnswerViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _errorMessage.value = "删除失败：${e.message ?: "未知错误"}"
+                _errorMessage.value = "删除失败：${friendlyErrorMessage(e)}"
             }
         }
     }
@@ -213,7 +213,7 @@ class WrongAnswerViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Timber.e(e, "rateWrongAnswer failed: id=$id, rating=$rating")
-                _errorMessage.value = "评分失败：${e.message ?: "未知错误"}"
+                _errorMessage.value = "评分失败：${friendlyErrorMessage(e)}"
             } finally {
                 isRating = false
             }

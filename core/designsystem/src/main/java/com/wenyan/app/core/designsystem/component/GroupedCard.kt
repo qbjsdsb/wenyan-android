@@ -172,6 +172,11 @@ fun GroupedCardItem(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                // 右侧值不能以无约束 intrinsic width 抢走整行空间；给它固定比例的
+                // 可用宽度，大字号/长说明在两行内省略，保留标题的可读宽度。
+                modifier = Modifier.weight(0.42f, fill = false),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

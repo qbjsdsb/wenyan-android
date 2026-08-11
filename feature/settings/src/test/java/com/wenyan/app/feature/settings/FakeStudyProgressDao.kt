@@ -5,6 +5,7 @@ import com.wenyan.app.core.database.entity.StudyProgressEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
 
 /**
  * [StudyProgressDao] 的 Fake 实现,供 settings 模块测试使用(v0.8.13 P2-1 新增)。
@@ -23,6 +24,9 @@ class FakeStudyProgressDao(
         get() = _entity.value
         set(value) { _entity.value = value }
 
+    /** 模拟 DAO 观察流失败的异常；null 表示正常观察。 */
+    var observeFailure: Throwable? = null
+
     override suspend fun upsert(entity: StudyProgressEntity) {
         throw UnsupportedOperationException("upsert not used in settings tests")
     }
@@ -38,5 +42,6 @@ class FakeStudyProgressDao(
     override suspend fun getById(id: String): StudyProgressEntity? =
         throw UnsupportedOperationException("getById not used in settings tests")
 
-    override fun observeById(id: String): Flow<StudyProgressEntity?> = _entity.asStateFlow()
+    override fun observeById(id: String): Flow<StudyProgressEntity?> =
+        observeFailure?.let { failure -> flow { throw failure } } ?: _entity.asStateFlow()
 }

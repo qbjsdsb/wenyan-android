@@ -41,6 +41,9 @@ class FakeAiService(
      */
     var replyGate: CompletableDeferred<Unit>? = null
 
+    /** v0.9.37：在首个 Delta 后暂停，覆盖“已显示半截回复后清空”的竞态。 */
+    var deltaGate: CompletableDeferred<Unit>? = null
+
     /**
      * v0.9.24 测试用：记录 chatResultStream 收到的 history（供多轮上下文断言）。
      */
@@ -74,6 +77,9 @@ class FakeAiService(
         // 模拟流式：按字符逐块 emit Delta，最后 Complete
         response.forEachIndexed { index, ch ->
             emit(Result.success(AiStreamEvent.Delta(ch.toString())))
+            if (index == 0) {
+                deltaGate?.await()
+            }
             if (index % 10 == 9) {
                 // 模拟真实 chunk 粒度，避免单字符过多事件
                 emit(Result.success(AiStreamEvent.Delta("")))

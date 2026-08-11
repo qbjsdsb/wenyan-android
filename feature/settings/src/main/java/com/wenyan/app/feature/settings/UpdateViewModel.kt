@@ -6,10 +6,12 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wenyan.app.core.common.util.friendlyErrorMessage
 import com.wenyan.app.core.data.repository.UpdateCheckResult
 import com.wenyan.app.core.data.repository.UpdateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +24,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
+import java.util.zip.ZipFile
 import javax.inject.Inject
 
 /**
@@ -123,9 +126,11 @@ class UpdateViewModel @Inject constructor(
                     is UpdateCheckResult.Error ->
                         UpdateUiState.Error(message = result.message)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.value = UpdateUiState.Error(
-                    message = "检查更新失败：${e.message ?: "未知错误"}",
+                    message = "检查更新失败：${friendlyErrorMessage(e)}",
                 )
             } finally {
                 isChecking = false
@@ -153,6 +158,8 @@ class UpdateViewModel @Inject constructor(
                     // 避免国内网络单次中断直接报错（重试前 downloadApk 会清空旧文件）。
                     try {
                         downloadApk(pendingDownloadUrl, pendingSha256)
+                    } catch (first: CancellationException) {
+                        throw first
                     } catch (first: Exception) {
                         downloadApk(pendingDownloadUrl, pendingSha256)
                     }
@@ -160,6 +167,8 @@ class UpdateViewModel @Inject constructor(
                 _uiState.value = UpdateUiState.DownloadComplete(apkFile = file)
                 // 下载完成后自动触发安装
                 installApk(file)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 val message = when {
                     e.message?.contains("Unable to resolve host") == true ||
@@ -174,10 +183,11 @@ class UpdateViewModel @Inject constructor(
                         "存储空间不足，请清理后重试"
 
                     e.message?.contains("下载不完整") == true ||
-                        e.message?.contains("校验失败") == true ->
+                        e.message?.contains("校验失败") == true ||
+                        e.message?.contains("下载文件格式无效") == true ->
                         "下载文件不完整，请重试"
 
-                    else -> "下载失败：${e.message ?: "未知错误"}"
+                    else -> "下载失败，请重试"
                 }
                 _uiState.value = UpdateUiState.Error(message = message)
             } finally {
@@ -221,65 +231,86 @@ class UpdateViewModel @Inject constructor(
             .header("User-Agent", "Wenyan-Android-App")
             .build()
 
-        val response = okHttpClient.newCall(request).execute()
-        if (!response.isSuccessful) {
-            throw RuntimeException("HTTP ${response.code}")
-        }
+        return okHttpClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw RuntimeException("HTTP ${response.code}")
+            }
 
-        val body = response.body ?: throw RuntimeException("响应体为空")
-        val contentLength = body.contentLength()
-        val inputStream = body.byteStream()
+            val body = response.body ?: throw RuntimeException("响应体为空")
+            val contentLength = body.contentLength()
+            var totalBytesRead = 0L
 
-        var totalBytesRead = 0L
+            body.byteStream().use { inputStream ->
+                FileOutputStream(file).use { outputStream ->
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+                    var lastProgress = -1
 
-        FileOutputStream(file).use { outputStream ->
-            val buffer = ByteArray(8192)
-            var bytesRead: Int
-            var lastProgress = -1
+                    while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                        outputStream.write(buffer, 0, bytesRead)
+                        totalBytesRead += bytesRead
 
-            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                outputStream.write(buffer, 0, bytesRead)
-                totalBytesRead += bytesRead
+                        // 更新进度（仅在有 Content-Length 时）
+                        if (contentLength > 0) {
+                            val progress = ((totalBytesRead * 100) / contentLength).toInt()
+                            if (progress != lastProgress) {
+                                lastProgress = progress
+                                _uiState.value = UpdateUiState.Downloading(progress = progress)
+                            }
+                        }
+                    }
+                    outputStream.flush()
+                }
 
-                // 更新进度（仅在有 Content-Length 时）
-                if (contentLength > 0) {
-                    val progress = ((totalBytesRead * 100) / contentLength).toInt()
-                    if (progress != lastProgress) {
-                        lastProgress = progress
-                        _uiState.value = UpdateUiState.Downloading(progress = progress)
+                // P1 修复（v0.9.28）：下载完整性校验。
+                // 此前无任何校验，下载中断/串内容时把损坏文件直接交给安装器 → "应用文件存在问题"。
+                // 校验 1：Content-Length 字节数对比（服务端声明了长度时必须一致）。
+                if (contentLength > 0 && totalBytesRead != contentLength) {
+                    file.delete()
+                    throw RuntimeException(
+                        "下载不完整：预期 $contentLength 字节，实际 $totalBytesRead 字节",
+                    )
+                }
+
+                // 校验 2：APK 必须是可打开的 ZIP。降级路径没有 GitHub digest 时，
+                // 这一步至少能拦住被重定向到 HTML/空响应的“200 成功”假下载。
+                if (!file.isValidApkZip()) {
+                    file.delete()
+                    throw RuntimeException("下载文件格式无效，请重试")
+                }
+
+                // 校验 3：sha256 摘要（GitHub API 资产 digest；降级路径无 digest 时跳过）。
+                if (expectedSha256 != null) {
+                    val actual = file.sha256Hex()
+                    if (!actual.equals(expectedSha256, ignoreCase = true)) {
+                        file.delete()
+                        throw RuntimeException("下载校验失败：文件哈希不匹配")
                     }
                 }
-            }
-            outputStream.flush()
-        }
 
-        // P1 修复（v0.9.28）：下载完整性校验。
-        // 此前无任何校验，下载中断/串内容时把损坏文件直接交给安装器 → "应用文件存在问题"。
-        // 校验 1：Content-Length 字节数对比（服务端声明了长度时必须一致）。
-        if (contentLength > 0 && totalBytesRead != contentLength) {
-            file.delete()
-            throw RuntimeException(
-                "下载不完整：预期 $contentLength 字节，实际 $totalBytesRead 字节",
-            )
-        }
-
-        // 校验 2：sha256 摘要（GitHub API 资产 digest；降级路径无 digest 时跳过）。
-        if (expectedSha256 != null) {
-            val actual = file.sha256Hex()
-            if (!actual.equals(expectedSha256, ignoreCase = true)) {
-                file.delete()
-                throw RuntimeException("下载校验失败：文件哈希不匹配")
+                file
             }
         }
-
-        return file
     }
 
     /** 计算文件 SHA-256 十六进制摘要（用于 APK 完整性校验）。 */
     private fun File.sha256Hex(): String {
-        val digest = MessageDigest.getInstance("SHA-256").digest(readBytes())
-        return digest.joinToString("") { "%02x".format(it) }
+        val digest = MessageDigest.getInstance("SHA-256")
+        inputStream().use { input ->
+            val buffer = ByteArray(8192)
+            while (true) {
+                val bytesRead = input.read(buffer)
+                if (bytesRead == -1) break
+                digest.update(buffer, 0, bytesRead)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
     }
+
+    /** APK 是 ZIP 容器；打开中央目录可拦截 HTML/截断响应等非 APK 文件。 */
+    private fun File.isValidApkZip(): Boolean = runCatching {
+        ZipFile(this).use { zip -> zip.entries().hasMoreElements() }
+    }.getOrDefault(false)
 
     /**
      * 通过系统安装器安装 APK。

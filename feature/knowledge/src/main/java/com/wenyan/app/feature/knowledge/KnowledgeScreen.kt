@@ -98,7 +98,7 @@ import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
  * - 搜索 + 分类筛选可叠加(在搜索结果中再按科目筛选)
  * - 右侧 Clear 按钮一键清空搜索
  *
- * TopAppBar 右上角提供"AI助手"入口（与底部 NavigationBar 第 5 个 Tab 形成双入口）。
+ * TopAppBar 右上角提供"AI助手"入口（与"我的" Hub 形成双入口）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -190,7 +190,10 @@ fun KnowledgeScreen(
                 targetState = Triple(browseMode, uiState.isLoading, uiState.error),
                 animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
                 label = "knowledge_state",
-                modifier = Modifier.fillMaxSize(),
+                // 顶部模式/搜索/分类区需要保留自身高度；内容区填充剩余空间。
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
             ) { (mode, isLoading, error) ->
                 when {
                     mode == KnowledgeBrowseMode.FRAMEWORK -> {
@@ -412,7 +415,10 @@ private fun FrameworkBrowser(
                             }
                         },
                         label = "framework_navigation",
-                        modifier = Modifier.fillMaxSize(),
+                        // 框架标题栏位于同一 Column 中，导航内容只能占剩余高度。
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                     ) { destination ->
                         // 使用 AnimatedContent 自己的目标快照，避免进入下一层时旧页面也被
                         // 外层 selectedSubject 立即改写，导致过渡期间内容“闪”成同一页。

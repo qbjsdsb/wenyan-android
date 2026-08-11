@@ -418,6 +418,8 @@ private fun ApiConfigFormDialog(
     // "0." / "-0" / "" 时 toDoubleOrNull() 返回 null，let {} 不执行，
     // formState.temperature 不变，输入被立即丢弃，用户无法清空重输或输入小数点。
     // 现改为本地 String state 自由输入，onSave 时统一解析与 coerceIn。
+    // 本地文本在保存前不回写 ViewModel，避免每次输入合法字符都改变
+    // rememberSaveable 的 key，把用户正在编辑的 "0." / "1" 重置成 Double 格式。
     //
     // v0.8.3 修复（P1-A-2）：remember → rememberSaveable，屏幕旋转不丢失输入。
     // v0.8.3 修复（P1-A-1）：添加输入校验，非法值时显示错误提示。
@@ -450,25 +452,20 @@ private fun ApiConfigFormDialog(
             else -> null
         }
     }
+    // 中间态（如 "-"、"0."）允许继续输入，但不能作为有效配置保存。
+    val temperatureCanSave = temperatureText.isBlank() || temperatureText.toDoubleOrNull() != null
+    val maxTokensCanSave = maxTokensText.isBlank() || maxTokensText.toIntOrNull() != null
 
     // v0.9.30 打磨：必填校验（此前空名称/URL/key 也可保存）
     val displayNameError = remember(formState.displayName) {
         if (formState.displayName.isBlank()) "请输入显示名称" else null
     }
-    // v0.9.35 审计修复：UI 校验与 validateBaseUrl 同步强制 https（v0.9.31 批次 D）——
-    // 原 UI 放行 http://（提示"需以 http(s):// 开头"），输入 http 无红字、保存才报错，
-    // 体验不一致；现输入 http:// 立即提示改用 https
+    // v0.9.35 审计修复：UI 直接复用 validateBaseUrl，避免表单实时校验和保存校验
+    // 在协议大小写、首尾空白、无域名等边界上出现两套规则。
     val baseUrlError = remember(formState.baseUrl) {
         when {
             formState.baseUrl.isBlank() -> "请输入接口地址"
-            // v0.9.35 第四轮审计：UI 校验与 validateBaseUrl 完全对齐——强制 https
-            // + 空域名盲区（"https://" 或 "https:///" 无 host 会在 Retrofit 抛异常）
-            !formState.baseUrl.startsWith("https://") ->
-                "需以 https:// 开头（出于安全不支持 http://）"
-            formState.baseUrl.removePrefix("https://").isBlank() ||
-                formState.baseUrl.removePrefix("https://").startsWith("/") ->
-                "接口地址缺少域名（如 api.deepseek.com）"
-            else -> null
+            else -> validateBaseUrl(formState.baseUrl)
         }
     }
     val apiKeyError = remember(formState.apiKey) {
@@ -565,8 +562,6 @@ private fun ApiConfigFormDialog(
                 onValueChange = { v ->
                     // P0-3 修复：本地 state 自由接收输入，不立即解析
                     temperatureText = v
-                    // 实时尝试解析并向上同步（合法时才同步，不合法时保留本地输入）
-                    v.toDoubleOrNull()?.let { onTemperatureChange(it.coerceIn(0.0, 2.0)) }
                 },
                 placeholder = "0.7",
                 keyboardType = KeyboardType.Decimal,
@@ -580,8 +575,6 @@ private fun ApiConfigFormDialog(
                 onValueChange = { v ->
                     // P0-3 修复：本地 state 自由接收输入，不立即解析
                     maxTokensText = v
-                    // 实时尝试解析并向上同步（合法时才同步，不合法时保留本地输入）
-                    v.toIntOrNull()?.let { onMaxTokensChange(it.coerceIn(1, 32000)) }
                 },
                 placeholder = "2000",
                 keyboardType = KeyboardType.Number,
@@ -619,7 +612,9 @@ private fun ApiConfigFormDialog(
                         onSave()
                     },
                     // v0.9.30 打磨：保存按钮禁用条件加入必填校验（此前只查温度/Token）
-                    enabled = temperatureError == null &&
+                    enabled = temperatureCanSave &&
+                        maxTokensCanSave &&
+                        temperatureError == null &&
                         maxTokensError == null &&
                         displayNameError == null &&
                         baseUrlError == null &&
