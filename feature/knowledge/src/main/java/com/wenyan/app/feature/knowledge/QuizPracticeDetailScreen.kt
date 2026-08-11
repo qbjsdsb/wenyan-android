@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -23,6 +25,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -50,6 +53,7 @@ import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
+import com.wenyan.app.core.database.entity.PracticeErrorReason
 import com.wenyan.app.core.designsystem.component.ProvenanceBadge
 import kotlinx.coroutines.withTimeout
 
@@ -84,6 +88,7 @@ fun QuizPracticeDetailScreen(
     val keywords by viewModel.keywords.collectAsStateWithLifecycle()
     val outline by viewModel.outline.collectAsStateWithLifecycle()
     val body by viewModel.body.collectAsStateWithLifecycle()
+    val selectedErrors by viewModel.selectedErrors.collectAsStateWithLifecycle()
     val sessionSummary by viewModel.sessionSummary.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
@@ -167,6 +172,8 @@ fun QuizPracticeDetailScreen(
                         onToggleShowAnswer = viewModel::toggleShowAnswer,
                         onMarkKnow = viewModel::markKnow,
                         onMarkDontKnow = viewModel::markDontKnow,
+                        selectedErrors = selectedErrors,
+                        onToggleErrorReason = viewModel::toggleErrorReason,
                     )
                 }
                 else -> {
@@ -342,6 +349,8 @@ private fun PracticeActionBar(
     onToggleShowAnswer: () -> Unit,
     onMarkKnow: () -> Unit,
     onMarkDontKnow: () -> Unit,
+    selectedErrors: List<String>,
+    onToggleErrorReason: (PracticeErrorReason) -> Unit,
 ) {
     // v0.9.34 横屏：操作栏与题干区对齐限宽居中（题干已 widthIn compact），
     // 避免横屏下按钮全宽拉伸
@@ -396,6 +405,25 @@ private fun PracticeActionBar(
                 Text(stringResource(R.string.kp_quiz_show_answer))
             }
         } else {
+            Text(
+                text = "不会原因（可多选，未选择默认记忆缺口）",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                PracticeErrorReason.entries.forEach { reason ->
+                    FilterChip(
+                        selected = reason.name in selectedErrors,
+                        onClick = { onToggleErrorReason(reason) },
+                        label = { Text(practiceErrorReasonLabel(reason)) },
+                    )
+                }
+            }
             // 已显示答案：不会（红）+ 会了（绿）
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -428,4 +456,14 @@ private fun PracticeActionBar(
         }
     }
     }
+}
+
+private fun practiceErrorReasonLabel(reason: PracticeErrorReason): String = when (reason) {
+    PracticeErrorReason.MEMORY_GAP -> "记忆缺口"
+    PracticeErrorReason.CONCEPT_CONFUSION -> "概念混淆"
+    PracticeErrorReason.MISREAD_PROMPT -> "审题偏差"
+    PracticeErrorReason.WEAK_STRUCTURE -> "结构薄弱"
+    PracticeErrorReason.WEAK_EVIDENCE -> "论据薄弱"
+    PracticeErrorReason.TIME_CONTROL -> "时间失控"
+    PracticeErrorReason.EXPRESSION -> "表达问题"
 }

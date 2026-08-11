@@ -33,6 +33,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -138,6 +140,8 @@ class QuizPracticeDetailViewModel @Inject constructor(
 
     /** 加载题目列表（与列表页相同筛选条件），定位起始题 */
     private var loadJob: Job? = null
+    private var restoreJob: Job? = null
+    private val persistMutex = Mutex()
 
     private fun loadQuestions() {
         loadJob?.cancel()
@@ -173,9 +177,12 @@ class QuizPracticeDetailViewModel @Inject constructor(
                         _error.value = "题目不在当前筛选中，请返回列表重试"
                         _isLoading.value = false
                     } else {
+                        val savedIndex = savedStateHandle.get<Int>(KEY_CURRENT_INDEX)
+                        val targetIndex = (savedIndex ?: startIndex).coerceIn(filtered.indices)
                         _questions.value = filtered
-                        if (savedStateHandle.get<Int>(KEY_CURRENT_INDEX) == null) setCurrentIndex(startIndex)
+                        if (savedIndex != targetIndex) setCurrentIndex(targetIndex)
                         _isLoading.value = false
+                        restoreAttemptForQuestion(filtered[targetIndex].id)
                     }
                 }
         }
@@ -197,31 +204,35 @@ class QuizPracticeDetailViewModel @Inject constructor(
 
     fun previous() {
         if (_currentIndex.value > 0) {
+            persistDraftBeforeNavigation()
             setCurrentIndex(_currentIndex.value - 1)
             resetAttemptForQuestion()
-            hideAnswer()
+            restoreAttemptForQuestion(_questions.value[_currentIndex.value].id)
         }
     }
 
     fun next() {
         if (_currentIndex.value < _questions.value.size - 1) {
+            persistDraftBeforeNavigation()
             setCurrentIndex(_currentIndex.value + 1)
             resetAttemptForQuestion()
-            hideAnswer()
+            restoreAttemptForQuestion(_questions.value[_currentIndex.value].id)
         }
     }
 
     /** 标记"会了"→ 推进到下一题（已是最后一题则保持原位，由 UI 提示已完成） */
     fun markKnow() {
+        if (!canAdvanceAfterReveal()) return
         // v0.9.35 审计修复：400ms 防连击窗，避免快速双击"会了"连跳两题
         if (!tryAcquireAdvanceLock()) return
         assess(PracticeSelfRating.GOOD, emptySet())
         completeAttempt()
-        hideAnswer()
         if (_currentIndex.value < _questions.value.size - 1) {
             setCurrentIndex(_currentIndex.value + 1)
             resetAttemptForQuestion()
+            restoreAttemptForQuestion(_questions.value[_currentIndex.value].id)
         } else {
+            hideAnswer()
             _message.value = "已经是最后一题"
         }
     }
@@ -237,13 +248,20 @@ class QuizPracticeDetailViewModel @Inject constructor(
      */
     fun markDontKnow() {
         val question = currentQuestion.value ?: return
+        if (!canAdvanceAfterReveal()) return
         if (!tryAcquireAdvanceLock()) return
-        assess(PracticeSelfRating.AGAIN, setOf(PracticeErrorReason.MEMORY_GAP))
+        val errors = selectedErrors.value
+            .mapNotNull(PracticeErrorReason::fromDb)
+            .toSet()
+            .ifEmpty { setOf(PracticeErrorReason.MEMORY_GAP) }
+        val userAnswer = currentDraftText()
+        assess(PracticeSelfRating.AGAIN, errors)
         completeAttempt()
         val isLast = _currentIndex.value >= _questions.value.size - 1
         if (!isLast) {
             setCurrentIndex(_currentIndex.value + 1)
             resetAttemptForQuestion()
+            restoreAttemptForQuestion(_questions.value[_currentIndex.value].id)
         }
         hideAnswer()
         viewModelScope.launch {
@@ -251,7 +269,7 @@ class QuizPracticeDetailViewModel @Inject constructor(
                 wrongAnswerRepository.recordWrongAnswer(
                     pointId = null,
                     examQuestionId = question.id,
-                    userAnswer = "",
+                    userAnswer = userAnswer,
                     correctAnswer = question.answerFramework,
                     source = WrongAnswerRepository.SOURCE_QUIZ_WRONG,
                 )
@@ -269,7 +287,7 @@ class QuizPracticeDetailViewModel @Inject constructor(
     }
 
     /** 防连击锁：400ms 内只允许一次推进操作（"会了"/"不会"共用）。 */
-    private var lastAdvanceAt = 0L
+    private var lastAdvanceAt: Long? = null
 
     /**
      * 时间源（可注入便于单测——纯 JVM 测试中 SystemClock.uptimeMillis 恒 0，
@@ -279,7 +297,8 @@ class QuizPracticeDetailViewModel @Inject constructor(
 
     private fun tryAcquireAdvanceLock(): Boolean {
         val now = uptimeMillis()
-        if (now - lastAdvanceAt < ADVANCE_LOCK_MS) return false
+        val last = lastAdvanceAt
+        if (last != null && now - last < ADVANCE_LOCK_MS) return false
         lastAdvanceAt = now
         return true
     }
@@ -298,6 +317,13 @@ class QuizPracticeDetailViewModel @Inject constructor(
     fun updateKeywords(value: String) { savedStateHandle[KEY_KEYWORDS] = value }
     fun updateOutline(value: String) { savedStateHandle[KEY_OUTLINE] = value }
     fun updateBody(value: String) { savedStateHandle[KEY_BODY] = value }
+
+    /** 记录用户在核对后选择的一个或多个错因，随 SavedStateHandle 跨旋转保留。 */
+    fun toggleErrorReason(reason: PracticeErrorReason) {
+        val current = selectedErrors.value.mapNotNull(PracticeErrorReason::fromDb).toMutableSet()
+        if (!current.add(reason)) current.remove(reason)
+        savedStateHandle[KEY_ERRORS] = ArrayList(current.map { it.name }.sorted())
+    }
 
     fun saveDraft() = applyTransition(PracticeAttemptWorkflow.save(workflowState()), persist = true)
 
@@ -325,6 +351,30 @@ class QuizPracticeDetailViewModel @Inject constructor(
         repairState = if (selectedErrors.value.isEmpty()) PracticeRepairState.NONE else PracticeRepairState.CANDIDATE,
     )
 
+    /** 切题前静默保存非空草稿，避免用户尚未揭示答案时直接切题而丢失输入。 */
+    private fun persistDraftBeforeNavigation() {
+        if (workflowState().draft.hasAnswer) {
+            applyTransition(PracticeAttemptWorkflow.save(workflowState()), persist = true)
+        }
+    }
+
+    private fun canAdvanceAfterReveal(): Boolean {
+        if (attemptStage.value == PracticeAttemptStage.COMPLETED.name) {
+            _message.value = "本题本轮已完成，请切换题目后再练习"
+            return false
+        }
+        if (!_showAnswer.value) {
+            _message.value = "请先主动揭示并核对"
+            return false
+        }
+        return true
+    }
+
+    private fun currentDraftText(): String = listOf(keywords.value, outline.value, body.value)
+        .map(String::trim)
+        .filter(String::isNotEmpty)
+        .joinToString("\n\n")
+
     private fun applyTransition(
         transition: PracticeTransition,
         persist: Boolean,
@@ -350,21 +400,26 @@ class QuizPracticeDetailViewModel @Inject constructor(
             ?: "attempt-${java.util.UUID.randomUUID()}".also { savedStateHandle[KEY_ATTEMPT_ID] = it }
         viewModelScope.launch {
             runCatching {
-                val existing = practiceAttemptStore.get(attemptId)
-                practiceAttemptStore.save(
-                    PracticeAttemptEntity(
-                        id = attemptId, questionId = question.id,
-                        pointId = question.relatedPointIds?.singleOrNull(), learningUnitId = null,
-                        sessionId = sessionId, attemptType = PracticeAttemptType.EXAM_OUTLINE.name,
-                        userKeywords = state.draft.keywords, outline = state.draft.outline, body = state.draft.body,
-                        startedAt = existing?.startedAt ?: now,
-                        revealedAt = if (state.stage >= PracticeAttemptStage.REVEALED) existing?.revealedAt ?: now else null,
-                        completedAt = if (state.stage == PracticeAttemptStage.COMPLETED) existing?.completedAt ?: now else null,
-                        elapsedMs = existing?.elapsedMs ?: 0L, selfRating = state.rating?.name,
-                        errorReasons = state.errors.map { it.name }.sorted(), repairState = state.repairState.name,
-                        createdAt = existing?.createdAt ?: now, updatedAt = now,
-                    ),
-                )
+                // assess() and completeAttempt() are separate transitions, but their persistence
+                // jobs can overlap. Serialize the read-modify-write sequence so a later completed
+                // state cannot be overwritten by an older state that read the same prior row.
+                persistMutex.withLock {
+                    val existing = practiceAttemptStore.get(attemptId)
+                    practiceAttemptStore.save(
+                        PracticeAttemptEntity(
+                            id = attemptId, questionId = question.id,
+                            pointId = question.relatedPointIds?.singleOrNull(), learningUnitId = null,
+                            sessionId = sessionId, attemptType = PracticeAttemptType.EXAM_OUTLINE.name,
+                            userKeywords = state.draft.keywords, outline = state.draft.outline, body = state.draft.body,
+                            startedAt = existing?.startedAt ?: now,
+                            revealedAt = if (state.stage >= PracticeAttemptStage.REVEALED) existing?.revealedAt ?: now else null,
+                            completedAt = if (state.stage == PracticeAttemptStage.COMPLETED) existing?.completedAt ?: now else null,
+                            elapsedMs = existing?.elapsedMs ?: 0L, selfRating = state.rating?.name,
+                            errorReasons = state.errors.map { it.name }.sorted(), repairState = state.repairState.name,
+                            createdAt = existing?.createdAt ?: now, updatedAt = now,
+                        ),
+                    )
+                }
             }.onFailure { Timber.e(it, "persist practice attempt failed") }
         }
     }
@@ -372,11 +427,55 @@ class QuizPracticeDetailViewModel @Inject constructor(
     private fun setCurrentIndex(value: Int) { savedStateHandle[KEY_CURRENT_INDEX] = value }
 
     private fun resetAttemptForQuestion() {
+        restoreJob?.cancel()
         savedStateHandle.remove<String>(KEY_ATTEMPT_ID)
         savedStateHandle.remove<String>(KEY_RATING)
         savedStateHandle[KEY_KEYWORDS] = ""; savedStateHandle[KEY_OUTLINE] = ""; savedStateHandle[KEY_BODY] = ""
         savedStateHandle[KEY_ERRORS] = arrayListOf<String>()
         savedStateHandle[KEY_ATTEMPT_STAGE] = PracticeAttemptStage.ANSWERING.name
+        savedStateHandle[KEY_SHOW_ANSWER] = false
+    }
+
+    /** Restore the latest draft for this session/question after manual or process navigation. */
+    private fun restoreAttemptForQuestion(questionId: String) {
+        restoreJob?.cancel()
+        restoreJob = viewModelScope.launch {
+            val attempt = runCatching {
+                // Serialize this read with pending writes in the same VM so an immediate return
+                // cannot observe the previous version of the attempt.
+                persistMutex.withLock {
+                    practiceAttemptStore.getLatestForSessionAndQuestion(sessionId, questionId)
+                }
+            }.onFailure { Timber.e(it, "restore practice attempt failed") }.getOrNull() ?: return@launch
+
+            val currentId = _questions.value.getOrNull(_currentIndex.value)?.id
+            if (currentId != questionId || hasLocalAttemptState()) return@launch
+
+            savedStateHandle[KEY_ATTEMPT_ID] = attempt.id
+            savedStateHandle[KEY_KEYWORDS] = attempt.userKeywords
+            savedStateHandle[KEY_OUTLINE] = attempt.outline
+            savedStateHandle[KEY_BODY] = attempt.body
+            savedStateHandle[KEY_RATING] = PracticeSelfRating.fromDb(attempt.selfRating)?.name
+            savedStateHandle[KEY_ERRORS] = ArrayList(
+                attempt.errorReasons.mapNotNull(PracticeErrorReason::fromDb).map { it.name }.distinct().sorted(),
+            )
+            savedStateHandle[KEY_ATTEMPT_STAGE] = restoredStage(attempt).name
+            savedStateHandle[KEY_SHOW_ANSWER] = attempt.revealedAt != null
+        }
+    }
+
+    private fun hasLocalAttemptState(): Boolean =
+        keywords.value.isNotBlank() || outline.value.isNotBlank() || body.value.isNotBlank() ||
+            attemptStage.value != PracticeAttemptStage.ANSWERING.name || _showAnswer.value ||
+            selectedRating.value != null || selectedErrors.value.isNotEmpty()
+
+    private fun restoredStage(attempt: PracticeAttemptEntity): PracticeAttemptStage = when {
+        attempt.completedAt != null -> PracticeAttemptStage.COMPLETED
+        attempt.selfRating != null -> PracticeAttemptStage.ASSESSED
+        attempt.revealedAt != null -> PracticeAttemptStage.REVEALED
+        attempt.userKeywords.isNotBlank() || attempt.outline.isNotBlank() || attempt.body.isNotBlank() ->
+            PracticeAttemptStage.SAVED
+        else -> PracticeAttemptStage.ANSWERING
     }
 
     internal var currentTimeMillis: () -> Long = System::currentTimeMillis

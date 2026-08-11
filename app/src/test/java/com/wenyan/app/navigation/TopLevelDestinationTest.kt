@@ -14,8 +14,11 @@ class TopLevelDestinationTest {
     @Test fun `all legacy entries map to a retained top level parent`() {
         val expected = mapOf(
             "knowledge_detail/{pointId}" to "knowledge",
+            "daily_cards/task-1/point-1" to "today",
+            "daily_cards_fullscreen" to "today",
             "essay" to "training", "cards" to "training", "quiz_practice" to "training",
-            "writing_materials" to "training", "wrong_answer" to "my", "settings" to "my",
+            "essay_detail/eq-1" to "training", "writing_materials" to "training",
+            "writing_editor?materialId=wm-1" to "training", "wrong_answer" to "my", "settings" to "my",
             "about" to "my", "api_config" to "my",
         )
         assertEquals(expected, expected.mapValues { TopLevelDestination.parentRouteFor(it.key) })

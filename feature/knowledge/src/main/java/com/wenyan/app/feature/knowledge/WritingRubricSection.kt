@@ -23,6 +23,7 @@ fun WritingRubricSection(
     trends: List<DimensionTrend>,
     onLevel: (RubricDimension, RubricLevel) -> Unit,
     onNote: (RubricDimension, String) -> Unit,
+    enabled: Boolean = true,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("本地自评量规", style = MaterialTheme.typography.titleMedium)
@@ -40,6 +41,7 @@ fun WritingRubricSection(
                         FilterChip(
                             selected = mark?.level == level,
                             onClick = { onLevel(dimension, level) },
+                            enabled = enabled,
                             label = { Text(level.points.toString()) },
                         )
                     }
@@ -48,6 +50,7 @@ fun WritingRubricSection(
                 OutlinedTextField(
                     value = mark?.note.orEmpty(),
                     onValueChange = { onNote(dimension, it) },
+                    enabled = enabled,
                     label = { Text("${dimension.label}备注") },
                     modifier = Modifier.fillMaxWidth(),
                 )

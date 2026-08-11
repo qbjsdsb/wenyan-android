@@ -39,7 +39,7 @@ internal data class TrainingEntry(
 internal fun trainingEntries(): List<TrainingEntry> = listOf(
     TrainingEntry("快速回忆", "继续 LearningUnit 记忆卡片", TopLevelDestination.ROUTE_CARDS, Icons.AutoMirrored.Filled.MenuBook),
     TrainingEntry("真题作答", "按真实题目进入现有真题训练", ROUTE_QUIZ_PRACTICE, Icons.Default.HistoryEdu),
-    TrainingEntry("610 写作", "从现有论述题与写作材料开始", TopLevelDestination.ROUTE_ESSAY, Icons.Default.EditNote),
+    TrainingEntry("610 写作", "从现有写作材料开始", ROUTE_WRITING_MATERIALS, Icons.Default.EditNote),
     TrainingEntry("错题修复", "回到已有错题本处理待修复内容", TopLevelDestination.ROUTE_WRONG_ANSWER, Icons.Default.Replay),
 )
 

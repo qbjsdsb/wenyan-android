@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-08-11 会话：PR17 合并后核心闭环综合复审
+
+- **基线与边界**：以远端 `main@0f2464c6`（PR17 已合并）为唯一基线；未修改 seed、稳定 ID、用户记录、Room 版本或既有 migration。`tools.zip` 仅按历史工具证据检查，未作为产品源码解压或提交。
+- **导航闭环**：训练中心的写作入口改为素材列表；素材可带 reviewed/legacy 来源进入写作会话；写作、真题、卡片、Today 指定卡片及全屏页均补齐返回兜底；真题题目/筛选参数、素材 ID、卡片 ID 统一做 URI 编码；补齐子路由到 Today/训练/论述题父路由的映射。
+- **离线写作**：保留完整素材正文与可引用状态；自动保存 flush 结果可阻止未保存时离开；完成/放弃后只读；单调时钟恢复、暂停、完成计时边界与保存失败重试保持一致；初始化建档失败时“重试”现在会重新加载而非空操作。
+- **真题练习**：答案只在已审校且用户主动作答后展示；“会/不会”防连点；不会原因和用户作答进入记录；切题前保存草稿并按 session/题目恢复；同一题揭示→自评→完成的异步读改写按顺序持久化，避免完成态回滚。
+- **验证记录**：`git diff --check` 通过；本地 Gradle wrapper 先受默认 `/root/.gradle` 锁目录权限影响，改用临时用户目录后又因环境无法访问 `services.gradle.org`，随后用已有 Gradle 运行时进入构建，但 `org.gradle.kotlin.kotlin-dsl:5.2.0` 依赖无法解析，未把本地 Android/单元测试写成通过。待 Draft PR 的 GitHub Actions 完整验证后再执行 Ready/合并。
+
+---
+
 ## 2026-08-09 会话：Codex Cloud MVP 启动准备
 
 - **真实断点**：远端 main 为 `205eb5c2`；PR-01A 已由 PR #13 合并，下一工单是 PR-01B。远端 main 原缺少 `docs/plans/PR-01B.md`，总体计划和状态文档仍保留“PR-01A 尚未提交”的旧表述。
@@ -7252,3 +7262,11 @@ while (retryCount <= maxRetries) {
 - 不接受先前弱证据：补齐 monotonic 活动计时、返回前 autosave flush、直接 ViewModel 进程恢复测试、真实证据 repository 与 reviewed-only 选择、量规备注/历史趋势接线。
 - 发现并修复 `WritingMaterialDao.REPLACE` 与 provenance CASCADE 的组合误删风险，改用 `@Upsert`，真实 Room 测试证明素材更新不会删除来源。
 - 定向写作/Room tests、全模块 JVM tests、Debug/androidTest APK、Python 25 tests、双 seed audit/cmp 全绿；seed SHA 未漂移。C24 仍为 PASS_LOCAL，仅等待 Cloud Draft PR。
+
+# 2026-08-11 — PR17 合并后综合复审修正
+
+- 从 PR17 merge 后的 `main@0f2464c6` 建立独立审查分支；未修改 seed、Room schema、迁移、稳定 ID 或既有用户记录。
+- 修复写作素材入口未带入素材、DRAFT 无法启动计时、缺少完成保存、完成/放弃后仍可修改，以及返回前保存失败仍离开页面的问题；完整正文按选中素材惰性读取，只有 REVIEWED 素材自动进入可引用证据。
+- 修复真题训练的首击防连击、未揭示答案仍可推进、切题丢失草稿、错因无法选择和错题本丢失用户作答；补充状态/恢复回归测试。
+- 修复 Today 指定卡片详情无可见返回入口、训练入口绕路，以及异常恢复进入每日卡片全屏时的崩溃风险。
+- `git diff --check` 通过。当前容器无法完成 Gradle 定向测试：Gradle 8.14.4 可手动恢复，但构建在 `build-logic` 的 `org.gradle.kotlin.kotlin-dsl:5.2.0` 依赖解析处停止，且容器没有 Android SDK；未执行 CI、真机或合并发布。
