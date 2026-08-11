@@ -210,6 +210,9 @@ class FakeChatRepository(
     val setCurrentCalls: MutableList<String?> = mutableListOf()
     val currentId: String? get() = _currentId.value
 
+    /** 让清理路径模拟 DataStore 写入失败，验证 ViewModel 不会崩溃。 */
+    var failSetCurrentConversation: Boolean = false
+
     /**
      * v0.9.23 测试用闸门：非 null 时 [loadOrInitCurrent] 先 await 再返回，
      * 模拟真实 DataStore 异步恢复延迟（供 P0-2 init 恢复竞态测试使用）。
@@ -311,6 +314,9 @@ class FakeChatRepository(
             ?: emptyList()
 
     override suspend fun setCurrentConversation(id: String?) {
+        if (failSetCurrentConversation) {
+            throw IllegalStateException("DataStore unavailable")
+        }
         setCurrentCalls.add(id)
         _currentId.value = id
     }

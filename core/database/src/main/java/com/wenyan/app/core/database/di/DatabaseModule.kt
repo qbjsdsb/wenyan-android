@@ -54,7 +54,7 @@ import javax.inject.Singleton
  *
  * 提供：
  * - [WenyanDatabase] 单例（数据库文件 wenyan.db）
- * - 19 个 DAO 的 @Provides 方法
+ * - 25 个 DAO 的 @Provides 方法
  *
  * 安装到 [SingletonComponent] 以保证全局单例。
  */

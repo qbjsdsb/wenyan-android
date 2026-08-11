@@ -37,7 +37,7 @@ interface WrongAnswerDao {
         FROM wrong_answers w
         LEFT JOIN knowledge_points k ON w.point_id = k.id
         LEFT JOIN exam_questions e ON w.exam_question_id = e.id
-        ORDER BY w.last_wrong_at DESC
+        ORDER BY w.last_wrong_at DESC, w.id ASC
         """,
     )
     fun observeAll(): Flow<List<WrongAnswerWithDetails>>
@@ -52,15 +52,15 @@ interface WrongAnswerDao {
         LEFT JOIN knowledge_points k ON w.point_id = k.id
         LEFT JOIN exam_questions e ON w.exam_question_id = e.id
         WHERE w.resolved_at IS NULL
-        ORDER BY w.last_wrong_at DESC
+        ORDER BY w.last_wrong_at DESC, w.id ASC
         """,
     )
     fun observeUnresolved(): Flow<List<WrongAnswerWithDetails>>
 
-    @Query("SELECT * FROM wrong_answers WHERE point_id = :pointId ORDER BY last_wrong_at DESC")
+    @Query("SELECT * FROM wrong_answers WHERE point_id = :pointId ORDER BY last_wrong_at DESC, id ASC")
     fun observeByPoint(pointId: String): Flow<List<WrongAnswerEntity>>
 
-    @Query("SELECT * FROM wrong_answers WHERE exam_question_id = :examQuestionId ORDER BY last_wrong_at DESC")
+    @Query("SELECT * FROM wrong_answers WHERE exam_question_id = :examQuestionId ORDER BY last_wrong_at DESC, id ASC")
     fun observeByExamQuestion(examQuestionId: String): Flow<List<WrongAnswerEntity>>
 
     /**
@@ -176,7 +176,7 @@ interface WrongAnswerDao {
         LEFT JOIN knowledge_points k ON w.point_id = k.id
         LEFT JOIN exam_questions e ON w.exam_question_id = e.id
         WHERE w.resolved_at IS NULL AND w.sched_next_review_at <= :now
-        ORDER BY w.sched_next_review_at ASC
+        ORDER BY w.sched_next_review_at ASC, w.id ASC
         """,
     )
     fun observeDueWrongAnswers(now: Long): Flow<List<WrongAnswerWithDetails>>

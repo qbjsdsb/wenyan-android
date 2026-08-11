@@ -52,13 +52,13 @@ interface MemoRecordDao {
               AND reps = 0
               AND review_count = 0
           )
-        ORDER BY next_review_at ASC
+        ORDER BY next_review_at ASC, point_id ASC
         """,
     )
     fun observeDue(): Flow<List<MemoRecordEntity>>
 
     /** 查询优先队列中的记忆记录 */
-    @Query("SELECT * FROM memo_records WHERE in_priority_queue = 1 ORDER BY next_review_at ASC")
+    @Query("SELECT * FROM memo_records WHERE in_priority_queue = 1 ORDER BY next_review_at ASC, point_id ASC")
     fun observePriorityQueue(): Flow<List<MemoRecordEntity>>
 
     /**
@@ -68,7 +68,7 @@ interface MemoRecordDao {
      *
      * P1-D3 修正：加 ORDER BY next_review_at ASC 保证 Compose 重组时顺序稳定。
      */
-    @Query("SELECT * FROM memo_records ORDER BY next_review_at ASC")
+    @Query("SELECT * FROM memo_records ORDER BY next_review_at ASC, point_id ASC")
     fun observeAll(): Flow<List<MemoRecordEntity>>
 
     @Query("SELECT COUNT(*) FROM memo_records WHERE state = :state")

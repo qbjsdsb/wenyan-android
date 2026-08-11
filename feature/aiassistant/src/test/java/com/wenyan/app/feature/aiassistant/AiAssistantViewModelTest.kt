@@ -293,6 +293,14 @@ class AiAssistantViewModelTest {
     }
 
     @Test
+    fun `guideEssayAnswer 多字段总长度超限时不发送`() = runTest {
+        viewModel.guideEssayAnswer("题目".repeat(1001), "答案")
+
+        assertTrue("超长论述题不应添加用户消息", viewModel.uiState.value.messages.isEmpty())
+        assertTrue("超长论述题应提示输入过长", viewModel.uiState.value.errorMessage!!.contains("输入过长"))
+    }
+
+    @Test
     fun `guideEssayAnswer 正常答案输出三阶段消息`() = runTest {
         aiService.response = "AI 分析结果"
         val longAnswer = "苏轼是北宋著名的文学家，他在诗、词、文、书、画等方面都有很高的成就。" +
@@ -330,6 +338,14 @@ class AiAssistantViewModelTest {
     }
 
     @Test
+    fun `explainWrongAnswer 多字段总长度超限时不发送`() = runTest {
+        viewModel.explainWrongAnswer("题目".repeat(700), "错误答案".repeat(700), "正确答案")
+
+        assertTrue("超长错题解释不应添加用户消息", viewModel.uiState.value.messages.isEmpty())
+        assertTrue("超长错题解释应提示输入过长", viewModel.uiState.value.errorMessage!!.contains("输入过长"))
+    }
+
+    @Test
     fun `explainWrongAnswer 输出错题解释消息`() = runTest {
         aiService.response = "AI 分析结果"
         viewModel.explainWrongAnswer("苏轼", "错误答案", "正确答案")
@@ -364,6 +380,18 @@ class AiAssistantViewModelTest {
         assertEquals(RecallLevel.L2, result.level)
         assertEquals("完全相同时相似度应为 1", 1f, result.coverage, 0.001f)
         assertEquals(RecallRating.EASY, result.rating)
+    }
+
+    @Test
+    fun `launchCheckRecall 多字段总长度超限时不检测`() = runTest {
+        viewModel.launchCheckRecall(
+            userAnswer = "用户答案".repeat(500),
+            correctAnswer = "正确答案".repeat(500),
+            questionType = QuestionType.ESSAY,
+        )
+
+        assertNull("超长回忆检测不应产生结果", viewModel.uiState.value.recallResult)
+        assertTrue("超长回忆检测应提示输入过长", viewModel.uiState.value.errorMessage!!.contains("输入过长"))
     }
 
     // ── checkRoteMemorization 测试 ────────────────────────────────
@@ -460,6 +488,19 @@ class AiAssistantViewModelTest {
         assertTrue("清空后消息应为空", viewModel.uiState.value.messages.isEmpty())
         assertNull("清空后 errorMessage 应为 null", viewModel.uiState.value.errorMessage)
         assertNull("清空后 roteWarning 应为 null", viewModel.uiState.value.roteWarning)
+    }
+
+    @Test
+    fun `clearMessages DataStore失败时仍保持内存清空`() = runTest {
+        aiService.response = "AI 回复"
+        viewModel.sendMessage("测试")
+        chatRepository.failSetCurrentConversation = true
+
+        viewModel.clearMessages()
+        runCurrent()
+
+        assertTrue("DataStore 失败不应阻止内存消息清空", viewModel.uiState.value.messages.isEmpty())
+        assertFalse("DataStore 失败不应让 ViewModel 处于加载态", viewModel.uiState.value.isLoading)
     }
 
     @Test

@@ -1,9 +1,8 @@
 package com.wenyan.app.core.database.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import com.wenyan.app.core.database.entity.ChatMessageEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -15,16 +14,16 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ChatMessageDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insert(entity: ChatMessageEntity)
 
     @Query("DELETE FROM chat_messages WHERE conversation_id = :conversationId")
     suspend fun deleteByConversation(conversationId: String)
 
-    @Query("SELECT * FROM chat_messages WHERE conversation_id = :conversationId ORDER BY created_at ASC")
+    @Query("SELECT * FROM chat_messages WHERE conversation_id = :conversationId ORDER BY created_at ASC, id ASC")
     fun observeByConversation(conversationId: String): Flow<List<ChatMessageEntity>>
 
-    @Query("SELECT * FROM chat_messages WHERE conversation_id = :conversationId ORDER BY created_at ASC")
+    @Query("SELECT * FROM chat_messages WHERE conversation_id = :conversationId ORDER BY created_at ASC, id ASC")
     suspend fun getByConversation(conversationId: String): List<ChatMessageEntity>
 
     /**
@@ -35,7 +34,7 @@ interface ChatMessageDao {
      */
     @Query(
         "SELECT * FROM chat_messages WHERE conversation_id = :conversationId " +
-            "ORDER BY created_at DESC LIMIT :limit",
+            "ORDER BY created_at DESC, id DESC LIMIT :limit",
     )
     suspend fun getRecentByConversation(
         conversationId: String,
@@ -48,13 +47,13 @@ interface ChatMessageDao {
     /**
      * 删除会话最旧的 N 条消息（v0.9.37 P1-7：消息保留上限）。
      *
-     * 按 (created_at, rowid) 升序取最旧 limit 条的 rowid 删除——rowid 兜底
+     * 按 (created_at, id) 升序取最旧 limit 条的主键删除——id 兜底
      * 同毫秒多条消息的场景（created_at 可能重复，仅按 created_at 会误删更多）。
      */
     @Query(
         "DELETE FROM chat_messages WHERE rowid IN (" +
             "SELECT rowid FROM chat_messages WHERE conversation_id = :conversationId " +
-            "ORDER BY created_at ASC, rowid ASC LIMIT :limit)",
+            "ORDER BY created_at ASC, id ASC LIMIT :limit)",
     )
     suspend fun deleteOldestByConversation(conversationId: String, limit: Int)
 }

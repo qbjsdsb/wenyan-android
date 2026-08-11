@@ -1,10 +1,9 @@
 package com.wenyan.app.core.database.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import com.wenyan.app.core.database.entity.StudyProgressEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -14,7 +13,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface StudyProgressDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsert(entity: StudyProgressEntity)
 
     @Update

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -118,44 +119,42 @@ private fun TodayContent(
             ),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                Text("今日计划", style = MaterialTheme.typography.headlineMedium)
-                Text(
-                    listOfNotNull(
-                        state.countdownDays?.let { "距考试 $it 天" },
-                        "预计 ${state.estimatedMinutes} 分钟",
-                    ).joinToString(" · "),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                state.infeasibleMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                state.nextTask?.let { next ->
-                    Button(onClick = { onTaskClick(next) }) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = null)
-                        Text("继续学习")
-                    }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    Text("今日计划", style = MaterialTheme.typography.headlineMedium)
+                    Text(
+                        listOfNotNull(
+                            state.countdownDays?.let { "距考试 $it 天" },
+                            "预计 ${state.estimatedMinutes} 分钟",
+                        ).joinToString(" · "),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    state.infeasibleMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    state.nextTask
+                        ?.takeIf { it.destination != TodayDestination.UNSUPPORTED }
+                        ?.let { next ->
+                            Button(onClick = { onTaskClick(next) }) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = null)
+                                Text("继续学习")
+                            }
+                        }
+                    if (state.isFinished) Text("今日计划已完成", style = MaterialTheme.typography.titleLarge)
                 }
-                if (state.isFinished) Text("今日计划已完成", style = MaterialTheme.typography.titleLarge)
             }
-        }
-        TodayGroup.entries.forEach { group ->
-            val grouped = state.tasks.filter { it.group == group }
-            if (grouped.isNotEmpty()) {
-                item { Text(group.label, style = MaterialTheme.typography.titleMedium) }
-                items(grouped, key = { it.id }) { task -> TodayTaskCard(task, onTaskClick) }
+            TodayGroup.entries.forEach { group ->
+                val grouped = state.tasks.filter { it.group == group }
+                if (grouped.isNotEmpty()) {
+                    item { Text(group.label, style = MaterialTheme.typography.titleMedium) }
+                    items(grouped, key = { it.id }) { task -> TodayTaskCard(task, onTaskClick) }
+                }
             }
-        }
         }
     }
 }
 
 @Composable
 private fun TodayTaskCard(task: TodayTaskUi, onTaskClick: (TodayTaskUi) -> Unit) {
-    Card(
-        onClick = { onTaskClick(task) },
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(),
-    ) {
+    val content: @Composable ColumnScope.() -> Unit = {
         Row(
             Modifier
                 .fillMaxWidth()
@@ -175,8 +174,29 @@ private fun TodayTaskCard(task: TodayTaskUi, onTaskClick: (TodayTaskUi) -> Unit)
             Column(Modifier.weight(1f)) {
                 Text(task.title, style = MaterialTheme.typography.titleMedium)
                 Text("约 ${task.estimatedMinutes} 分钟", style = MaterialTheme.typography.bodyMedium)
+                if (task.destination == TodayDestination.UNSUPPORTED) {
+                    Text(
+                        "此任务类型暂不支持直接打开",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
         }
+    }
+    if (task.destination == TodayDestination.UNSUPPORTED) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(),
+            content = content,
+        )
+    } else {
+        Card(
+            onClick = { onTaskClick(task) },
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(),
+            content = content,
+        )
     }
 }
 

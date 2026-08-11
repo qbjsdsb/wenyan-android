@@ -1,10 +1,9 @@
 package com.wenyan.app.core.database.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import com.wenyan.app.core.database.entity.TemplateFillEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -14,10 +13,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TemplateFillDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insert(entity: TemplateFillEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertAll(entities: List<TemplateFillEntity>)
 
     @Update
@@ -29,12 +28,12 @@ interface TemplateFillDao {
     @Query("SELECT * FROM template_fills WHERE id = :id")
     suspend fun getById(id: String): TemplateFillEntity?
 
-    @Query("SELECT * FROM template_fills WHERE template_id = :templateId ORDER BY created_at DESC")
+    @Query("SELECT * FROM template_fills WHERE template_id = :templateId ORDER BY created_at DESC, id ASC")
     fun observeByTemplate(templateId: String): Flow<List<TemplateFillEntity>>
 
-    @Query("SELECT * FROM template_fills WHERE exam_question_id = :questionId ORDER BY created_at DESC")
+    @Query("SELECT * FROM template_fills WHERE exam_question_id = :questionId ORDER BY created_at DESC, id ASC")
     fun observeByExamQuestion(questionId: String): Flow<List<TemplateFillEntity>>
 
-    @Query("SELECT * FROM template_fills ORDER BY created_at DESC")
+    @Query("SELECT * FROM template_fills ORDER BY created_at DESC, id ASC")
     fun observeAll(): Flow<List<TemplateFillEntity>>
 }

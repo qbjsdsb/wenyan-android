@@ -63,9 +63,9 @@ internal const val CURRENT_SEED_IMPORT_SCHEMA_VERSION = 4
  *   导致种子加载被吞掉、下次启动仍报错。现 [isInitialized] 异常时假设"未初始化"
  *   让种子重试导入，[storeSeedState] 异常时仅 Log.w 不冒泡（App 继续工作，下次启动重试，
  *   内容表 Upsert 幂等，MemoRecord 按数据库已有 ID 保留）。
- * - 不修改 DAO 的 `@Insert(onConflict = REPLACE)` 策略：种子加载只在
- *   `isInitialized() == false` 时执行（首次安装），事务包裹确保原子性，首次安装
- *   用户无数据可被覆盖。
+ * - 内容与用户状态写入使用 Upsert/显式条件更新：种子加载只在
+ *   `isInitialized() == false` 时执行（首次安装），事务包裹确保原子性，升级时
+ *   不会用 DELETE+INSERT 触发外键级联，也不会覆盖用户学习状态。
  *
  * P1-AUDIT-4 修复：版本感知种子升级。原实现只用 boolean `seed_initialized` 标志，
  * 更新 seed_data.json 后用户不会获得新内容（标志仍为 true）。现改为：

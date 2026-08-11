@@ -1,26 +1,32 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-08-09（v0.9.43 已发布；PR-01A 已由 PR #13 合并；下一工单 PR-01B）
+> 最后更新：2026-08-11（当前 main 为 `0fbcac2b`；PR #20 已合并；本轮审计代码基线为 `3f0f8640`）
 
 ## 🚦 当前工程断点
 
 | 项目 | 当前事实 |
 | --- | --- |
-| 远端 main 基线 | 205eb5c2ded5451e461167c7462f2e6348f76bd1 |
-| PR-00 | 已由 PR #11 建立；历史日志恢复已承接到云端启动准备 |
-| PR-01A | 已由 PR #13 合并；只读确定性 seed audit、schema 与 baseline 已进入 main |
-| 第一个未完成工单 | PR-01B：把 seed 审计与未漂移检查接入普通 Android CI |
-| Cloud MVP 连续范围 | PR-01B → PR-08C，之后执行 C24 闭环审计 |
-| Cloud 执行合同 | docs/plans/CLOUD-MVP-EXECUTION.md |
-| Cloud 续跑日志 | docs/plans/CLOUD-MVP-PROGRESS.md |
-| PR-01B 合同 | docs/plans/PR-01B.md |
+| 当前 main 基线 | `0fbcac2bd6c5173241ce1244b0d4f1f291c339d5`（PR #20 后补齐 v0.9.45 元数据） |
+| 本轮审计代码基线 | `3f0f8640b90b23991098981e3cb948715c08bcb3`（PR #20 已合并） |
+| 当前工作项 | 全仓第二轮审计与加固；本地分支待通过远端 CI 后再合并 |
+| App 代码版本 | v0.9.45 / versionCode 70 |
+| Room | schema v15；25 entities；25 DAOs |
+| 顶层入口 | 4 个：今日、知识点、训练、我的 |
+| seed 快照 | v2.26.0；1101 知识点；564 真题（ESSAY 142）；909 写作材料 |
+| JVM 测试静态计数 | 779 个 `@Test` 注解；不是实际执行结果 |
+| 本地构建状态 | 未进入 Gradle 编译：临时 Gradle 用户目录下载 wrapper 时网络不可达 |
+| 远端最终门禁 | GitHub Actions `testDebugUnitTest`、`assembleDebug`；真实设备/模拟器冒烟仍需补做 |
 
-PR #12 的 5 个文档修复已完整承接到云端启动准备分支；该启动准备合并后，PR #12 应以 superseded 关闭，不能再重复合并。当前尚未开始 PR-01B 产品实施，也未修改 Kotlin、Room、Compose、Gradle、workflow、seed、版本、签名或用户数据。
+本轮最终分支以当前 main `0fbcac2b` 为父基线；PR #20 的代码审计基线为 `3f0f8640`，其后仅有 v0.9.45/versionCode 70 与 CHANGELOG 元数据提交。保留稳定内容 ID、用户记录、既有 migration 和 seed 数据；`tools.zip` 仍只是历史附件，未作为产品输入读取、解压或提交。Cloud MVP 合同仍是显式授权后才启用的历史协作流程，本轮不执行该合同。
 
 Cloud 连续模式只有在用户明确要求执行 docs/plans/CLOUD-MVP-EXECUTION.md 时才启用。它把普通检查点改为自动过关，但仍禁止直接写 main、合并、打 tag、发布、破坏性迁移、猜写来源和读取 tools.zip。
 
 ## ✅ 当前状态
+
+**本轮代码快照**：围绕边界输入、Room 写入副作用、确定性排序、今日任务未知类型、更新安装校验、AI 重试溢出和 CI 权限完成第二轮加固；seed 正式内容与稳定 ID 未改动。Android 编译与 instrumentation 尚待远端 CI/可用设备给出执行证据。
+
+### 历史发布记录
 
 **v0.9.43 已发布**（2026-08-07，Release #70）：关联知识点导航修复（versionCode 68）。详情页 A→B 关联跳转不入栈修复（launchSingleTop 折叠动态路由）+ 同点防重复栈项 + 路径编码；新增导航策略/GroupedCard 测试；APK 已下载实测核验通过。
 - **Release**：https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.43
@@ -139,24 +145,24 @@ Cloud 连续模式只有在用户明确要求执行 docs/plans/CLOUD-MVP-EXECUTI
 
 | 项 | 值 |
 |----|-----|
-| PR-00 产品基线 commit | **c1df65e**（v0.9.43 发布文档，PR-00 以此产品状态复算） |
-| 最新 Release | **v0.9.43**（2026-08-07，Release #70，导航修复，APK 已实测核验）— https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.43 |
-| versionCode / versionName | **68 / "0.9.43"** |
+| 当前 main 基线 | **0fbcac2b**（PR #20 后补齐 v0.9.45 发布元数据） |
+| 最新已发布 tag | **v0.9.43**；main 已进入 v0.9.45 元数据，tag/release 以 release workflow 为准 — https://github.com/qbjsdsb/wenyan-android/releases/tag/v0.9.43 |
+| versionCode / versionName | **70 / "0.9.45"** |
 | 知识点 | **1101 个（seed 2.26.0）** |
 | 真题 | **564 道** |
 | 论述题 | **142 道**（v0.9.23 起删年份显示，数据层 year 保留） |
 | seed 版本 | **2.26.0（2025 年 805 外国文学真题已校正）** |
-| seed 导入 schema | **3**（导入可追溯教材来源；无双来源证据的冲突标记不展示） |
-| 数据库版本 | **10**（v0.9.24 补 3 个筛选索引） |
-| 底部导航 | **5 Tab**（知识点/论述题/卡片/错题本/设置），MD3 规范 + scroll-aware 显隐 |
+| seed 导入 schema | **4**（导入可追溯教材来源；无双来源证据的冲突标记不展示） |
+| 数据库版本 | **15**（v11–v15 已有显式 migration 与升级测试） |
+| 底部导航 | **4 个入口**（今日/知识点/训练/我的）；论述题、卡片、错题本、设置为 Hub 子路由 |
 | 图谱 | **已移除**（v0.9.3） |
 | AI 服务商 | DeepSeek/通义/智谱/月之暗面/自定义（v0.9.23 修复 URL 拼接） |
 | 更新日志机制 | **CHANGELOG.md** + release.yml 动态读取（v0.9.23 起） |
-| 单测 | **636 个 JVM unit test 0 失败**（v0.9.43 release receipt；不含 instrumentation test） |
+| 单测 | **779 个 JVM `@Test` 静态计数**；本轮未把未执行的 Android 测试写成通过 |
 | R8 | **已启用并随 v0.9.32 发布**（APK 6.11MB，需 emulator 冒烟实测） |
 | 启动图标 | **v7.5 双色页精进**（v0.9.27 起：米色右页+页脚厚度+缩进+主题镂空，纯矢量） |
 | 崩溃上报 | **未接入**（需 Firebase/Sentry 配置） |
-| 阻塞 | **PR-00 无产品代码阻塞；PR #11 的 Android Build & Test Run #433 已成功。当前仅修复该 PR 意外截断的历史会话日志，不开始 PR-01。** |
+| 阻塞 | **本地 Gradle wrapper 下载受网络不可达阻塞；需远端 CI 完成 Android 编译/单测，真机或模拟器冒烟仍待执行。** |
 
 > **统计口径与复算命令**：知识点、真题、论述题和写作材料均统计 `app/src/main/assets/seed_data.json` 的对应数组；论述题按 `question_type == "ESSAY"` 筛选；JVM unit test 只统计 `app/src/test`、`core`、`feature` 中的 `@Test`，不含 `app/src/androidTest`。完整命令和当前系统表见 [docs/architecture/current-system.md](architecture/current-system.md)。
 

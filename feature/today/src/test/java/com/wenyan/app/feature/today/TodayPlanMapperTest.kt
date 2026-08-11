@@ -40,6 +40,18 @@ class TodayPlanMapperTest {
         assertNull(state.countdownDays)
     }
 
+    @Test
+    fun `unknown task type stays visible but is never routed to writing`() {
+        val state = TodayPlanMapper.map(
+            plan(tasks = listOf(task("future", "FUTURE_TASK", "PENDING", 10))),
+            LocalDate.of(2026, 8, 11),
+        )
+
+        assertEquals(TodayGroup.OTHER, state.tasks.single().group)
+        assertEquals(TodayDestination.UNSUPPORTED, state.tasks.single().destination)
+        assertEquals("future", state.tasks.single().title)
+    }
+
     private fun plan(status: String = "ACTIVE", snapshot: String = "{}", tasks: List<DailyTaskEntity> = emptyList()) = DailyPlanWithTasks(
         DailyPlanEntity("plan", "2026-08-11", 1, 2027, snapshot, "2.26.0", status), tasks,
     )

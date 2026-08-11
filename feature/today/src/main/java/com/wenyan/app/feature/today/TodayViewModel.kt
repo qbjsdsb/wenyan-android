@@ -21,6 +21,8 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import timber.log.Timber
 import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneId
@@ -100,6 +102,16 @@ class DailyTaskCompletionViewModel @Inject constructor(
 ) : ViewModel() {
     fun markDone(taskId: String) {
         if (taskId.isBlank()) return
-        viewModelScope.launch { repository.markDone(taskId) }
+        viewModelScope.launch {
+            try {
+                repository.markDone(taskId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Completion is a best-effort side effect after leaving a study screen.
+                // A database failure must not crash the navigation host or cancel siblings.
+                Timber.w(e, "mark daily task done failed: $taskId")
+            }
+        }
     }
 }

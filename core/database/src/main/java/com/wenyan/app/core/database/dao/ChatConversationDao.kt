@@ -20,13 +20,13 @@ interface ChatConversationDao {
     @Query("DELETE FROM chat_conversations WHERE id = :id")
     suspend fun deleteById(id: String)
 
-    @Query("SELECT * FROM chat_conversations ORDER BY updated_at DESC")
+    @Query("SELECT * FROM chat_conversations ORDER BY updated_at DESC, id ASC")
     fun observeAll(): Flow<List<ChatConversationEntity>>
 
     @Query("SELECT * FROM chat_conversations WHERE id = :id")
     suspend fun getById(id: String): ChatConversationEntity?
 
-    @Query("SELECT * FROM chat_conversations ORDER BY updated_at DESC LIMIT 1")
+    @Query("SELECT * FROM chat_conversations ORDER BY updated_at DESC, id ASC LIMIT 1")
     suspend fun getMostRecent(): ChatConversationEntity?
 
     /**

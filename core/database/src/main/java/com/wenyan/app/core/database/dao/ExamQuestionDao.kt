@@ -36,13 +36,13 @@ interface ExamQuestionDao {
     @Query("SELECT * FROM exam_questions WHERE id = :id")
     fun observeById(id: String): Flow<ExamQuestionEntity?>
 
-    @Query("SELECT * FROM exam_questions WHERE subject_id = :subjectId ORDER BY year DESC")
+    @Query("SELECT * FROM exam_questions WHERE subject_id = :subjectId ORDER BY year DESC, exam_paper_code ASC, id ASC")
     fun observeBySubject(subjectId: String): Flow<List<ExamQuestionEntity>>
 
-    @Query("SELECT * FROM exam_questions WHERE year = :year ORDER BY subject_id ASC")
+    @Query("SELECT * FROM exam_questions WHERE year = :year ORDER BY subject_id ASC, exam_paper_code ASC, id ASC")
     fun observeByYear(year: Int): Flow<List<ExamQuestionEntity>>
 
-    @Query("SELECT * FROM exam_questions WHERE question_type = :type ORDER BY year DESC")
+    @Query("SELECT * FROM exam_questions WHERE question_type = :type ORDER BY year DESC, exam_paper_code ASC, id ASC")
     fun observeByQuestionType(type: String): Flow<List<ExamQuestionEntity>>
 
     /**
@@ -69,15 +69,15 @@ interface ExamQuestionDao {
      * - 内存过滤可精确匹配 List<String> contains
      * - 当前数据量下性能无差异
      */
-    @Query("SELECT * FROM exam_questions WHERE question_type = 'ESSAY' ORDER BY year DESC, exam_paper_code ASC")
+    @Query("SELECT * FROM exam_questions WHERE question_type = 'ESSAY' ORDER BY year DESC, exam_paper_code ASC, id ASC")
     fun observeAllEssays(): Flow<List<ExamQuestionEntity>>
 
     /** 按试卷代码查询（索引 exam_paper_code，SubTask 11.6） */
-    @Query("SELECT * FROM exam_questions WHERE exam_paper_code = :code ORDER BY year DESC")
+    @Query("SELECT * FROM exam_questions WHERE exam_paper_code = :code ORDER BY year DESC, id ASC")
     fun observeByExamPaperCode(code: String): Flow<List<ExamQuestionEntity>>
 
     /** 按答案状态查询 */
-    @Query("SELECT * FROM exam_questions WHERE answer_status = :status ORDER BY year DESC")
+    @Query("SELECT * FROM exam_questions WHERE answer_status = :status ORDER BY year DESC, exam_paper_code ASC, id ASC")
     fun observeByAnswerStatus(status: String): Flow<List<ExamQuestionEntity>>
 
     @Query("SELECT DISTINCT year FROM exam_questions ORDER BY year DESC")

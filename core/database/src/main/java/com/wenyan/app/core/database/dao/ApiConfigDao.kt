@@ -1,10 +1,9 @@
 package com.wenyan.app.core.database.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import com.wenyan.app.core.database.entity.ApiConfigEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -14,10 +13,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ApiConfigDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insert(entity: ApiConfigEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertAll(entities: List<ApiConfigEntity>)
 
     @Update
@@ -39,9 +38,9 @@ interface ApiConfigDao {
     @Query("UPDATE api_configs SET is_current = CASE WHEN id = :id THEN 1 ELSE 0 END")
     suspend fun setCurrent(id: String)
 
-    @Query("SELECT * FROM api_configs WHERE is_enabled = 1 ORDER BY created_at ASC")
+    @Query("SELECT * FROM api_configs WHERE is_enabled = 1 ORDER BY created_at ASC, id ASC")
     fun observeEnabled(): Flow<List<ApiConfigEntity>>
 
-    @Query("SELECT * FROM api_configs ORDER BY created_at ASC")
+    @Query("SELECT * FROM api_configs ORDER BY created_at ASC, id ASC")
     fun observeAll(): Flow<List<ApiConfigEntity>>
 }

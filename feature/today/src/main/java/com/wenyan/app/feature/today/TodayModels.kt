@@ -7,7 +7,7 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 enum class TodayGroup { DUE, REPAIR, NEW, OUTPUT, WRITING, OTHER }
-enum class TodayDestination { CARDS, QUIZ, WRITING_MATERIALS }
+enum class TodayDestination { CARDS, QUIZ, WRITING_MATERIALS, UNSUPPORTED }
 
 @Immutable
 data class TodayTaskUi(
@@ -76,7 +76,10 @@ internal object TodayPlanMapper {
         val destination = when (group) {
             TodayGroup.DUE, TodayGroup.REPAIR, TodayGroup.NEW -> TodayDestination.CARDS
             TodayGroup.OUTPUT -> TodayDestination.QUIZ
-            TodayGroup.WRITING, TodayGroup.OTHER -> TodayDestination.WRITING_MATERIALS
+            TodayGroup.WRITING -> TodayDestination.WRITING_MATERIALS
+            // Unknown task types must remain visible for diagnosis, but must not be
+            // silently routed to an unrelated feature such as writing materials.
+            TodayGroup.OTHER -> TodayDestination.UNSUPPORTED
         }
         return TodayTaskUi(
             id = task.id,

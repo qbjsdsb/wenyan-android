@@ -1,10 +1,9 @@
 package com.wenyan.app.core.database.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import com.wenyan.app.core.database.entity.ExamCodeHistoryEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -14,10 +13,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ExamCodeHistoryDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insert(entity: ExamCodeHistoryEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertAll(entities: List<ExamCodeHistoryEntity>)
 
     @Update
@@ -29,7 +28,7 @@ interface ExamCodeHistoryDao {
     @Query("SELECT * FROM exam_code_history WHERE id = :id")
     suspend fun getById(id: String): ExamCodeHistoryEntity?
 
-    @Query("SELECT * FROM exam_code_history WHERE exam_code = :code ORDER BY valid_from_year ASC")
+    @Query("SELECT * FROM exam_code_history WHERE exam_code = :code ORDER BY valid_from_year ASC, id ASC")
     fun observeByCode(code: String): Flow<List<ExamCodeHistoryEntity>>
 
     /** 查询某年份有效的所有科目代码 */
@@ -37,10 +36,10 @@ interface ExamCodeHistoryDao {
         "SELECT * FROM exam_code_history " +
             "WHERE valid_from_year <= :year " +
             "AND (valid_to_year IS NULL OR valid_to_year >= :year) " +
-            "ORDER BY exam_code ASC",
+            "ORDER BY exam_code ASC, valid_from_year ASC, id ASC",
     )
     fun observeValidInYear(year: Int): Flow<List<ExamCodeHistoryEntity>>
 
-    @Query("SELECT * FROM exam_code_history ORDER BY valid_from_year ASC")
+    @Query("SELECT * FROM exam_code_history ORDER BY valid_from_year ASC, id ASC")
     fun observeAll(): Flow<List<ExamCodeHistoryEntity>>
 }

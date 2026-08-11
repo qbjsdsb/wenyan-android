@@ -102,6 +102,47 @@ class UpdateRepositoryTest {
         )
     }
 
+    @Test
+    fun `resolveDownloadUrl_外部APK资产URL_拒绝并回退到仓库资产`() {
+        val assets = listOf(
+            UpdateRepositoryImpl.GitHubAsset(
+                name = "wenyan-v0.9.27.apk",
+                browser_download_url = "https://example.com/wenyan-v0.9.27.apk",
+                content_type = "application/vnd.android.package-archive",
+            ),
+        )
+
+        assertEquals(
+            "https://github.com/qbjsdsb/wenyan-android/releases/download/v0.9.27/wenyan-v0.9.27.apk",
+            impl.resolveDownloadUrl(assets, "v0.9.27"),
+        )
+        assertFalse(impl.isTrustedApkDownloadUrl("http://github.com/qbjsdsb/wenyan-android/releases/download/v0.9.27/wenyan.apk"))
+        assertTrue(impl.isTrustedApkDownloadUrl("https://github.com/qbjsdsb/wenyan-android/releases/download/v0.9.27/wenyan.apk"))
+    }
+
+    @Test
+    fun `resolveExpectedSha256_只从实际使用的可信APK资产取摘要`() {
+        val externalDigest = "a".repeat(64)
+        val trustedDigest = "b".repeat(64)
+        val assets = listOf(
+            UpdateRepositoryImpl.GitHubAsset(
+                name = "external.apk",
+                browser_download_url = "https://example.com/external.apk",
+                content_type = "application/vnd.android.package-archive",
+                digest = "sha256:$externalDigest",
+            ),
+            UpdateRepositoryImpl.GitHubAsset(
+                name = "wenyan-v0.9.27.apk",
+                browser_download_url =
+                    "https://github.com/qbjsdsb/wenyan-android/releases/download/v0.9.27/wenyan-v0.9.27.apk",
+                content_type = "APPLICATION/VND.ANDROID.PACKAGE-ARCHIVE",
+                digest = "sha256:$trustedDigest",
+            ),
+        )
+
+        assertEquals(trustedDigest, impl.resolveExpectedSha256(assets))
+    }
+
     // ============ buildApkDownloadUrl ============
 
     @Test
