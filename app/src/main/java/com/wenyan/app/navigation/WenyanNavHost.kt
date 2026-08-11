@@ -1,6 +1,5 @@
 package com.wenyan.app.navigation
 
-import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -369,7 +368,7 @@ private fun NavHostController.navigateToKnowledgeDetail(pointId: String) {
         return
     }
 
-    navigate("$ROUTE_KNOWLEDGE_DETAIL/${Uri.encode(normalizedPointId)}") {
+    navigate("$ROUTE_KNOWLEDGE_DETAIL/${encodeRouteComponent(normalizedPointId)}") {
         launchSingleTop = shouldUseKnowledgeDetailSingleTop(currentEntry?.destination?.route)
     }
 }
@@ -759,14 +758,14 @@ internal fun dailyCardsRoute(taskId: String, pointId: String): String? {
     val normalizedTaskId = taskId.trim()
     val normalizedPointId = pointId.trim()
     if (normalizedTaskId.isBlank() || normalizedPointId.isBlank()) return null
-    return "$ROUTE_DAILY_CARDS/${Uri.encode(normalizedTaskId)}/${Uri.encode(normalizedPointId)}"
+    return "$ROUTE_DAILY_CARDS/${encodeRouteComponent(normalizedTaskId)}/${encodeRouteComponent(normalizedPointId)}"
 }
 
 /** Build a writing session route, optionally seeded from one reviewed/legacy material. */
 internal fun writingEditorRoute(materialId: String?): String {
     val normalizedMaterialId = materialId?.trim().orEmpty()
     if (normalizedMaterialId.isBlank()) return ROUTE_WRITING_EDITOR
-    return "$ROUTE_WRITING_EDITOR?$ARG_WRITING_MATERIAL_ID=${Uri.encode(normalizedMaterialId)}"
+    return "$ROUTE_WRITING_EDITOR?$ARG_WRITING_MATERIAL_ID=${encodeRouteComponent(normalizedMaterialId)}"
 }
 
 /** Build a filtered practice-detail route without allowing IDs or filters to break the URI. */
@@ -779,12 +778,30 @@ internal fun quizPracticeDetailRoute(
 ): String? {
     val normalizedQuestionId = questionId.trim()
     if (normalizedQuestionId.isBlank()) return null
-    fun encodedOrAll(value: String?): String = Uri.encode(value ?: FILTER_ALL)
-    return "$ROUTE_QUIZ_PRACTICE_DETAIL/${Uri.encode(normalizedQuestionId)}" +
+    fun encodedOrAll(value: String?): String = encodeRouteComponent(value ?: FILTER_ALL)
+    return "$ROUTE_QUIZ_PRACTICE_DETAIL/${encodeRouteComponent(normalizedQuestionId)}" +
         "?type=${encodedOrAll(type)}" +
         "&subject=${encodedOrAll(subject)}" +
         "&year=${encodedOrAll(year?.toString())}" +
         "&paper=${encodedOrAll(paper)}"
+}
+
+/** Percent-encode a route path/query component without requiring Android's Uri stub in JVM tests. */
+private fun encodeRouteComponent(value: String): String {
+    val safe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()"
+    val hex = "0123456789ABCDEF"
+    return buildString {
+        value.toByteArray(Charsets.UTF_8).forEach { byte ->
+            val code = byte.toInt() and 0xFF
+            if (code < 128 && safe.indexOf(code.toChar()) >= 0) {
+                append(code.toChar())
+            } else {
+                append('%')
+                append(hex[code ushr 4])
+                append(hex[code and 0x0F])
+            }
+        }
+    }
 }
 
 /** 导航回归测试使用的纯策略：空 ID 或当前详情页重复点击都不应产生新栈项。 */
