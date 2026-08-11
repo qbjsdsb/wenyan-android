@@ -20,10 +20,10 @@ interface ChatMessageDao {
     @Query("DELETE FROM chat_messages WHERE conversation_id = :conversationId")
     suspend fun deleteByConversation(conversationId: String)
 
-    @Query("SELECT * FROM chat_messages WHERE conversation_id = :conversationId ORDER BY created_at ASC, id ASC")
+    @Query("SELECT * FROM chat_messages WHERE conversation_id = :conversationId ORDER BY created_at ASC, rowid ASC")
     fun observeByConversation(conversationId: String): Flow<List<ChatMessageEntity>>
 
-    @Query("SELECT * FROM chat_messages WHERE conversation_id = :conversationId ORDER BY created_at ASC, id ASC")
+    @Query("SELECT * FROM chat_messages WHERE conversation_id = :conversationId ORDER BY created_at ASC, rowid ASC")
     suspend fun getByConversation(conversationId: String): List<ChatMessageEntity>
 
     /**
@@ -34,7 +34,7 @@ interface ChatMessageDao {
      */
     @Query(
         "SELECT * FROM chat_messages WHERE conversation_id = :conversationId " +
-            "ORDER BY created_at DESC, id DESC LIMIT :limit",
+            "ORDER BY created_at DESC, rowid DESC LIMIT :limit",
     )
     suspend fun getRecentByConversation(
         conversationId: String,
@@ -47,13 +47,13 @@ interface ChatMessageDao {
     /**
      * 删除会话最旧的 N 条消息（v0.9.37 P1-7：消息保留上限）。
      *
-     * 按 (created_at, id) 升序取最旧 limit 条的主键删除——id 兜底
-     * 同毫秒多条消息的场景（created_at 可能重复，仅按 created_at 会误删更多）。
+     * 按 (created_at, rowid) 升序取最旧 limit 条的主键删除。
+     * rowid 保留同毫秒消息的真实插入顺序；随机 UUID 不能作为插入顺序的兜底。
      */
     @Query(
         "DELETE FROM chat_messages WHERE rowid IN (" +
             "SELECT rowid FROM chat_messages WHERE conversation_id = :conversationId " +
-            "ORDER BY created_at ASC, id ASC LIMIT :limit)",
+            "ORDER BY created_at ASC, rowid ASC LIMIT :limit)",
     )
     suspend fun deleteOldestByConversation(conversationId: String, limit: Int)
 }

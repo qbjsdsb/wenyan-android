@@ -9,6 +9,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.wenyan.app.core.ai.RagReference
 import com.wenyan.app.core.database.WenyanDatabase
+import com.wenyan.app.core.database.entity.ChatMessageEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -156,6 +157,60 @@ class ChatRepositoryImplTest {
         val convAfter = db.chatConversationDao().getById(convId)!!
         assertEquals("messageCount 应 +1", 1, convAfter.messageCount)
         assertTrue("updatedAt 应推进", convAfter.updatedAt > tsBefore)
+    }
+
+    /**
+     * 同一毫秒写入的消息必须按真实插入顺序保留，不能按随机 UUID 决定
+     * 消息上限截断对象；否则可能删除 assistant 回复而留下其 user 提问。
+     */
+    @Test
+    fun `same timestamp messages use insertion order for retention and reads`() = runTest {
+        val convId = repository.createConversation("同毫秒对话", null, null)
+        val timestamp = 123_456L
+        val oldest = ChatMessageEntity(
+            id = "z-oldest",
+            conversationId = convId,
+            role = "USER",
+            content = "最早的问题",
+            contentSource = "USER_INPUT",
+            stage = null,
+            referencesJson = null,
+            contextScreen = null,
+            contextTitle = null,
+            tokensUsed = null,
+            createdAt = timestamp,
+        )
+        val assistant = oldest.copy(
+            id = "a-assistant",
+            role = "ASSISTANT",
+            content = "紧接着的回答",
+            contentSource = "AI_REPLY",
+        )
+        val newest = oldest.copy(
+            id = "m-newest",
+            role = "USER",
+            content = "最新的问题",
+        )
+
+        db.chatMessageDao().insert(oldest)
+        db.chatMessageDao().insert(assistant)
+        db.chatMessageDao().insert(newest)
+
+        assertEquals(
+            listOf("z-oldest", "a-assistant", "m-newest"),
+            db.chatMessageDao().getByConversation(convId).map { it.id },
+        )
+        assertEquals(
+            listOf("m-newest", "a-assistant"),
+            db.chatMessageDao().getRecentByConversation(convId, 2).map { it.id },
+        )
+
+        db.chatMessageDao().deleteOldestByConversation(convId, 1)
+
+        assertEquals(
+            listOf("a-assistant", "m-newest"),
+            db.chatMessageDao().getByConversation(convId).map { it.id },
+        )
     }
 
     /**

@@ -327,11 +327,6 @@ class UpdateViewModel @Inject constructor(
         return digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
     }
 
-    /** APK 是 ZIP 容器；打开中央目录可拦截 HTML/截断响应等非 APK 文件。 */
-    private fun File.isValidApkZip(): Boolean = runCatching {
-        ZipFile(this).use { zip -> zip.entries().hasMoreElements() }
-    }.getOrDefault(false)
-
     /**
      * 通过系统安装器安装 APK。
      *
@@ -382,3 +377,13 @@ class UpdateViewModel @Inject constructor(
         }
     }
 }
+
+/**
+ * APK 是带 AndroidManifest.xml 的 ZIP 容器；仅检查“是任意 ZIP”不足以拦截
+ * 伪装成 .apk 的普通压缩包，后者会把失败推迟到系统安装器。
+ */
+internal fun File.isValidApkZip(): Boolean = runCatching {
+    ZipFile(this).use { zip ->
+        zip.getEntry("AndroidManifest.xml") != null
+    }
+}.getOrDefault(false)
