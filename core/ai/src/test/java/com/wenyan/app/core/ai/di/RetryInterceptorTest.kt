@@ -6,6 +6,7 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Test
 import java.io.IOException
@@ -289,5 +290,26 @@ class RetryInterceptorTest {
         }
 
         assertEquals(1, chain.proceedCount)
+    }
+
+    // ── Retry-After 解析边界 ──────────────────────────────────
+
+    @Test
+    fun `Retry-After 超大秒数在乘毫秒前截断不溢出`() {
+        val interceptor = RetryInterceptor(maxRetries = 0)
+
+        assertEquals(5_000L, interceptor.retryAfterMillis(Long.MAX_VALUE.toString()))
+        assertEquals(5_000L, interceptor.retryAfterMillis("6"))
+        assertEquals(1_000L, interceptor.retryAfterMillis("1"))
+    }
+
+    @Test
+    fun `Retry-After 非正数或非数字回退指数退避`() {
+        val interceptor = RetryInterceptor(maxRetries = 0)
+
+        assertNull(interceptor.retryAfterMillis(null))
+        assertNull(interceptor.retryAfterMillis("0"))
+        assertNull(interceptor.retryAfterMillis("-1"))
+        assertNull(interceptor.retryAfterMillis("Wed, 21 Oct 2015 07:28:00 GMT"))
     }
 }

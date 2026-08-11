@@ -6,6 +6,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -69,6 +70,8 @@ class UpdateRepositoryImpl @Inject constructor() : UpdateRepository {
         /** 请求超时（毫秒） */
         private const val CONNECT_TIMEOUT = 8_000
         private const val READ_TIMEOUT = 8_000
+        private val RELEASE_TAG_PATTERN = Regex("\\d+(?:\\.\\d+)+")
+        private val SHA256_PATTERN = Regex("[0-9a-fA-F]{64}")
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -116,14 +119,7 @@ class UpdateRepositoryImpl @Inject constructor() : UpdateRepository {
                     // "应用文件存在问题"。统一走 resolveDownloadUrl：有资产用资产 URL，
                     // 无资产按 release.yml 固定命名规则构造真实 APK 下载 URL。
                     val downloadUrl = resolveDownloadUrl(release.assets, release.tag_name)
-                    val expectedSha256 = release.assets
-                        .firstOrNull { asset ->
-                            asset.name.endsWith(".apk", ignoreCase = true) &&
-                                asset.content_type == "application/vnd.android.package-archive"
-                        }
-                        ?.digest
-                        ?.removePrefix("sha256:")
-                        ?.takeIf { it.isNotBlank() && it.length == 64 }
+                    val expectedSha256 = resolveExpectedSha256(release.assets)
 
                     UpdateCheckResult.UpdateAvailable(
                         latestVersion = release.tag_name,
@@ -253,12 +249,45 @@ class UpdateRepositoryImpl @Inject constructor() : UpdateRepository {
     internal fun resolveDownloadUrl(assets: List<GitHubAsset>, tagName: String): String {
         val apkAsset = assets.firstOrNull { asset ->
             asset.name.endsWith(".apk", ignoreCase = true) &&
-                asset.content_type == "application/vnd.android.package-archive"
+                asset.content_type.equals("application/vnd.android.package-archive", ignoreCase = true) &&
+                isTrustedApkDownloadUrl(asset.browser_download_url)
         }
         return apkAsset?.browser_download_url
             .takeIf { !it.isNullOrBlank() }
             ?: buildApkDownloadUrl(tagName)
     }
+
+    /**
+     * Accept only the repository's HTTPS release assets before handing a URL to the downloader.
+     * GitHub normally supplies this exact host/path, while the allowlist prevents malformed or
+     * unexpectedly external API data from becoming an install source.
+     */
+    internal fun isTrustedApkDownloadUrl(url: String): Boolean = runCatching {
+        val uri = URI(url)
+        uri.scheme.equals("https", ignoreCase = true) &&
+            uri.host.equals("github.com", ignoreCase = true) &&
+            uri.port == -1 &&
+            uri.userInfo == null &&
+            uri.query == null &&
+            uri.fragment == null &&
+            uri.path.startsWith("/qbjsdsb/wenyan-android/releases/download/") &&
+            uri.path.substringAfterLast('/').endsWith(".apk", ignoreCase = true)
+    }.getOrDefault(false)
+
+    /**
+     * Resolve the digest from the same trusted APK asset predicate as [resolveDownloadUrl].
+     * This prevents an external or malformed first APK entry from supplying a hash for a
+     * different download URL.
+     */
+    internal fun resolveExpectedSha256(assets: List<GitHubAsset>): String? = assets
+        .firstOrNull { asset ->
+            asset.name.endsWith(".apk", ignoreCase = true) &&
+                asset.content_type.equals("application/vnd.android.package-archive", ignoreCase = true) &&
+                isTrustedApkDownloadUrl(asset.browser_download_url)
+        }
+        ?.digest
+        ?.removePrefix("sha256:")
+        ?.takeIf { it.matches(SHA256_PATTERN) }
 
     /**
      * 构造 Release APK 资产下载 URL。
@@ -270,6 +299,7 @@ class UpdateRepositoryImpl @Inject constructor() : UpdateRepository {
      */
     internal fun buildApkDownloadUrl(tagName: String): String {
         val tag = tagName.removePrefix("v")
+        require(tag.matches(RELEASE_TAG_PATTERN)) { "Invalid release tag: $tagName" }
         return "$GITHUB_DOWNLOAD_URL_BASE/v$tag/wenyan-v$tag.apk"
     }
 

@@ -85,6 +85,9 @@ fun WenyanNavHost(
                 }
                 TodayDestination.QUIZ -> navController.navigate(ROUTE_QUIZ_PRACTICE) { launchSingleTop = true }
                 TodayDestination.WRITING_MATERIALS -> navController.navigate(ROUTE_WRITING_MATERIALS) { launchSingleTop = true }
+                // Kept as a visible, non-clickable task by TodayScreen so an unknown
+                // persisted task type can never be mistaken for a writing task.
+                TodayDestination.UNSUPPORTED -> Unit
             }
         }
         trainingDestination { route -> navController.navigate(route) { launchSingleTop = true } }

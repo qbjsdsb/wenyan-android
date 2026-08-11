@@ -129,12 +129,7 @@ class RetryInterceptor(
                     // v0.9.27 修复：clamp 到 MAX_BACKOFF_MS(5s)——服务商若返回大值（60s+），
                     // 不设上限会长时间阻塞 IO 线程且占住全局 Semaphore 槽位（3 槽可能被睡死），
                     // 用户"停止生成"也无法中断 Thread.sleep。上限后最长阻塞 5s，可接受。
-                    val retryAfterMs = response.header("Retry-After")
-                        ?.trim()
-                        ?.toLongOrNull()
-                        ?.takeIf { it > 0 }
-                        ?.let { it * 1000 }
-                        ?.coerceAtMost(MAX_BACKOFF_MS)
+                    val retryAfterMs = retryAfterMillis(response.header("Retry-After"))
                     response.close()
                     val backoffMs = retryAfterMs ?: computeBackoff(attempt)
                     Thread.sleep(backoffMs)
@@ -169,6 +164,19 @@ class RetryInterceptor(
         val baseDelay = BASE_DELAY_MS * (1L shl attempt)  // 500, 1000, 2000
         val jitter = (Math.random() * (baseDelay * 0.4)) - (baseDelay * 0.2)  // ±20% 抖动
         return min(baseDelay + jitter.toLong(), MAX_BACKOFF_MS).coerceAtLeast(0)
+    }
+
+    /**
+     * Parse a numeric Retry-After value without overflowing while converting seconds to millis.
+     * Values above the backoff cap are clamped before multiplication.
+     */
+    internal fun retryAfterMillis(value: String?): Long? {
+        val seconds = value
+            ?.trim()
+            ?.toLongOrNull()
+            ?.takeIf { it > 0 }
+            ?: return null
+        return seconds.coerceAtMost(MAX_BACKOFF_MS / 1000) * 1000
     }
 
     /**

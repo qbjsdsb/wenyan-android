@@ -1,9 +1,8 @@
 package com.wenyan.app.core.database.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import com.wenyan.app.core.database.entity.AppMetaEntity
 
 /**
@@ -12,12 +11,12 @@ import com.wenyan.app.core.database.entity.AppMetaEntity
  * 提供按 key 读写 [AppMetaEntity] 的能力，供 [com.wenyan.app.core.data.repository.ClockGuard]
  * 等组件存储应用级元数据（如最近已知时间戳）。
  *
- * 写入用 [OnConflictStrategy.REPLACE]：upsert 语义，已存在 key 则覆盖（更新时间戳用）。
+ * 写入用 [Upsert]：已存在 key 则更新，不触发 DELETE/INSERT 副作用。
  */
 @Dao
 interface AppMetaDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsert(entity: AppMetaEntity)
 
     @Query("SELECT * FROM app_meta WHERE `key` = :key LIMIT 1")

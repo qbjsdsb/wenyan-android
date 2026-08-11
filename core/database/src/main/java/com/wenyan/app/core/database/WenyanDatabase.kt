@@ -80,7 +80,7 @@ import com.wenyan.app.core.database.entity.WrongAnswerEntity
  *   - v13→v14：增加 practice_attempts；旧用户数据不变
  *   - v14→v15：增加 writing_sessions；旧写作素材与用户数据不变
  *
- * 共 24 张表（v7 移除 graph_nodes + graph_edges；无 mentors 表，导师信息改为外链官网）：
+ * 共 25 张表（v7 移除 graph_nodes + graph_edges；无 mentors 表，导师信息改为外链官网）：
  * 1. subjects                科目
  * 2. chapters                章节
  * 3. knowledge_points        知识点（含 Spec 新增字段）
@@ -104,6 +104,8 @@ import com.wenyan.app.core.database.entity.WrongAnswerEntity
  * 21. learning_unit_records  单元级 FSRS 状态
  * 22. daily_plans            每日计划快照
  * 23. daily_tasks            有序且可恢复的每日任务
+ * 24. practice_attempts      输出练习尝试与修复状态
+ * 25. writing_sessions       独立离线写作会话
  *
  * v5 移除的表：chat_history、ai_conversations（死代码表，0 Repository 引用，合并为 chat_conversations + chat_messages）
  * v7 移除的表：graph_nodes、graph_edges（v0.9.0 删 feature:graph UI 后 core 层图谱设施无消费者）

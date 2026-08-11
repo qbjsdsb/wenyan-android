@@ -95,6 +95,7 @@ class UpdateViewModel @Inject constructor(
      */
     fun checkForUpdate() {
         if (isChecking) return
+        if (isDownloading) return
         if (_uiState.value is UpdateUiState.Checking) return
 
         isChecking = true
@@ -112,8 +113,11 @@ class UpdateViewModel @Inject constructor(
                 }
                 val result = updateRepository.checkForUpdate(currentVersion)
                 _uiState.value = when (result) {
-                    is UpdateCheckResult.Latest ->
+                    is UpdateCheckResult.Latest -> {
+                        pendingDownloadUrl = ""
+                        pendingSha256 = null
                         UpdateUiState.Latest(currentVersion = result.currentVersion)
+                    }
                     is UpdateCheckResult.UpdateAvailable -> {
                         pendingDownloadUrl = result.downloadUrl
                         pendingSha256 = result.expectedSha256
@@ -123,12 +127,17 @@ class UpdateViewModel @Inject constructor(
                             releaseNotes = result.releaseNotes,
                         )
                     }
-                    is UpdateCheckResult.Error ->
+                    is UpdateCheckResult.Error -> {
+                        pendingDownloadUrl = ""
+                        pendingSha256 = null
                         UpdateUiState.Error(message = result.message)
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                pendingDownloadUrl = ""
+                pendingSha256 = null
                 _uiState.value = UpdateUiState.Error(
                     message = "检查更新失败：${friendlyErrorMessage(e)}",
                 )
@@ -146,7 +155,9 @@ class UpdateViewModel @Inject constructor(
      */
     fun downloadAndInstallApk() {
         if (isDownloading) return
-        if (pendingDownloadUrl.isBlank()) return
+        val downloadUrl = pendingDownloadUrl
+        val expectedSha256 = pendingSha256
+        if (downloadUrl.isBlank()) return
 
         isDownloading = true
         _uiState.value = UpdateUiState.Downloading(progress = 0)
@@ -157,11 +168,11 @@ class UpdateViewModel @Inject constructor(
                     // P1 修复（v0.9.28）：下载失败自动重试 1 次，
                     // 避免国内网络单次中断直接报错（重试前 downloadApk 会清空旧文件）。
                     try {
-                        downloadApk(pendingDownloadUrl, pendingSha256)
+                        downloadApk(downloadUrl, expectedSha256)
                     } catch (first: CancellationException) {
                         throw first
                     } catch (first: Exception) {
-                        downloadApk(pendingDownloadUrl, pendingSha256)
+                        downloadApk(downloadUrl, expectedSha256)
                     }
                 }
                 _uiState.value = UpdateUiState.DownloadComplete(apkFile = file)
@@ -205,7 +216,16 @@ class UpdateViewModel @Inject constructor(
     fun installDownloadedApk() {
         val state = _uiState.value
         if (state is UpdateUiState.DownloadComplete) {
-            installApk(state.apkFile)
+            try {
+                installApk(state.apkFile)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Cache files can be evicted while the screen is backgrounded, and some
+                // devices have no package installer that can handle APK intents. Keep the
+                // failure in UI state instead of crashing from a click handler.
+                _uiState.value = UpdateUiState.Error("无法启动安装，请重新下载")
+            }
         }
     }
 
@@ -318,6 +338,7 @@ class UpdateViewModel @Inject constructor(
      * 使用 FileProvider 提供文件 URI，避免 file:// URI 导出限制（Android 7+）。
      */
     private fun installApk(file: File) {
+        check(file.isFile && file.length() > 0) { "安装文件不存在或为空" }
         val apkUri = FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
@@ -347,6 +368,7 @@ class UpdateViewModel @Inject constructor(
     fun resetState() {
         _uiState.value = UpdateUiState.Idle
         pendingDownloadUrl = ""
+        pendingSha256 = null
         isChecking = false
         isDownloading = false
     }

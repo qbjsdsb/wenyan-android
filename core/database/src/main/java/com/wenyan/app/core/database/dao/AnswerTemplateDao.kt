@@ -30,12 +30,12 @@ interface AnswerTemplateDao {
     @Query("SELECT * FROM answer_templates WHERE id = :id")
     suspend fun getById(id: String): AnswerTemplateEntity?
 
-    @Query("SELECT * FROM answer_templates WHERE question_type = :type ORDER BY created_at ASC")
+    @Query("SELECT * FROM answer_templates WHERE question_type = :type ORDER BY created_at ASC, id ASC")
     fun observeByQuestionType(type: String): Flow<List<AnswerTemplateEntity>>
 
-    @Query("SELECT * FROM answer_templates WHERE is_builtin = 1 ORDER BY created_at ASC")
+    @Query("SELECT * FROM answer_templates WHERE is_builtin = 1 ORDER BY created_at ASC, id ASC")
     fun observeBuiltin(): Flow<List<AnswerTemplateEntity>>
 
-    @Query("SELECT * FROM answer_templates ORDER BY created_at ASC")
+    @Query("SELECT * FROM answer_templates ORDER BY created_at ASC, id ASC")
     fun observeAll(): Flow<List<AnswerTemplateEntity>>
 }

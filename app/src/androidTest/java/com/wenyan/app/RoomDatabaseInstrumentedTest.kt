@@ -24,7 +24,7 @@ import java.lang.reflect.Modifier
 /**
  * Task 29 - Room 数据库 Instrumented Test。
  *
- * 验证 checklist C2.0-C2.13 项：数据库结构、Hilt 注入、19 Entity + 19 DAO、
+ * 验证 checklist C2.0-C2.13 项：数据库结构、Hilt 注入、25 Entity + 25 DAO、
  * ExamQuestion/KnowledgePoint 字段完整性、Spec 新增字段、ExamCodeHistory/DataSource 表、
  * 不存在 mentors 表、@Index 索引、种子数据 assets。
  *
@@ -77,19 +77,19 @@ class RoomDatabaseInstrumentedTest {
         assertNotNull("WenyanApplication 应标注 @HiltAndroidApp", annotation)
     }
 
-    // ===================== C2.0e: 多模块结构 19 Entity + 19 DAO =====================
+    // ===================== C2.0e: 多模块结构 25 Entity + 25 DAO =====================
 
-    /** C2.0e: 验证 @Database 注解声明 19 个 Entity，且 WenyanDatabase 声明 19 个抽象 DAO 方法 */
+    /** C2.0e: 验证 @Database 注解声明 25 个 Entity，且 WenyanDatabase 声明 25 个抽象 DAO 方法 */
     @Test
-    fun database_has19EntitiesAnd19Daos() {
+    fun database_has25EntitiesAnd25Daos() {
         val dbAnnotation = WenyanDatabase::class.java.getAnnotation(Database::class.java)
         assertNotNull("@Database 注解应存在", dbAnnotation)
-        assertEquals("Entity 数量应为 19", 19, dbAnnotation!!.entities.size)
+        assertEquals("Entity 数量应为 25", 25, dbAnnotation!!.entities.size)
 
         val abstractDaoMethods = WenyanDatabase::class.java.declaredMethods.filter {
             Modifier.isAbstract(it.modifiers)
         }
-        assertEquals("DAO 抽象方法数量应为 19", 19, abstractDaoMethods.size)
+        assertEquals("DAO 抽象方法数量应为 25", 25, abstractDaoMethods.size)
     }
 
     // ===================== C2.0i: ExamQuestion Entity 字段完整 =====================

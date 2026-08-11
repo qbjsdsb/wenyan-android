@@ -31,13 +31,13 @@ interface ChapterDao {
     @Query("SELECT * FROM chapters WHERE id = :id")
     suspend fun getById(id: String): ChapterEntity?
 
-    @Query("SELECT * FROM chapters WHERE subject_id = :subjectId ORDER BY sort_order ASC")
+    @Query("SELECT * FROM chapters WHERE subject_id = :subjectId ORDER BY sort_order ASC, id ASC")
     fun observeBySubject(subjectId: String): Flow<List<ChapterEntity>>
 
-    @Query("SELECT * FROM chapters WHERE parent_id = :parentId ORDER BY sort_order ASC")
+    @Query("SELECT * FROM chapters WHERE parent_id = :parentId ORDER BY sort_order ASC, id ASC")
     fun observeChildren(parentId: String): Flow<List<ChapterEntity>>
 
-    @Query("SELECT * FROM chapters WHERE subject_id = :subjectId AND parent_id IS NULL ORDER BY sort_order ASC")
+    @Query("SELECT * FROM chapters WHERE subject_id = :subjectId AND parent_id IS NULL ORDER BY sort_order ASC, id ASC")
     fun observeRoots(subjectId: String): Flow<List<ChapterEntity>>
 
     /**
@@ -53,7 +53,7 @@ interface ChapterDao {
             UNION ALL
             SELECT c.* FROM chapters c JOIN tree t ON c.parent_id = t.id
         )
-        SELECT * FROM tree ORDER BY sort_order ASC
+        SELECT * FROM tree ORDER BY sort_order ASC, id ASC
         """,
     )
     fun observeTree(rootId: String): Flow<List<ChapterEntity>>

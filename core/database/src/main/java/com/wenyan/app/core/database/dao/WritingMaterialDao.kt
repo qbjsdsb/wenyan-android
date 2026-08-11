@@ -1,7 +1,6 @@
 package com.wenyan.app.core.database.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import androidx.room.Upsert
@@ -31,7 +30,7 @@ interface WritingMaterialDao {
     @Query("SELECT * FROM writing_materials WHERE id = :id")
     suspend fun getById(id: String): WritingMaterialEntity?
 
-    @Query("SELECT * FROM writing_materials WHERE category = :category ORDER BY created_at DESC")
+    @Query("SELECT * FROM writing_materials WHERE category = :category ORDER BY created_at DESC, id ASC")
     fun observeByCategory(category: String): Flow<List<WritingMaterialEntity>>
 
     /**
@@ -48,13 +47,13 @@ interface WritingMaterialDao {
      *
      * @param tag 已转义的标签字符串
      */
-    @Query("SELECT * FROM writing_materials WHERE tags LIKE '%' || :tag || '%' ESCAPE '\\' ORDER BY created_at DESC")
+    @Query("SELECT * FROM writing_materials WHERE tags LIKE '%' || :tag || '%' ESCAPE '\\' ORDER BY created_at DESC, id ASC")
     fun observeByTag(tag: String): Flow<List<WritingMaterialEntity>>
 
-    @Query("SELECT * FROM writing_materials ORDER BY created_at DESC")
+    @Query("SELECT * FROM writing_materials ORDER BY created_at DESC, id ASC")
     fun observeAll(): Flow<List<WritingMaterialEntity>>
 
     @Transaction
-    @Query("SELECT * FROM writing_materials ORDER BY created_at DESC")
+    @Query("SELECT * FROM writing_materials ORDER BY created_at DESC, id ASC")
     fun observeAllWithSources(): Flow<List<WritingMaterialWithSources>>
 }

@@ -174,12 +174,7 @@ class AiAssistantViewModel @Inject constructor(
         // - 浪费 token 配额（denial-of-wallet）
         // - RAG LIKE 查询超长 SQL 性能下降（RagEngine 已 limit 500，但 prompt 仍会超长）
         // 2000 字约等于 3000-4000 tokens，足以承载完整的考研知识点提问。
-        if (text.length > MAX_INPUT_LENGTH) {
-            _uiState.update {
-                it.copy(errorMessage = "输入过长（${text.length} 字），请控制在 $MAX_INPUT_LENGTH 字以内")
-            }
-            return
-        }
+        if (rejectOverlongInput(text)) return
 
         val userMessage = AiMessage(
             id = nextId(),
@@ -334,6 +329,8 @@ class AiAssistantViewModel @Inject constructor(
         if (question.isBlank() || userAnswer.isBlank()) return
         // v0.9.23 P1-3：AI 回复中拒绝新任务（在添加用户消息前检查）
         if (aiJob?.isActive == true) return
+        // 工具入口也共用同一输入预算，避免通过多个参数绕过普通问答的限制。
+        if (rejectOverlongInput(question, userAnswer)) return
 
         val userMsg = AiMessage(
             id = nextId(),
@@ -392,6 +389,8 @@ class AiAssistantViewModel @Inject constructor(
         if (question.isBlank() || userAnswer.isBlank() || correctAnswer.isBlank()) return
         // v0.9.23 P1-3：AI 回复中拒绝新任务（在添加用户消息前检查）
         if (aiJob?.isActive == true) return
+        // 错题解释会把三个字段拼进同一个 prompt，按总长度限制而非逐字段放行。
+        if (rejectOverlongInput(question, userAnswer, correctAnswer)) return
 
         val userMsg = AiMessage(
             id = nextId(),
@@ -482,6 +481,7 @@ class AiAssistantViewModel @Inject constructor(
         if (userAnswer.isBlank() || correctAnswer.isBlank()) return
         // v0.9.23 P1-3：AI 任务进行中拒绝新任务
         if (aiJob?.isActive == true) return
+        if (rejectOverlongInput(userAnswer, correctAnswer)) return
         // v0.9.23 P1-3：统一走 launchAiTask（防重入 + 可取消）
         launchAiTask { generation ->
             try {
@@ -571,6 +571,21 @@ class AiAssistantViewModel @Inject constructor(
         _uiState.update { it.copy(inputText = text) }
     }
 
+    /**
+     * 检查一次 AI 工具调用的总用户输入长度。
+     *
+     * 论述题、错题解释和回忆检测都会把多个字段组合进 prompt；按总长度限制，
+     * 防止分别填满多个字段后绕过普通问答的 token/费用保护。
+     */
+    private fun rejectOverlongInput(vararg inputs: String): Boolean {
+        val length = inputs.sumOf { it.length }
+        if (length <= MAX_INPUT_LENGTH) return false
+        _uiState.update {
+            it.copy(errorMessage = "输入过长（${length} 字），请控制在 $MAX_INPUT_LENGTH 字以内")
+        }
+        return true
+    }
+
     /** 清空对话消息(NF-PP6: 同时删除当前对话 + 清空 DataStore currentId) */
     fun clearMessages() {
         // v0.9.23 P0-1 修复：先取消在途 AI 任务，避免 sendMessage 协程在
@@ -594,11 +609,18 @@ class AiAssistantViewModel @Inject constructor(
             }
             // 用户可能已在删除完成前发送新消息并创建新会话；旧清理不能覆盖新会话。
             if (cleanupGeneration == conversationGeneration && currentConversationId == null) {
-                chatRepository.setCurrentConversation(null)
-                // setCurrentConversation 挂起期间可能已经创建了新会话；重新读取内存 ID，
-                // 把持久化值校正回新会话，避免旧清理的 null 写入覆盖新会话 ID。
-                currentConversationId?.let { newConversationId ->
-                    chatRepository.setCurrentConversation(newConversationId)
+                try {
+                    chatRepository.setCurrentConversation(null)
+                    // setCurrentConversation 挂起期间可能已经创建了新会话；重新读取内存 ID，
+                    // 把持久化值校正回新会话，避免旧清理的 null 写入覆盖新会话 ID。
+                    currentConversationId?.let { newConversationId ->
+                        chatRepository.setCurrentConversation(newConversationId)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // 清空是内存态优先操作；DataStore 写入失败不应让 ViewModel 协程崩溃。
+                    Timber.w(e, "clear current chat conversation failed")
                 }
             }
         }
@@ -630,10 +652,16 @@ class AiAssistantViewModel @Inject constructor(
         viewModelScope.launch {
             // 新建后若用户立即发送消息，不能让这个旧的异步清理覆盖新会话 ID。
             if (cleanupGeneration == conversationGeneration && currentConversationId == null) {
-                chatRepository.setCurrentConversation(null)
-                // 同上：DataStore 写入是挂起操作，必须在返回后再校正一次竞态中的新 ID。
-                currentConversationId?.let { newConversationId ->
-                    chatRepository.setCurrentConversation(newConversationId)
+                try {
+                    chatRepository.setCurrentConversation(null)
+                    // 同上：DataStore 写入是挂起操作，必须在返回后再校正一次竞态中的新 ID。
+                    currentConversationId?.let { newConversationId ->
+                        chatRepository.setCurrentConversation(newConversationId)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Timber.w(e, "start new chat conversation failed")
                 }
             }
         }
@@ -866,8 +894,8 @@ class AiAssistantViewModel @Inject constructor(
          * 多轮上下文最大注入条数（v0.9.24 新增）。
          *
          * 取最近 N 条历史消息注入 LLM messages 数组（system + history + 当前 query）。
-         * 20 条约等于 10 轮对话，足以承载连续追问场景；配合
-         * 单条 MAX_INPUT_LENGTH=2000 字约束，总 token 在可控范围。
+         * 20 条约等于 10 轮对话，足以承载连续追问场景；配合一次工具调用的
+         * MAX_INPUT_LENGTH=2000 字总输入约束，总 token 在可控范围。
          */
         private const val MAX_HISTORY_MESSAGES = 20
         /** 多轮上下文总字符预算（≈6k token，中文 1 字≈1 token；v0.9.35 审计新增） */

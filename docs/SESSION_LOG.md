@@ -2,7 +2,16 @@
 
 > **每次会话结束前追加一节。** 新会话开始时读最后一节恢复进度。
 
-> **当前状态说明（2026-08-09，PR-00）：** 本文件以下内容是按时间保存的历史记录。旧条目中关于旧版本、D 盘工具链或未来恢复 Graph 视图的表述不代表当前实现；当前模块、路由、Room、seed 和路线决策以 [当前系统基线](architecture/current-system.md) 及 [知识图谱暂缓恢复](decisions/004-knowledge-graph-deferred.md) 为准。不得为更新状态而截断或重写以下历史。
+> **当前状态说明（2026-08-11）：** 本文件以下内容是按时间保存的历史记录。旧条目中关于旧版本、D 盘工具链或未来恢复 Graph 视图的表述不代表当前实现；当前模块、路由、Room、seed 和路线决策以 [当前系统基线](architecture/current-system.md) 及 [知识图谱暂缓恢复](decisions/004-knowledge-graph-deferred.md) 为准。不得为更新状态而截断或重写以下历史。
+
+---
+
+## 2026-08-11 会话：PR #20 合并后第二轮全仓审计与加固
+
+- **基线与边界**：先从 PR #20 合并提交 `3f0f8640` 完成代码审计；建 Draft PR 期间远端 main 补齐到 `0fbcac2b`（仅 v0.9.45/versionCode 70 与 CHANGELOG 元数据），最终提交已改为以该最新 main 为父基线。未读取、解压或提交历史附件 `tools.zip`，未改 seed 正式内容、稳定 ID、既有 migration 或用户记录。
+- **本轮修复**：未知今日任务保留可见但不再误路由；每日任务完成失败隔离；Room 25 entities/25 DAOs 文档与测试对齐；用户记录相关 DAO 从 REPLACE 改为 `@Upsert`；同毫秒列表补稳定主键排序；更新下载 URL/摘要/安装边界加固；Retry-After 极大值防溢出；AI 工具入口统一总输入长度预算；对话清理的 DataStore 异常隔离；CI 增加只读 contents 权限。
+- **确定性门禁**：Python 工具测试 25/25 通过；seed audit 连续两次均为 `0 error(s), 2783 known debt(s), 0 new debt(s)` 且报告字节一致；正式 seed 未发生 diff；当前 JVM `@Test` 静态计数 779。
+- **验证边界**：`git diff --check` 通过；本地 Gradle wrapper 在临时用户目录下载 `gradle-8.14.4` 时因环境无法访问 `services.gradle.org` 未进入 Android 编译/单测，不能将其写成通过；待远端 GitHub Actions 完成 `testDebugUnitTest`/`assembleDebug`，真机或模拟器冒烟另行补做。
 
 ---
 

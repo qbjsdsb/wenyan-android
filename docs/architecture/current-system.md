@@ -1,10 +1,10 @@
 # 当前系统基线
 
-> **状态：** PR-00 文档基线（2026-08-09）。
+> **状态：** 当前系统快照（2026-08-11；第二轮全仓审计起点）。
 >
-> **起始基线 commit：** `c1df65e860bc1e9f9deb046d63f4a05ac14f2883`。PR-00 以该提交的产品代码和数据复算；这不是“当前 main 永远等于该 SHA”的声明。
+> **当前 main commit：** `0fbcac2bd6c5173241ce1244b0d4f1f291c339d5`（PR #20 后补齐 v0.9.45/versionCode 70 与 CHANGELOG）。本轮代码审计基线为 `3f0f8640b90b23991098981e3cb948715c08bcb3`，最终分支以当前 main 为父基线。
 >
-> 本文只描述该 commit 中已经存在的系统事实，不引入产品行为。数字是快照；仓库变化后必须按“复算命令”重新计算，不能把本文手填数字当成新的数据源。
+> 本文描述当前代码与本轮审计约束；数字是快照，仓库变化后必须按“复算命令”重新计算，不能把本文手填数字当成新的数据源。
 
 ## 1. 复算环境与统一口径
 
@@ -42,10 +42,10 @@ jq -r '[.exam_questions[] | select(.question_type == "ESSAY")] |
 # 明确排除 app/src/androidTest；这是注解数量，不替代实际测试执行结果。
 rg -o '@Test\b' --glob '*.kt' app/src/test core feature | wc -l
 
-# 模块与路由声明数量；下面的表格按这些声明逐项列出
+# 模块与顶层路由声明数量；下面的表格按这些声明逐项列出
 rg '^include\(' settings.gradle.kts | wc -l
-rg '^    data object ' app/src/main/java/com/wenyan/app/navigation/TopLevelDestination.kt | wc -l
-rg '^\s*route = ' app/src/main/java/com/wenyan/app/navigation/WenyanNavHost.kt | wc -l
+sed -n '/val destinations: List/,/)/p' app/src/main/java/com/wenyan/app/navigation/TopLevelDestination.kt
+rg -n 'composable\(' app/src/main/java/com/wenyan/app/navigation/WenyanNavHost.kt
 
 # Room 实体数量：WenyanDatabase.entities 列表是最终口径
 rg -n '^\s*[A-Za-z]*Entity::class,' \
@@ -56,8 +56,8 @@ rg -n '^\s*[A-Za-z]*Entity::class,' \
 
 | 项目 | 当前值 | 统计口径 |
 | --- | ---: | --- |
-| App | v0.9.43 / versionCode 68 | `app/build.gradle.kts` 的 `defaultConfig` |
-| Room schema | v10 | `WenyanDatabase.kt` 的 `@Database(version = 10)` |
+| App | v0.9.45 / versionCode 70 | `app/build.gradle.kts` 的 `defaultConfig` |
+| Room schema | v15 | `WenyanDatabase.kt` 的 `@Database(version = 15)` |
 | Room 依赖 | 2.7.0 | `gradle/libs.versions.toml` 的 `room` 版本 |
 | seed | v2.26.0 | `seed_data.json.metadata.version` |
 | 科目 | 4 | `seed_data.json.subjects` 数组长度 |
@@ -65,8 +65,8 @@ rg -n '^\s*[A-Za-z]*Entity::class,' \
 | 真题 | 564 | `seed_data.json.exam_questions` 数组长度 |
 | 其中 ESSAY | 142 | `question_type == "ESSAY"` 的真题数量 |
 | 写作材料 | 909 | `seed_data.json.writing_materials` 数组长度 |
-| JVM unit-test 静态计数 | 636 | `app/src/test`、`core`、`feature` 中的 `@Test` 注解；不含 instrumentation test |
-| Room 实体表 | 19 | `WenyanDatabase.entities` 列表 |
+| JVM unit-test 静态计数 | 779 | `app/src/test`、`core`、`feature` 中的 `@Test` 注解；不含 instrumentation test |
+| Room 实体表 | 25 | `WenyanDatabase.entities` 列表 |
 
 知识点按 `seed.subject` 的复算结果为：中国古代文学 498、中国现当代文学 256、外国文学 157、文学理论 190。论述题的 `angle`、`notes` 均为 134/142，二者同时存在的题目为 134/142。上述每个数字均以本节命令的数组筛选口径为准。
 
@@ -97,20 +97,22 @@ rg -n '^\s*[A-Za-z]*Entity::class,' \
 
 | 顺序 | route | 用户入口 |
 | ---: | --- | --- |
-| 1 | `knowledge` | 知识点 |
-| 2 | `essay` | 论述题 |
-| 3 | `cards` | 卡片 |
-| 4 | `wrong_answer` | 错题本 |
-| 5 | `settings` | 设置 |
+| 1 | `today` | 今日 |
+| 2 | `knowledge` | 知识点 |
+| 3 | `training` | 训练 Hub（论述题、卡片、真题练习、写作） |
+| 4 | `my` | 我的 Hub（错题本、设置、AI 助手） |
 
 当前注册的子路由来源：[WenyanNavHost.kt](../../app/src/main/java/com/wenyan/app/navigation/WenyanNavHost.kt)：
 
 | route | 用途 |
 | --- | --- |
 | `quiz_practice` | 名词解释/简答真题背题列表 |
-| `quiz_practice_detail/{questionId}?type={type}&subject={subject}&year={year}` | 真题背题详情 |
+| `quiz_practice_detail/{questionId}?type={type}&subject={subject}&year={year}&paper={paper}` | 真题背题详情 |
+| `daily_cards/{taskId}/{pointId}` | 今日计划指定知识点的卡片复习 |
+| `daily_cards_fullscreen` | 今日计划卡片沉浸式复习 |
 | `knowledge_detail/{pointId}` | 知识点详情；详情 A→B→C 保留返回路径 |
 | `essay_detail/{examQuestionId}` | 论述题详情 |
+| `writing_materials` / `writing_editor` | 写作素材列表与离线写作会话 |
 | `cards_fullscreen` | 卡片沉浸式全屏复习 |
 | `aiassistant` | AI 助手 |
 | `api_config` | AI API 配置 |
@@ -119,7 +121,7 @@ rg -n '^\s*[A-Za-z]*Entity::class,' \
 
 关键导航不变量：
 
-- 顶层 Tab 只有上述 5 个；错题本占据原图谱位置。
+- 顶层导航只有上述 4 个入口；历史 `essay`、`cards`、`wrong_answer`、`settings` 路由仍作为稳定子路由保留。
 - 知识点详情内部跳转到不同 `pointId` 必须正常入栈；同一点重复点击才可跳过。
 - `feature:graph`、Graph 顶级 route 和当前图谱 UI 入口均不存在。
 
@@ -127,7 +129,7 @@ rg -n '^\s*[A-Za-z]*Entity::class,' \
 
 数据库声明来源：[WenyanDatabase.kt](../../core/database/src/main/java/com/wenyan/app/core/database/WenyanDatabase.kt)；实体表名来源：[entity 目录](../../core/database/src/main/java/com/wenyan/app/core/database/entity/)。
 
-当前 19 个实体表如下：
+当前 25 个实体表如下：
 
 ~~~text
 subjects
@@ -149,6 +151,12 @@ app_meta
 chat_conversations
 chat_messages
 wrong_answers
+learning_units
+learning_unit_records
+daily_plans
+daily_tasks
+practice_attempts
+writing_sessions
 ~~~
 
 表的边界：
@@ -156,9 +164,10 @@ wrong_answers
 - 内容与来源：`subjects`、`chapters`、`knowledge_points`、`exam_questions`、`writing_materials`、`data_sources`。
 - 复习与用户记录：`memo_records`、`study_progress`、`review_logs`、`wrong_answers`。
 - 写作：`answer_templates`、`template_fills`、`writing_patterns`。
+- 学习计划与输出：`learning_units`、`learning_unit_records`、`daily_plans`、`daily_tasks`、`practice_attempts`、`writing_sessions`。
 - 应用、AI 与兼容元数据：`api_configs`、`ai_grading_records`、`exam_code_history`、`app_meta`、`chat_conversations`、`chat_messages`。
 
-图谱表 `graph_nodes`、`graph_edges` 已在历史迁移中移除，不属于 v10 当前 schema。
+图谱表 `graph_nodes`、`graph_edges` 已在历史迁移中移除，不属于 v15 当前 schema。
 
 ## 5. Seed 导入与不可破坏不变量
 
@@ -166,12 +175,12 @@ wrong_answers
 
 当前导入器的可验证约束：
 
-1. `metadata.version` 与导入器 schema version 分开保存；当前导入器 schema 常量为 3。
+1. `metadata.version` 与导入器 schema version 分开保存；当前导入器 schema 常量为 4。
 2. 导入步骤置于 `WenyanDatabase.withTransaction` 内；任一步失败时不应留下已标记完成的半成品导入。
-3. seed 管理的科目、章节、知识点和真题使用稳定 ID；这些 DAO 当前使用 `@Upsert`。写作材料 DAO 仍使用带替换冲突策略的插入，后续若增加其子表必须另加数据保护测试。
+3. seed 管理的科目、章节、知识点、真题、写作材料、来源和科目代码历史使用稳定 ID；相关 DAO 使用 `@Upsert`，不触发 DELETE/INSERT 级联副作用。来源清理只针对受管理前缀。
 4. seed 升级时，已有 `MemoRecord` 按 `point_id` 跳过，只为新增知识点建立初始记录；既有 FSRS 字段不由 seed 初始值覆盖。
-5. 导入器不写入用户的 `study_progress`、`review_logs`、`wrong_answers`、`template_fills`、`api_configs` 和聊天记录；seed 来源清理仅针对受管理的 `seed-kp-source:` 前缀。
-6. 当前 PR-00 不改 seed、Room、Kotlin 或用户数据；任何后续 schema/seed 改动必须保留旧 ID、补迁移/升级测试，并证明用户记录不丢失。
+5. 导入器不写入用户的 `study_progress`、`review_logs`、`wrong_answers`、`template_fills`、`api_configs` 和聊天记录；seed 来源清理仅针对受管理的 `seed-kp-source:`、`seed-eq-source:`、`seed-wm-source:` 前缀。
+6. 本轮审计不改正式 seed、稳定 ID 或既有用户记录；任何后续 schema/seed 改动必须保留旧 ID、补迁移/升级测试，并证明用户记录不丢失。
 
 可复核实现细节：
 

@@ -26,10 +26,10 @@ interface ReviewLogDao {
     @Query("SELECT * FROM review_logs WHERE id = :id")
     suspend fun getById(id: String): ReviewLogEntity?
 
-    @Query("SELECT * FROM review_logs WHERE point_id = :pointId ORDER BY created_at DESC")
+    @Query("SELECT * FROM review_logs WHERE point_id = :pointId ORDER BY created_at DESC, id ASC")
     fun observeByPoint(pointId: String): Flow<List<ReviewLogEntity>>
 
-    @Query("SELECT * FROM review_logs ORDER BY created_at DESC")
+    @Query("SELECT * FROM review_logs ORDER BY created_at DESC, id ASC")
     fun observeAll(): Flow<List<ReviewLogEntity>>
 
     @Query("SELECT COUNT(*) FROM review_logs WHERE point_id = :pointId")
@@ -44,7 +44,7 @@ interface ReviewLogDao {
      * @param pointId 知识点 ID
      * @return 复习日志列表，最新记录在前
      */
-    @Query("SELECT * FROM review_logs WHERE point_id = :pointId ORDER BY created_at DESC")
+    @Query("SELECT * FROM review_logs WHERE point_id = :pointId ORDER BY created_at DESC, id ASC")
     suspend fun getByPointOrderByCreatedDesc(pointId: String): List<ReviewLogEntity>
 
     /**
@@ -56,6 +56,6 @@ interface ReviewLogDao {
      * @param pointIds 关联卡片 ID 列表
      * @return 匹配的复习日志列表
      */
-    @Query("SELECT * FROM review_logs WHERE point_id IN (:pointIds)")
+    @Query("SELECT * FROM review_logs WHERE point_id IN (:pointIds) ORDER BY created_at DESC, id ASC")
     suspend fun getByPointIds(pointIds: List<String>): List<ReviewLogEntity>
 }

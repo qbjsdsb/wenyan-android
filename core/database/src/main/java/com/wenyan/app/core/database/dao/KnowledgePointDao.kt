@@ -42,28 +42,28 @@ interface KnowledgePointDao {
     @Query("SELECT * FROM knowledge_points WHERE id = :id")
     fun observeById(id: String): Flow<KnowledgePointEntity?>
 
-    @Query("SELECT * FROM knowledge_points WHERE chapter_id = :chapterId ORDER BY created_at ASC")
+    @Query("SELECT * FROM knowledge_points WHERE chapter_id = :chapterId ORDER BY created_at ASC, id ASC")
     fun observeByChapter(chapterId: String): Flow<List<KnowledgePointEntity>>
 
-    @Query("SELECT * FROM knowledge_points WHERE exam_frequency = :frequency ORDER BY created_at ASC")
+    @Query("SELECT * FROM knowledge_points WHERE exam_frequency = :frequency ORDER BY created_at ASC, id ASC")
     fun observeByExamFrequency(frequency: String): Flow<List<KnowledgePointEntity>>
 
     /** 按 OCR 状态查询（索引 ocr_status） */
-    @Query("SELECT * FROM knowledge_points WHERE ocr_status = :status ORDER BY created_at ASC")
+    @Query("SELECT * FROM knowledge_points WHERE ocr_status = :status ORDER BY created_at ASC, id ASC")
     fun observeByOcrStatus(status: String): Flow<List<KnowledgePointEntity>>
 
     /** 按内容来源查询 */
-    @Query("SELECT * FROM knowledge_points WHERE content_source = :source ORDER BY created_at ASC")
+    @Query("SELECT * FROM knowledge_points WHERE content_source = :source ORDER BY created_at ASC, id ASC")
     fun observeByContentSource(source: String): Flow<List<KnowledgePointEntity>>
 
     @Query("SELECT COUNT(*) FROM knowledge_points WHERE chapter_id = :chapterId")
     suspend fun countByChapter(chapterId: String): Int
 
-    @Query("SELECT * FROM knowledge_points ORDER BY created_at ASC")
+    @Query("SELECT * FROM knowledge_points ORDER BY created_at ASC, id ASC")
     fun observeAll(): Flow<List<KnowledgePointEntity>>
 
     /** 查询所有 OCR 已校验（VERIFIED）的知识点，用于 FSRS 复习队列（过滤 PENDING） */
-    @Query("SELECT * FROM knowledge_points WHERE ocr_status = 'VERIFIED' AND content_status NOT IN ('AI_DRAFT', 'REJECTED') ORDER BY updated_at DESC")
+    @Query("SELECT * FROM knowledge_points WHERE ocr_status = 'VERIFIED' AND content_status NOT IN ('AI_DRAFT', 'REJECTED') ORDER BY updated_at DESC, id ASC")
     fun observeVerifiedForReview(): Flow<List<KnowledgePointEntity>>
 
     /** 更新知识点的 OCR 状态（PENDING -> VERIFIED 激活），同时刷新 updated_at */
@@ -95,7 +95,7 @@ interface KnowledgePointDao {
             "core_conclusion LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
             "full_content LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
             "study_text LIKE '%' || :keyword || '%' ESCAPE '\\' " +
-            ") ORDER BY updated_at DESC LIMIT :limit",
+            ") ORDER BY updated_at DESC, id ASC LIMIT :limit",
     )
     suspend fun searchByKeyword(keyword: String, limit: Int = 5): List<KnowledgePointEntity>
 
@@ -124,7 +124,7 @@ interface KnowledgePointDao {
             "kp.core_conclusion LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
             "kp.full_content LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
             "kp.study_text LIKE '%' || :keyword || '%' ESCAPE '\\' " +
-            ") ORDER BY kp.updated_at DESC",
+            ") ORDER BY kp.updated_at DESC, kp.id ASC",
     )
     fun observeSearchWithSubject(keyword: String): Flow<List<KnowledgePointWithSubject>>
 
@@ -148,7 +148,7 @@ interface KnowledgePointDao {
             "LEFT JOIN chapters c ON kp.chapter_id = c.id " +
             "LEFT JOIN subjects s ON c.subject_id = s.id " +
             "WHERE kp.ocr_status = 'VERIFIED' AND kp.content_status NOT IN ('AI_DRAFT', 'REJECTED') " +
-            "ORDER BY kp.updated_at DESC",
+            "ORDER BY kp.updated_at DESC, kp.id ASC",
     )
     fun observeVerifiedWithSubject(): Flow<List<KnowledgePointWithSubject>>
 
@@ -169,7 +169,7 @@ interface KnowledgePointDao {
             "LEFT JOIN chapters c ON kp.chapter_id = c.id " +
             "LEFT JOIN subjects s ON c.subject_id = s.id " +
             "WHERE kp.ocr_status = 'VERIFIED' AND kp.content_status NOT IN ('AI_DRAFT', 'REJECTED') " +
-            "ORDER BY kp.updated_at DESC",
+            "ORDER BY kp.updated_at DESC, kp.id ASC",
     )
     fun observeVerifiedListItem(): Flow<List<KnowledgePointListItem>>
 
@@ -191,7 +191,7 @@ interface KnowledgePointDao {
             "kp.core_conclusion LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
             "kp.full_content LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
             "kp.study_text LIKE '%' || :keyword || '%' ESCAPE '\\' " +
-            ") ORDER BY kp.updated_at DESC",
+            ") ORDER BY kp.updated_at DESC, kp.id ASC",
     )
     fun observeSearchListItem(keyword: String): Flow<List<KnowledgePointListItem>>
 }
