@@ -41,8 +41,17 @@ class WritingAutosaveControllerTest {
         val store = FakeStore()
         val controller = WritingAutosaveController(this, store, 10_000) {}
         controller.submit(entity("not-yet-debounced"))
-        controller.flush()
+        assertTrue(controller.flush().isSuccess)
         assertEquals("not-yet-debounced", store.saved.single().body)
+    }
+
+    @Test fun `flush reports failure so caller can keep the editor open`() = runTest {
+        val store = FakeStore().apply { fail = true }
+        val controller = WritingAutosaveController(this, store, 10_000) {}
+        controller.submit(entity("failed"))
+
+        assertTrue(controller.flush().isFailure)
+        assertTrue(store.saved.isEmpty())
     }
 
     private fun entity(body: String) = WritingSessionEntity(

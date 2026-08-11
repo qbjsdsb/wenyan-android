@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
 interface PracticeAttemptStore {
     suspend fun save(attempt: PracticeAttemptEntity)
     suspend fun get(id: String): PracticeAttemptEntity?
+    suspend fun getLatestForSessionAndQuestion(sessionId: String, questionId: String): PracticeAttemptEntity?
     fun observeSession(sessionId: String): Flow<List<PracticeAttemptEntity>>
 }
 
@@ -34,7 +35,15 @@ class PracticeAttemptStoreImpl @Inject constructor(
         }
     }
 
-    override suspend fun get(id: String): PracticeAttemptEntity? = database.practiceAttemptDao().getById(id)
+    override suspend fun get(id: String): PracticeAttemptEntity? = saveMutex.withLock {
+        database.practiceAttemptDao().getById(id)
+    }
+
+    override suspend fun getLatestForSessionAndQuestion(sessionId: String, questionId: String): PracticeAttemptEntity? =
+        saveMutex.withLock {
+            database.practiceAttemptDao().getLatestBySessionAndQuestion(sessionId, questionId)
+        }
+
     override fun observeSession(sessionId: String): Flow<List<PracticeAttemptEntity>> =
         database.practiceAttemptDao().observeBySession(sessionId)
 }

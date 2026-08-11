@@ -12,12 +12,27 @@ class TrainingHubTest {
             listOf(
                 TopLevelDestination.ROUTE_CARDS,
                 ROUTE_QUIZ_PRACTICE,
-                TopLevelDestination.ROUTE_ESSAY,
+                ROUTE_WRITING_MATERIALS,
                 TopLevelDestination.ROUTE_WRONG_ANSWER,
             ),
             entries.map { it.route },
         )
         assertEquals(4, entries.map { it.route }.distinct().size)
+    }
+
+    @Test
+    fun writingEditorRouteWithoutMaterialUsesBlankSession() {
+        assertEquals(ROUTE_WRITING_EDITOR, writingEditorRoute(null))
+        assertEquals(ROUTE_WRITING_EDITOR, writingEditorRoute(" "))
+    }
+
+    @Test
+    fun quizPracticeDetailRouteEncodesQuestionAndFilterValues() {
+        assertEquals(
+            "quiz_practice_detail/q%2F1?type=SHORT_ANSWER&subject=sub%201&year=2020&paper=610",
+            quizPracticeDetailRoute("q/1", "SHORT_ANSWER", "sub 1", 2020, "610"),
+        )
+        assertEquals(null, quizPracticeDetailRoute(" ", null, null, null, null))
     }
 
 }

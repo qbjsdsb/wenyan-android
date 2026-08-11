@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -42,7 +44,7 @@ class WritingMaterialListViewModel @Inject constructor(
 @Composable
 fun WritingMaterialListScreen(
     onBack: () -> Unit,
-    onStartWriting: () -> Unit = {},
+    onStartWriting: (String?) -> Unit = { _ -> },
     viewModel: WritingMaterialListViewModel = hiltViewModel(),
 ) {
     val materials by viewModel.materials.collectAsStateWithLifecycle()
@@ -60,7 +62,12 @@ fun WritingMaterialListScreen(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            item { androidx.compose.material3.Button(onClick = onStartWriting, modifier = Modifier.fillMaxWidth()) { androidx.compose.material3.Text("开始离线写作") } }
+            item {
+                Button(
+                    onClick = { onStartWriting(null) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("开始离线写作") }
+            }
             items(materials, key = { it.material.id }) { item ->
                 val material = item.material
                 TonalCardLow {
@@ -93,6 +100,12 @@ fun WritingMaterialListScreen(
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                             }
+                        }
+                        OutlinedButton(
+                            onClick = { onStartWriting(material.id) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("用此素材开始写作")
                         }
                     }
                 }

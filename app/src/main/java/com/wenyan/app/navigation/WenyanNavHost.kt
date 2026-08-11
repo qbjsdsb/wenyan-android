@@ -1,6 +1,5 @@
 package com.wenyan.app.navigation
 
-import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -116,15 +115,8 @@ fun WenyanNavHost(
                 navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_KNOWLEDGE)
             },
             onNavigateToDetail = { questionId, type, subject, year, paper ->
-                val typeParam = type ?: FILTER_ALL
-                val subjectParam = subject ?: FILTER_ALL
-                val yearParam = year?.toString() ?: FILTER_ALL
-                val paperParam = paper ?: FILTER_ALL
-                navController.navigate(
-                    "$ROUTE_QUIZ_PRACTICE_DETAIL/$questionId" +
-                        "?type=$typeParam&subject=$subjectParam&year=$yearParam&paper=$paperParam",
-                ) {
-                    launchSingleTop = true
+                quizPracticeDetailRoute(questionId, type, subject, year, paper)?.let { route ->
+                    navController.navigate(route) { launchSingleTop = true }
                 }
             },
         )
@@ -146,12 +138,26 @@ fun WenyanNavHost(
                 navController.navigate(ROUTE_WRITING_MATERIALS) { launchSingleTop = true }
             },
         )
-        composable(ROUTE_WRITING_EDITOR) { WritingEditorRoute(onBack = { navController.popBackStack() }) }
+        composable(
+            route = ROUTE_WRITING_EDITOR_PATTERN,
+            arguments = listOf(
+                navArgument(ARG_WRITING_MATERIAL_ID) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+            ),
+        ) {
+            WritingEditorRoute(onBack = { navController.popBackStackOrNavigateTo(ROUTE_WRITING_MATERIALS) })
+        }
         writingMaterialsDestination(
             onBack = { navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_TRAINING) },
-            onStartWriting = { navController.navigate(ROUTE_WRITING_EDITOR) { launchSingleTop = true } },
+            onStartWriting = { materialId ->
+                navController.navigate(writingEditorRoute(materialId)) { launchSingleTop = true }
+            },
         )
         cardsDestination(
+            onBack = { navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_TRAINING) },
             onNavigateToAiAssistant = {
                 navController.navigate(ROUTE_AI_ASSISTANT) {
                     launchSingleTop = true
@@ -180,6 +186,7 @@ fun WenyanNavHost(
             },
         )
         dailyCardsDestination(
+            onBack = { navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_TODAY) },
             onNavigateToAiAssistant = {
                 navController.navigate(ROUTE_AI_ASSISTANT) { launchSingleTop = true }
             },
@@ -361,7 +368,7 @@ private fun NavHostController.navigateToKnowledgeDetail(pointId: String) {
         return
     }
 
-    navigate("$ROUTE_KNOWLEDGE_DETAIL/${Uri.encode(normalizedPointId)}") {
+    navigate("$ROUTE_KNOWLEDGE_DETAIL/${encodeRouteComponent(normalizedPointId)}") {
         launchSingleTop = shouldUseKnowledgeDetailSingleTop(currentEntry?.destination?.route)
     }
 }
@@ -451,7 +458,10 @@ private fun NavGraphBuilder.essayTabDestination(
     }
 }
 
-private fun NavGraphBuilder.writingMaterialsDestination(onBack: () -> Unit, onStartWriting: () -> Unit) {
+private fun NavGraphBuilder.writingMaterialsDestination(
+    onBack: () -> Unit,
+    onStartWriting: (String?) -> Unit,
+) {
     composable(
         route = ROUTE_WRITING_MATERIALS,
         enterTransition = { WenyanMotion.PushEnterTransition },
@@ -464,6 +474,7 @@ private fun NavGraphBuilder.writingMaterialsDestination(onBack: () -> Unit, onSt
 }
 
 private fun NavGraphBuilder.cardsDestination(
+    onBack: () -> Unit,
     onNavigateToAiAssistant: () -> Unit,
     onNavigateToKnowledge: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
@@ -471,6 +482,7 @@ private fun NavGraphBuilder.cardsDestination(
 ) {
     composable(TopLevelDestination.ROUTE_CARDS) {
         CardsScreen(
+            onBack = onBack,
             onNavigateToAiAssistant = onNavigateToAiAssistant,
             onNavigateToKnowledge = onNavigateToKnowledge,
             onNavigateToDetail = onNavigateToDetail,
@@ -480,6 +492,7 @@ private fun NavGraphBuilder.cardsDestination(
 }
 
 private fun NavGraphBuilder.dailyCardsDestination(
+    onBack: () -> Unit,
     onNavigateToAiAssistant: () -> Unit,
     onNavigateToKnowledge: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
@@ -499,6 +512,7 @@ private fun NavGraphBuilder.dailyCardsDestination(
     ) { backStackEntry ->
         val taskId = backStackEntry.arguments?.getString(ARG_DAILY_TASK_ID)
         CardsScreen(
+            onBack = onBack,
             onNavigateToAiAssistant = onNavigateToAiAssistant,
             onNavigateToKnowledge = onNavigateToKnowledge,
             onNavigateToDetail = onNavigateToDetail,
@@ -549,18 +563,30 @@ private fun NavGraphBuilder.dailyCardsFullscreenDestination(
         popEnterTransition = { WenyanMotion.PopEnterTransition },
         popExitTransition = { WenyanMotion.PopExitTransition },
     ) {
-        // This destination is only reachable from the daily-card route, so the previous
+        // This destination is normally reached from the daily-card route, so the previous
         // entry is the authoritative shared-session owner even when the route has arguments.
-        val dailyEntry = requireNotNull(navController.previousBackStackEntry)
-        val taskId = dailyEntry.arguments?.getString(ARG_DAILY_TASK_ID)
-        CardsFullscreenScreen(
-            onBack = onBack,
-            onNavigateToAiAssistant = onNavigateToAiAssistant,
-            onNavigateToKnowledge = onNavigateToKnowledge,
-            onNavigateToDetail = onNavigateToDetail,
-            onDailyTaskFinished = { taskId?.let(onDailyTaskFinished) },
-            viewModel = hiltViewModel<CardsViewModel>(dailyEntry),
-        )
+        // Keep an isolated fallback for restored/deep-linked state instead of crashing during
+        // composition when that entry is absent.
+        val dailyEntry = navController.previousBackStackEntry
+        if (dailyEntry == null) {
+            CardsFullscreenScreen(
+                onBack = onBack,
+                onNavigateToAiAssistant = onNavigateToAiAssistant,
+                onNavigateToKnowledge = onNavigateToKnowledge,
+                onNavigateToDetail = onNavigateToDetail,
+                viewModel = hiltViewModel<CardsViewModel>(),
+            )
+        } else {
+            val taskId = dailyEntry.arguments?.getString(ARG_DAILY_TASK_ID)
+            CardsFullscreenScreen(
+                onBack = onBack,
+                onNavigateToAiAssistant = onNavigateToAiAssistant,
+                onNavigateToKnowledge = onNavigateToKnowledge,
+                onNavigateToDetail = onNavigateToDetail,
+                onDailyTaskFinished = { taskId?.let(onDailyTaskFinished) },
+                viewModel = hiltViewModel<CardsViewModel>(dailyEntry),
+            )
+        }
     }
 }
 
@@ -711,6 +737,9 @@ private const val ROUTE_ABOUT = "about"
 private const val ROUTE_ESSAY_DETAIL = "essay_detail"
 internal const val ROUTE_WRITING_MATERIALS = "writing_materials"
 internal const val ROUTE_WRITING_EDITOR = "writing_editor"
+private const val ARG_WRITING_MATERIAL_ID = "materialId"
+private const val ROUTE_WRITING_EDITOR_PATTERN =
+    "$ROUTE_WRITING_EDITOR?$ARG_WRITING_MATERIAL_ID={$ARG_WRITING_MATERIAL_ID}"
 // v0.9.11：检查更新子路由
 private const val ROUTE_UPDATE_CHECK = "update_check"
 // v0.9.33：真题背题子路由
@@ -729,7 +758,50 @@ internal fun dailyCardsRoute(taskId: String, pointId: String): String? {
     val normalizedTaskId = taskId.trim()
     val normalizedPointId = pointId.trim()
     if (normalizedTaskId.isBlank() || normalizedPointId.isBlank()) return null
-    return "$ROUTE_DAILY_CARDS/${Uri.encode(normalizedTaskId)}/${Uri.encode(normalizedPointId)}"
+    return "$ROUTE_DAILY_CARDS/${encodeRouteComponent(normalizedTaskId)}/${encodeRouteComponent(normalizedPointId)}"
+}
+
+/** Build a writing session route, optionally seeded from one reviewed/legacy material. */
+internal fun writingEditorRoute(materialId: String?): String {
+    val normalizedMaterialId = materialId?.trim().orEmpty()
+    if (normalizedMaterialId.isBlank()) return ROUTE_WRITING_EDITOR
+    return "$ROUTE_WRITING_EDITOR?$ARG_WRITING_MATERIAL_ID=${encodeRouteComponent(normalizedMaterialId)}"
+}
+
+/** Build a filtered practice-detail route without allowing IDs or filters to break the URI. */
+internal fun quizPracticeDetailRoute(
+    questionId: String,
+    type: String?,
+    subject: String?,
+    year: Int?,
+    paper: String?,
+): String? {
+    val normalizedQuestionId = questionId.trim()
+    if (normalizedQuestionId.isBlank()) return null
+    fun encodedOrAll(value: String?): String = encodeRouteComponent(value ?: FILTER_ALL)
+    return "$ROUTE_QUIZ_PRACTICE_DETAIL/${encodeRouteComponent(normalizedQuestionId)}" +
+        "?type=${encodedOrAll(type)}" +
+        "&subject=${encodedOrAll(subject)}" +
+        "&year=${encodedOrAll(year?.toString())}" +
+        "&paper=${encodedOrAll(paper)}"
+}
+
+/** Percent-encode a route path/query component without requiring Android's Uri stub in JVM tests. */
+private fun encodeRouteComponent(value: String): String {
+    val safe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()"
+    val hex = "0123456789ABCDEF"
+    return buildString {
+        value.toByteArray(Charsets.UTF_8).forEach { byte ->
+            val code = byte.toInt() and 0xFF
+            if (code < 128 && safe.indexOf(code.toChar()) >= 0) {
+                append(code.toChar())
+            } else {
+                append('%')
+                append(hex[code ushr 4])
+                append(hex[code and 0x0F])
+            }
+        }
+    }
 }
 
 /** 导航回归测试使用的纯策略：空 ID 或当前详情页重复点击都不应产生新栈项。 */

@@ -105,9 +105,12 @@ sealed class TopLevelDestination(
             route == null -> null
             route == ROUTE_TODAY -> ROUTE_TODAY
             route == ROUTE_KNOWLEDGE || route.startsWith("knowledge_detail/") -> ROUTE_KNOWLEDGE
+            route == "daily_cards_fullscreen" || route.startsWith("daily_cards/") -> ROUTE_TODAY
             route == ROUTE_TRAINING || route == ROUTE_ESSAY || route == ROUTE_CARDS ||
                 route == "quiz_practice" || route.startsWith("quiz_practice_detail/") ||
-                route == "writing_materials" || route == "cards_fullscreen" -> ROUTE_TRAINING
+                route == "essay_detail" || route.startsWith("essay_detail/") ||
+                route == "writing_materials" || route == "writing_editor" ||
+                route.startsWith("writing_editor?") || route == "cards_fullscreen" -> ROUTE_TRAINING
             route == ROUTE_MY || route == ROUTE_WRONG_ANSWER || route == ROUTE_SETTINGS ||
                 route == "about" || route == "update_check" || route == "api_config" ||
                 route == "aiassistant" -> ROUTE_MY

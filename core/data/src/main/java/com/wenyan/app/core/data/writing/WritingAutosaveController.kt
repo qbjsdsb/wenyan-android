@@ -39,17 +39,18 @@ class WritingAutosaveController(
         pending = scope.launch { persist(session, requestedGeneration) }
     }
 
-    suspend fun flush() {
-        val session = latest ?: return
+    suspend fun flush(): Result<Unit> {
+        val session = latest ?: return Result.success(Unit)
         val requestedGeneration = ++generation
         pending?.cancel()
-        persist(session, requestedGeneration)
+        return persist(session, requestedGeneration)
     }
 
-    private suspend fun persist(session: WritingSessionEntity, requestedGeneration: Long) {
+    private suspend fun persist(session: WritingSessionEntity, requestedGeneration: Long): Result<Unit> {
         val result = withContext(NonCancellable) {
             saveMutex.withLock { runCatching { store.save(session) } }
         }
         if (requestedGeneration == generation) onResult(result)
+        return result
     }
 }

@@ -164,6 +164,8 @@ private val CARD_MAX_WIDTH_FULLSCREEN = 560.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CardsScreen(
+    // 子路由（例如 Today 指定卡片）需要显式返回入口；顶级卡片 Tab 保持无返回箭头。
+    onBack: (() -> Unit)? = null,
     onNavigateToAiAssistant: () -> Unit = {},
     onNavigateToKnowledge: () -> Unit = {},
     onNavigateToDetail: (String) -> Unit = {},
@@ -270,6 +272,7 @@ fun CardsScreen(
         topBar = {
             WenyanLargeTopAppBar(
                 title = stringResource(R.string.card_title),
+                onBack = onBack,
                 actions = {
                     IconButton(onClick = onNavigateToAiAssistant) {
                         Icon(

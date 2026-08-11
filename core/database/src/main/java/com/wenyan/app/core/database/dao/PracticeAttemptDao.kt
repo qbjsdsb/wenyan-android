@@ -19,6 +19,16 @@ interface PracticeAttemptDao {
     @Query("SELECT * FROM practice_attempts WHERE id = :id")
     suspend fun getById(id: String): PracticeAttemptEntity?
 
+    @Query(
+        """
+        SELECT * FROM practice_attempts
+        WHERE session_id = :sessionId AND question_id = :questionId
+        ORDER BY updated_at DESC, id DESC
+        LIMIT 1
+        """,
+    )
+    suspend fun getLatestBySessionAndQuestion(sessionId: String, questionId: String): PracticeAttemptEntity?
+
     @Query("SELECT * FROM practice_attempts WHERE question_id = :questionId ORDER BY created_at DESC, id DESC")
     fun observeByQuestion(questionId: String): Flow<List<PracticeAttemptEntity>>
 
