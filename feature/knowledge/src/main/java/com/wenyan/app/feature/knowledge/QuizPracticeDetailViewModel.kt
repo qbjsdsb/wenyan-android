@@ -411,7 +411,7 @@ class QuizPracticeDetailViewModel @Inject constructor(
                     val existing = practiceAttemptStore.get(attemptId)
                     val existingStage = existing?.let(::persistedStage) ?: PracticeAttemptStage.ANSWERING
                     val effectiveStage = maxOf(state.stage, existingStage)
-                    val effectiveDraft = if (existingStage > state.stage) {
+                    val effectiveDraft = if (existingStage > state.stage && existing != null) {
                         PracticeDraft(existing.userKeywords, existing.outline, existing.body)
                     } else {
                         state.draft
