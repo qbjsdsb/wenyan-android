@@ -60,6 +60,15 @@ class ApiConfigViewModelTest {
     fun `https 无域名被拒绝`() {
         assertNotNull(validateBaseUrl("https://"))
         assertNotNull(validateBaseUrl("https:///"))
+        assertNotNull(validateBaseUrl("https://?model=chat"))
+        assertNotNull(validateBaseUrl("https://api.deepseek.com:bad"))
+    }
+
+    @Test
+    fun `baseUrl 不允许携带凭据查询参数或片段`() {
+        assertNotNull(validateBaseUrl("https://user:password@api.deepseek.com"))
+        assertNotNull(validateBaseUrl("https://api.deepseek.com?model=chat"))
+        assertNotNull(validateBaseUrl("https://api.deepseek.com/v1#chat"))
     }
 
     @Test
@@ -69,10 +78,10 @@ class ApiConfigViewModelTest {
     }
 
     @Test
-    fun `错误信息包含用户输入便于排查`() {
+    fun `错误信息不回显接口地址原文`() {
         val error = validateBaseUrl("api.deepseek.com")
         assertEquals(
-            "接口地址必须以 https:// 开头（当前为 \"api.deepseek.com\"）",
+            "接口地址必须以 https:// 开头",
             error,
         )
     }

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.wenyan.app.core.common.model.ContentSource
 import com.wenyan.app.core.database.dao.KnowledgePointDao
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.Serializable
@@ -61,6 +62,8 @@ class RagEngine @Inject constructor(
         // 现在 catch 降级为"无检索结果"，由调用方决定是否继续（无 RAG 也能回答）。
         val results = try {
             knowledgePointDao.searchByKeyword(escapeLikeWildcards(keyword), limit = MAX_RESULTS)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.w(e, "RAG searchByKeyword failed, degrade to no-results: ${e.message}")
             emptyList()

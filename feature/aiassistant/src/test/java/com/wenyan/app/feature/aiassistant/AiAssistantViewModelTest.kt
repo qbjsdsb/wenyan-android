@@ -190,6 +190,25 @@ class AiAssistantViewModelTest {
         assertTrue("用户消息应保留", viewModel.uiState.value.messages.any { it.role == AiRole.USER && it.content == "测试问题" })
     }
 
+    /**
+     * v0.9.37 回归：首个流式片段已经显示后清空对话，旧任务不能把半截回复写回新状态。
+     */
+    @Test
+    fun `已显示半截回复后清空不会复活幽灵消息`() = runTest {
+        aiService.response = "旧回复"
+        aiService.deltaGate = CompletableDeferred()
+        viewModel.sendMessage("测试问题")
+
+        assertEquals("旧", viewModel.uiState.value.streamingContent)
+        viewModel.clearMessages()
+        aiService.deltaGate?.complete(Unit)
+        aiService.deltaGate = null
+        runCurrent()
+
+        assertTrue("清空后不应恢复旧消息", viewModel.uiState.value.messages.isEmpty())
+        assertNull("清空后不应保留流式文本", viewModel.uiState.value.streamingContent)
+    }
+
     @Test
     fun `sendMessage RAG有结果时AI回复包含引用`() = runTest {
         aiService.response = "AI 回复"
@@ -637,6 +656,52 @@ class AiAssistantViewModelTest {
         assertEquals("不应覆盖用户新消息", 2, state.messages.size)
         assertEquals("用户新消息", state.messages[0].content)
         assertTrue("不应包含旧消息", state.messages.none { it.content == "旧消息" })
+    }
+
+    /** v0.9.37 回归：恢复未完成时清空对话，旧历史不能在稍后重新灌回 UI。 */
+    @Test
+    fun `恢复进行中清空对话不会复活旧历史`() = runTest {
+        val oldConversation = ChatConversationEntity(
+            id = "conv_old",
+            title = "旧对话",
+            apiConfigId = null,
+            model = null,
+            messageCount = 1,
+            createdAt = 1000L,
+            updatedAt = 2000L,
+        )
+        val oldMessage = ChatMessageEntity(
+            id = "msg_old",
+            conversationId = "conv_old",
+            role = "USER",
+            content = "旧消息",
+            contentSource = "USER_INPUT",
+            stage = null,
+            referencesJson = null,
+            contextScreen = null,
+            contextTitle = null,
+            tokensUsed = null,
+            createdAt = 1000L,
+        )
+        val repository = FakeChatRepository(
+            initialConversations = listOf(oldConversation),
+            initialMessages = listOf(oldMessage),
+        ).also { it.loadOrInitGate = CompletableDeferred() }
+        val restoringVm = AiAssistantViewModel(
+            aiService = aiService,
+            socraticTutor = socraticTutor,
+            ragEngine = ragEngine,
+            recallChecker = recallChecker,
+            antiRoteMemorization = antiRoteMemorization,
+            chatRepository = repository,
+        )
+
+        restoringVm.clearMessages()
+        repository.loadOrInitGate?.complete(Unit)
+        repository.loadOrInitGate = null
+        runCurrent()
+
+        assertTrue("清空后旧历史不应重新出现", restoringVm.uiState.value.messages.isEmpty())
     }
 
     /**

@@ -39,26 +39,23 @@ class StudyProgressRepository @Inject constructor(
      */
     fun observeProgress(): Flow<StudyProgressEntity> =
         studyProgressDao.observeById(DEFAULT_ID).map { entity ->
-            entity ?: StudyProgressEntity(
-                id = DEFAULT_ID,
-                lastPointId = null,
-                lastVisitedAt = null,
-                totalStudyTime = 0,
-                streakDays = 0,
-                lastCheckIn = null,
-            )
+            entity ?: defaultProgress()
         }.catch { e ->
             // v0.8.21: Log.e → Timber.e（tag 自动推断为 "StudyProgressRepository"）
             Timber.e(e, "observeProgress failed")
-            StudyProgressEntity(
-                id = DEFAULT_ID,
-                lastPointId = null,
-                lastVisitedAt = null,
-                totalStudyTime = 0,
-                streakDays = 0,
-                lastCheckIn = null,
-            )
+            // catch lambda 不会自动把返回值发送到下游；必须显式 emit，
+            // 否则数据库异常后 observeProgress 会直接完成，Settings 页会永久停在 Loading。
+            emit(defaultProgress())
         }
+
+    private fun defaultProgress() = StudyProgressEntity(
+        id = DEFAULT_ID,
+        lastPointId = null,
+        lastVisitedAt = null,
+        totalStudyTime = 0,
+        streakDays = 0,
+        lastCheckIn = null,
+    )
 
     /**
      * 记录一次学习会话(P0 v0.7.2)。

@@ -1,5 +1,6 @@
 package com.wenyan.app.core.data.repository
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -96,6 +97,8 @@ class UpdateRepositoryImpl @Inject constructor() : UpdateRepository {
             val release = withContext(Dispatchers.IO) {
                 try {
                     fetchLatestReleaseFromApi()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     // API 失败（国内可能无法访问 api.github.com），
                     // 降级到 github.com Releases 页面，通过重定向获取版本号
@@ -135,6 +138,8 @@ class UpdateRepositoryImpl @Inject constructor() : UpdateRepository {
                     message = "当前版本 ($currentVersion) 高于 GitHub 最新版 ($latestTag)，请确认",
                 )
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             val message = when {
                 e.message?.contains("Unable to resolve host") == true ||
@@ -152,7 +157,7 @@ class UpdateRepositoryImpl @Inject constructor() : UpdateRepository {
                     e.message?.contains("kotlinx.serialization") == true ->
                     "解析版本信息失败，请稍后再试"
 
-                else -> "检查更新失败：${e.message ?: "未知错误"}"
+                else -> "检查更新失败，请稍后重试"
             }
             UpdateCheckResult.Error(message)
         }
@@ -177,7 +182,7 @@ class UpdateRepositoryImpl @Inject constructor() : UpdateRepository {
             if (responseCode != HttpURLConnection.HTTP_OK) {
                 throw RuntimeException("$responseCode")
             }
-            val body = connection.inputStream.bufferedReader().readText()
+            val body = connection.inputStream.bufferedReader().use { reader -> reader.readText() }
             json.decodeFromString<GitHubRelease>(body)
         } finally {
             connection.disconnect()

@@ -171,62 +171,52 @@ fun UpdateCheckScreen(
                 }
 
                 // ── 状态区域（AnimatedContent 过渡动画） ──
-                // 使用基于状态类型的稳定 key，避免进度更新时触发过渡动画（闪烁）
-                val stateKey = when (uiState) {
-                    is UpdateUiState.Idle -> "idle"
-                    is UpdateUiState.Checking -> "checking"
-                    is UpdateUiState.Latest -> "latest"
-                    is UpdateUiState.UpdateAvailable -> "update_available"
-                    is UpdateUiState.Downloading -> "downloading"
-                    is UpdateUiState.DownloadComplete -> "download_complete"
-                    is UpdateUiState.Error -> "error"
-                }
+                // targetState 传入完整快照，contentKey 只按状态类型变化：进度更新不会
+                // 触发过渡动画，同时过渡中的旧帧仍能渲染自己的版本/下载数据，不会闪空白。
                 AnimatedContent(
-                    targetState = stateKey,
+                    targetState = uiState,
+                    contentKey = { state -> updateStateKey(state) },
                     transitionSpec = {
                         fadeIn(tween(300)) togetherWith fadeOut(tween(300))
                     },
                     label = "update_state",
-                ) { key ->
-                    // v0.9.25 修复：content lambda 使用参数 key 分发，而非闭包直接读 uiState。
-                    // 原实现两帧过渡时都渲染"最新状态"（crossfade 失效），
-                    // 且 Downloading→DownloadComplete 等状态转换时旧帧会读错状态。
-                    // 用 as? 安全 cast，过渡期间旧帧数据不可用时渲染空（300ms 内可接受）。
-                    when (key) {
-                        "idle" -> IdleContent(onCheck = viewModel::checkForUpdate)
-                        "checking" -> CheckingContent()
-                        "latest" -> (uiState as? UpdateUiState.Latest)?.let {
-                            LatestContent(currentVersion = it.currentVersion)
-                        }
-                        "update_available" -> (uiState as? UpdateUiState.UpdateAvailable)?.let {
-                            UpdateAvailableContent(
-                                latestVersion = it.latestVersion,
-                                releaseNotes = it.releaseNotes,
-                                onDownload = viewModel::downloadAndInstallApk,
-                                onOpenInBrowser = { viewModel.openDownloadPage(it.downloadUrl) },
-                            )
-                        }
-                        "downloading" -> (uiState as? UpdateUiState.Downloading)?.let {
-                            DownloadingContent(progress = it.progress)
-                        }
-                        "download_complete" -> (uiState as? UpdateUiState.DownloadComplete)?.let {
-                            DownloadCompleteContent(onInstall = viewModel::installDownloadedApk)
-                        }
-                        "error" -> (uiState as? UpdateUiState.Error)?.let {
-                            ErrorContent(
-                                message = it.message,
-                                onRetry = {
-                                    viewModel.resetState()
-                                    viewModel.checkForUpdate()
-                                },
-                            )
-                        }
-                        else -> IdleContent(onCheck = viewModel::checkForUpdate)
+                ) { state ->
+                    when (state) {
+                        UpdateUiState.Idle -> IdleContent(onCheck = viewModel::checkForUpdate)
+                        UpdateUiState.Checking -> CheckingContent()
+                        is UpdateUiState.Latest -> LatestContent(currentVersion = state.currentVersion)
+                        is UpdateUiState.UpdateAvailable -> UpdateAvailableContent(
+                            latestVersion = state.latestVersion,
+                            releaseNotes = state.releaseNotes,
+                            onDownload = viewModel::downloadAndInstallApk,
+                            onOpenInBrowser = { viewModel.openDownloadPage(state.downloadUrl) },
+                        )
+                        is UpdateUiState.Downloading -> DownloadingContent(progress = state.progress)
+                        is UpdateUiState.DownloadComplete -> DownloadCompleteContent(
+                            onInstall = viewModel::installDownloadedApk,
+                        )
+                        is UpdateUiState.Error -> ErrorContent(
+                            message = state.message,
+                            onRetry = {
+                                viewModel.resetState()
+                                viewModel.checkForUpdate()
+                            },
+                        )
                     }
                 }
             }
         }
     }
+}
+
+private fun updateStateKey(state: UpdateUiState): String = when (state) {
+    UpdateUiState.Idle -> "idle"
+    UpdateUiState.Checking -> "checking"
+    is UpdateUiState.Latest -> "latest"
+    is UpdateUiState.UpdateAvailable -> "update_available"
+    is UpdateUiState.Downloading -> "downloading"
+    is UpdateUiState.DownloadComplete -> "download_complete"
+    is UpdateUiState.Error -> "error"
 }
 
 // ── 各状态的内容组件 ──

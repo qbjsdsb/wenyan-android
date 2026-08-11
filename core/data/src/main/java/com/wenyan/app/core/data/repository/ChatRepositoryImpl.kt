@@ -12,6 +12,7 @@ import com.wenyan.app.core.database.dao.ChatConversationDao
 import com.wenyan.app.core.database.dao.ChatMessageDao
 import com.wenyan.app.core.database.entity.ChatConversationEntity
 import com.wenyan.app.core.database.entity.ChatMessageEntity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -147,6 +148,8 @@ class ChatRepositoryImpl @Inject constructor(
                     prefs[KEY_CURRENT_CONVERSATION_ID] = id
                 }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             // DataStore 写失败不冒泡（与 SeedDataLoader 的种子状态写入策略一致），
             // 下次启动 loadOrInitCurrent 会重新从 DB 推断

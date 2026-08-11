@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.net.URI
 import java.util.UUID
 import javax.inject.Inject
 
@@ -231,7 +232,7 @@ class ApiConfigViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _errorMessage.value = "保存失败：${e.message}"
+                _errorMessage.value = "保存失败：${friendlyErrorMessage(e)}"
             }
         }
     }
@@ -244,7 +245,7 @@ class ApiConfigViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _errorMessage.value = "切换失败：${e.message}"
+                _errorMessage.value = "切换失败：${friendlyErrorMessage(e)}"
             }
         }
     }
@@ -257,7 +258,7 @@ class ApiConfigViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _errorMessage.value = "删除失败：${e.message}"
+                _errorMessage.value = "删除失败：${friendlyErrorMessage(e)}"
             }
         }
     }
@@ -290,27 +291,29 @@ class ApiConfigViewModel @Inject constructor(
  *
  * 注：本 App 面向的 LLM 服务商（DeepSeek/通义/智谱/月之暗面）均强制 https；
  * 本地局域网 http 模型服务（如 Ollama）本就因明文策略无法使用，不应放行误导。
+ * URL 也不允许携带用户名/密码、查询参数或片段，避免把凭据写进地址或让 Retrofit
+ * 在 base URL 后拼接 `/chat/completions` 时生成非法路径。
  *
  * @return null 表示通过，非 null 为错误提示
  */
 internal fun validateBaseUrl(baseUrl: String): String? {
     val trimmed = baseUrl.trim()
+    val parsedUri = runCatching { URI(trimmed) }.getOrNull()
     return when {
         trimmed.startsWith("http://") -> {
-            "接口地址不支持 http:// 明文传输，请改用 https://（当前为 \"$trimmed\"）"
+            "接口地址不支持 http:// 明文传输，请改用 https://"
         }
         !trimmed.startsWith("https://") -> {
-            "接口地址必须以 https:// 开头（当前为 \"$trimmed\"）"
+            "接口地址必须以 https:// 开头"
         }
-        // 检查是否包含 host 部分：
-        // - "https://" 本身非法（removePrefix 后为空）
-        // - "https:///" 非法（removePrefix 后以 "/" 开头，无 host；v0.9.31 单测捕获的
-        //   原实现漏判边界，Retrofit HttpUrl.parse("https:///") 返回 null 会抛异常）
-        trimmed.removePrefix("https://").let { rest ->
-            rest.isBlank() || rest.startsWith("/")
-        } -> {
+        // 解析完整 URI，避免只检查字符串前缀而放过 "https://?"、非法端口、空 host
+        // 等最终会让 Retrofit/OkHttp 抛异常的地址。
+        parsedUri?.host.isNullOrBlank() -> {
             "接口地址缺少域名（如 api.deepseek.com）"
         }
+        parsedUri?.userInfo != null -> "接口地址不能包含用户名或密码"
+        parsedUri?.query != null -> "接口地址不能包含查询参数"
+        parsedUri?.fragment != null -> "接口地址不能包含片段标记"
         else -> null
     }
 }

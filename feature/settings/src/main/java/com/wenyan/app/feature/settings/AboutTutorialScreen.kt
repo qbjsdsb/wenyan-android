@@ -68,7 +68,7 @@ import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
  * 信息架构：
  * 1. 欢迎卡片 — 定位 + 三大理念
  * 2. 快速上手 — 3 步入门
- * 3. 功能模块 — 5 个 Tab 简介
+ * 3. 功能模块 — 5 个核心模块简介
  * 4. 学习原理 — FSRS + 三档记忆（可折叠）
  * 5. 关于 — 技术栈 + 致谢
  */

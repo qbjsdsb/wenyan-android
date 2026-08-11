@@ -16,6 +16,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -70,6 +71,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -83,6 +85,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -901,7 +904,9 @@ private fun AlreadyScheduledHint(
                     text = hintText,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = Spacing.xs),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = Spacing.xs),
                 )
             }
         }
@@ -1459,7 +1464,17 @@ private fun RatingButtons(
         )
     }
 
-    if (columns >= 4) {
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        // 四档评分同时包含中文标签和预期间隔；在窄屏或大字号下保持四列会压缩
+        // 触控内容，甚至让按钮文字被裁切。两列布局保留相同操作顺序并给每档足够宽度。
+        val effectiveColumns = when {
+            columns <= 1 -> 1
+            columns == 2 -> 2
+            maxWidth < 360.dp || LocalDensity.current.fontScale >= 1.3f -> 2
+            else -> columns
+        }
+
+    if (effectiveColumns >= 4) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -1509,7 +1524,7 @@ private fun RatingButtons(
                 modifier = Modifier.weight(1f),
             )
         }
-    } else if (columns == 2) {
+    } else if (effectiveColumns == 2) {
         // 2×2 网格：横屏窄操作面板内按钮更小（~90dp）、总高 ~120dp（远小于 4 横排 ~184dp）
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -1605,6 +1620,7 @@ private fun RatingButtons(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+    }
     }
 }
 
@@ -1840,11 +1856,18 @@ private fun TodayPlanBanner(
                     },
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = Spacing.sm),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = examLabel,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }

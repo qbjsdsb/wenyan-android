@@ -7,6 +7,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -53,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -167,7 +169,11 @@ fun WrongAnswerScreen(
                 targetState = Triple(uiState.isLoading, uiState.error, uiState.items.isEmpty()),
                 animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
                 label = "wrong_answer_state",
-                modifier = Modifier.fillMaxSize(),
+                // 过滤区已经占用一部分高度，列表/状态区只填充剩余空间。
+                // fillMaxSize 会在小屏和大字号下覆盖过滤区并造成底部裁切。
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
             ) { (isLoading, error, isEmpty) ->
                 when {
                     isLoading -> {
@@ -400,10 +406,11 @@ private fun WrongAnswerCard(
     TonalCard(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(Spacing.lg)) {
             // 1. 顶部信息行:来源 + 答错次数 + 解决状态 + FSRS 调度状态
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                itemVerticalAlignment = Alignment.CenterVertically,
             ) {
                 WenyanInfoChip(
                     text = formatSource(item.source),
@@ -588,9 +595,10 @@ private fun WrongAnswerSchedulingInfo(
         Column(modifier = Modifier.padding(Spacing.sm)) {
             if (item.schedReps == 0) {
                 // 新建错题，从未复习
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    itemVerticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
                         imageVector = Icons.Default.Schedule,
@@ -606,10 +614,11 @@ private fun WrongAnswerSchedulingInfo(
                 }
             } else {
                 // 已调度，展示下次复习时间 + 统计
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    itemVerticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
                         imageVector = Icons.Default.Schedule,
@@ -625,9 +634,8 @@ private fun WrongAnswerSchedulingInfo(
                         text = "下次复习：$nextReviewText",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        // v0.9.25 修复：窄屏/大字号下日期文本可被挤压换行错乱，
-                        // 给日期 Text weight(1f) 占满剩余空间 + 单行省略
-                        modifier = Modifier.weight(1f, fill = false),
+                        // v0.9.25 修复：窄屏/大字号下日期文本单行省略；
+                        // FlowRow 允许统计项换到下一行，避免固定 Row 横向溢出。
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -682,49 +690,117 @@ private fun WrongAnswerSchedulingInfo(
 private fun WrongAnswerRatingButtons(
     onRate: (Rating) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+    @Composable
+    fun RatingItem(
+        label: String,
+        rating: Rating,
+        containerColor: Color,
+        contentColor: Color,
+        isPrimary: Boolean,
+        modifier: Modifier,
     ) {
-        // AGAIN：红色警示（"完全不会"）— 重置到学习阶段
         WrongAnswerRatingButton(
-            label = stringResource(R.string.wrong_rating_again),
-            onClick = { onRate(Rating.AGAIN) },
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-            contentColor = MaterialTheme.colorScheme.onErrorContainer,
-            isPrimary = false,
-            modifier = Modifier.weight(1f),
+            label = label,
+            onClick = { onRate(rating) },
+            containerColor = containerColor,
+            contentColor = contentColor,
+            isPrimary = isPrimary,
+            modifier = modifier,
         )
+    }
 
-        // HARD：黄/橙色（"有难度"）— 短间隔复习
-        WrongAnswerRatingButton(
-            label = stringResource(R.string.wrong_rating_hard),
-            onClick = { onRate(Rating.HARD) },
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-            isPrimary = false,
-            modifier = Modifier.weight(1f),
-        )
-
-        // GOOD：绿色（"掌握了"，FSRS 标准间隔）— 默认推荐评分
-        WrongAnswerRatingButton(
-            label = stringResource(R.string.wrong_rating_good),
-            onClick = { onRate(Rating.GOOD) },
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            isPrimary = true,
-            modifier = Modifier.weight(1f),
-        )
-
-        // EASY：蓝色（"很简单"，加成间隔）
-        WrongAnswerRatingButton(
-            label = stringResource(R.string.wrong_rating_easy),
-            onClick = { onRate(Rating.EASY) },
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            isPrimary = false,
-            modifier = Modifier.weight(1f),
-        )
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        // 窄屏/大字号下四列会把评分按钮压到不可读；两列仍保持四档的顺序，
+        // 同时为每个按钮提供足够的文字和触控空间。
+        val useTwoColumns = maxWidth < 360.dp || LocalDensity.current.fontScale >= 1.3f
+        if (useTwoColumns) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    RatingItem(
+                        label = stringResource(R.string.wrong_rating_again),
+                        rating = Rating.AGAIN,
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        isPrimary = false,
+                        modifier = Modifier.weight(1f),
+                    )
+                    RatingItem(
+                        label = stringResource(R.string.wrong_rating_hard),
+                        rating = Rating.HARD,
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                        isPrimary = false,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    RatingItem(
+                        label = stringResource(R.string.wrong_rating_good),
+                        rating = Rating.GOOD,
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        isPrimary = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    RatingItem(
+                        label = stringResource(R.string.wrong_rating_easy),
+                        rating = Rating.EASY,
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        isPrimary = false,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                // AGAIN：红色警示（"完全不会"）— 重置到学习阶段
+                RatingItem(
+                    label = stringResource(R.string.wrong_rating_again),
+                    rating = Rating.AGAIN,
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    isPrimary = false,
+                    modifier = Modifier.weight(1f),
+                )
+                // HARD：黄/橙色（"有难度"）— 短间隔复习
+                RatingItem(
+                    label = stringResource(R.string.wrong_rating_hard),
+                    rating = Rating.HARD,
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    isPrimary = false,
+                    modifier = Modifier.weight(1f),
+                )
+                // GOOD：绿色（"掌握了"，FSRS 标准间隔）— 默认推荐评分
+                RatingItem(
+                    label = stringResource(R.string.wrong_rating_good),
+                    rating = Rating.GOOD,
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    isPrimary = true,
+                    modifier = Modifier.weight(1f),
+                )
+                // EASY：蓝色（"很简单"，加成间隔）
+                RatingItem(
+                    label = stringResource(R.string.wrong_rating_easy),
+                    rating = Rating.EASY,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    isPrimary = false,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
     }
 }
 

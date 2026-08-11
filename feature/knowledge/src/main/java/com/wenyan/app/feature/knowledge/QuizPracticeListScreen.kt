@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -64,7 +66,7 @@ import com.wenyan.app.core.database.entity.SubjectEntity
  *
  * 数据流：[QuizPracticeListViewModel] combine(题目, 科目, 3筛选) 内存过滤。
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun QuizPracticeListScreen(
     onBack: (() -> Unit)? = null,
@@ -131,7 +133,10 @@ fun QuizPracticeListScreen(
                 targetState = Triple(uiState.isLoading, uiState.error, uiState.questions.isEmpty()),
                 animationSpec = tween(WenyanMotion.DurationMedium, easing = WenyanMotion.DecelerateEasing),
                 label = "quiz_practice_list_state",
-                modifier = Modifier.fillMaxSize(),
+                // 筛选栏位于同一 Column 中，列表区只填充剩余高度。
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
             ) { (isLoading, error, isEmpty) ->
                 when {
                     isLoading -> {
@@ -385,10 +390,11 @@ private fun QuizPracticeListItemCard(
             modifier = Modifier.padding(Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                itemVerticalAlignment = Alignment.CenterVertically,
             ) {
                 // 题型标签（primaryContainer 底色区分题型）
                 Text(
@@ -411,7 +417,6 @@ private fun QuizPracticeListItemCard(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Box(modifier = Modifier.weight(1f))
                 Text(
                     text = stringResource(R.string.kp_quiz_answer_len, item.answerLength),
                     style = MaterialTheme.typography.labelSmall,

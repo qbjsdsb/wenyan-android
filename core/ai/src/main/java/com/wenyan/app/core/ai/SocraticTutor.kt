@@ -125,7 +125,7 @@ class SocraticTutorImpl @Inject constructor(
             // P1-6 修复：阶段1失败短路，不执行阶段2/3
             emit(SocraticGuide(
                 stage = SocraticStage.ANALYZE,
-                content = "AI 分析失败：${analysisResult.exceptionOrNull()?.message ?: "未知错误"}",
+                content = "AI 分析失败，请稍后重试。",
                 isSampleEssay = false,
                 contentSource = CONTENT_SOURCE_AI,
             ))
@@ -146,7 +146,7 @@ class SocraticTutorImpl @Inject constructor(
             // P1-6 修复：阶段2失败短路，不执行阶段3
             emit(SocraticGuide(
                 stage = SocraticStage.SUGGEST,
-                content = "AI 建议生成失败：${suggestionResult.exceptionOrNull()?.message ?: "未知错误"}",
+                content = "AI 建议生成失败，请稍后重试。",
                 isSampleEssay = false,
                 contentSource = CONTENT_SOURCE_AI,
             ))
@@ -167,7 +167,7 @@ class SocraticTutorImpl @Inject constructor(
         val sampleContent = if (sampleResult.isSuccess) {
             sampleResult.getOrThrow()
         } else {
-            "范文生成失败：${sampleResult.exceptionOrNull()?.message ?: "未知错误"}"
+            "范文生成失败，请稍后重试。"
         }
         emit(SocraticGuide(
             stage = SocraticStage.SHOW_SAMPLE,
@@ -207,7 +207,7 @@ class SocraticTutorImpl @Inject constructor(
         val errorAnalysisResult = analyzeErrorThinking(question, userAnswer, correctAnswer)
         if (errorAnalysisResult.isFailure) {
             emit(WrongAnswerExplanation(
-                errorAnalysis = "AI 错误分析失败：${errorAnalysisResult.exceptionOrNull()?.message ?: "未知错误"}",
+                errorAnalysis = "AI 错误分析失败，请稍后重试。",
                 correctApproach = "",
                 references = references,
             ))
@@ -220,7 +220,7 @@ class SocraticTutorImpl @Inject constructor(
         val correctApproach = if (correctApproachResult.isSuccess) {
             correctApproachResult.getOrThrow()
         } else {
-            "AI 正确思路生成失败：${correctApproachResult.exceptionOrNull()?.message ?: "未知错误"}"
+            "AI 正确思路生成失败，请稍后重试。"
         }
 
         emit(WrongAnswerExplanation(

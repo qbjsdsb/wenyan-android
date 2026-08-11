@@ -2,6 +2,7 @@ package com.wenyan.app.feature.today
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wenyan.app.core.common.util.friendlyErrorMessage
 import com.wenyan.app.core.data.repository.DailyPlanRepository
 import com.wenyan.app.core.database.entity.DailyPlanWithTasks
 import dagger.Binds
@@ -83,7 +84,7 @@ class TodayViewModel @Inject constructor(
                 emit(TodayUiState(isLoading = true, date = today.toString()))
                 source.ensure(today.toString())
             }
-            .catch { emit(TodayUiState(date = today.toString(), error = it.message ?: "今日计划加载失败")) }
+            .catch { emit(TodayUiState(date = today.toString(), error = friendlyErrorMessage(it))) }
     }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TodayUiState(isLoading = true))
 

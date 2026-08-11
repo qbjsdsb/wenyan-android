@@ -700,9 +700,13 @@ private fun RelatedPointItem(
             },
         onClick = onClick,
         trailing = {
-            Row(
+            // 两个 chip 在大字号/窄屏下不能继续挤在一行；限制尾部宽度并允许换行，
+            // 给知识点标题保留稳定的可读空间。
+            FlowRow(
+                modifier = Modifier.widthIn(max = 120.dp),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                itemVerticalAlignment = Alignment.CenterVertically,
             ) {
                 // 考频 chip：仅非 NEVER 时显示（NEVER 语义为"未考"，不展示避免噪音）
                 if (point.examFrequency != "NEVER") {

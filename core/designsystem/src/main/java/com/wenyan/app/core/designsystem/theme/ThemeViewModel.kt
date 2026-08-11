@@ -3,6 +3,7 @@ package com.wenyan.app.core.designsystem.theme
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wenyan.app.core.common.util.friendlyErrorMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -77,7 +78,7 @@ class ThemeViewModel @Inject constructor(
             throw e
         } catch (e: Exception) {
             Timber.w(e, "主题操作失败: ${e.message}")
-            _errorEvents.tryEmit("设置未保存：${e.message ?: "存储异常"}")
+            _errorEvents.tryEmit("设置未保存：${friendlyErrorMessage(e)}")
         }
     }
 }

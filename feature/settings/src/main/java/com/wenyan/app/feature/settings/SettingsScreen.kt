@@ -12,6 +12,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -57,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.contentDescription
@@ -90,7 +92,7 @@ import com.wenyan.app.core.fsrs.StudyPhase
  */
 
 // NF-UP2 修复：seedColors 移到文件顶层 top-level private val，
-// 避免每次 SettingsScreen 重组都创建新 List<Color>（5 个 Color 装箱）。
+// 避免每次 SettingsScreen 重组都创建新 List<Color>（5 个 Color 值）。
 // 顶层 val 在 class loader 加载时初始化一次，全局共享。
 // P0-5 修复：改为带色名的 SeedColorPreset，让 TalkBack 可朗读"种子色：紫色"。
 private data class SeedColorPreset(val color: Color, val name: String)
@@ -201,31 +203,20 @@ fun SettingsScreen(
                     )
                     GroupedCardDivider()
                     // v0.6：主题模式选择改用 SegmentedButton（互斥选择更紧凑专业）
-                    SingleChoiceSegmentedButtonRow(
+                    AdaptiveChoiceRow(
+                        options = ColorMode.entries.map { mode ->
+                            when (mode) {
+                                ColorMode.SYSTEM -> "跟随系统"
+                                ColorMode.LIGHT -> "浅色"
+                                ColorMode.DARK -> "深色"
+                            }
+                        },
+                        selectedIndex = ColorMode.entries.indexOf(themeConfig.colorMode),
+                        onSelected = { index -> viewModel.setColorMode(ColorMode.entries[index]) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                    ) {
-                        ColorMode.entries.forEachIndexed { index, mode ->
-                            SegmentedButton(
-                                selected = themeConfig.colorMode == mode,
-                                onClick = { viewModel.setColorMode(mode) },
-                                shape = SegmentedButtonDefaults.itemShape(
-                                    index = index,
-                                    count = ColorMode.entries.size,
-                                ),
-                                label = {
-                                    Text(
-                                        text = when (mode) {
-                                            ColorMode.SYSTEM -> "跟随系统"
-                                            ColorMode.LIGHT -> "浅色"
-                                            ColorMode.DARK -> "深色"
-                                        },
-                                    )
-                                },
-                            )
-                        }
-                    }
+                    )
                     GroupedCardDivider()
                     // AMOLED 开关
                     GroupedCardItem(
@@ -329,36 +320,21 @@ fun SettingsScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(bottom = Spacing.sm),
                                 )
-                                SingleChoiceSegmentedButtonRow(
+                                AdaptiveChoiceRow(
+                                    options = WenyanPaletteStyle.entries.map { style ->
+                                        when (style) {
+                                            WenyanPaletteStyle.TONAL_SPOT -> "色调点"
+                                            WenyanPaletteStyle.NEUTRAL -> "中性"
+                                            WenyanPaletteStyle.VIBRANT -> "鲜艳"
+                                            WenyanPaletteStyle.EXPRESSIVE -> "表现力"
+                                        }
+                                    },
+                                    selectedIndex = WenyanPaletteStyle.entries.indexOf(themeConfig.paletteStyle),
+                                    onSelected = { index ->
+                                        viewModel.setPaletteStyle(WenyanPaletteStyle.entries[index])
+                                    },
                                     modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    WenyanPaletteStyle.entries.forEachIndexed { index, style ->
-                                        SegmentedButton(
-                                            selected = themeConfig.paletteStyle == style,
-                                            onClick = { viewModel.setPaletteStyle(style) },
-                                            shape = SegmentedButtonDefaults.itemShape(
-                                                index = index,
-                                                count = WenyanPaletteStyle.entries.size,
-                                            ),
-                                            label = {
-                                                Text(
-                                                    // v0.8.3 修复：原英文标签与其他全中文 UI 不一致，
-                                                    // 用户需猜测含义。改为 M3 中文术语：
-                                                    // Tonal Spot=色调点（默认，种子色直接作主色）
-                                                    // Neutral=中性（降低主色饱和度，偏灰）
-                                                    // Vibrant=鲜艳（提升对比度，色彩浓郁）
-                                                    // Expressive=表现力（多色调对比，最活泼）
-                                                    text = when (style) {
-                                                        WenyanPaletteStyle.TONAL_SPOT -> "色调点"
-                                                        WenyanPaletteStyle.NEUTRAL -> "中性"
-                                                        WenyanPaletteStyle.VIBRANT -> "鲜艳"
-                                                        WenyanPaletteStyle.EXPRESSIVE -> "表现力"
-                                                    },
-                                                )
-                                            },
-                                        )
-                                    }
-                                }
+                                )
                             }
                         }
                     }
@@ -462,24 +438,14 @@ private fun CardStudySettingsCard(
                 bottom = Spacing.sm,
             ),
         )
-        SingleChoiceSegmentedButtonRow(
+        AdaptiveChoiceRow(
+            options = CardFrequencyFilter.entries.map { it.displayName },
+            selectedIndex = CardFrequencyFilter.entries.indexOf(settings.frequencyFilter),
+            onSelected = { index -> onFrequencyFilterChange(CardFrequencyFilter.entries[index]) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.lg),
-        ) {
-            CardFrequencyFilter.entries.forEachIndexed { index, filter ->
-                SegmentedButton(
-                    selected = settings.frequencyFilter == filter,
-                    onClick = { onFrequencyFilterChange(filter) },
-                    shape = SegmentedButtonDefaults.itemShape(
-                        index = index,
-                        count = CardFrequencyFilter.entries.size,
-                    ),
-                ) {
-                    Text(filter.displayName)
-                }
-            }
-        }
+        )
         GroupedCardDivider()
 
         // 复习科目（四科多选）
@@ -552,6 +518,55 @@ private fun CardStudySettingsCard(
                 },
             ) {
                 DatePicker(state = datePickerState)
+            }
+        }
+    }
+}
+
+/**
+ * 选择项自适应布局：常规宽度使用连体分段按钮，窄屏或大字号改为纵向按钮。
+ * 分段按钮的默认最小宽度在四项调色板等场景下容易挤压文字；纵向布局保留同样的
+ * 单选语义，同时给每个选项完整的触控宽度。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AdaptiveChoiceRow(
+    options: List<String>,
+    selectedIndex: Int,
+    onSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (options.isEmpty()) return
+
+    BoxWithConstraints(modifier = modifier) {
+        val useVerticalLayout = maxWidth < 420.dp || LocalDensity.current.fontScale >= 1.3f
+        if (useVerticalLayout) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                options.forEachIndexed { index, label ->
+                    SegmentedButton(
+                        selected = index == selectedIndex,
+                        onClick = { onSelected(index) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 1),
+                    ) {
+                        Text(label)
+                    }
+                }
+            }
+        } else {
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                options.forEachIndexed { index, label ->
+                    SegmentedButton(
+                        selected = index == selectedIndex,
+                        onClick = { onSelected(index) },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = options.size,
+                        ),
+                    ) {
+                        Text(label)
+                    }
+                }
             }
         }
     }

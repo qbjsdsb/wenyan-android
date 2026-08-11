@@ -102,6 +102,19 @@ class StudyProgressViewModelTest {
     }
 
     @Test
+    fun uiState_dbFails_emitsLoadedDefaultEntityInsteadOfStayingLoading() =
+        runTest(testDispatcher) {
+            dao.observeFailure = IllegalStateException("simulated database failure")
+            val viewModel = createViewModel()
+            backgroundScope.launch { viewModel.uiState.collect { } }
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertTrue("should recover with Loaded state", state is StudyProgressUiState.Loaded)
+            assertEquals(0, (state as StudyProgressUiState.Loaded).entity.streakDays)
+        }
+
+    @Test
     fun uiState_dbUpdates_reflectsNewValue() = runTest(testDispatcher) {
         // 初始空表
         dao.entity = null

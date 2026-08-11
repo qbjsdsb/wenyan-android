@@ -121,7 +121,12 @@ fun WenyanTheme(
     SideEffect {
         if (!view.isInEditMode) {
             val window = view.context.findActivity()?.window ?: return@SideEffect
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !isDark
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = !isDark
+                // enableEdgeToEdge 之后导航栏同样绘制在内容之上；手动主题模式
+                // 与系统模式不一致时，导航手势区图标也必须保持可读。
+                isAppearanceLightNavigationBars = !isDark
+            }
         }
     }
 

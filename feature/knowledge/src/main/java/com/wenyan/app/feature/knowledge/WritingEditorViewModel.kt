@@ -3,6 +3,7 @@ package com.wenyan.app.feature.knowledge
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wenyan.app.core.common.util.friendlyErrorMessage
 import com.wenyan.app.core.data.repository.WritingEvidenceDetail
 import com.wenyan.app.core.data.repository.WritingEvidenceItem
 import com.wenyan.app.core.data.repository.WritingEvidenceSource
@@ -47,7 +48,10 @@ class WritingEditorViewModel @Inject constructor(
     private var loadJob: Job? = null
     private var activeTimer: ActiveWritingTimer? = null
     private val autosave = WritingAutosaveController(viewModelScope, store) { result ->
-        _state.value = _state.value.copy(saving = false, saveError = result.exceptionOrNull()?.message)
+        _state.value = _state.value.copy(
+            saving = false,
+            saveError = result.exceptionOrNull()?.let(::friendlyErrorMessage),
+        )
     }
 
     init {
@@ -78,7 +82,7 @@ class WritingEditorViewModel @Inject constructor(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
-                _state.value = _state.value.copy(saveError = error.message, loaded = true)
+                _state.value = _state.value.copy(saveError = friendlyErrorMessage(error), loaded = true)
                 return@launch
             }
             activateTimerIfRunning(session)
@@ -111,7 +115,7 @@ class WritingEditorViewModel @Inject constructor(
         } else {
             _state.value = _state.value.copy(
                 saving = false,
-                saveError = result.exceptionOrNull()?.message ?: "离线保存失败，请重试",
+                saveError = result.exceptionOrNull()?.let(::friendlyErrorMessage) ?: "离线保存失败，请重试",
             )
         }
     }
