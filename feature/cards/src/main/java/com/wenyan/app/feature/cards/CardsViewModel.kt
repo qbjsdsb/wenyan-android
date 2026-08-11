@@ -45,6 +45,9 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
+/** Navigation argument used by Today to scope a card session to one knowledge point. */
+const val CARDS_TARGET_POINT_ID_ARG = "targetPointId"
+
 /**
  * 记忆卡片模块 ViewModel。
  *
@@ -369,6 +372,13 @@ class CardsViewModel @Inject constructor(
                         _currentIndex,
                     ) { cards, queue, isFlipped, currentIndex ->
                         val newPointIds = queue.newPoints.map { it.id }.toSet()
+                        val targetPointId = savedStateHandle.get<String>(CARDS_TARGET_POINT_ID_ARG)
+                            ?.takeIf { it.isNotBlank() }
+                        val scopedCards = if (targetPointId == null) {
+                            cards
+                        } else {
+                            cards.filter { it.pointId == targetPointId }
+                        }
                         // v0.8.5 P0：会话内冻结 cards，避免 Flow 重新 emit 导致错位
                         // v0.8.6 P0:进程被杀后恢复(sessionLoaded=true 但 sessionCards=null)
                         //   此时 currentIndex 可能 >0 但 sessionCards 已丢失,重置避免错位
@@ -377,7 +387,7 @@ class CardsViewModel @Inject constructor(
                             // 首次加载:重新生成 sessionCards
                             // v0.9.37 P1-9:数千张卡的 id 生成(buildString)移出主线程,
                             // 避免冷进入卡片页 combine 在主线程数百 ms 掉帧
-                            val newCards = buildSessionCards(cards, newPointIds)
+                            val newCards = buildSessionCards(scopedCards, newPointIds)
                             // 空队列不能冻结为一次学习会话：共享队列过去会先发人工空初值，
                             // 真实新卡随后到达时因 sessionCards 已冻结为空而永远不可见。
                             // 即使是真空队列，也应允许 60s tick 后新到期卡进入当前页面。
@@ -409,7 +419,7 @@ class CardsViewModel @Inject constructor(
                             savedStateHandle["sessionAgainCount"] = 0
                             // 清空评分历史栈(内存已丢失,同步清空避免 undo 错位)
                             ratingHistory.clear()
-                            val newCards = buildSessionCards(cards, newPointIds)
+                            val newCards = buildSessionCards(scopedCards, newPointIds)
                             if (newCards.isNotEmpty()) {
                                 sessionCards = newCards
                             } else {

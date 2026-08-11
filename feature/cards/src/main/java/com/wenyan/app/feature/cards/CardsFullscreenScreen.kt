@@ -79,6 +79,7 @@ fun CardsFullscreenScreen(
     onNavigateToAiAssistant: () -> Unit,
     onNavigateToKnowledge: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
+    onDailyTaskFinished: () -> Unit = {},
     viewModel: CardsViewModel,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -97,6 +98,10 @@ fun CardsFullscreenScreen(
     val isAddingBookmark by viewModel.isAddingBookmark.collectAsStateWithLifecycle()
     val manualAddedPointIds by viewModel.manualAddedPointIds.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.isFinished) {
+        if (uiState.isFinished) onDailyTaskFinished()
+    }
 
     // v0.9.36 全屏：进入即隐藏系统栏，离开组合自动恢复（DisposableEffect onDispose）
     // 注意：仅全屏页启用，卡片页正常保留系统栏

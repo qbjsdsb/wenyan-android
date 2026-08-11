@@ -9,12 +9,17 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneId
@@ -23,13 +28,28 @@ import javax.inject.Singleton
 
 interface TodayPlanSource {
     fun observe(date: String): Flow<DailyPlanWithTasks?>
+
+    /** Ensure the date has a persisted plan before [observe] starts consuming it. */
+    suspend fun ensure(date: String) = Unit
 }
 
 @Singleton
 class PersistedTodayPlanSource @Inject constructor(
     private val repository: DailyPlanRepository,
+    private val factory: TodayPlanFactory,
 ) : TodayPlanSource {
     override fun observe(date: String): Flow<DailyPlanWithTasks?> = repository.observe(date)
+
+    override suspend fun ensure(date: String) {
+        // Read the source snapshot before entering getOrCreate's Room transaction. The
+        // transaction callback must only validate/insert the already-built draft; collecting
+        // Room-backed flows inside it can wait on the same database executor indefinitely.
+        val draft = factory.create(date)
+        val persisted = repository.getOrCreate(date) { draft }
+        if (persisted.plan.status == "EMPTY" && persisted.tasks.isEmpty() && draft.tasks.isNotEmpty()) {
+            repository.fillEmpty(date, draft)
+        }
+    }
 }
 
 interface TodayDateSource { fun today(): LocalDate }
@@ -48,15 +68,37 @@ abstract class TodaySourceModule {
 }
 
 @HiltViewModel
+@OptIn(ExperimentalCoroutinesApi::class)
 class TodayViewModel @Inject constructor(
     source: TodayPlanSource,
     dateProvider: TodayDateSource,
 ) : ViewModel() {
     private val today = dateProvider.today()
+    private val retryTrigger = MutableStateFlow(0)
 
-    val uiState = source.observe(today.toString())
-        .map { value -> value?.let { TodayPlanMapper.map(it, today) } ?: TodayUiState(date = today.toString()) }
-        .onStart { emit(TodayUiState(isLoading = true, date = today.toString())) }
-        .catch { emit(TodayUiState(date = today.toString(), error = it.message ?: "今日计划加载失败")) }
+    val uiState = retryTrigger.flatMapLatest {
+        source.observe(today.toString())
+            .map { value -> value?.let { TodayPlanMapper.map(it, today) } ?: TodayUiState(date = today.toString()) }
+            .onStart {
+                emit(TodayUiState(isLoading = true, date = today.toString()))
+                source.ensure(today.toString())
+            }
+            .catch { emit(TodayUiState(date = today.toString(), error = it.message ?: "今日计划加载失败")) }
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TodayUiState(isLoading = true))
+
+    fun retry() {
+        retryTrigger.update { it + 1 }
+    }
+}
+
+/** Small write-only bridge used by navigation destinations after a study session finishes. */
+@HiltViewModel
+class DailyTaskCompletionViewModel @Inject constructor(
+    private val repository: DailyPlanRepository,
+) : ViewModel() {
+    fun markDone(taskId: String) {
+        if (taskId.isBlank()) return
+        viewModelScope.launch { repository.markDone(taskId) }
+    }
 }
