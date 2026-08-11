@@ -60,6 +60,9 @@ import com.wenyan.app.core.common.util.ExamContentCleaner
 import com.wenyan.app.core.designsystem.component.GroupedCardDivider
 import com.wenyan.app.core.designsystem.component.GroupedCardItem
 import com.wenyan.app.core.designsystem.component.MaxContentWidth
+import com.wenyan.app.core.designsystem.component.ProvenanceBadge
+import com.wenyan.app.core.designsystem.component.ProvenanceSourceUiModel
+import com.wenyan.app.core.designsystem.component.SourceSection
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.TonalCardLow
 import com.wenyan.app.core.designsystem.component.WenyanInfoChip
@@ -90,6 +93,7 @@ fun KnowledgePointDetailScreen(
     viewModel: KnowledgePointDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val revealedStudyLayers by viewModel.revealedStudyLayers.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
     )
@@ -187,9 +191,35 @@ fun KnowledgePointDetailScreen(
                                         HeaderSection(point)
                                     }
 
-                                    // ── 摘要 ──
-                                    if (point.summary?.isNotBlank() == true) {
-                                        item(key = "summary", contentType = "summary") {
+                                    uiState.progress?.let { progress ->
+                                        item(key = "three_dimensional_progress", contentType = "progress") {
+                                            KnowledgeProgressSection(progress)
+                                        }
+                                    }
+
+                                    item(key = "active_recall", contentType = "active_recall") {
+                                        ActiveRecallSection(
+                                            point = point,
+                                            sources = uiState.sources,
+                                            revealed = revealedStudyLayers,
+                                            onReveal = viewModel::revealStudyLayer,
+                                        )
+                                    }
+
+                                    val detailForRelated = uiState.detail
+                                    knowledgeDetailSections(
+                                        visibility = KnowledgeDetailSectionVisibility(
+                                            recall = false,
+                                            outlineAndExplanation = false,
+                                            evidence = false,
+                                            relatedPoints = detailForRelated != null &&
+                                                (detailForRelated.relatedPoints.isNotEmpty() ||
+                                                    detailForRelated.contrastPoints.isNotEmpty() ||
+                                                    detailForRelated.extensionPoints.isNotEmpty()),
+                                            relatedEssays = uiState.relatedEssays.isNotEmpty(),
+                                            wrongAnswers = uiState.wrongAnswers.isNotEmpty(),
+                                        ),
+                                        recall = {
                                             GroupedCard(title = stringResource(R.string.kp_summary)) {
                                                 Text(
                                                     text = point.summary.orEmpty(),
@@ -202,69 +232,51 @@ fun KnowledgePointDetailScreen(
                                                     ),
                                                 )
                                             }
-                                        }
-                                    }
-
-                                    // ── 多教材对照 ──
-                                    // v0.9.30 打磨：条件化 item，避免空 section 残留空槽位+间距
-                                    if (
-                                        !point.coreConclusion.isNullOrBlank() ||
-                                        !point.studyText.isNullOrBlank() ||
-                                        point.multiPerspectives?.isNotEmpty() == true
-                                    ) {
-                                        item(key = "multi_perspective", contentType = "multi_perspective") {
-                                            MultiPerspectiveSection(point)
-                                        }
-                                    }
-
-                                    // ── 来源溯源 ──
-                                    if (uiState.sources.isNotEmpty()) {
-                                        item(key = "sources", contentType = "sources") {
-                                            SourcesSection(uiState.sources)
-                                        }
-                                    }
-
-                                    // ── 关联知识点 ──
-                                    val detailForRelated = uiState.detail
-                                    if (
-                                        detailForRelated != null &&
-                                        (detailForRelated.relatedPoints.isNotEmpty() ||
-                                            detailForRelated.contrastPoints.isNotEmpty() ||
-                                            detailForRelated.extensionPoints.isNotEmpty())
-                                    ) {
-                                        item(key = "related_points", contentType = "related_points") {
+                                        },
+                                        outlineAndExplanation = { MultiPerspectiveSection(point) },
+                                        evidence = {
+                                            SourceSection(uiState.sources.map(DataSourceEntity::toProvenanceSourceUiModel))
+                                        },
+                                        relatedPoints = {
                                             RelatedPointsSection(
-                                                detail = detailForRelated,
+                                                detail = requireNotNull(detailForRelated),
                                                 onNavigateToDetail = onNavigateToDetail,
                                             )
-                                        }
-                                    }
-
-                                    // ── 相关论述题(v0.9.8 知识点串联器) ──
-                                    if (uiState.relatedEssays.isNotEmpty()) {
-                                        item(key = "related_essays", contentType = "related_essays") {
+                                        },
+                                        relatedEssays = {
                                             RelatedEssaysSection(
                                                 essays = uiState.relatedEssays,
                                                 onNavigateToEssay = onNavigateToEssay,
                                             )
-                                        }
-                                    }
-
-                                    // ── 错题记录(v0.8.19 P1-REL-1) ──
-                                    if (uiState.wrongAnswers.isNotEmpty()) {
-                                        item(key = "wrong_answers", contentType = "wrong_answers") {
+                                        },
+                                        wrongAnswers = {
                                             WrongAnswersSection(
                                                 wrongAnswers = uiState.wrongAnswers,
                                                 onMarkResolved = viewModel::markWrongAnswerResolved,
                                             )
-                                        }
-                                    }
+                                        },
+                                    )
                                 } // LazyColumn end
                             } // Box end
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun KnowledgeProgressSection(progress: KnowledgeProgressUiModel) {
+    GroupedCard(title = "学习进度") {
+        Column(
+            modifier = Modifier.padding(Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            Text("见过：${progress.seen}", style = MaterialTheme.typography.titleSmall)
+            Text("记得：${progress.remembered}", style = MaterialTheme.typography.titleSmall)
+            Text("写得出：${progress.writable}", style = MaterialTheme.typography.titleSmall)
+            Text(progress.explanation, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -292,6 +304,7 @@ private fun HeaderSection(point: KnowledgePointEntity) {
                 contentSource = point.contentSource,
                 stageLabel = null,
             )
+            ProvenanceBadge(status = point.contentStatus)
 
             // 考频标签（高频/中频/低频用 PRIMARY 突出）
             val (freqLabel, freqVariant) = when (point.examFrequency) {
@@ -305,6 +318,78 @@ private fun HeaderSection(point: KnowledgePointEntity) {
             // 难度标签
             WenyanInfoChip(text = "难度 ${point.difficulty}/5")
         }
+    }
+}
+
+@Composable
+private fun ActiveRecallSection(
+    point: KnowledgePointEntity,
+    sources: List<DataSourceEntity>,
+    revealed: Set<KnowledgeStudyLayer>,
+    onReveal: (KnowledgeStudyLayer) -> Unit,
+) {
+    val contents = point.studyLayerContents()
+    GroupedCard(title = "主动回忆") {
+        Column(
+            modifier = Modifier.padding(Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            Text("先看标题回忆 30 秒，再逐层揭示。揭示不代表已经掌握。")
+            contents.forEach { layerContent ->
+                if (layerContent.layer in revealed) {
+                    Text(
+                        text = when (layerContent.layer) {
+                            KnowledgeStudyLayer.RECALL_30_SECONDS -> "30 秒回忆"
+                            KnowledgeStudyLayer.OUTLINE_2_MINUTES -> "2 分钟答题骨架"
+                            KnowledgeStudyLayer.EXAM_EXPRESSION -> "考试表达"
+                            KnowledgeStudyLayer.UNDERSTANDING -> "理解与辨析"
+                            KnowledgeStudyLayer.EVIDENCE -> "证据与来源"
+                        },
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    when {
+                        layerContent.layer == KnowledgeStudyLayer.EVIDENCE && sources.isNotEmpty() ->
+                            SourceSection(sources.map(DataSourceEntity::toProvenanceSourceUiModel))
+                        layerContent.content != null -> Text(layerContent.content)
+                        else -> Text("暂无已审校内容，本层不自动生成。")
+                    }
+                }
+            }
+            nextStudyLayer(revealed)?.let { next ->
+                FilledTonalButton(onClick = { onReveal(next) }) {
+                    Text(
+                        when (next) {
+                            KnowledgeStudyLayer.RECALL_30_SECONDS -> "完成回忆，揭示要点"
+                            KnowledgeStudyLayer.OUTLINE_2_MINUTES -> "完成要点，核对答题骨架"
+                            KnowledgeStudyLayer.EXAM_EXPRESSION -> "继续查看考试表达"
+                            KnowledgeStudyLayer.UNDERSTANDING -> "继续查看理解与辨析"
+                            KnowledgeStudyLayer.EVIDENCE -> "最后核对证据与来源"
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Preview(name = "主动回忆 - 大字体", fontScale = 2f, showBackground = true)
+@Preview(name = "主动回忆 - 横屏", device = "spec:width=900dp,height=500dp,dpi=420", showBackground = true)
+@Composable
+private fun ActiveRecallSectionPreview() {
+    WenyanTheme(config = ThemeConfig(colorMode = ColorMode.LIGHT, dynamicColor = false)) {
+        ActiveRecallSection(
+            point = sampleRelatedPoint(
+                id = "preview",
+                title = "文学知识点",
+                summary = LONG_SUMMARY,
+                examFrequency = "HIGH",
+                difficulty = 4,
+            ).copy(coreConclusion = "只展示已有的审校内容；缺失层保持为空。", studyText = LONG_SUMMARY),
+            sources = emptyList(),
+            revealed = KnowledgeStudyLayer.entries.toSet(),
+            onReveal = {},
+        )
     }
 }
 
@@ -433,47 +518,14 @@ private fun PerspectiveCard(
 
 // ── 来源溯源 ────────────────────────────────────────────────
 
-@Composable
-private fun SourcesSection(sources: List<DataSourceEntity>) {
-    GroupedCard(title = stringResource(R.string.kp_sources_count, sources.size)) {
-        sources.forEachIndexed { index, source ->
-            SourceRow(source)
-            if (index < sources.size - 1) {
-                GroupedCardDivider()
-            }
-        }
-    }
-}
-
-@Composable
-private fun SourceRow(source: DataSourceEntity) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.md, bottom = Spacing.md),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-    ) {
-        ContentSourceBadge(
-            contentSource = source.contentSource,
-            stageLabel = null,
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = source.sourceFile,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Medium,
-            )
-            source.sourcePage?.let { page ->
-                Text(
-                    text = stringResource(R.string.kp_page, page),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
+private fun DataSourceEntity.toProvenanceSourceUiModel() = ProvenanceSourceUiModel(
+    title = sourceTitle?.takeIf(String::isNotBlank) ?: sourceFile,
+    evidenceStatus = sourceStatus,
+    edition = sourceEdition,
+    pageStart = sourcePageStart ?: sourcePage,
+    pageEnd = sourcePageEnd ?: sourcePage,
+    reviewNote = reviewNote,
+)
 
 // ── 关联知识点 ──────────────────────────────────────────────
 
@@ -493,9 +545,9 @@ private enum class RelationshipType(
     val icon: ImageVector,
     val chipVariant: ChipVariant,
 ) {
-    RELATED("关联", Icons.Filled.Link, ChipVariant.PRIMARY),
+    RELATED("自动关联", Icons.Filled.Link, ChipVariant.NEUTRAL),
     CONTRAST("对比", Icons.AutoMirrored.Filled.CompareArrows, ChipVariant.SECONDARY),
-    EXTENSION("延伸", Icons.Filled.NorthEast, ChipVariant.TERTIARY),
+    EXTENSION("方向待核", Icons.Filled.NorthEast, ChipVariant.TERTIARY),
 }
 
 /**
@@ -520,31 +572,41 @@ private fun RelatedPointsSection(
 ) {
     if (detail == null) return
 
-    val hasRelated = detail.relatedPoints.isNotEmpty()
-    val hasContrast = detail.contrastPoints.isNotEmpty()
-    val hasExtension = detail.extensionPoints.isNotEmpty()
+    val pointsById = (detail.relatedPoints + detail.contrastPoints + detail.extensionPoints).associateBy { it.id }
+    val automaticPoints = detail.relationships
+        .filter { it.origin == com.wenyan.app.core.data.relationship.ContentRelationshipOrigin.AUTOMATIC_FALLBACK }
+        .mapNotNull { pointsById[it.targetId] }
+    val contrastPoints = detail.relationships
+        .filter { it.type == com.wenyan.app.core.data.relationship.ContentRelationshipType.COMPARE_WITH }
+        .mapNotNull { pointsById[it.targetId] }
+    val directionUnknownPoints = detail.relationships
+        .filter {
+            it.origin == com.wenyan.app.core.data.relationship.ContentRelationshipOrigin.EXPLICIT &&
+                it.type == com.wenyan.app.core.data.relationship.ContentRelationshipType.UNKNOWN
+        }
+        .mapNotNull { pointsById[it.targetId] }
 
-    if (!hasRelated && !hasContrast && !hasExtension) return
+    if (automaticPoints.isEmpty() && contrastPoints.isEmpty() && directionUnknownPoints.isEmpty()) return
 
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
-        if (hasRelated) {
+        if (automaticPoints.isNotEmpty()) {
             RelatedGroup(
                 type = RelationshipType.RELATED,
-                points = detail.relatedPoints,
+                points = automaticPoints,
                 onNavigateToDetail = onNavigateToDetail,
             )
         }
-        if (hasContrast) {
+        if (contrastPoints.isNotEmpty()) {
             RelatedGroup(
                 type = RelationshipType.CONTRAST,
-                points = detail.contrastPoints,
+                points = contrastPoints,
                 onNavigateToDetail = onNavigateToDetail,
             )
         }
-        if (hasExtension) {
+        if (directionUnknownPoints.isNotEmpty()) {
             RelatedGroup(
                 type = RelationshipType.EXTENSION,
-                points = detail.extensionPoints,
+                points = directionUnknownPoints,
                 onNavigateToDetail = onNavigateToDetail,
             )
         }

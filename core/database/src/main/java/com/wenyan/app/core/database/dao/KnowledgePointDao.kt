@@ -63,7 +63,7 @@ interface KnowledgePointDao {
     fun observeAll(): Flow<List<KnowledgePointEntity>>
 
     /** 查询所有 OCR 已校验（VERIFIED）的知识点，用于 FSRS 复习队列（过滤 PENDING） */
-    @Query("SELECT * FROM knowledge_points WHERE ocr_status = 'VERIFIED' ORDER BY updated_at DESC")
+    @Query("SELECT * FROM knowledge_points WHERE ocr_status = 'VERIFIED' AND content_status NOT IN ('AI_DRAFT', 'REJECTED') ORDER BY updated_at DESC")
     fun observeVerifiedForReview(): Flow<List<KnowledgePointEntity>>
 
     /** 更新知识点的 OCR 状态（PENDING -> VERIFIED 激活），同时刷新 updated_at */
@@ -90,7 +90,7 @@ interface KnowledgePointDao {
         // v0.9.26 修复：RAG 检索过滤 ocr_status='VERIFIED'（未校对知识点不进 AI 上下文）。
         // 原实现无过滤，PENDING 未校对数据可能被喂给 LLM；与 observeSearchWithSubject 一致。
         "SELECT * FROM knowledge_points WHERE " +
-            "ocr_status = 'VERIFIED' AND (" +
+            "ocr_status = 'VERIFIED' AND content_status NOT IN ('AI_DRAFT', 'REJECTED') AND (" +
             "title LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
             "core_conclusion LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
             "full_content LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
@@ -119,7 +119,7 @@ interface KnowledgePointDao {
             "FROM knowledge_points kp " +
             "LEFT JOIN chapters c ON kp.chapter_id = c.id " +
             "LEFT JOIN subjects s ON c.subject_id = s.id " +
-            "WHERE kp.ocr_status = 'VERIFIED' AND (" +
+            "WHERE kp.ocr_status = 'VERIFIED' AND kp.content_status NOT IN ('AI_DRAFT', 'REJECTED') AND (" +
             "kp.title LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
             "kp.core_conclusion LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
             "kp.full_content LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
@@ -147,7 +147,7 @@ interface KnowledgePointDao {
             "FROM knowledge_points kp " +
             "LEFT JOIN chapters c ON kp.chapter_id = c.id " +
             "LEFT JOIN subjects s ON c.subject_id = s.id " +
-            "WHERE kp.ocr_status = 'VERIFIED' " +
+            "WHERE kp.ocr_status = 'VERIFIED' AND kp.content_status NOT IN ('AI_DRAFT', 'REJECTED') " +
             "ORDER BY kp.updated_at DESC",
     )
     fun observeVerifiedWithSubject(): Flow<List<KnowledgePointWithSubject>>
@@ -168,7 +168,7 @@ interface KnowledgePointDao {
             "FROM knowledge_points kp " +
             "LEFT JOIN chapters c ON kp.chapter_id = c.id " +
             "LEFT JOIN subjects s ON c.subject_id = s.id " +
-            "WHERE kp.ocr_status = 'VERIFIED' " +
+            "WHERE kp.ocr_status = 'VERIFIED' AND kp.content_status NOT IN ('AI_DRAFT', 'REJECTED') " +
             "ORDER BY kp.updated_at DESC",
     )
     fun observeVerifiedListItem(): Flow<List<KnowledgePointListItem>>
@@ -186,7 +186,7 @@ interface KnowledgePointDao {
             "FROM knowledge_points kp " +
             "LEFT JOIN chapters c ON kp.chapter_id = c.id " +
             "LEFT JOIN subjects s ON c.subject_id = s.id " +
-            "WHERE kp.ocr_status = 'VERIFIED' AND (" +
+            "WHERE kp.ocr_status = 'VERIFIED' AND kp.content_status NOT IN ('AI_DRAFT', 'REJECTED') AND (" +
             "kp.title LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
             "kp.core_conclusion LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +
             "kp.full_content LIKE '%' || :keyword || '%' ESCAPE '\\' OR " +

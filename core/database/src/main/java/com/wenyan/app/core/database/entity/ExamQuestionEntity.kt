@@ -36,6 +36,7 @@ import androidx.room.PrimaryKey
         // answer_status（observeByAnswerStatus 筛选）——数据量增长后避免全表扫描
         Index("question_type"),
         Index("answer_status"),
+        Index("content_status"),
     ],
 )
 data class ExamQuestionEntity(
@@ -99,4 +100,8 @@ data class ExamQuestionEntity(
     /** 来源页码 */
     @ColumnInfo(name = "source_page")
     val sourcePage: Int?,
+
+    /** Human review state, separate from answer availability and source evidence. */
+    @ColumnInfo(name = "content_status", defaultValue = "LEGACY_UNVERIFIED")
+    val contentStatus: String = ContentReviewStatus.LEGACY_UNVERIFIED.name,
 )

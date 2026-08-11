@@ -40,6 +40,7 @@ import androidx.room.PrimaryKey
         Index("ocr_status"),
         // v0.9.24 新增：content_source（observeByContentSource 筛选）——数据量增长后避免全表扫描
         Index("content_source"),
+        Index("content_status"),
     ],
 )
 data class KnowledgePointEntity(
@@ -125,4 +126,8 @@ data class KnowledgePointEntity(
     /** 学习理解文本（袁行霈版为主） */
     @ColumnInfo(name = "study_text")
     val studyText: String?,
+
+    /** Human review state; legacy rows must never be inferred as reviewed from OCR flags. */
+    @ColumnInfo(name = "content_status", defaultValue = "LEGACY_UNVERIFIED")
+    val contentStatus: String = ContentReviewStatus.LEGACY_UNVERIFIED.name,
 )

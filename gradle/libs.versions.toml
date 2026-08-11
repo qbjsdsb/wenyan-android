@@ -72,6 +72,7 @@ androidxTestCore = "1.6.1"
 robolectric = "4.13"
 turbine = "1.1.0"
 coroutinesTest = "1.8.1"
+sqliteJdbc = "3.41.2.2"
 
 [libraries]
 # Compose BOM
@@ -150,6 +151,7 @@ androidx-test-core = { group = "androidx.test", name = "core", version.ref = "an
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
+sqlite-jdbc = { group = "org.xerial", name = "sqlite-jdbc", version.ref = "sqliteJdbc" }
 
 # NF-B8 修复：移除 5 个 wenyan-feature-* 死声明。
 # 各模块用 project(":feature:xxx") 引用，从未用 libs.wenyan.feature.xxx 别名。

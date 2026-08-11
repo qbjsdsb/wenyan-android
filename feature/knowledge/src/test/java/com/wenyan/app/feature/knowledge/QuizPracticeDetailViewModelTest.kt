@@ -2,6 +2,8 @@ package com.wenyan.app.feature.knowledge
 
 import androidx.lifecycle.SavedStateHandle
 import com.wenyan.app.core.database.entity.ExamQuestionEntity
+import com.wenyan.app.core.database.entity.PracticeAttemptEntity
+import com.wenyan.app.core.data.repository.PracticeAttemptStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -13,6 +15,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -38,7 +42,7 @@ class QuizPracticeDetailViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun entity(id: String, year: Int = 2020) = ExamQuestionEntity(
+    private fun entity(id: String, year: Int = 2020, reviewed: Boolean = false) = ExamQuestionEntity(
         id = id,
         year = year,
         subjectId = "sub1",
@@ -55,6 +59,7 @@ class QuizPracticeDetailViewModelTest {
         materialText = null,
         sourceFile = null,
         sourcePage = null,
+        contentStatus = if (reviewed) "REVIEWED" else "LEGACY_UNVERIFIED",
     )
 
     /**
@@ -74,6 +79,7 @@ class QuizPracticeDetailViewModelTest {
         questionId: String,
         essays: List<ExamQuestionEntity>,
         wrongRepo: FakeKnowledgeWrongAnswerRepository,
+        attemptStore: FakePracticeAttemptStore = FakePracticeAttemptStore(),
     ): QuizPracticeDetailViewModel {
         val examDao = FakeExamQuestionDao(initialEssays = essays)
         val repo = buildKnowledgeRepository(
@@ -85,6 +91,7 @@ class QuizPracticeDetailViewModelTest {
             savedStateHandle = SavedStateHandle(mapOf("questionId" to questionId)),
             knowledgeRepository = repo,
             wrongAnswerRepository = wrongRepo,
+            practiceAttemptStore = attemptStore,
         )
     }
 
@@ -140,10 +147,74 @@ class QuizPracticeDetailViewModelTest {
             savedStateHandle = SavedStateHandle(), // 无 questionId
             knowledgeRepository = repo,
             wrongAnswerRepository = wrongRepo,
+            practiceAttemptStore = FakePracticeAttemptStore(),
         )
 
         advanceUntilIdle()
         assertEquals(false, vm.isLoading.value)
         assertEquals("缺少题目参数，请返回列表重试", vm.error.value)
     }
+
+    @Test
+    fun `空白作答不能揭示且未审校框架始终不可见`() = runTest(dispatcher) {
+        val vm = createViewModel("q1", listOf(entity("q1")), FakeKnowledgeWrongAnswerRepository())
+        subscribeCurrentQuestion(vm)
+        vm.revealAnswer()
+        assertFalse(vm.showAnswer.value)
+        vm.updateOutline("我的提纲")
+        vm.revealAnswer()
+        assertFalse(vm.showAnswer.value)
+        assertTrue(vm.message.value.orEmpty().contains("尚未人工审校"))
+    }
+
+    @Test
+    fun `已审校题先作答再揭示并持久化进程恢复字段`() = runTest(dispatcher) {
+        val store = FakePracticeAttemptStore()
+        val vm = createViewModel("q1", listOf(entity("q1", reviewed = true)), FakeKnowledgeWrongAnswerRepository(), store)
+        subscribeCurrentQuestion(vm)
+        vm.updateKeywords("关键词")
+        vm.updateOutline("我的提纲")
+        vm.revealAnswer()
+        advanceUntilIdle()
+        assertTrue(vm.showAnswer.value)
+        assertEquals(1, store.values.size)
+        assertEquals("我的提纲", store.values.values.single().outline)
+        assertTrue(store.values.values.single().revealedAt != null)
+    }
+
+    @Test
+    fun `SavedStateHandle恢复未完成作答而不自动揭示`() = runTest(dispatcher) {
+        val examDao = FakeExamQuestionDao(initialEssays = listOf(entity("q1", reviewed = true)))
+        val handle = SavedStateHandle(
+            mapOf(
+                "questionId" to "q1",
+                "practice_keywords" to "已保存关键词",
+                "practice_outline" to "已保存提纲",
+                "practice_attempt_stage" to "SAVED",
+                "practice_show_answer" to false,
+            ),
+        )
+        val vm = QuizPracticeDetailViewModel(
+            savedStateHandle = handle,
+            knowledgeRepository = buildKnowledgeRepository(FakeKnowledgePointDao(), FakeDataSourceDao(), examDao),
+            wrongAnswerRepository = FakeKnowledgeWrongAnswerRepository(),
+            practiceAttemptStore = FakePracticeAttemptStore(),
+        )
+        subscribeCurrentQuestion(vm)
+        assertEquals("已保存关键词", vm.keywords.value)
+        assertEquals("已保存提纲", vm.outline.value)
+        assertEquals("SAVED", vm.attemptStage.value)
+        assertFalse(vm.showAnswer.value)
+    }
+}
+
+private class FakePracticeAttemptStore : PracticeAttemptStore {
+    val values = linkedMapOf<String, PracticeAttemptEntity>()
+    private val flow = kotlinx.coroutines.flow.MutableStateFlow<List<PracticeAttemptEntity>>(emptyList())
+    override suspend fun save(attempt: PracticeAttemptEntity) {
+        values[attempt.id] = attempt
+        flow.value = values.values.toList()
+    }
+    override suspend fun get(id: String): PracticeAttemptEntity? = values[id]
+    override fun observeSession(sessionId: String) = flow
 }

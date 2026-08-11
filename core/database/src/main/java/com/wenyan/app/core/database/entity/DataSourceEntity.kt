@@ -35,11 +35,19 @@ import androidx.room.PrimaryKey
             childColumns = ["exam_question_id"],
             onDelete = ForeignKey.CASCADE,
         ),
+        ForeignKey(
+            entity = WritingMaterialEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["writing_material_id"],
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
     indices = [
         Index("knowledge_point_id"),
         Index("exam_question_id"),
         Index("content_source"),
+        Index("writing_material_id"),
+        Index("source_status"),
     ],
 )
 data class DataSourceEntity(
@@ -68,4 +76,29 @@ data class DataSourceEntity(
 
     @ColumnInfo(name = "created_at")
     val createdAt: Long,
+
+    @ColumnInfo(name = "writing_material_id")
+    val writingMaterialId: String? = null,
+
+    /** Evidence class, deliberately independent from content_source and ocr_status. */
+    @ColumnInfo(name = "source_status", defaultValue = "UNKNOWN")
+    val sourceStatus: String = SourceEvidenceType.UNKNOWN.name,
+
+    @ColumnInfo(name = "source_title")
+    val sourceTitle: String? = null,
+
+    @ColumnInfo(name = "source_edition")
+    val sourceEdition: String? = null,
+
+    @ColumnInfo(name = "source_page_start")
+    val sourcePageStart: Int? = null,
+
+    @ColumnInfo(name = "source_page_end")
+    val sourcePageEnd: Int? = null,
+
+    @ColumnInfo(name = "source_checksum")
+    val sourceChecksum: String? = null,
+
+    @ColumnInfo(name = "review_note")
+    val reviewNote: String? = null,
 )

@@ -96,6 +96,31 @@ class EssayDetailViewModelTest {
     // ── examQuestionId 为空 ───────────────────────────────────
 
     @Test
+    fun uiState_examSource_isExposedWithoutInventingMetadata() = runTest(testDispatcher) {
+        val essay = makeEssay(id = "eq_source")
+        examQuestionDao.setEssays(listOf(essay))
+        val source = com.wenyan.app.core.database.entity.DataSourceEntity(
+            id = "source-1",
+            knowledgePointId = null,
+            examQuestionId = essay.id,
+            sourceFile = "招生单位公布试卷",
+            sourcePage = null,
+            contentSource = "TEXTBOOK_NATIVE",
+            ocrStatus = "VERIFIED",
+            createdAt = 1L,
+            sourceStatus = "OFFICIAL_ORIGINAL",
+            sourceTitle = "招生单位公布试卷",
+        )
+        dataSourceDao.setSourcesForExam(essay.id, listOf(source))
+
+        val viewModel = createViewModel(essay.id)
+        backgroundScope.launch { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        assertEquals(listOf(source), viewModel.uiState.value.sources)
+    }
+
+    @Test
     fun uiState_blankExamQuestionId_showsNotFound() = runTest(testDispatcher) {
         val viewModel = createViewModel(examQuestionId = null)
         backgroundScope.launch { viewModel.uiState.collect { } }

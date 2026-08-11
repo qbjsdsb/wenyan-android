@@ -30,10 +30,17 @@ import androidx.room.PrimaryKey
             childColumns = ["point_id"],
             onDelete = ForeignKey.CASCADE,
         ),
+        ForeignKey(
+            entity = LearningUnitEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["learning_unit_id"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
     ],
     indices = [
         Index("point_id"),
         Index("created_at"),
+        Index("learning_unit_id"),
     ],
 )
 data class ReviewLogEntity(
@@ -68,4 +75,7 @@ data class ReviewLogEntity(
 
     @ColumnInfo(name = "created_at")
     val createdAt: Long,
+
+    @ColumnInfo(name = "learning_unit_id")
+    val learningUnitId: String? = null,
 )

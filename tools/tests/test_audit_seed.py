@@ -39,6 +39,7 @@ class AuditSeedCliTest(unittest.TestCase):
         baseline: Path | None = None,
         report_name: str = "report.json",
         write_baseline: Path | None = None,
+        check: bool = False,
     ) -> tuple[subprocess.CompletedProcess[str], dict]:
         report = self.work / report_name
         command = [
@@ -58,6 +59,8 @@ class AuditSeedCliTest(unittest.TestCase):
             command.extend(["--baseline", str(baseline)])
         if write_baseline is not None:
             command.extend(["--write-baseline", str(write_baseline)])
+        if check:
+            command.append("--check")
         completed = subprocess.run(
             command,
             cwd=ROOT,
@@ -162,6 +165,43 @@ class AuditSeedCliTest(unittest.TestCase):
         completed, report = self.run_audit(seed, baseline=baseline)
         self.assertNotEqual(0, completed.returncode)
         self.assertIn("BASELINE_INVALID", self.codes(report))
+
+    def test_check_is_read_only_and_rejects_seed_sha_mismatch(self) -> None:
+        seed = self.write_seed(copy.deepcopy(self.template))
+        baseline = self.make_baseline(seed)
+        seed_before = seed.read_bytes()
+        baseline_before = baseline.read_bytes()
+
+        changed = copy.deepcopy(self.template)
+        changed["metadata"]["description"] = "改变正式 seed 字节但不改变 ID"
+        changed_seed = self.write_seed(changed, "changed.json")
+        changed_before = changed_seed.read_bytes()
+        completed, report = self.run_audit(
+            changed_seed,
+            baseline=baseline,
+            check=True,
+        )
+
+        self.assertNotEqual(0, completed.returncode)
+        self.assertIn("BASELINE_SEED_SHA256_MISMATCH", self.codes(report))
+        self.assertEqual(seed_before, seed.read_bytes())
+        self.assertEqual(changed_before, changed_seed.read_bytes())
+        self.assertEqual(baseline_before, baseline.read_bytes())
+
+    def test_report_omits_seed_content_and_question_text(self) -> None:
+        value = copy.deepcopy(self.template)
+        point_text = "不得进入审计证据的知识点正文-UNIQUE"
+        question_text = "不得进入审计证据的完整题干-UNIQUE"
+        value["knowledge_points"][0]["full_content"] = point_text
+        value["exam_questions"][0]["content"] = question_text
+        seed = self.write_seed(value)
+
+        completed, _ = self.run_audit(seed, check=True)
+        report_text = (self.work / "report.json").read_text(encoding="utf-8")
+
+        self.assertEqual(0, completed.returncode, completed.stdout)
+        self.assertNotIn(point_text, report_text)
+        self.assertNotIn(question_text, report_text)
 
     def test_ai_draft_in_formal_collection_fails(self) -> None:
         value = copy.deepcopy(self.template)

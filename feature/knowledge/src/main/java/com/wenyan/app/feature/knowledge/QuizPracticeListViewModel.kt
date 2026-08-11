@@ -74,6 +74,13 @@ class QuizPracticeListViewModel @Inject constructor(
     private val _selectedYear = MutableStateFlow<Int?>(null)
     val selectedYear: StateFlow<Int?> = _selectedYear.asStateFlow()
 
+    private val _selectedPaperCode = MutableStateFlow<String?>(null)
+    val selectedPaperCode: StateFlow<String?> = _selectedPaperCode.asStateFlow()
+
+    private val filters = combine(
+        _selectedType, _selectedSubjectId, _selectedYear, _selectedPaperCode,
+    ) { type, subject, year, paper -> QuizFilters(type, subject, year, paper) }
+
     /** 重试触发器（与 EssayListViewModel 一致，驱动 flatMapLatest 重建内层流） */
     private val retryTrigger = MutableStateFlow(0)
 
@@ -88,16 +95,15 @@ class QuizPracticeListViewModel @Inject constructor(
                         combine(
                             knowledgeRepository.observePracticeQuestions(QuizPracticeTypes.ALL),
                             chapterRepository.observeSubjects(),
-                            _selectedType,
-                            _selectedSubjectId,
-                            _selectedYear,
-                        ) { questions, subjects, type, subjectId, year ->
+                            filters,
+                        ) { questions, subjects, filter ->
                             val subjectMap = subjects.associate { it.id to it.name }
                             val years = questions.map { it.year }.distinct().sortedDescending()
                             val filtered = questions.filter { q ->
-                                (type == null || q.questionType == type) &&
-                                    (subjectId == null || q.subjectId == subjectId) &&
-                                    (year == null || q.year == year)
+                                (filter.type == null || q.questionType == filter.type) &&
+                                    (filter.subjectId == null || q.subjectId == filter.subjectId) &&
+                                    (filter.year == null || q.year == filter.year) &&
+                                    (filter.paperCode == null || q.examPaperCode == filter.paperCode)
                             }
                             val items = filtered.map { q ->
                                 QuizPracticeListItem(
@@ -116,6 +122,9 @@ class QuizPracticeListViewModel @Inject constructor(
                                 filteredCount = filtered.size,
                                 subjects = subjects,
                                 years = years,
+                                paperCodes = questions.mapNotNull { it.examPaperCode }
+                                    .filter { it in HISTORICAL_PAPER_CODES }.distinct()
+                                    .sortedWith(compareBy { HISTORICAL_PAPER_CODES.indexOf(it) }),
                             )
                         }
                             .catch { e ->
@@ -151,10 +160,16 @@ class QuizPracticeListViewModel @Inject constructor(
         _selectedYear.value = year
     }
 
+    fun selectPaperCode(code: String?) {
+        require(code == null || code in HISTORICAL_PAPER_CODES)
+        _selectedPaperCode.value = code
+    }
+
     fun clearFilters() {
         _selectedType.value = null
         _selectedSubjectId.value = null
         _selectedYear.value = null
+        _selectedPaperCode.value = null
     }
 
     fun retry() {
@@ -164,6 +179,7 @@ class QuizPracticeListViewModel @Inject constructor(
     private companion object {
         const val MAX_PREVIEW_LENGTH = 60
         const val TAG = "QuizPracticeListViewModel"
+        val HISTORICAL_PAPER_CODES = listOf("610", "801", "805", "806", "807")
     }
 }
 
@@ -177,6 +193,11 @@ data class QuizPracticeListUiState(
     val filteredCount: Int = 0,
     val subjects: List<SubjectEntity> = emptyList(),
     val years: List<Int> = emptyList(),
+    val paperCodes: List<String> = emptyList(),
+)
+
+private data class QuizFilters(
+    val type: String?, val subjectId: String?, val year: Int?, val paperCode: String?,
 )
 
 /** 背题列表项（v0.9.33）。 */

@@ -2,6 +2,8 @@ package com.wenyan.app.core.data.repository
 
 import androidx.compose.runtime.Immutable
 import com.wenyan.app.core.data.util.catchAndLog
+import com.wenyan.app.core.data.relationship.ContentRelationship
+import com.wenyan.app.core.data.relationship.resolveKnowledgeRelationships
 import com.wenyan.app.core.database.dao.DataSourceDao
 import com.wenyan.app.core.database.dao.ExamQuestionDao
 import com.wenyan.app.core.database.dao.KnowledgePointDao
@@ -261,6 +263,10 @@ class KnowledgeRepository @Inject constructor(
         examQuestionDao.observeById(examQuestionId)
             .catchAndLog(TAG, "observeEssayById id=$examQuestionId") { null }
 
+    fun observeExamQuestionSources(examQuestionId: String): Flow<List<DataSourceEntity>> =
+        dataSourceDao.observeByExamQuestion(examQuestionId)
+            .catchAndLog(TAG, "observeExamQuestionSources id=$examQuestionId") { emptyList() }
+
     /**
      * 批量查询知识点（v0.9.8 新增，供论述题详情页"关联知识点"区块使用）。
      *
@@ -286,4 +292,13 @@ data class KnowledgePointDetail(
     val relatedPoints: List<KnowledgePointEntity> = emptyList(),
     val contrastPoints: List<KnowledgePointEntity> = emptyList(),
     val extensionPoints: List<KnowledgePointEntity> = emptyList(),
-)
+) {
+    val relationships: List<ContentRelationship>
+        get() = resolveKnowledgeRelationships(
+            sourceId = point.id,
+            automaticRelatedIds = point.relatedIds.orEmpty(),
+            explicitCompareIds = point.contrastIds.orEmpty(),
+            explicitDirectionUnknownIds = point.extensionIds.orEmpty(),
+            existingIds = (relatedPoints + contrastPoints + extensionPoints).map { it.id }.toSet(),
+        )
+}

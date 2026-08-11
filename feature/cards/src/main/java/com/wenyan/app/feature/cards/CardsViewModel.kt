@@ -11,16 +11,19 @@ import com.wenyan.app.core.data.cards.EssayPointsCard
 import com.wenyan.app.core.data.cards.SchoolComparisonCard
 import com.wenyan.app.core.data.cards.TermExplanationCard
 import com.wenyan.app.core.data.cards.WorkAuthorBidirectionalCard
+import com.wenyan.app.core.data.cards.LearningUnitCard
 import com.wenyan.app.core.data.repository.CardRepository
 import com.wenyan.app.core.data.repository.CardSettingsRepository
 import com.wenyan.app.core.data.repository.IntervalPreview
 import com.wenyan.app.core.data.repository.SchedulingRepository
+import com.wenyan.app.core.data.repository.UnitRatingReceipt
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.data.repository.daysUntilExam
 import com.wenyan.app.core.database.entity.CardTemplateType
 import com.wenyan.app.core.fsrs.Rating
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
@@ -139,6 +142,7 @@ class CardsViewModel @Inject constructor(
 
     /** 已完成调度的 pointId 集合（同 pointId 仅第一次触发 FSRS 调度） */
     private val ratedPointIds = mutableSetOf<String>()
+    private val ratedUnitIds = mutableSetOf<String>()
 
     /**
      * 会话内已复习张数(v0.8.9 持久化到 SavedStateHandle,修复 P2-2)。
@@ -298,7 +302,11 @@ class CardsViewModel @Inject constructor(
         .map { state ->
             val card = state.currentCard ?: return@map false
             val pointId = card.pointId
-            pointId.isNotBlank() && pointId in ratedPointIds
+            if (card.learningUnitId.isNotBlank()) {
+                card.learningUnitId in ratedUnitIds
+            } else {
+                pointId.isNotBlank() && pointId in ratedPointIds
+            }
         }
         .stateIn(
             scope = viewModelScope,
@@ -485,10 +493,11 @@ class CardsViewModel @Inject constructor(
                         return@collectLatest
                     }
                     try {
-                        _currentPreviews.value = schedulingRepository.previewIntervals(
-                            pointId = card.pointId,
-                            cardType = templateType,
-                        )
+                        _currentPreviews.value = if (card.learningUnitId.isNotBlank()) {
+                            schedulingRepository.previewLearningUnitIntervals(card.learningUnitId, templateType)
+                        } else {
+                            schedulingRepository.previewIntervals(card.pointId, templateType)
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -585,13 +594,18 @@ class CardsViewModel @Inject constructor(
             Timber.w(e, "Invalid cardType for pointId=$pointId, cardTypeStr=$cardTypeStr, skip FSRS scheduling")
             null
         }
-        val shouldSchedule = pointId !in ratedPointIds && templateType != null
+        val unitId = current.learningUnitId
+        val shouldSchedule = templateType != null && if (unitId.isNotBlank()) {
+            unitId !in ratedUnitIds
+        } else {
+            pointId !in ratedPointIds
+        }
         if (shouldSchedule) {
-            ratedPointIds.add(pointId)
+            if (unitId.isNotBlank()) ratedUnitIds.add(unitId) else ratedPointIds.add(pointId)
         }
 
-        // v0.8.8:入栈评分历史,undo 时据此回退 sessionReviewedCount/sessionAgainCount
-        ratingHistory.addLast(RatingStep(rating = rating, pointId = pointId))
+        val receipt = if (unitId.isNotBlank() && shouldSchedule) CompletableDeferred<UnitRatingReceipt?>() else null
+        ratingHistory.addLast(RatingStep(rating = rating, pointId = pointId, unitId = unitId, receipt = receipt))
 
         viewModelScope.launch {
             val fsrsRating = when (rating) {
@@ -607,15 +621,24 @@ class CardsViewModel @Inject constructor(
             // Kotlin smart cast 可通过 Boolean val 传播推断此处 templateType 非空。
             if (shouldSchedule) {
                 val updated = try {
-                    schedulingRepository.rateCard(pointId, fsrsRating, templateType)
+                    if (unitId.isNotBlank()) {
+                        val result = schedulingRepository.rateLearningUnit(pointId, unitId, fsrsRating, templateType)
+                        receipt?.complete(result)
+                        result?.updated?.let { ScheduleOutcome(it.state, it.failCount) }
+                    } else {
+                        schedulingRepository.rateCard(pointId, fsrsRating, templateType)
+                            ?.let { ScheduleOutcome(it.state, it.failCount) }
+                    }
                 } catch (e: CancellationException) {
+                    receipt?.cancel(e)
                     throw e
                 } catch (e: Exception) {
                     // v0.8.12 P1-3:错误优先级调度失败 > 学习进度 > 错题,用 hasSchedulingError 标记
                     _errorMessage.value = "评分调度失败：${e.message ?: "未知错误"}"
                     // v0.9.35 审计修复：调度失败回滚 ratedPointIds 标记，
                     // 否则同 pointId 的 sibling 卡本会话永不再触发调度（FSRS 数据永久缺失）
-                    ratedPointIds.remove(pointId)
+                    if (unitId.isNotBlank()) ratedUnitIds.remove(unitId) else ratedPointIds.remove(pointId)
+                    receipt?.complete(null)
                     null
                 }
 
@@ -638,7 +661,8 @@ class CardsViewModel @Inject constructor(
                     //
                     // 仅当内存有记录时优先用内存值(更准确,反映本次会话内的连续 AGAIN 序列),
                     // 内存无记录时才反推(进程恢复场景)。
-                    val oldFailCount = lastFailCounts[pointId] ?: when (fsrsRating) {
+                    val scheduleKey = unitId.ifBlank { pointId }
+                    val oldFailCount = lastFailCounts[scheduleKey] ?: when (fsrsRating) {
                         Rating.AGAIN -> if (updated.state == "REVIEW") {
                             (updated.failCount - 1).coerceAtLeast(0)
                         } else {
@@ -648,7 +672,7 @@ class CardsViewModel @Inject constructor(
                     }
 
                     // 更新 failCount 跟踪
-                    lastFailCounts[pointId] = updated.failCount
+                    lastFailCounts[scheduleKey] = updated.failCount
 
                     // v0.8.12 P1-1:Leech 检测改为"新增 leech"
                     // 原实现用累计 failCount >= 8,导致达到阈值后每次评分都弹警告
@@ -769,7 +793,18 @@ class CardsViewModel @Inject constructor(
                     (_sessionAgainCount.value - 1).coerceAtLeast(0)
             }
         }
-        // v0.8.12 P0:不再回退 ratedPointIds,避免重新评分导致 FSRS 重复调度
+        if (step.unitId.isNotBlank() && step.receipt != null) {
+            viewModelScope.launch {
+                val receipt = runCatching { step.receipt.await() }.getOrNull() ?: return@launch
+                if (schedulingRepository.undoLearningUnitRating(receipt)) {
+                    ratedUnitIds.remove(step.unitId)
+                    lastFailCounts.remove(step.unitId)
+                } else {
+                    _errorMessage.value = "撤销评分失败，请稍后重试"
+                }
+            }
+        }
+        // 旧知识点调度仍不可逆；新学习单元依靠完整 receipt 做精确事务撤销。
     }
 
     /** 清除错误提示 */
@@ -803,6 +838,7 @@ class CardsViewModel @Inject constructor(
     fun retry() {
         sessionCards = null
         ratedPointIds.clear()
+        ratedUnitIds.clear()
         ratingHistory.clear()
         // v0.8.12 P1:retry 清理 lastFailCounts,避免恢复后 Leech 检测基准错误
         lastFailCounts.clear()
@@ -957,17 +993,18 @@ class CardsViewModel @Inject constructor(
         // "建安风骨 — 时代背景"前 16 字符都是"建安风骨 — 时代"),ID 完全相同,
         // 会导致 Compose key 重复以及卡片身份混淆。
         // 现用全文 hashCode,降低碰撞概率(仍非密码学安全,但业务场景足够)。
-        id = buildString {
+        id = learningUnitId.ifBlank { buildString {
             append(templateType.name)
             append('_')
             if (pointId.isNotBlank()) append(pointId) else append(front.hashCode())
             append('_')
             append(front.hashCode())
-        },
+        } },
         front = front,
         back = back,
         cardType = templateType.name,
         pointId = pointId,
+        learningUnitId = learningUnitId,
         isNew = isNew,
         template = this,
     )
@@ -1011,6 +1048,7 @@ class CardsViewModel @Inject constructor(
     private fun extractCorrectAnswer(card: CardItem): String? {
         val template = card.template ?: return card.back.takeIf { it.isNotBlank() }
         return when (template) {
+            is LearningUnitCard -> card.back.takeIf { it.isNotBlank() }
             is DistinctionCard -> {
                 // 区分卡:用 differences 列表拼接为完整答案
                 // 占位文本"$item1 与 $item2 的区别见要点"无信息量,不能作为 correctAnswer
@@ -1145,6 +1183,8 @@ data class CardItem(
     val cardType: String,
     /** 关联知识点 ID（用于 FSRS 调度回写） */
     val pointId: String = "",
+    /** 稳定学习单元 ID；非空时评分仅写 learning_unit_records。 */
+    val learningUnitId: String = "",
     /** 是否为"新卡"（v0.9.31：未学过的知识点，首次进入学习循环） */
     val isNew: Boolean = false,
     val template: CardTemplate? = null,
@@ -1174,6 +1214,13 @@ enum class CardRating {
 private data class RatingStep(
     val rating: CardRating?,
     val pointId: String,
+    val unitId: String = "",
+    val receipt: CompletableDeferred<UnitRatingReceipt?>? = null,
+)
+
+private data class ScheduleOutcome(
+    val state: String,
+    val failCount: Int,
 )
 
 /**

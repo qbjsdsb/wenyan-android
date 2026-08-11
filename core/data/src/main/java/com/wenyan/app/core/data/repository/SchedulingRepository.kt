@@ -2,6 +2,7 @@ package com.wenyan.app.core.data.repository
 
 import androidx.room.withTransaction
 import com.wenyan.app.core.data.mapper.MemoRecordMapper
+import com.wenyan.app.core.data.mapper.LearningUnitRecordMapper
 import com.wenyan.app.core.data.mapper.WrongAnswerSchedulingMapper
 import com.wenyan.app.core.database.WenyanDatabase
 import com.wenyan.app.core.database.dao.MemoRecordDao
@@ -9,6 +10,7 @@ import com.wenyan.app.core.database.dao.ReviewLogDao
 import com.wenyan.app.core.database.dao.WrongAnswerDao
 import com.wenyan.app.core.database.entity.CardTemplateType
 import com.wenyan.app.core.database.entity.MemoRecordEntity
+import com.wenyan.app.core.database.entity.LearningUnitRecordEntity
 import com.wenyan.app.core.database.entity.ReviewLogEntity
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
 import com.wenyan.app.core.fsrs.FsrsWrapper
@@ -102,6 +104,20 @@ interface SchedulingRepository {
         cardType: CardTemplateType,
     ): Map<Rating, IntervalPreview>
 
+    suspend fun rateLearningUnit(
+        pointId: String,
+        unitId: String,
+        rating: Rating,
+        cardType: CardTemplateType,
+    ): UnitRatingReceipt? = null
+
+    suspend fun previewLearningUnitIntervals(
+        unitId: String,
+        cardType: CardTemplateType,
+    ): Map<Rating, IntervalPreview> = emptyMap()
+
+    suspend fun undoLearningUnitRating(receipt: UnitRatingReceipt): Boolean = false
+
     /**
      * 错题评分调度：根据用户评分更新错题的 FSRS 调度状态（v0.9.4 新增）。
      *
@@ -123,6 +139,14 @@ interface SchedulingRepository {
         rating: Rating,
     ): WrongAnswerEntity?
 }
+
+data class UnitRatingReceipt(
+    val pointId: String,
+    val unitId: String,
+    val before: LearningUnitRecordEntity,
+    val updated: LearningUnitRecordEntity,
+    val reviewLogId: String,
+)
 
 /**
  * 评分预览信息(v0.8.6 新增)。
@@ -300,6 +324,86 @@ class SchedulingRepositoryImpl @Inject constructor(
                 displayText = formatInterval(scheduled.scheduledDays, intervalMillis),
             )
         }
+    }
+
+    override suspend fun rateLearningUnit(
+        pointId: String,
+        unitId: String,
+        rating: Rating,
+        cardType: CardTemplateType,
+    ): UnitRatingReceipt? {
+        if (pointId.isBlank() || unitId.isBlank()) return null
+        val unit = database.learningUnitDao().getById(unitId)
+            ?.takeIf { it.pointId == pointId && it.active } ?: return null
+        val recordDao = database.learningUnitRecordDao()
+        val before = recordDao.getById(unit.id) ?: return null
+        val nowMillis = clockGuard.effectiveNowMillis()
+        val now = LocalDateTime.ofInstant(Instant.ofEpochMilli(nowMillis), ZoneId.systemDefault())
+        val flashBefore = LearningUnitRecordMapper.toFlashCard(before)
+        val flashAfter = wrapperFor(cardType).schedule(flashBefore, rating, now)
+        val updated = LearningUnitRecordMapper.fromFlashCard(
+            flashAfter,
+            unit.id,
+            before.inPriorityQueue != 0,
+        )
+        val logId = UUID.randomUUID().toString()
+        database.withTransaction {
+            recordDao.upsert(updated)
+            reviewLogDao.insert(
+                ReviewLogEntity(
+                    id = logId,
+                    pointId = pointId,
+                    learningUnitId = unit.id,
+                    rating = rating.name,
+                    elapsedDays = flashAfter.elapsedDays,
+                    scheduledDays = flashAfter.scheduledDays,
+                    state = flashBefore.state.name,
+                    stability = flashBefore.stability,
+                    difficulty = flashBefore.difficulty,
+                    reps = flashAfter.reps,
+                    createdAt = nowMillis,
+                ),
+            )
+        }
+        return UnitRatingReceipt(pointId, unit.id, before, updated, logId)
+    }
+
+    override suspend fun previewLearningUnitIntervals(
+        unitId: String,
+        cardType: CardTemplateType,
+    ): Map<Rating, IntervalPreview> {
+        if (unitId.isBlank()) return emptyMap()
+        val record = database.learningUnitRecordDao().getById(unitId) ?: return emptyMap()
+        val nowMillis = clockGuard.effectiveNowMillis()
+        val now = LocalDateTime.ofInstant(Instant.ofEpochMilli(nowMillis), ZoneId.systemDefault())
+        return wrapperFor(cardType).repeat(LearningUnitRecordMapper.toFlashCard(record), now)
+            .mapValues { (rating, scheduled) ->
+                val intervalMillis = java.time.Duration.between(now, scheduled.dueDate).toMillis()
+                IntervalPreview(rating, scheduled.scheduledDays, intervalMillis, formatInterval(scheduled.scheduledDays, intervalMillis))
+            }
+    }
+
+    override suspend fun undoLearningUnitRating(receipt: UnitRatingReceipt): Boolean = database.withTransaction {
+        val recordDao = database.learningUnitRecordDao()
+        if (recordDao.getById(receipt.unitId) != receipt.updated) return@withTransaction false
+        val log = reviewLogDao.getById(receipt.reviewLogId)
+        if (log?.learningUnitId != receipt.unitId) return@withTransaction false
+        recordDao.upsert(receipt.before)
+        reviewLogDao.deleteById(receipt.reviewLogId)
+        true
+    }
+
+    private fun wrapperFor(cardType: CardTemplateType): FsrsWrapper {
+        val tier = mapCardTypeToTier(cardType)
+        val config = TIER_CONFIGS[tier] ?: TIER_CONFIGS.getValue(MemoryTier.TIER_FRAMEWORK)
+        return FsrsWrapper(
+            requestRetention = config.targetRetention,
+            maximumInterval = config.maxInterval,
+            enableFuzz = tier != MemoryTier.TIER_EXACT,
+            stabilityGrowthFactor = config.stabilityGrowthFactor,
+            easyBonus = config.easyBonus,
+            againPenalty = config.againPenalty,
+        )
     }
 
     /**

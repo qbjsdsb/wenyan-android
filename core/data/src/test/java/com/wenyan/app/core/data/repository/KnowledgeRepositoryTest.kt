@@ -717,9 +717,11 @@ private class FakeKpDao(
  */
 private class FakeDsDao(
     initialSourcesByPoint: Map<String, List<DataSourceEntity>> = emptyMap(),
+    initialSourcesByExam: Map<String, List<DataSourceEntity>> = emptyMap(),
 ) : DataSourceDao {
 
     private val _sourcesByPoint = MutableStateFlow(initialSourcesByPoint)
+    private val _sourcesByExam = MutableStateFlow(initialSourcesByExam)
 
     fun setSourcesForPoint(pointId: String, sources: List<DataSourceEntity>) {
         _sourcesByPoint.value = _sourcesByPoint.value + (pointId to sources)
@@ -733,7 +735,7 @@ private class FakeDsDao(
 
     override suspend fun deleteById(id: String) = throw UnsupportedOperationException()
 
-    override suspend fun deleteManagedKnowledgePointSources() = throw UnsupportedOperationException()
+    override suspend fun deleteManagedSeedSources() = throw UnsupportedOperationException()
 
     override suspend fun getById(id: String): DataSourceEntity? = throw UnsupportedOperationException()
 
@@ -741,6 +743,9 @@ private class FakeDsDao(
         _sourcesByPoint.map { it[pointId] ?: emptyList() }
 
     override fun observeByExamQuestion(questionId: String): Flow<List<DataSourceEntity>> =
+        _sourcesByExam.map { it[questionId] ?: emptyList() }
+
+    override fun observeByWritingMaterial(materialId: String): Flow<List<DataSourceEntity>> =
         throw UnsupportedOperationException()
 
     override fun observeByContentSource(source: String): Flow<List<DataSourceEntity>> =

@@ -3,6 +3,7 @@ package com.wenyan.app.feature.cards
 import androidx.lifecycle.SavedStateHandle
 import com.wenyan.app.core.data.cards.CardTemplate
 import com.wenyan.app.core.data.cards.ClozeQuoteCard
+import com.wenyan.app.core.data.cards.LearningUnitCard
 import com.wenyan.app.core.data.repository.IntervalPreview
 import com.wenyan.app.core.data.repository.StudyProgressRepository
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
@@ -41,6 +42,34 @@ import android.database.sqlite.SQLiteException
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CardsViewModelTest {
+
+    @Test
+    fun `learning-unit siblings are scheduled independently`() = runTest(testDispatcher) {
+        val scheduler = FakeSchedulingRepository()
+        val cards = listOf(
+            LearningUnitCard("核心", "答一", "point_1", "point_1:core:0"),
+            LearningUnitCard("关键词", "答二", "point_1", "point_1:keyword:0"),
+        )
+        viewModel = CardsViewModel(
+            savedStateHandle = SavedStateHandle(),
+            cardRepository = FakeCardRepository(cards),
+            schedulingRepository = scheduler,
+            wrongAnswerRepository = FakeWrongAnswerRepository(),
+            studyProgressRepository = FakeStudyProgressRepository(),
+            cardSettingsRepository = FakeCardSettingsRepository(),
+        )
+        advanceUntilIdle()
+
+        viewModel.rateCard(CardRating.GOOD)
+        viewModel.rateCard(CardRating.HARD)
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf("point_1:core:0", "point_1:keyword:0"),
+            scheduler.rateLearningUnitCalls.map { it.second },
+        )
+        assertTrue(scheduler.rateCardCalls.isEmpty())
+    }
 
     private val testDispatcher = StandardTestDispatcher()
 

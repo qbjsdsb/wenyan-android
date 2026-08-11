@@ -22,6 +22,7 @@ import com.wenyan.app.core.data.cards.EssayPointsCard
 import com.wenyan.app.core.data.cards.SchoolComparisonCard
 import com.wenyan.app.core.data.cards.SchoolInfo
 import com.wenyan.app.core.data.cards.TermExplanationCard
+import com.wenyan.app.core.data.cards.LearningUnitCard
 import com.wenyan.app.core.data.cards.TermCategory
 import com.wenyan.app.core.data.cards.WorkAuthorBidirectionalCard
 import com.wenyan.app.core.designsystem.component.Spacing
@@ -48,6 +49,10 @@ fun CardContent(
         is EssayPointsCard -> EssayPointsContent(card, isFlipped)
         is SchoolComparisonCard -> SchoolComparisonContent(card, isFlipped)
         is DistinctionCard -> DistinctionContent(card, isFlipped)
+        is LearningUnitCard -> Text(
+            text = if (isFlipped) card.back else card.front,
+            style = MaterialTheme.typography.bodyLarge,
+        )
     }
 }
 

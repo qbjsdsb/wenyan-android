@@ -340,6 +340,7 @@ dependencies {
     implementation(project(":feature:knowledge"))
     implementation(project(":feature:quiz"))
     implementation(project(":feature:cards"))
+    implementation(project(":feature:today"))
     implementation(project(":feature:aiassistant"))
     implementation(project(":feature:settings"))
 

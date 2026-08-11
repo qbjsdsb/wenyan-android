@@ -22,10 +22,14 @@ import com.wenyan.app.feature.knowledge.KnowledgePointDetailScreen
 import com.wenyan.app.feature.knowledge.KnowledgeScreen
 import com.wenyan.app.feature.knowledge.QuizPracticeDetailScreen
 import com.wenyan.app.feature.knowledge.QuizPracticeListScreen
+import com.wenyan.app.feature.knowledge.WritingMaterialListScreen
+import com.wenyan.app.feature.knowledge.WritingEditorRoute
 import com.wenyan.app.feature.quiz.WrongAnswerScreen
 import com.wenyan.app.feature.settings.AboutTutorialScreen
 import com.wenyan.app.feature.settings.SettingsScreen
 import com.wenyan.app.feature.settings.UpdateCheckScreen
+import com.wenyan.app.feature.today.TodayDestination
+import com.wenyan.app.feature.today.TodayRoute
 
 /**
  * 文研App 主导航图。
@@ -57,7 +61,7 @@ fun WenyanNavHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = TopLevelDestination.ROUTE_KNOWLEDGE,
+        startDestination = TopLevelDestination.ROUTE_TODAY,
         modifier = modifier,
         // 顶级 Tab 切换：纯 fade，避免与 NavigationBar indicator 动画冲突产生抖动
         enterTransition = { WenyanMotion.TabEnterTransition },
@@ -65,6 +69,15 @@ fun WenyanNavHost(
         popEnterTransition = { WenyanMotion.TabEnterTransition },
         popExitTransition = { WenyanMotion.TabExitTransition },
     ) {
+        todayDestination { destination, contentId ->
+            when (destination) {
+                TodayDestination.CARDS -> navController.navigate(TopLevelDestination.ROUTE_CARDS) { launchSingleTop = true }
+                TodayDestination.QUIZ -> navController.navigate(ROUTE_QUIZ_PRACTICE) { launchSingleTop = true }
+                TodayDestination.WRITING_MATERIALS -> navController.navigate(ROUTE_WRITING_MATERIALS) { launchSingleTop = true }
+            }
+        }
+        trainingDestination { route -> navController.navigate(route) { launchSingleTop = true } }
+        myDestination { route -> navController.navigate(route) { launchSingleTop = true } }
         knowledgeDestination(
             onNavigateToAiAssistant = {
                 // v0.6：AiAssistant 改为子路由，用 Push/Pop slide + launchSingleTop，
@@ -89,13 +102,14 @@ fun WenyanNavHost(
             onBack = {
                 navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_KNOWLEDGE)
             },
-            onNavigateToDetail = { questionId, type, subject, year ->
+            onNavigateToDetail = { questionId, type, subject, year, paper ->
                 val typeParam = type ?: FILTER_ALL
                 val subjectParam = subject ?: FILTER_ALL
                 val yearParam = year?.toString() ?: FILTER_ALL
+                val paperParam = paper ?: FILTER_ALL
                 navController.navigate(
                     "$ROUTE_QUIZ_PRACTICE_DETAIL/$questionId" +
-                        "?type=$typeParam&subject=$subjectParam&year=$yearParam",
+                        "?type=$typeParam&subject=$subjectParam&year=$yearParam&paper=$paperParam",
                 ) {
                     launchSingleTop = true
                 }
@@ -109,11 +123,20 @@ fun WenyanNavHost(
         // v0.9.9：真题 → 论述题迁移，essayTabDestination 替换 quizDestination
         // 顶级 Tab 使用 NavHost 默认 Tab fade transition（与 cards/wrongAnswer/settings 一致）
         essayTabDestination(
+            onBack = { navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_TRAINING) },
             onNavigateToEssayDetail = { essayId ->
                 navController.navigate("$ROUTE_ESSAY_DETAIL/$essayId") {
                     launchSingleTop = true
                 }
             },
+            onNavigateToWritingMaterials = {
+                navController.navigate(ROUTE_WRITING_MATERIALS) { launchSingleTop = true }
+            },
+        )
+        composable(ROUTE_WRITING_EDITOR) { WritingEditorRoute(onBack = { navController.popBackStack() }) }
+        writingMaterialsDestination(
+            onBack = { navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_TRAINING) },
+            onStartWriting = { navController.navigate(ROUTE_WRITING_EDITOR) { launchSingleTop = true } },
         )
         cardsDestination(
             onNavigateToAiAssistant = {
@@ -175,7 +198,9 @@ fun WenyanNavHost(
         )
         // v0.9.0：WrongAnswer 提升为顶级 Tab（原 graphDestination 位置）
         // 不传 onBack → WrongAnswerScreen 顶级模式（无返回箭头）
-        wrongAnswerDestination()
+        wrongAnswerDestination {
+            navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_MY)
+        }
         settingsDestination(
             onNavigateToApiConfig = {
                 navController.navigate(ROUTE_API_CONFIG) {
@@ -247,6 +272,20 @@ fun WenyanNavHost(
     }
 }
 
+private fun NavGraphBuilder.todayDestination(
+    onTaskClick: (TodayDestination, String?) -> Unit,
+) {
+    composable(TopLevelDestination.ROUTE_TODAY) { TodayRoute(onTaskClick) }
+}
+
+private fun NavGraphBuilder.trainingDestination(onNavigate: (String) -> Unit) {
+    composable(TopLevelDestination.ROUTE_TRAINING) { TrainingHubScreen(onNavigate) }
+}
+
+private fun NavGraphBuilder.myDestination(onNavigate: (String) -> Unit) {
+    composable(TopLevelDestination.ROUTE_MY) { MyHubScreen(onNavigate) }
+}
+
 /**
  * 进入知识点详情时保留当前页面。
  *
@@ -311,7 +350,7 @@ private fun NavGraphBuilder.knowledgeDestination(
 // v0.9.33：真题背题列表子路由（名词解释/简答专项）
 private fun NavGraphBuilder.quizPracticeDestination(
     onBack: () -> Unit,
-    onNavigateToDetail: (questionId: String, type: String?, subject: String?, year: Int?) -> Unit,
+    onNavigateToDetail: (questionId: String, type: String?, subject: String?, year: Int?, paper: String?) -> Unit,
 ) {
     composable(
         route = ROUTE_QUIZ_PRACTICE,
@@ -332,13 +371,14 @@ private fun NavGraphBuilder.quizPracticeDetailDestination(
     onBack: () -> Unit,
 ) {
     composable(
-        route = "$ROUTE_QUIZ_PRACTICE_DETAIL/{questionId}?type={type}&subject={subject}&year={year}",
+        route = "$ROUTE_QUIZ_PRACTICE_DETAIL/{questionId}?type={type}&subject={subject}&year={year}&paper={paper}",
         arguments = listOf(
             navArgument("questionId") { type = NavType.StringType },
             // 筛选条件（"ALL" 表示不筛选），背题页按相同条件重建前后题列表
             navArgument("type") { type = NavType.StringType; defaultValue = FILTER_ALL },
             navArgument("subject") { type = NavType.StringType; defaultValue = FILTER_ALL },
             navArgument("year") { type = NavType.StringType; defaultValue = FILTER_ALL },
+            navArgument("paper") { type = NavType.StringType; defaultValue = FILTER_ALL },
         ),
         enterTransition = { WenyanMotion.PushEnterTransition },
         exitTransition = { WenyanMotion.PushExitTransition },
@@ -352,13 +392,28 @@ private fun NavGraphBuilder.quizPracticeDetailDestination(
 // v0.9.9：真题→论述题迁移，essayTabDestination 替换 quizDestination
 // 顶级 Tab 使用 NavHost 默认 Tab fade transition（与 cards/wrongAnswer/settings 一致）
 private fun NavGraphBuilder.essayTabDestination(
+    onBack: () -> Unit,
     onNavigateToEssayDetail: (String) -> Unit,
+    onNavigateToWritingMaterials: () -> Unit,
 ) {
     composable(TopLevelDestination.ROUTE_ESSAY) {
         EssayListScreen(
-            onBack = null,
+            onBack = onBack,
             onNavigateToEssayDetail = onNavigateToEssayDetail,
+            onNavigateToWritingMaterials = onNavigateToWritingMaterials,
         )
+    }
+}
+
+private fun NavGraphBuilder.writingMaterialsDestination(onBack: () -> Unit, onStartWriting: () -> Unit) {
+    composable(
+        route = ROUTE_WRITING_MATERIALS,
+        enterTransition = { WenyanMotion.PushEnterTransition },
+        exitTransition = { WenyanMotion.PushExitTransition },
+        popEnterTransition = { WenyanMotion.PopEnterTransition },
+        popExitTransition = { WenyanMotion.PopExitTransition },
+    ) {
+        WritingMaterialListScreen(onBack = onBack, onStartWriting = onStartWriting)
     }
 }
 
@@ -406,9 +461,9 @@ private fun NavGraphBuilder.cardsFullscreenDestination(
 
 // v0.9.0：WrongAnswer 顶级 Tab，用 NavHost 默认 Tab fade（无 Push/Pop slide）
 // onBack 为 null 时 WrongAnswerScreen 隐藏返回箭头（顶级模式）
-private fun NavGraphBuilder.wrongAnswerDestination() {
+private fun NavGraphBuilder.wrongAnswerDestination(onBack: () -> Unit) {
     composable(TopLevelDestination.ROUTE_WRONG_ANSWER) {
-        WrongAnswerScreen()
+        WrongAnswerScreen(onBack = onBack)
     }
 }
 
@@ -542,17 +597,19 @@ private fun NavGraphBuilder.essayDetailDestination(
 
 // 子路由常量
 private const val ROUTE_API_CONFIG = "api_config"
-private const val ROUTE_AI_ASSISTANT = "aiassistant"
+internal const val ROUTE_AI_ASSISTANT = "aiassistant"
 private const val ROUTE_KNOWLEDGE_DETAIL = "knowledge_detail"
 private const val ARG_KNOWLEDGE_POINT_ID = "pointId"
 internal const val ROUTE_KNOWLEDGE_DETAIL_PATTERN =
     "$ROUTE_KNOWLEDGE_DETAIL/{$ARG_KNOWLEDGE_POINT_ID}"
 private const val ROUTE_ABOUT = "about"
 private const val ROUTE_ESSAY_DETAIL = "essay_detail"
+internal const val ROUTE_WRITING_MATERIALS = "writing_materials"
+internal const val ROUTE_WRITING_EDITOR = "writing_editor"
 // v0.9.11：检查更新子路由
 private const val ROUTE_UPDATE_CHECK = "update_check"
 // v0.9.33：真题背题子路由
-private const val ROUTE_QUIZ_PRACTICE = "quiz_practice"
+internal const val ROUTE_QUIZ_PRACTICE = "quiz_practice"
 private const val ROUTE_QUIZ_PRACTICE_DETAIL = "quiz_practice_detail"
 // v0.9.36：知识卡片全屏沉浸页子路由
 private const val ROUTE_CARDS_FULLSCREEN = "cards_fullscreen"

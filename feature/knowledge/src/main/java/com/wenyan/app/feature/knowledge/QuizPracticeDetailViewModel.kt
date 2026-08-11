@@ -7,6 +7,19 @@ import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.common.util.friendlyErrorMessage
 import com.wenyan.app.core.data.repository.KnowledgeRepository
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
+import com.wenyan.app.core.data.repository.PracticeAttemptStore
+import com.wenyan.app.core.data.practice.PracticeAttemptStage
+import com.wenyan.app.core.data.practice.PracticeAttemptWorkflow
+import com.wenyan.app.core.data.practice.PracticeAttemptWorkflowState
+import com.wenyan.app.core.data.practice.PracticeDraft
+import com.wenyan.app.core.data.practice.PracticeTransition
+import com.wenyan.app.core.data.practice.PracticeSessionSummary
+import com.wenyan.app.core.data.practice.summarizePracticeSession
+import com.wenyan.app.core.database.entity.PracticeAttemptEntity
+import com.wenyan.app.core.database.entity.PracticeAttemptType
+import com.wenyan.app.core.database.entity.PracticeErrorReason
+import com.wenyan.app.core.database.entity.PracticeRepairState
+import com.wenyan.app.core.database.entity.PracticeSelfRating
 import com.wenyan.app.core.database.entity.ExamQuestionEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -18,6 +31,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -39,9 +53,10 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class QuizPracticeDetailViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
     private val knowledgeRepository: KnowledgeRepository,
     private val wrongAnswerRepository: WrongAnswerRepository,
+    private val practiceAttemptStore: PracticeAttemptStore,
 ) : ViewModel() {
 
     /**
@@ -55,6 +70,9 @@ class QuizPracticeDetailViewModel @Inject constructor(
     private val selectedType: String? = savedStateHandle.get<String>(KEY_TYPE)?.takeIf { it != FILTER_ALL }
     private val selectedSubjectId: String? = savedStateHandle.get<String>(KEY_SUBJECT)?.takeIf { it != FILTER_ALL }
     private val selectedYear: Int? = savedStateHandle.get<String>(KEY_YEAR)?.takeIf { it != FILTER_ALL }?.toIntOrNull()
+    private val selectedPaperCode: String? = savedStateHandle.get<String>(KEY_PAPER)?.takeIf { it != FILTER_ALL }
+    private val sessionId: String = savedStateHandle.get<String>(KEY_SESSION_ID)
+        ?: "practice-session-${java.util.UUID.randomUUID()}".also { savedStateHandle[KEY_SESSION_ID] = it }
 
     // ── 基础状态 ──
 
@@ -69,16 +87,26 @@ class QuizPracticeDetailViewModel @Inject constructor(
     val questions: StateFlow<List<ExamQuestionEntity>> = _questions.asStateFlow()
 
     /** 当前题目下标 */
-    private val _currentIndex = MutableStateFlow(0)
-    val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
+    private val _currentIndex = savedStateHandle.getStateFlow(KEY_CURRENT_INDEX, 0)
+    val currentIndex: StateFlow<Int> = _currentIndex
 
     /** 是否已显示答案 */
-    private val _showAnswer = MutableStateFlow(false)
-    val showAnswer: StateFlow<Boolean> = _showAnswer.asStateFlow()
+    private val _showAnswer = savedStateHandle.getStateFlow(KEY_SHOW_ANSWER, false)
+    val showAnswer: StateFlow<Boolean> = _showAnswer
 
     /** 用户提示（进错题本等），UI 用 Snackbar 展示 */
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
+
+    val keywords = savedStateHandle.getStateFlow(KEY_KEYWORDS, "")
+    val outline = savedStateHandle.getStateFlow(KEY_OUTLINE, "")
+    val body = savedStateHandle.getStateFlow(KEY_BODY, "")
+    val attemptStage = savedStateHandle.getStateFlow(KEY_ATTEMPT_STAGE, PracticeAttemptStage.ANSWERING.name)
+    val selectedRating = savedStateHandle.getStateFlow<String?>(KEY_RATING, null)
+    val selectedErrors = savedStateHandle.getStateFlow<ArrayList<String>>(KEY_ERRORS, arrayListOf())
+    val sessionSummary: StateFlow<PracticeSessionSummary> = practiceAttemptStore.observeSession(sessionId)
+        .map(::summarizePracticeSession)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, summarizePracticeSession(emptyList()))
 
     // ── 派生状态 ──
 
@@ -133,6 +161,7 @@ class QuizPracticeDetailViewModel @Inject constructor(
                         (selectedType == null || q.questionType == selectedType) &&
                             (selectedSubjectId == null || q.subjectId == selectedSubjectId) &&
                             (selectedYear == null || q.year == selectedYear)
+                            && (selectedPaperCode == null || q.examPaperCode == selectedPaperCode)
                     }
                     val startIndex = filtered.indexOfFirst { it.id == startId }
                     if (startIndex < 0) {
@@ -145,7 +174,7 @@ class QuizPracticeDetailViewModel @Inject constructor(
                         _isLoading.value = false
                     } else {
                         _questions.value = filtered
-                        _currentIndex.value = startIndex
+                        if (savedStateHandle.get<Int>(KEY_CURRENT_INDEX) == null) setCurrentIndex(startIndex)
                         _isLoading.value = false
                     }
                 }
@@ -155,27 +184,29 @@ class QuizPracticeDetailViewModel @Inject constructor(
     // ── 操作 ──
 
     fun toggleShowAnswer() {
-        _showAnswer.value = !_showAnswer.value
+        if (_showAnswer.value) hideAnswer() else revealAnswer()
     }
 
     fun showAnswer() {
-        _showAnswer.value = true
+        revealAnswer()
     }
 
     fun hideAnswer() {
-        _showAnswer.value = false
+        savedStateHandle[KEY_SHOW_ANSWER] = false
     }
 
     fun previous() {
         if (_currentIndex.value > 0) {
-            _currentIndex.value -= 1
+            setCurrentIndex(_currentIndex.value - 1)
+            resetAttemptForQuestion()
             hideAnswer()
         }
     }
 
     fun next() {
         if (_currentIndex.value < _questions.value.size - 1) {
-            _currentIndex.value += 1
+            setCurrentIndex(_currentIndex.value + 1)
+            resetAttemptForQuestion()
             hideAnswer()
         }
     }
@@ -184,9 +215,12 @@ class QuizPracticeDetailViewModel @Inject constructor(
     fun markKnow() {
         // v0.9.35 审计修复：400ms 防连击窗，避免快速双击"会了"连跳两题
         if (!tryAcquireAdvanceLock()) return
+        assess(PracticeSelfRating.GOOD, emptySet())
+        completeAttempt()
         hideAnswer()
         if (_currentIndex.value < _questions.value.size - 1) {
-            _currentIndex.value += 1
+            setCurrentIndex(_currentIndex.value + 1)
+            resetAttemptForQuestion()
         } else {
             _message.value = "已经是最后一题"
         }
@@ -204,9 +238,12 @@ class QuizPracticeDetailViewModel @Inject constructor(
     fun markDontKnow() {
         val question = currentQuestion.value ?: return
         if (!tryAcquireAdvanceLock()) return
+        assess(PracticeSelfRating.AGAIN, setOf(PracticeErrorReason.MEMORY_GAP))
+        completeAttempt()
         val isLast = _currentIndex.value >= _questions.value.size - 1
         if (!isLast) {
-            _currentIndex.value += 1
+            setCurrentIndex(_currentIndex.value + 1)
+            resetAttemptForQuestion()
         }
         hideAnswer()
         viewModelScope.launch {
@@ -258,11 +295,108 @@ class QuizPracticeDetailViewModel @Inject constructor(
         _message.value = null
     }
 
+    fun updateKeywords(value: String) { savedStateHandle[KEY_KEYWORDS] = value }
+    fun updateOutline(value: String) { savedStateHandle[KEY_OUTLINE] = value }
+    fun updateBody(value: String) { savedStateHandle[KEY_BODY] = value }
+
+    fun saveDraft() = applyTransition(PracticeAttemptWorkflow.save(workflowState()), persist = true)
+
+    fun revealAnswer() {
+        val question = currentQuestion.value ?: return
+        val transition = PracticeAttemptWorkflow.reveal(
+            workflowState(), question.contentStatus, !question.answerFramework.isNullOrBlank(),
+        )
+        applyTransition(transition, persist = true) {
+            savedStateHandle[KEY_SHOW_ANSWER] = true
+        }
+    }
+
+    fun assess(rating: PracticeSelfRating, errors: Set<PracticeErrorReason>) {
+        applyTransition(PracticeAttemptWorkflow.assess(workflowState(), rating, errors), persist = true)
+    }
+
+    fun completeAttempt() = applyTransition(PracticeAttemptWorkflow.complete(workflowState()), persist = true)
+
+    private fun workflowState() = PracticeAttemptWorkflowState(
+        stage = PracticeAttemptStage.entries.firstOrNull { it.name == attemptStage.value } ?: PracticeAttemptStage.ANSWERING,
+        draft = PracticeDraft(keywords.value, outline.value, body.value),
+        rating = PracticeSelfRating.fromDb(selectedRating.value),
+        errors = selectedErrors.value.mapNotNull(PracticeErrorReason::fromDb).toSet(),
+        repairState = if (selectedErrors.value.isEmpty()) PracticeRepairState.NONE else PracticeRepairState.CANDIDATE,
+    )
+
+    private fun applyTransition(
+        transition: PracticeTransition,
+        persist: Boolean,
+        accepted: () -> Unit = {},
+    ) {
+        when (transition) {
+            is PracticeTransition.Rejected -> _message.value = transition.reason
+            is PracticeTransition.Accepted -> {
+                val state = transition.state
+                savedStateHandle[KEY_ATTEMPT_STAGE] = state.stage.name
+                savedStateHandle[KEY_RATING] = state.rating?.name
+                savedStateHandle[KEY_ERRORS] = ArrayList(state.errors.map { it.name })
+                accepted()
+                if (persist) persist(state)
+            }
+        }
+    }
+
+    private fun persist(state: PracticeAttemptWorkflowState) {
+        val question = currentQuestion.value ?: return
+        val now = currentTimeMillis()
+        val attemptId = savedStateHandle.get<String>(KEY_ATTEMPT_ID)
+            ?: "attempt-${java.util.UUID.randomUUID()}".also { savedStateHandle[KEY_ATTEMPT_ID] = it }
+        viewModelScope.launch {
+            runCatching {
+                val existing = practiceAttemptStore.get(attemptId)
+                practiceAttemptStore.save(
+                    PracticeAttemptEntity(
+                        id = attemptId, questionId = question.id,
+                        pointId = question.relatedPointIds?.singleOrNull(), learningUnitId = null,
+                        sessionId = sessionId, attemptType = PracticeAttemptType.EXAM_OUTLINE.name,
+                        userKeywords = state.draft.keywords, outline = state.draft.outline, body = state.draft.body,
+                        startedAt = existing?.startedAt ?: now,
+                        revealedAt = if (state.stage >= PracticeAttemptStage.REVEALED) existing?.revealedAt ?: now else null,
+                        completedAt = if (state.stage == PracticeAttemptStage.COMPLETED) existing?.completedAt ?: now else null,
+                        elapsedMs = existing?.elapsedMs ?: 0L, selfRating = state.rating?.name,
+                        errorReasons = state.errors.map { it.name }.sorted(), repairState = state.repairState.name,
+                        createdAt = existing?.createdAt ?: now, updatedAt = now,
+                    ),
+                )
+            }.onFailure { Timber.e(it, "persist practice attempt failed") }
+        }
+    }
+
+    private fun setCurrentIndex(value: Int) { savedStateHandle[KEY_CURRENT_INDEX] = value }
+
+    private fun resetAttemptForQuestion() {
+        savedStateHandle.remove<String>(KEY_ATTEMPT_ID)
+        savedStateHandle.remove<String>(KEY_RATING)
+        savedStateHandle[KEY_KEYWORDS] = ""; savedStateHandle[KEY_OUTLINE] = ""; savedStateHandle[KEY_BODY] = ""
+        savedStateHandle[KEY_ERRORS] = arrayListOf<String>()
+        savedStateHandle[KEY_ATTEMPT_STAGE] = PracticeAttemptStage.ANSWERING.name
+    }
+
+    internal var currentTimeMillis: () -> Long = System::currentTimeMillis
+
     private companion object {
         const val KEY_QUESTION_ID = "questionId"
         const val KEY_TYPE = "type"
         const val KEY_SUBJECT = "subject"
         const val KEY_YEAR = "year"
+        const val KEY_PAPER = "paper"
+        const val KEY_CURRENT_INDEX = "practice_current_index"
+        const val KEY_SHOW_ANSWER = "practice_show_answer"
+        const val KEY_KEYWORDS = "practice_keywords"
+        const val KEY_OUTLINE = "practice_outline"
+        const val KEY_BODY = "practice_body"
+        const val KEY_ATTEMPT_ID = "practice_attempt_id"
+        const val KEY_ATTEMPT_STAGE = "practice_attempt_stage"
+        const val KEY_RATING = "practice_rating"
+        const val KEY_ERRORS = "practice_errors"
+        const val KEY_SESSION_ID = "practice_session_id"
         const val FILTER_ALL = "ALL"
 
         /** 防连击窗口：400ms 内"会了/不会"只生效一次（v0.9.35 审计修复） */

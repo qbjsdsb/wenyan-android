@@ -25,6 +25,7 @@ import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.MemoRecordEntity
 import com.wenyan.app.core.database.entity.SubjectEntity
 import com.wenyan.app.core.database.entity.WritingMaterialEntity
+import com.wenyan.app.core.data.repository.LearningUnitRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -36,7 +37,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /** 提升此值可在 seed 内容版本不变时触发一次安全重导。 */
-internal const val CURRENT_SEED_IMPORT_SCHEMA_VERSION = 3
+internal const val CURRENT_SEED_IMPORT_SCHEMA_VERSION = 4
 
 /**
  * 种子数据加载器（阶段2：数据管线接通）。
@@ -88,6 +89,7 @@ class SeedDataLoader @Inject constructor(
     private val examQuestionDao: ExamQuestionDao,
     private val writingMaterialDao: WritingMaterialDao,
     private val memoRecordDao: MemoRecordDao,
+    private val learningUnitRepository: LearningUnitRepository,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -380,6 +382,7 @@ class SeedDataLoader @Inject constructor(
                 sourceFile = seed.resolvedSourceFiles().joinToString("；").takeIf { it.isNotBlank() },
                 sourcePage = null,
                 studyText = seed.studyText,
+                contentStatus = seed.resolvedContentStatus(),
             )
         }
         if (knowledgePointEntities.isNotEmpty()) {
@@ -401,7 +404,7 @@ class SeedDataLoader @Inject constructor(
         // 步骤3.1：导入可追溯教材来源。旧 seed 常用“其他”占位，这种值不写入来源表，
         // 防止 UI/AI 把占位文本包装成精确引用。App 管理的来源先删后建，种子升级时
         // 已移除或改名的教材不会残留；非 seed 前缀的用户来源不受影响。
-        dataSourceDao.deleteManagedKnowledgePointSources()
+        dataSourceDao.deleteManagedSeedSources()
         val importedKnowledgePointIds = knowledgePointEntities.mapTo(mutableSetOf()) { it.id }
         val dataSourceEntities = buildSeedDataSourceEntities(
             seeds = seedData.knowledgePoints,
@@ -452,6 +455,7 @@ class SeedDataLoader @Inject constructor(
         if (memoRecords.isNotEmpty()) {
             memoRecordDao.insertAll(memoRecords)
         }
+        learningUnitRepository.synchronizeAll(knowledgePointEntities, now)
         if (isUpgrade || existingMemoPointIds.isNotEmpty()) {
             Timber.i("Seed import: created ${memoRecords.size} new MemoRecords, preserved ${existingMemoPointIds.size} existing")
         }
@@ -490,6 +494,7 @@ class SeedDataLoader @Inject constructor(
                 materialText = null,
                 sourceFile = null,
                 sourcePage = null,
+                contentStatus = seed.resolvedContentStatus(),
             )
         }
         if (examQuestionEntities.isNotEmpty()) {
@@ -506,10 +511,18 @@ class SeedDataLoader @Inject constructor(
                 source = seed.source,
                 tags = seed.tags,
                 createdAt = now,
+                contentStatus = seed.resolvedContentStatus(),
             )
         }
         if (writingMaterialEntities.isNotEmpty()) {
             writingMaterialDao.insertAll(writingMaterialEntities)
+        }
+        val writingSourceEntities = buildWritingMaterialDataSourceEntities(
+            seeds = seedData.writingMaterials,
+            createdAt = now,
+        )
+        if (writingSourceEntities.isNotEmpty()) {
+            dataSourceDao.insertAll(writingSourceEntities)
         }
 
         // 步骤7：保留科目代码历史
@@ -896,6 +909,13 @@ data class KnowledgePointSeed(
     @SerialName("merged_at")
     val mergedAt: String? = null,
     val confidence: Double = 1.0,
+    @SerialName("content_status")
+    val contentStatus: String? = null,
+    val status: String? = null,
+    @SerialName("review_status")
+    val reviewStatus: String? = null,
+    @SerialName("source_status")
+    val sourceStatus: String? = null,
     /** 学习文本（逐字校对的教材原文，导入到 KnowledgePointEntity.studyText） */
     @SerialName("study_text")
     val studyText: String? = null,
@@ -971,6 +991,9 @@ internal fun KnowledgePointSeed.contentSourceCode(): String =
         ContentSource.TEXTBOOK_NATIVE
     }
 
+internal fun KnowledgePointSeed.resolvedContentStatus(): String =
+    SeedProvenanceMapper.contentStatus(contentStatus, status, reviewStatus)
+
 /** 将 seed 教材列表映射为已有 data_sources 表的稳定记录。 */
 internal fun buildSeedDataSourceEntities(
     seeds: List<KnowledgePointSeed>,
@@ -989,9 +1012,31 @@ internal fun buildSeedDataSourceEntities(
                 contentSource = seed.contentSourceCode(),
                 ocrStatus = "VERIFIED",
                 createdAt = createdAt,
+                sourceStatus = SeedProvenanceMapper.sourceStatus(seed.sourceStatus, sourceFile),
+                sourceTitle = sourceFile,
             )
         }
     }
+
+internal fun buildWritingMaterialDataSourceEntities(
+    seeds: List<WritingMaterialSeed>,
+    createdAt: Long,
+): List<DataSourceEntity> = seeds.mapNotNull { seed ->
+    val sourceTitle = seed.resolvedSourceTitle() ?: return@mapNotNull null
+    DataSourceEntity(
+        id = "seed-wm-source:${seed.id}:0",
+        knowledgePointId = null,
+        examQuestionId = null,
+        sourceFile = sourceTitle,
+        sourcePage = null,
+        contentSource = ContentSource.TEXTBOOK_NATIVE,
+        ocrStatus = "VERIFIED",
+        createdAt = createdAt,
+        writingMaterialId = seed.id,
+        sourceStatus = SeedProvenanceMapper.sourceStatus(seed.sourceStatus, sourceTitle),
+        sourceTitle = sourceTitle,
+    )
+}
 
 /** 仅返回数据库中尚无记忆记录的知识点，防止重复 seed 导入覆盖用户进度。 */
 internal fun List<KnowledgePointEntity>.missingMemoRecords(
@@ -1160,7 +1205,17 @@ data class ExamQuestionSeed(
      */
     @SerialName("related_point_ids")
     val relatedPointIds: List<String>? = null,
+    @SerialName("content_status")
+    val contentStatus: String? = null,
+    val status: String? = null,
+    @SerialName("review_status")
+    val reviewStatus: String? = null,
+    @SerialName("source_status")
+    val sourceStatus: String? = null,
 )
+
+internal fun ExamQuestionSeed.resolvedContentStatus(): String =
+    SeedProvenanceMapper.contentStatus(contentStatus, status, reviewStatus)
 
 /** 写作素材种子数据（对应 WritingMaterialEntity） */
 @kotlinx.serialization.Serializable
@@ -1172,4 +1227,18 @@ data class WritingMaterialSeed(
     val content: String,
     val source: String? = null,
     val tags: String? = null,
+    @SerialName("content_status")
+    val contentStatus: String? = null,
+    val status: String? = null,
+    @SerialName("review_status")
+    val reviewStatus: String? = null,
+    @SerialName("source_status")
+    val sourceStatus: String? = null,
 )
+
+internal fun WritingMaterialSeed.resolvedContentStatus(): String =
+    SeedProvenanceMapper.contentStatus(contentStatus, status, reviewStatus)
+
+internal fun WritingMaterialSeed.resolvedSourceTitle(): String? = source
+    ?.trim()
+    ?.takeIf { it.isNotEmpty() && it !in UNKNOWN_SOURCE_MARKERS }
