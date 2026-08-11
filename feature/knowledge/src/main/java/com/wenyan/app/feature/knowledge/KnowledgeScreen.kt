@@ -29,8 +29,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.runtime.CompositionLocalProvider
-import com.wenyan.app.core.designsystem.component.LocalLazyListState
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -237,18 +235,23 @@ fun KnowledgeScreen(
                                 "未找到匹配“${searchQuery.trim()}”的知识点"
                             else -> "暂无知识点，等待种子数据加载"
                         }
-                        EmptyState(
-                            icon = Icons.Filled.Inbox,
-                            title = title,
-                            // 搜索 + 分类叠加下 0 结果时,提供"查看全部分类"快捷操作
-                            action = {
-                                if (searchQuery.isNotBlank() && isFiltered) {
-                                    TextButton(onClick = { viewModel.selectCategory(KnowledgeCategory.ALL) }) {
-                                        Text(stringResource(R.string.text_06))
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            EmptyState(
+                                icon = Icons.Filled.Inbox,
+                                title = title,
+                                // 搜索 + 分类叠加下 0 结果时,提供"查看全部分类"快捷操作
+                                action = {
+                                    if (searchQuery.isNotBlank() && isFiltered) {
+                                        TextButton(onClick = { viewModel.selectCategory(KnowledgeCategory.ALL) }) {
+                                            Text(stringResource(R.string.text_06))
+                                        }
                                     }
-                                }
-                            },
-                        )
+                                },
+                            )
+                        }
                     }
                     else -> {
                         KnowledgeList(
@@ -723,10 +726,15 @@ private fun FrameworkChapterList(
         }
         if (children.isEmpty() && points.isEmpty()) {
             item(key = "chapter_empty") {
-                EmptyState(
-                    icon = Icons.Default.AccountTree,
-                    title = stringResource(R.string.kp_framework_empty),
-                )
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    EmptyState(
+                        icon = Icons.Default.AccountTree,
+                        title = stringResource(R.string.kp_framework_empty),
+                    )
+                }
             }
         }
     }
@@ -956,8 +964,7 @@ private fun KnowledgeList(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter,
     ) {
-        CompositionLocalProvider(LocalLazyListState provides listState) {
-            LazyColumn(
+        LazyColumn(
                 state = listState,
                 modifier = Modifier.widthIn(max = MaxContentWidth.comfortable),
                 contentPadding = contentPadding,
@@ -971,7 +978,6 @@ private fun KnowledgeList(
                     )
                 }
             }
-        }
     }
 }
 

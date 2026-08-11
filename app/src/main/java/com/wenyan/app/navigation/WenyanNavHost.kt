@@ -255,6 +255,9 @@ fun WenyanNavHost(
             navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_MY)
         }
         settingsDestination(
+            onBack = {
+                navController.popBackStackOrNavigateTo(TopLevelDestination.ROUTE_MY)
+            },
             onNavigateToApiConfig = {
                 navController.navigate(ROUTE_API_CONFIG) {
                     launchSingleTop = true
@@ -598,16 +601,18 @@ private fun NavGraphBuilder.wrongAnswerDestination(onBack: () -> Unit) {
     }
 }
 
-// v0.6：Settings 从子路由提升为顶级 Tab，用 NavHost 默认 Tab fade（无 Push/Pop slide）
+// Settings 是“我的”下的子路由，返回后回到“我的”Hub。
 // v0.9.5：新增 onNavigateToAbout，进入"关于与教程"子路由
 // v0.9.11：新增 onNavigateToUpdateCheck，进入"检查更新"子路由
 private fun NavGraphBuilder.settingsDestination(
+    onBack: () -> Unit,
     onNavigateToApiConfig: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToUpdateCheck: () -> Unit,
 ) {
     composable(TopLevelDestination.ROUTE_SETTINGS) {
         SettingsScreen(
+            onBack = onBack,
             onNavigateToApiConfig = onNavigateToApiConfig,
             onNavigateToAbout = onNavigateToAbout,
             onNavigateToUpdateCheck = onNavigateToUpdateCheck,

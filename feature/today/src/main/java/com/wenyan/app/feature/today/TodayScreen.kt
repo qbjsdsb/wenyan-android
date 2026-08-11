@@ -1,11 +1,14 @@
 package com.wenyan.app.feature.today
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -16,19 +19,27 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ErrorState
+import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
+import com.wenyan.app.core.designsystem.component.MaxContentWidth
+import com.wenyan.app.core.designsystem.component.Spacing
+import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
 
 @Composable
@@ -40,34 +51,76 @@ fun TodayRoute(
     TodayScreen(state, onTaskClick, onRetry = viewModel::retry)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodayScreen(
     state: TodayUiState,
     onTaskClick: (TodayTaskUi) -> Unit,
     onRetry: () -> Unit = {},
 ) {
-    when {
-        state.isLoading -> WenyanLoadingIndicator(modifier = Modifier.fillMaxSize())
-        state.error != null -> ErrorState(Icons.Default.Warning, "加载失败", onRetry, message = state.error)
-        state.tasks.isEmpty() -> EmptyState(
-            icon = Icons.Default.EventNote,
-            title = "今天还没有学习任务",
-            description = state.infeasibleMessage ?: "计划生成后会显示在这里",
-            action = { Button(onClick = onRetry) { Text("重新加载今日计划") } },
-        )
-        else -> TodayContent(state, onTaskClick)
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+        state = rememberTopAppBarState(),
+    )
+    ExpressiveScaffold(
+        topBar = {
+            WenyanLargeTopAppBar(
+                title = "今日",
+                scrollBehavior = scrollBehavior,
+            )
+        },
+    ) { innerPadding ->
+        val contentModifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection)
+            .padding(innerPadding)
+        when {
+            state.isLoading -> {
+                Box(contentModifier, contentAlignment = Alignment.Center) {
+                    WenyanLoadingIndicator()
+                }
+            }
+            state.error != null -> {
+                Box(contentModifier, contentAlignment = Alignment.Center) {
+                    ErrorState(Icons.Default.Warning, "加载失败", onRetry, message = state.error)
+                }
+            }
+            state.tasks.isEmpty() -> {
+                Box(contentModifier, contentAlignment = Alignment.Center) {
+                    EmptyState(
+                        icon = Icons.Default.EventNote,
+                        title = "今天还没有学习任务",
+                        description = state.infeasibleMessage ?: "计划生成后会显示在这里",
+                        action = { Button(onClick = onRetry) { Text("重新加载今日计划") } },
+                    )
+                }
+            }
+            else -> TodayContent(state, onTaskClick, contentModifier)
+        }
     }
 }
 
 @Composable
-private fun TodayContent(state: TodayUiState, onTaskClick: (TodayTaskUi) -> Unit) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+private fun TodayContent(
+    state: TodayUiState,
+    onTaskClick: (TodayTaskUi) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier, contentAlignment = Alignment.TopCenter) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = MaxContentWidth.comfortable),
+            contentPadding = PaddingValues(
+                start = Spacing.lg,
+                top = Spacing.lg,
+                end = Spacing.lg,
+                bottom = Spacing.xxl,
+            ),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
         item {
-            Column(Modifier.padding(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("今日学习", style = MaterialTheme.typography.headlineMedium)
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Text("今日计划", style = MaterialTheme.typography.headlineMedium)
                 Text(
                     listOfNotNull(
                         state.countdownDays?.let { "距考试 $it 天" },
@@ -92,6 +145,7 @@ private fun TodayContent(state: TodayUiState, onTaskClick: (TodayTaskUi) -> Unit
                 items(grouped, key = { it.id }) { task -> TodayTaskCard(task, onTaskClick) }
             }
         }
+        }
     }
 }
 
@@ -103,11 +157,21 @@ private fun TodayTaskCard(task: TodayTaskUi, onTaskClick: (TodayTaskUi) -> Unit)
         colors = CardDefaults.cardColors(),
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(Spacing.lg),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (task.completed) Icon(Icons.Default.CheckCircle, contentDescription = "已完成")
+            Icon(
+                imageVector = if (task.completed) Icons.Default.CheckCircle else Icons.Default.EventNote,
+                contentDescription = if (task.completed) "已完成" else "未完成",
+                tint = if (task.completed) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
             Column(Modifier.weight(1f)) {
                 Text(task.title, style = MaterialTheme.typography.titleMedium)
                 Text("约 ${task.estimatedMinutes} 分钟", style = MaterialTheme.typography.bodyMedium)

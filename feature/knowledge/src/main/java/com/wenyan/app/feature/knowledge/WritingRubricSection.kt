@@ -4,18 +4,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.wenyan.app.core.data.writing.DimensionTrend
 import com.wenyan.app.core.data.writing.RubricAssessment
 import com.wenyan.app.core.data.writing.RubricDimension
 import com.wenyan.app.core.data.writing.RubricLevel
 import com.wenyan.app.core.data.writing.followUpTasks
+import com.wenyan.app.core.designsystem.component.Spacing
 
 @Composable
 fun WritingRubricSection(
@@ -25,7 +27,7 @@ fun WritingRubricSection(
     onNote: (RubricDimension, String) -> Unit,
     enabled: Boolean = true,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         Text("本地自评量规", style = MaterialTheme.typography.titleMedium)
         Text(
             "总分 ${assessment.total}/${assessment.maximum}，由七个维度直接相加，仅供自我复盘，不是官方评分。",
@@ -36,7 +38,10 @@ fun WritingRubricSection(
             val trend = trends.firstOrNull { it.dimension == dimension }?.direction ?: "首次记录"
             Column {
                 Text("${dimension.label} · $trend")
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
                     RubricLevel.entries.forEach { level ->
                         FilterChip(
                             selected = mark?.level == level,

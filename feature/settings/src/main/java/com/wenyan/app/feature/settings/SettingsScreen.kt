@@ -25,8 +25,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.CompositionLocalProvider
-import com.wenyan.app.core.designsystem.component.LocalLazyListState
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Palette
@@ -87,7 +85,7 @@ import com.wenyan.app.core.fsrs.StudyPhase
 /**
  * 设置页面。
  *
- * v0.6 起从子路由提升为顶级 Tab，不再需要 onBack 返回箭头。
+ * 作为“我的”下的子页面展示；从导航入口进入时提供返回箭头。
  * 包含：外观（主题模式/AMOLED）、动态色彩（开关/种子色/调色板风格）、AI 服务、关于。
  */
 
@@ -121,6 +119,7 @@ fun SettingsScreen(
     onNavigateToApiConfig: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToUpdateCheck: () -> Unit,
+    onBack: (() -> Unit)? = null,
     viewModel: ThemeViewModel = hiltViewModel(),
     cardSettingsViewModel: CardSettingsViewModel = hiltViewModel(),
 ) {
@@ -157,6 +156,7 @@ fun SettingsScreen(
         topBar = {
             WenyanLargeTopAppBar(
                 title = stringResource(R.string.settings_title),
+                onBack = onBack,
                 scrollBehavior = scrollBehavior,
             )
         },
@@ -172,8 +172,7 @@ fun SettingsScreen(
                 .padding(padding),
             contentAlignment = Alignment.TopCenter,
         ) {
-            CompositionLocalProvider(LocalLazyListState provides settingsListState) {
-                LazyColumn(
+            LazyColumn(
                     state = settingsListState,
                     modifier = Modifier.widthIn(max = MaxContentWidth.compact),
                     verticalArrangement = Arrangement.spacedBy(Spacing.xl),
@@ -403,7 +402,6 @@ fun SettingsScreen(
                 }
             }
             } // LazyColumn end
-            } // CompositionLocalProvider end
         } // Box end
     }
 }

@@ -167,6 +167,9 @@ private fun FieldRow(label: String, value: String) {
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
+            // 长内容（尤其是教材原文）必须在剩余宽度内换行；否则 Row 会把
+            // 文本测量成无限宽，横屏和大字体下直接裁切出卡片边界。
+            modifier = Modifier.weight(1f),
         )
     }
 }

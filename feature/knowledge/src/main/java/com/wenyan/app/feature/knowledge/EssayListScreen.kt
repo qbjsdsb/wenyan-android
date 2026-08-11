@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Inbox
@@ -47,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.designsystem.component.ChipVariant
-import com.wenyan.app.core.designsystem.component.LocalLazyListState
 import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ErrorState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
@@ -166,11 +164,16 @@ fun EssayListScreen(
                     isEmpty -> {
                         // v0.9.23：年份筛选已删除，hasFilter 只含科目 + 审题思路
                         val hasFilter = selectedSubjectId != null || onlyWithAngle
-                        EmptyState(
-                            icon = Icons.Default.Inbox,
-                            title = if (hasFilter) "当前筛选无匹配论述题" else "暂无论述题",
-                            description = if (hasFilter) "尝试调整筛选条件" else "等待种子数据加载",
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            EmptyState(
+                                icon = Icons.Default.Inbox,
+                                title = if (hasFilter) "当前筛选无匹配论述题" else "暂无论述题",
+                                description = if (hasFilter) "尝试调整筛选条件" else "等待种子数据加载",
+                            )
+                        }
                     }
                     else -> {
                         EssayList(
@@ -264,8 +267,7 @@ private fun EssayList(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter,
     ) {
-        CompositionLocalProvider(LocalLazyListState provides listState) {
-            LazyColumn(
+        LazyColumn(
                 state = listState,
                 modifier = Modifier.widthIn(max = MaxContentWidth.comfortable),
                 contentPadding = contentPadding,
@@ -279,7 +281,6 @@ private fun EssayList(
                     )
                 }
             }
-        }
     }
 }
 

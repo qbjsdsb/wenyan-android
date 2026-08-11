@@ -164,11 +164,16 @@ fun EssayDetailScreen(
                         }
                     }
                     isNotFound -> {
-                        EmptyState(
-                            icon = Icons.Default.Inbox,
-                            title = "论述题不存在",
-                            description = "该题目可能已被删除或 ID 错误",
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            EmptyState(
+                                icon = Icons.Default.Inbox,
+                                title = "论述题不存在",
+                                description = "该题目可能已被删除或 ID 错误",
+                            )
+                        }
                     }
                     else -> {
                         uiState.essay?.let { essay ->

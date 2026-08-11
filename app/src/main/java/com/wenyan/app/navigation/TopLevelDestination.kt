@@ -14,18 +14,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 /**
  * 顶级目的地定义。
  *
- * 对应底部导航栏的 5 个主入口：
- * - 知识点（knowledge）
- * - 论述题（essay）— v0.9.9：从子路由提升为顶级 Tab，替换原"真题"位置
- * - 卡片（cards）
- * - 错题本（wrong_answer）— v0.9.0：从 quiz 子路由提升为顶级 Tab，原"图谱"位置
- * - 设置（settings）
+ * 当前底部导航栏的 4 个主入口：今日、知识点、训练、我的。
+ * Essay、Cards、WrongAnswer、Settings 仍保留为稳定路由/子页面，
+ * 由训练或我的 Hub 进入，不直接占用底部导航栏槽位。
  *
  * 变更历史：
  * - v0.6：AiAssistant 从顶级 Tab 降为子路由，由 4 个主屏 TopBar SmartToy 图标进入
- * - v0.9.0：移除 Graph 顶级 Tab（feature:graph 模块整体删除，知识点关联改走树结构），
- *           WrongAnswer 从 quiz 子路由提升为顶级 Tab，占据原 Graph 位置
- * - v0.9.9：移除 Quiz 顶级 Tab（真题 → 论述题迁移），新增 Essay 顶级 Tab
+ * - v0.9.0：移除 Graph 顶级 Tab（feature:graph 模块整体删除，知识点关联改走树结构）。
+ * - v0.9.9：论述题与错题迁移到训练/我的 Hub，保留原路由以兼容已有导航与深链。
  *
  * 使用 sealed class 确保导航目的地穷举可控。
  */

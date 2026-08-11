@@ -1,19 +1,26 @@
 package com.wenyan.app.feature.knowledge
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -21,6 +28,7 @@ import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.database.dao.WritingMaterialDao
 import com.wenyan.app.core.database.entity.WritingMaterialWithSources
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
+import com.wenyan.app.core.designsystem.component.MaxContentWidth
 import com.wenyan.app.core.designsystem.component.ProvenanceBadge
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.TonalCardLow
@@ -41,6 +49,7 @@ class WritingMaterialListViewModel @Inject constructor(
 }
 
 /** Read-only provenance entry; editing is deliberately deferred to the writing workbench. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WritingMaterialListScreen(
     onBack: () -> Unit,
@@ -48,20 +57,33 @@ fun WritingMaterialListScreen(
     viewModel: WritingMaterialListViewModel = hiltViewModel(),
 ) {
     val materials by viewModel.materials.collectAsStateWithLifecycle()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+        state = rememberTopAppBarState(),
+    )
     ExpressiveScaffold(
         topBar = {
             WenyanLargeTopAppBar(
                 title = "写作素材",
                 subtitle = "${materials.size} 条 · 只读来源核对",
                 onBack = onBack,
+                scrollBehavior = scrollBehavior,
             )
         },
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .padding(padding),
+            contentAlignment = Alignment.TopCenter,
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = MaxContentWidth.comfortable),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            ) {
             item {
                 Button(
                     onClick = { onStartWriting(null) },
@@ -109,6 +131,7 @@ fun WritingMaterialListScreen(
                         }
                     }
                 }
+            }
             }
         }
     }

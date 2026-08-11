@@ -7270,3 +7270,10 @@ while (retryCount <= maxRetries) {
 - 修复真题训练的首击防连击、未揭示答案仍可推进、切题丢失草稿、错因无法选择和错题本丢失用户作答；补充状态/恢复回归测试。
 - 修复 Today 指定卡片详情无可见返回入口、训练入口绕路，以及异常恢复进入每日卡片全屏时的崩溃风险。
 - `git diff --check` 通过。当前容器无法完成 Gradle 定向测试：Gradle 8.14.4 可手动恢复，但构建在 `build-logic` 的 `org.gradle.kotlin.kotlin-dsl:5.2.0` 依赖解析处停止，且容器没有 Android SDK；未执行 CI、真机或合并发布。
+
+# 2026-08-11 — 全局界面规范审计 / UI-AUDIT
+
+- 统一 Today、Training Hub、My Hub 与 Writing Editor 的 ExpressiveScaffold、顶栏、系统栏 inset、横屏最大内容宽度和大字体布局；修正所有主要加载/错误/空态/不存在态的居中呈现。
+- 修复设置页从“我的”进入后没有返回箭头；清理失效的 LocalLazyListState 注入，改用自适应导航容器的 NestedScrollConnection 实现底栏滚动显隐，并在入口切换时复位可见状态；移除平板外层 Scaffold 的重复 inset。
+- 修复写作编辑器、量规、API 配置表单、素材卡片和卡片字段长文本在短屏/大字号下的溢出风险；未修改 seed、Room schema、migration、稳定 ID 或用户数据。
+- `git diff --check` 通过；本地 Gradle 仍受 wrapper/依赖网络限制，构建与回归测试留待 Cloud CI 验证。

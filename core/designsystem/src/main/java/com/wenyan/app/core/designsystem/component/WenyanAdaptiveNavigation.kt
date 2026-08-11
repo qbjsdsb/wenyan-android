@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
@@ -22,8 +23,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
@@ -101,44 +105,30 @@ fun WenyanAdaptiveNavigation(
                     // 导航栏自身通过 windowInsets 吃手势条（总高 = 80dp + 手势条）。
                     val bottomPadding = 80.dp
 
-                    // KSU 风格滚动感知显隐：监听 LocalLazyListState 的滚动方向
-                    val scrollState = LocalLazyListState.current
                     var barVisible by remember { mutableStateOf(true) }
-
-                    if (scrollState != null) {
-                        // 记录上一次滚动位置，用于检测滚动方向
-                        var previousIndex by remember { mutableStateOf(0) }
-                        var previousOffset by remember { mutableStateOf(0) }
-
-                        LaunchedEffect(scrollState) {
-                            // v0.9.25 修复：Tab 切换时 scrollState 变化（LocalLazyListState
-                            // 提供新 Tab 的列表），重置导航栏可见与滚动方向基线。
-                            // 原实现 previousIndex/previousOffset/barVisible 跨 Tab 保留：
-                            // A Tab 下滑隐藏导航栏后切到 B Tab，B 列表在顶部但导航栏仍隐藏；
-                            // 且首帧滚动方向会用 A 的旧位置误判。
-                            previousIndex = 0
-                            previousOffset = 0
-                            barVisible = true
-                            snapshotFlow {
-                                scrollState.firstVisibleItemIndex to
-                                    scrollState.firstVisibleItemScrollOffset
-                            }.collect { (index, offset) ->
-                                val direction = detectScrollDirection(
-                                    index = index,
-                                    offset = offset,
-                                    previousIndex = previousIndex,
-                                    previousOffset = previousOffset,
-                                )
-                                when (direction) {
-                                    ScrollDirection.DOWN -> barVisible = false
-                                    ScrollDirection.UP -> barVisible = true
-                                    ScrollDirection.IDLE -> { /* no change */ }
+                    // KSU 风格滚动感知显隐：在导航容器上监听嵌套滚动。
+                    // 旧实现从页面私有的 LazyListState 读取滚动状态，但状态提供在
+                    // NavHost 子树内部，父容器永远读不到，导致显隐功能实际失效。
+                    // NestedScrollConnection 能统一覆盖 LazyColumn、verticalScroll
+                    // 以及不同页面自己的滚动容器。
+                    val scrollConnection = remember {
+                        object : NestedScrollConnection {
+                            override fun onPostScroll(
+                                consumed: Offset,
+                                available: Offset,
+                                source: NestedScrollSource,
+                            ): Offset {
+                                when {
+                                    consumed.y < -10f -> barVisible = false
+                                    consumed.y > 10f -> barVisible = true
                                 }
-
-                                previousIndex = index
-                                previousOffset = offset
+                                return Offset.Zero
                             }
                         }
+                    }
+                    LaunchedEffect(currentRoute, showNavigation) {
+                        // 切换顶级入口或从子路由返回时，导航栏必须从可见状态开始。
+                        barVisible = true
                     }
 
                     // 底部容器的总隐藏距离 = 导航栏总高（内容 80dp + 手势条区域）
@@ -159,6 +149,7 @@ fun WenyanAdaptiveNavigation(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .nestedScroll(scrollConnection)
                             .padding(bottom = bottomPadding),
                     ) {
                         content(PaddingValues(0.dp))
@@ -225,7 +216,8 @@ fun WenyanAdaptiveNavigation(
 /**
  * 侧边栏 + 内容区的 Row 布局（Medium/Expanded 共用）。
  *
- * WideNavigationRail 在左，ExpressiveScaffold 在右（weight=1f 填充剩余空间）。
+ * WideNavigationRail 在左，内容区在右（weight=1f 填充剩余空间）。
+ * 每个页面自己负责 ExpressiveScaffold 与系统栏 inset，避免平板端外层和页面重复消费 padding。
  */
 @Composable
 private fun AdaptiveRailScaffold(
@@ -246,8 +238,12 @@ private fun AdaptiveRailScaffold(
                 onNavigate = onNavigate,
             )
         }
-        ExpressiveScaffold(modifier = Modifier.weight(1f)) { padding ->
-            content(padding)
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+        ) {
+            content(PaddingValues(0.dp))
         }
     }
 }
