@@ -29,7 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,7 +42,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wenyan.app.core.designsystem.component.EmptyState
 import com.wenyan.app.core.designsystem.component.ErrorState
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
-import com.wenyan.app.core.designsystem.component.LocalLazyListState
 import com.wenyan.app.core.designsystem.component.MaxContentWidth
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
@@ -158,16 +156,21 @@ fun QuizPracticeListScreen(
                     isEmpty -> {
                         val hasFilter = selectedType != null || selectedSubjectId != null || selectedYear != null ||
                             selectedPaperCode != null
-                        EmptyState(
-                            icon = Icons.Default.Inbox,
-                            title = stringResource(
-                                when {
-                                    hasFilter -> R.string.kp_quiz_empty_filter
-                                    else -> R.string.kp_quiz_empty_all
-                                },
-                            ),
-                            description = stringResource(R.string.kp_quiz_empty_desc),
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            EmptyState(
+                                icon = Icons.Default.Inbox,
+                                title = stringResource(
+                                    when {
+                                        hasFilter -> R.string.kp_quiz_empty_filter
+                                        else -> R.string.kp_quiz_empty_all
+                                    },
+                                ),
+                                description = stringResource(R.string.kp_quiz_empty_desc),
+                            )
+                        }
                     }
                     else -> {
                         QuizPracticeList(
@@ -342,8 +345,7 @@ private fun QuizPracticeList(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter,
     ) {
-        CompositionLocalProvider(LocalLazyListState provides listState) {
-            LazyColumn(
+        LazyColumn(
                 state = listState,
                 modifier = Modifier.widthIn(max = MaxContentWidth.comfortable),
                 contentPadding = contentPadding,
@@ -357,7 +359,6 @@ private fun QuizPracticeList(
                     )
                 }
             }
-        }
     }
 }
 

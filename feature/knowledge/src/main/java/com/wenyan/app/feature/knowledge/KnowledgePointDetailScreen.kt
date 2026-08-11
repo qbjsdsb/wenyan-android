@@ -162,11 +162,16 @@ fun KnowledgePointDetailScreen(
                     }
                     isNotFound -> {
                         // v0.8.3 优化：用 EmptyState 组件替代裸 Text，与全 App 一致
-                        EmptyState(
-                            icon = Icons.Default.Inbox,
-                            title = stringResource(R.string.kp_not_found),
-                            description = "该知识点可能已被删除或 ID 错误",
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            EmptyState(
+                                icon = Icons.Default.Inbox,
+                                title = stringResource(R.string.kp_not_found),
+                                description = "该知识点可能已被删除或 ID 错误",
+                            )
+                        }
                     }
                     else -> {
                         uiState.point?.let { point ->

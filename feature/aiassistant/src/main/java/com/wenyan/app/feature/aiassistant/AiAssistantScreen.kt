@@ -69,6 +69,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.wenyan.app.core.ai.recall.QuestionType
 import com.wenyan.app.core.ai.recall.RecallRating
 import com.wenyan.app.core.ai.recall.RecallResult
@@ -530,7 +532,9 @@ private fun LearningToolDialog(
             // v0.8.3 修复：原 Column 无 verticalArrangement，说明文字/输入框/按钮紧贴一起
             // 视觉拥挤且误触率高。加 spacedBy(Spacing.sm) 保证 8dp 间距。
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 when (mode) {

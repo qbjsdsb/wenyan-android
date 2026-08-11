@@ -1,13 +1,15 @@
 package com.wenyan.app.feature.knowledge
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -16,6 +18,10 @@ import com.wenyan.app.core.data.writing.*
 import com.wenyan.app.core.database.entity.ContentReviewStatus
 import com.wenyan.app.core.database.entity.WritingSessionEntity
 import com.wenyan.app.core.database.entity.WritingSessionState
+import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
+import com.wenyan.app.core.designsystem.component.MaxContentWidth
+import com.wenyan.app.core.designsystem.component.Spacing
+import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 
 @Composable
 fun WritingEditorRoute(onBack: () -> Unit, viewModel: WritingEditorViewModel = hiltViewModel()) {
@@ -65,18 +71,33 @@ fun WritingEditorScreen(
     onEvidence: (WritingEvidenceItem) -> Unit,
 ) {
     var confirmDiscard by remember { mutableStateOf(false) }
-    Scaffold(
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+        state = rememberTopAppBarState(),
+    )
+    ExpressiveScaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("离线写作") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
+            WenyanLargeTopAppBar(
+                title = "离线写作",
+                onBack = onBack,
+                scrollBehavior = scrollBehavior,
             )
         },
     ) { padding ->
-        Column(
-            Modifier.padding(padding).padding(16.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .padding(padding),
+            contentAlignment = Alignment.TopCenter,
         ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = MaxContentWidth.comfortable)
+                    .verticalScroll(rememberScrollState())
+                    .padding(Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            ) {
             val session = state.session
             if (session == null) {
                 if (state.saveError == null) CircularProgressIndicator() else ErrorAndRetry(state.saveError, onRetry)
@@ -89,8 +110,11 @@ fun WritingEditorScreen(
                 Text(session.promptSnapshot, style = MaterialTheme.typography.titleMedium)
                 Text("已用时 ${formatElapsed(state.elapsedMs)}", style = MaterialTheme.typography.labelLarge)
                 ModeSelector(session.mode, onMode, enabled = editable)
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    ) {
                         when (session.state) {
                             WritingSessionState.RUNNING.name -> Button(onClick = onPause) { Text("暂停") }
                             WritingSessionState.DRAFT.name,
@@ -137,6 +161,7 @@ fun WritingEditorScreen(
                     enabled = editable,
                 )
             }
+            }
         }
     }
     if (confirmDiscard) {
@@ -152,7 +177,10 @@ fun WritingEditorScreen(
 
 @Composable
 private fun ModeSelector(selected: String, onMode: (WritingMode) -> Unit, enabled: Boolean) {
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
         WritingMode.entries.forEach { mode ->
             FilterChip(
                 selected = selected == mode.name,
@@ -175,23 +203,30 @@ private fun EvidenceSelector(
     onEvidence: (WritingEvidenceItem) -> Unit,
     enabled: Boolean,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text("证据卡", style = MaterialTheme.typography.titleSmall)
         if (items.isEmpty()) Text("暂无可核对素材")
-        items.forEach { item ->
-            FilterChip(
-                selected = item.id in selected,
-                enabled = enabled && item.isCitable,
-                onClick = { onEvidence(item) },
-                label = { Text("${item.title ?: item.preview.take(24)} · ${if (item.isCitable) "已审校可引用" else "待核线索"}") },
-            )
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            items.forEach { item ->
+                FilterChip(
+                    selected = item.id in selected,
+                    enabled = enabled && item.isCitable,
+                    onClick = { onEvidence(item) },
+                    label = { Text("${item.title ?: item.preview.take(24)} · ${if (item.isCitable) "已审校可引用" else "待核线索"}") },
+                )
+            }
         }
     }
 }
 
 @Composable private fun ErrorAndRetry(message: String, onRetry: () -> Unit) {
-    Text("保存失败：$message", color = MaterialTheme.colorScheme.error)
-    Button(onClick = onRetry) { Text("重试") }
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        Text("保存失败：$message", color = MaterialTheme.colorScheme.error)
+        Button(onClick = onRetry) { Text("重试") }
+    }
 }
 @Composable
 private fun EditorField(

@@ -21,8 +21,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.CompositionLocalProvider
-import com.wenyan.app.core.designsystem.component.LocalLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
@@ -194,19 +192,24 @@ fun WrongAnswerScreen(
                         }
                     }
                     isEmpty -> {
-                        EmptyState(
-                            // v0.8.4 修复：Inbox 语义弱，改用 ErrorOutline 更贴切"错题"语义
-                            // v0.9.4：DUE 模式用 Schedule 图标，传达"按计划复习"语义
-                            icon = when (filter) {
-                                WrongAnswerFilter.DUE -> Icons.Default.Schedule
-                                else -> Icons.Default.ErrorOutline
-                            },
-                            title = when (filter) {
-                                WrongAnswerFilter.UNRESOLVED -> "暂无未解决错题"
-                                WrongAnswerFilter.ALL -> "错题本为空"
-                                WrongAnswerFilter.DUE -> "暂无待复习错题"
-                            },
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            EmptyState(
+                                // v0.8.4 修复：Inbox 语义弱，改用 ErrorOutline 更贴切"错题"语义
+                                // v0.9.4：DUE 模式用 Schedule 图标，传达"按计划复习"语义
+                                icon = when (filter) {
+                                    WrongAnswerFilter.DUE -> Icons.Default.Schedule
+                                    else -> Icons.Default.ErrorOutline
+                                },
+                                title = when (filter) {
+                                    WrongAnswerFilter.UNRESOLVED -> "暂无未解决错题"
+                                    WrongAnswerFilter.ALL -> "错题本为空"
+                                    WrongAnswerFilter.DUE -> "暂无待复习错题"
+                                },
+                            )
+                        }
                     }
                     else -> {
                         WrongAnswerList(
@@ -298,8 +301,7 @@ private fun WrongAnswerList(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter,
     ) {
-        CompositionLocalProvider(LocalLazyListState provides listState) {
-            LazyColumn(
+        LazyColumn(
                 state = listState,
                 modifier = Modifier.widthIn(max = MaxContentWidth.comfortable),
                 contentPadding = PaddingValues(
@@ -319,7 +321,6 @@ private fun WrongAnswerList(
                     )
                 }
             }
-        }
     }
 
     // v0.8.3 新增：删除确认 Dialog（与 ApiConfigScreen/AiAssistantScreen 行为一致）
