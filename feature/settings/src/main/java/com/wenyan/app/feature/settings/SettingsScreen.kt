@@ -543,14 +543,12 @@ private fun AdaptiveChoiceRow(
         if (useVerticalLayout) {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 options.forEachIndexed { index, label ->
-                    SegmentedButton(
+                    FilterChip(
                         selected = index == selectedIndex,
                         onClick = { onSelected(index) },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 1),
-                    ) {
-                        Text(label)
-                    }
+                        label = { Text(label) },
+                    )
                 }
             }
         } else {

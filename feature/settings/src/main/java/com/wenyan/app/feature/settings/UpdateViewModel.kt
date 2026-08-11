@@ -304,7 +304,7 @@ class UpdateViewModel @Inject constructor(
                 digest.update(buffer, 0, bytesRead)
             }
         }
-        return digest.joinToString("") { "%02x".format(it) }
+        return digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
     }
 
     /** APK 是 ZIP 容器；打开中央目录可拦截 HTML/截断响应等非 APK 文件。 */
