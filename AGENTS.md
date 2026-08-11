@@ -10,7 +10,7 @@
 
 **仓库**：`qbjsdsb/wenyan-android`（public）
 
-> **当前事实来源（2026-08-11）**：PR #20 的代码基线为 `3f0f8640`；当前 `main` 已前进到 `0fbcac2b`，仅补齐 v0.9.45/versionCode 70 与 CHANGELOG 元数据。新任务以 [docs/00-STATUS.md](docs/00-STATUS.md)、[当前系统基线](docs/architecture/current-system.md)、仓库实际代码和 `.github/workflows/` 为准。当前代码为 v0.9.45 / Room 15 / 4 个顶层入口 / 25 张表。本文件后半部保留的大段旧版本、D 盘、CodeBuddy、OCR 和图谱记录仅用于历史恢复，不能覆盖这些当前来源。
+> **当前事实来源（2026-08-12）**：PR #21 已合并，当前 `main` 为 `3010107c`；本轮 follow-up 分支从该基线建立，用于修复 PR #21 自动审查指出的两个 P2 边界问题并补强 APK 文件识别。新任务以 [docs/00-STATUS.md](docs/00-STATUS.md)、[当前系统基线](docs/architecture/current-system.md)、仓库实际代码和 `.github/workflows/` 为准。当前代码为 v0.9.45 / Room 15 / 4 个顶层入口 / 25 张表。本文件后半部保留的大段旧版本、D 盘、CodeBuddy、OCR 和图谱记录仅用于历史恢复，不能覆盖这些当前来源。
 
 > **Codex Cloud 连续模式**：只有用户明确要求执行 [CLOUD-MVP-EXECUTION.md](docs/plans/CLOUD-MVP-EXECUTION.md) 时，才允许按其中 C00–C24 在一个独立分支连续推进。该模式只免除普通检查点重复等待用户授权；稳定 ID、用户数据、显式 migration、真实测试、来源证据以及禁止 Ready/合并/tag/发布等规则全部继续生效。续跑前先读 [CLOUD-MVP-PROGRESS.md](docs/plans/CLOUD-MVP-PROGRESS.md)。
 

@@ -31,7 +31,13 @@ data class TodayUiState(
     val infeasibleMessage: String? = null,
     val error: String? = null,
 ) {
-    val nextTask: TodayTaskUi? get() = tasks.firstOrNull { !it.completed }
+    /**
+     * Continue must only select a task that has a supported destination.
+     * Unknown persisted task types stay visible for diagnosis, but must not
+     * hide a later task that the user can actually open.
+     */
+    val nextTask: TodayTaskUi?
+        get() = tasks.firstOrNull { !it.completed && it.destination != TodayDestination.UNSUPPORTED }
 }
 
 internal object TodayPlanMapper {

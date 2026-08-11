@@ -7293,3 +7293,14 @@ while (retryCount <= maxRetries) {
 - 修复 AI 会话代次与取消竞态、恢复历史覆盖、流式幽灵回复、上下文预算、API 地址安全校验、原始异常信息泄露、数据库异常后永久 Loading、更新包 ZIP/长度/SHA-256 完整性和状态动画快照问题。
 - 修复主要列表/筛选/评分/自评/设置选择器在窄屏与大字号下的布局约束，补齐系统导航栏图标对比度、返回路径和测试覆盖；旧路由保持兼容。
 - 本地验证：Python 单测 25/25；seed audit 两次均 `0 error / 0 new debt` 且报告字节一致；`git diff --check` 通过。Android Gradle 编译/单测因当前容器无法取得 Gradle/Android 依赖，留由 Draft PR CI 作为合并门禁。
+
+# 2026-08-12 — PR #21 合并后 follow-up 审计
+
+- 基于 `main@3010107c40bff783bc237f3e8237327795aa384d` 建立 `agent/followup-audit-20260811`；不修改 seed、Room schema/migration、稳定 ID 或用户数据。
+- 修复今日任务未知持久化类型遮蔽后续支持任务的问题：`nextTask` 只从可执行目的地选择；补充未知任务位于首项的回归测试。
+- 修复聊天同毫秒消息按随机 UUID 排序的问题：DAO 使用 SQLite `rowid` 作为插入顺序 tie-breaker；补充真实 Room 同毫秒排序、最近消息和截断回归测试。
+- 收紧更新文件校验：ZIP 必须包含 `AndroidManifest.xml` 才接受为 APK；补充普通 ZIP、有效 APK 形态 ZIP 和坏文件测试。
+- Python 单测 `25/25`；seed audit 两次均 `0 error / 0 new debt`，报告字节一致；seed SHA-256 为 `d6385911bf31fbecaf168d5e882ecb0fc32be32c333fe14a28fc19db2726446`，与最新 main 一致。
+- 本地 Gradle 因 wrapper 下载 `gradle-8.14.4` 时网络不可达，未进入 Android 编译；远端 GitHub Actions run 460（PR #21）已全绿，本轮 follow-up 仍需 Draft PR CI 作为 Android 门禁。
+- `tools.zip` 未读取、解压或作为产品输入；当前仅保留其附件约束记录。
+- 当前状态：完成代码与本地静态/数据门禁，待最终自审后进入发布流程；最终提交 SHA 待本轮提交生成。

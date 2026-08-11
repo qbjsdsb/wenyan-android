@@ -1,30 +1,30 @@
 # 当前状态快照
 
 > **AI 新会话第一份要读的文件。10 秒了解项目当前状态。**
-> 最后更新：2026-08-11（当前 main 为 `0fbcac2b`；PR #20 已合并；本轮审计代码基线为 `3f0f8640`）
+> 最后更新：2026-08-12（当前 main 为 `3010107c`；PR #21 已合并；follow-up 审计分支为 `agent/followup-audit-20260811`）
 
 ## 🚦 当前工程断点
 
 | 项目 | 当前事实 |
 | --- | --- |
-| 当前 main 基线 | `0fbcac2bd6c5173241ce1244b0d4f1f291c339d5`（PR #20 后补齐 v0.9.45 元数据） |
-| 本轮审计代码基线 | `3f0f8640b90b23991098981e3cb948715c08bcb3`（PR #20 已合并） |
-| 当前工作项 | 全仓第二轮审计与加固；本地分支待通过远端 CI 后再合并 |
+| 当前 main 基线 | `3010107c40bff783bc237f3e8237327795aa384d`（PR #21 已合并） |
+| 本轮审计代码基线 | `3010107c40bff783bc237f3e8237327795aa384d`（从最新 main 建立 follow-up 分支） |
+| 当前工作项 | 修复 PR #21 自动审查的两个 P2，并补强 APK 文件识别；本地分支待远端 CI 后再提交 Draft PR |
 | App 代码版本 | v0.9.45 / versionCode 70 |
 | Room | schema v15；25 entities；25 DAOs |
 | 顶层入口 | 4 个：今日、知识点、训练、我的 |
 | seed 快照 | v2.26.0；1101 知识点；564 真题（ESSAY 142）；909 写作材料 |
 | JVM 测试静态计数 | 779 个 `@Test` 注解；不是实际执行结果 |
-| 本地构建状态 | 未进入 Gradle 编译：临时 Gradle 用户目录下载 wrapper 时网络不可达 |
+| 本地构建状态 | Python 25/25、双 seed audit/cmp 已通过；Gradle wrapper 下载因当前容器网络不可达，未进入 Android 编译 |
 | 远端最终门禁 | GitHub Actions `testDebugUnitTest`、`assembleDebug`；真实设备/模拟器冒烟仍需补做 |
 
-本轮最终分支以当前 main `0fbcac2b` 为父基线；PR #20 的代码审计基线为 `3f0f8640`，其后仅有 v0.9.45/versionCode 70 与 CHANGELOG 元数据提交。保留稳定内容 ID、用户记录、既有 migration 和 seed 数据；`tools.zip` 仍只是历史附件，未作为产品输入读取、解压或提交。Cloud MVP 合同仍是显式授权后才启用的历史协作流程，本轮不执行该合同。
+本轮 follow-up 分支以当前 main `3010107c` 为父基线；PR #21 的 GitHub Actions run 460 已全绿。保留稳定内容 ID、用户记录、既有 migration 和 seed 数据；`tools.zip` 仍只是历史附件，未作为产品输入读取、解压或提交。Cloud MVP 合同仍是显式授权后才启用的历史协作流程，本轮不执行该合同。
 
 Cloud 连续模式只有在用户明确要求执行 docs/plans/CLOUD-MVP-EXECUTION.md 时才启用。它把普通检查点改为自动过关，但仍禁止直接写 main、合并、打 tag、发布、破坏性迁移、猜写来源和读取 tools.zip。
 
 ## ✅ 当前状态
 
-**本轮代码快照**：围绕边界输入、Room 写入副作用、确定性排序、今日任务未知类型、更新安装校验、AI 重试溢出和 CI 权限完成第二轮加固；seed 正式内容与稳定 ID 未改动。Android 编译与 instrumentation 尚待远端 CI/可用设备给出执行证据。
+**本轮代码快照**：修复今日任务在未知类型后无法继续首个支持任务、聊天同毫秒消息按 UUID 错序导致截断错误两个 P2；补充基于 SQLite `rowid` 的插入顺序回归测试，并将更新包校验收紧为必须含 `AndroidManifest.xml` 的 APK ZIP。seed 正式内容、Room schema/migration、稳定 ID 与用户数据均未改动。Android 编译与 instrumentation 尚待远端 CI/可用设备给出执行证据。
 
 ### 历史发布记录
 
