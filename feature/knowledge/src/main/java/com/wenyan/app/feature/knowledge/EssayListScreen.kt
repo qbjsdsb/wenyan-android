@@ -85,6 +85,7 @@ import com.wenyan.app.core.designsystem.theme.WenyanTheme
 fun EssayListScreen(
     onBack: (() -> Unit)? = null,
     onNavigateToEssayDetail: (String) -> Unit = {},
+    onNavigateToWritingMaterials: () -> Unit = {},
     viewModel: EssayListViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -108,6 +109,11 @@ fun EssayListScreen(
                     null
                 },
                 onBack = onBack,
+                actions = {
+                    androidx.compose.material3.TextButton(onClick = onNavigateToWritingMaterials) {
+                        Text("写作素材")
+                    }
+                },
                 scrollBehavior = scrollBehavior,
             )
         },

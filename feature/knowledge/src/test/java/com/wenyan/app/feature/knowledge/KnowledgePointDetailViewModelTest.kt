@@ -2,6 +2,8 @@ package com.wenyan.app.feature.knowledge
 
 import androidx.lifecycle.SavedStateHandle
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
+import com.wenyan.app.core.data.repository.KnowledgeProgressSource
+import kotlinx.coroutines.flow.flowOf
 import com.wenyan.app.core.database.entity.ExamQuestionEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
@@ -78,6 +80,9 @@ class KnowledgePointDetailViewModelTest {
         return KnowledgePointDetailViewModel(
             savedStateHandle = savedStateHandle,
             knowledgeRepository = buildKnowledgeRepository(knowledgePointDao, dataSourceDao, examQuestionDao),
+            knowledgeProgressRepository = object : KnowledgeProgressSource {
+                override fun observe(pointId: String) = flowOf(emptyList<com.wenyan.app.core.database.entity.LearningUnitWithRecord>())
+            },
             wrongAnswerRepository = wrongAnswerRepository,
         )
     }

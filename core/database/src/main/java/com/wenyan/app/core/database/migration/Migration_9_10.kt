@@ -23,16 +23,14 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * @see com.wenyan.app.core.database.entity.KnowledgePointEntity
  * @see com.wenyan.app.core.database.WenyanDatabase
  */
+internal val MIGRATION_9_10_STATEMENTS = listOf(
+    "CREATE INDEX IF NOT EXISTS index_exam_questions_question_type ON exam_questions(question_type)",
+    "CREATE INDEX IF NOT EXISTS index_exam_questions_answer_status ON exam_questions(answer_status)",
+    "CREATE INDEX IF NOT EXISTS index_knowledge_points_content_source ON knowledge_points(content_source)",
+)
+
 val MIGRATION_9_10: Migration = object : Migration(9, 10) {
     override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL(
-            "CREATE INDEX IF NOT EXISTS index_exam_questions_question_type ON exam_questions(question_type)",
-        )
-        database.execSQL(
-            "CREATE INDEX IF NOT EXISTS index_exam_questions_answer_status ON exam_questions(answer_status)",
-        )
-        database.execSQL(
-            "CREATE INDEX IF NOT EXISTS index_knowledge_points_content_source ON knowledge_points(content_source)",
-        )
+        MIGRATION_9_10_STATEMENTS.forEach(database::execSQL)
     }
 }

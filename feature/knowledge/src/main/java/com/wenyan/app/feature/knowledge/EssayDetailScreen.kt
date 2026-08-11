@@ -66,6 +66,9 @@ import com.wenyan.app.core.designsystem.component.GroupedCard
 import com.wenyan.app.core.designsystem.component.GroupedCardDivider
 import com.wenyan.app.core.designsystem.component.GroupedCardItem
 import com.wenyan.app.core.designsystem.component.MaxContentWidth
+import com.wenyan.app.core.designsystem.component.ProvenanceBadge
+import com.wenyan.app.core.designsystem.component.ProvenanceSourceUiModel
+import com.wenyan.app.core.designsystem.component.SourceSection
 import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.TonalCardLow
 import com.wenyan.app.core.designsystem.component.WenyanInfoChip
@@ -73,6 +76,7 @@ import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
 import com.wenyan.app.core.designsystem.component.WenyanRatingButton
 import com.wenyan.app.core.designsystem.component.ExpressiveScaffold
+import com.wenyan.app.core.database.entity.DataSourceEntity
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
 import com.wenyan.app.core.designsystem.theme.ColorMode
 import com.wenyan.app.core.designsystem.theme.ThemeConfig
@@ -190,15 +194,24 @@ fun EssayDetailScreen(
                                 ) {
                                     // 1. 题目信息区（v0.9.23：年份已删除）
                                     item(key = "header") {
-                                        EssayHeaderSection(
-                                            score = essay.score,
-                                            examPaperCode = essay.examPaperCode,
-                                        )
+                                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                                            EssayHeaderSection(
+                                                score = essay.score,
+                                                examPaperCode = essay.examPaperCode,
+                                            )
+                                            ProvenanceBadge(essay.contentStatus)
+                                        }
                                     }
 
                                     // 2. 题目正文
                                     item(key = "content") {
                                         EssayContentSection(content = essay.content)
+                                    }
+
+                                    if (uiState.sources.isNotEmpty()) {
+                                        item(key = "sources") {
+                                            SourceSection(uiState.sources.map(DataSourceEntity::toProvenanceSourceUiModel))
+                                        }
                                     }
 
                                     // 3. 审题思路区
@@ -1141,6 +1154,15 @@ private fun LabeledText(
 }
 
 // ── Previews ───────────────────────────────────────────────
+
+private fun DataSourceEntity.toProvenanceSourceUiModel() = ProvenanceSourceUiModel(
+    title = sourceTitle?.takeIf(String::isNotBlank) ?: sourceFile,
+    evidenceStatus = sourceStatus,
+    edition = sourceEdition,
+    pageStart = sourcePageStart ?: sourcePage,
+    pageEnd = sourcePageEnd ?: sourcePage,
+    reviewNote = reviewNote,
+)
 
 @Preview(name = "Essay - Light", showBackground = true)
 @Composable

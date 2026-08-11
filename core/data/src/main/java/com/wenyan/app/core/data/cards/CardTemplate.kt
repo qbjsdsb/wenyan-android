@@ -26,7 +26,17 @@ sealed class CardTemplate {
     abstract val back: String
     abstract val templateType: CardTemplateType
     abstract val pointId: String
+    open val learningUnitId: String = ""
 }
+
+@Immutable
+data class LearningUnitCard(
+    override val front: String,
+    override val back: String,
+    override val pointId: String,
+    override val learningUnitId: String,
+    override val templateType: CardTemplateType = CardTemplateType.TERM_EXPLANATION,
+) : CardTemplate()
 
 /**
  * 名词解释卡类别（Task 17.2）。

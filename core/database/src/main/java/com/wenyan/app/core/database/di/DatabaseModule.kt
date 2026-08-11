@@ -11,15 +11,21 @@ import com.wenyan.app.core.database.dao.ChapterDao
 import com.wenyan.app.core.database.dao.ChatConversationDao
 import com.wenyan.app.core.database.dao.ChatMessageDao
 import com.wenyan.app.core.database.dao.DataSourceDao
+import com.wenyan.app.core.database.dao.DailyPlanDao
+import com.wenyan.app.core.database.dao.DailyTaskDao
 import com.wenyan.app.core.database.dao.ExamCodeHistoryDao
 import com.wenyan.app.core.database.dao.ExamQuestionDao
 import com.wenyan.app.core.database.dao.KnowledgePointDao
+import com.wenyan.app.core.database.dao.LearningUnitDao
+import com.wenyan.app.core.database.dao.LearningUnitRecordDao
 import com.wenyan.app.core.database.dao.MemoRecordDao
+import com.wenyan.app.core.database.dao.PracticeAttemptDao
 import com.wenyan.app.core.database.dao.ReviewLogDao
 import com.wenyan.app.core.database.dao.StudyProgressDao
 import com.wenyan.app.core.database.dao.SubjectDao
 import com.wenyan.app.core.database.dao.TemplateFillDao
 import com.wenyan.app.core.database.dao.WritingMaterialDao
+import com.wenyan.app.core.database.dao.WritingSessionDao
 import com.wenyan.app.core.database.dao.WritingPatternDao
 import com.wenyan.app.core.database.dao.WrongAnswerDao
 import com.wenyan.app.core.database.migration.MIGRATION_1_2
@@ -31,6 +37,11 @@ import com.wenyan.app.core.database.migration.MIGRATION_6_7
 import com.wenyan.app.core.database.migration.MIGRATION_7_8
 import com.wenyan.app.core.database.migration.MIGRATION_8_9
 import com.wenyan.app.core.database.migration.MIGRATION_9_10
+import com.wenyan.app.core.database.migration.MIGRATION_10_11
+import com.wenyan.app.core.database.migration.MIGRATION_11_12
+import com.wenyan.app.core.database.migration.MIGRATION_12_13
+import com.wenyan.app.core.database.migration.MIGRATION_13_14
+import com.wenyan.app.core.database.migration.MIGRATION_14_15
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -68,6 +79,11 @@ object DatabaseModule {
      * - [MIGRATION_8_9]：v0.9.22 为存量 v8 用户补建 wrong_answers 两个复合索引
      *   （MIGRATION_7_8 遗漏的 [point_id, source] / [exam_question_id, source]）
      * - [MIGRATION_9_10]：v0.9.24 为 exam_questions/knowledge_points 补 3 个筛选索引
+     * - [MIGRATION_10_11]：内容审校状态与来源证据分离；历史内容保持未审校/未知
+     * - [MIGRATION_11_12]：学习单元与单元级 FSRS 表
+     * - [MIGRATION_12_13]：每日计划与有序任务表
+     * - [MIGRATION_13_14]：通用输出练习尝试与修复状态
+     * - [MIGRATION_14_15]：独立离线写作会话；不改写旧素材与用户草稿
      * - fallbackToDestructiveMigrationOnDowngrade：仅版本号降级时重建表（开发期降级测试用）。
      *   P0-D1 修正：原 fallbackToDestructiveMigration() 在升级时也会清空整个数据库，
      *   v0.2.0 已发布用户有真实 FSRS 复习记录，升级时被静默清空是不可接受的。
@@ -93,6 +109,11 @@ object DatabaseModule {
                 MIGRATION_7_8,
                 MIGRATION_8_9,
                 MIGRATION_9_10,
+                MIGRATION_10_11,
+                MIGRATION_11_12,
+                MIGRATION_12_13,
+                MIGRATION_13_14,
+                MIGRATION_14_15,
             )
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
@@ -111,6 +132,25 @@ object DatabaseModule {
     @Provides
     fun provideKnowledgePointDao(database: WenyanDatabase): KnowledgePointDao =
         database.knowledgePointDao()
+
+    @Provides
+    fun provideLearningUnitDao(database: WenyanDatabase): LearningUnitDao = database.learningUnitDao()
+
+    @Provides
+    fun provideLearningUnitRecordDao(database: WenyanDatabase): LearningUnitRecordDao =
+        database.learningUnitRecordDao()
+
+    @Provides
+    fun provideDailyPlanDao(database: WenyanDatabase): DailyPlanDao = database.dailyPlanDao()
+
+    @Provides
+    fun provideDailyTaskDao(database: WenyanDatabase): DailyTaskDao = database.dailyTaskDao()
+
+    @Provides
+    fun providePracticeAttemptDao(database: WenyanDatabase): PracticeAttemptDao = database.practiceAttemptDao()
+
+    @Provides
+    fun provideWritingSessionDao(database: WenyanDatabase): WritingSessionDao = database.writingSessionDao()
 
     @Provides
     fun provideExamQuestionDao(database: WenyanDatabase): ExamQuestionDao =

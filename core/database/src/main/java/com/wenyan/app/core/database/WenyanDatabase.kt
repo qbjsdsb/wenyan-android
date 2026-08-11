@@ -12,15 +12,20 @@ import com.wenyan.app.core.database.dao.ChapterDao
 import com.wenyan.app.core.database.dao.ChatConversationDao
 import com.wenyan.app.core.database.dao.ChatMessageDao
 import com.wenyan.app.core.database.dao.DataSourceDao
+import com.wenyan.app.core.database.dao.DailyPlanDao
+import com.wenyan.app.core.database.dao.DailyTaskDao
 import com.wenyan.app.core.database.dao.ExamCodeHistoryDao
 import com.wenyan.app.core.database.dao.ExamQuestionDao
 import com.wenyan.app.core.database.dao.KnowledgePointDao
+import com.wenyan.app.core.database.dao.LearningUnitDao
+import com.wenyan.app.core.database.dao.LearningUnitRecordDao
 import com.wenyan.app.core.database.dao.MemoRecordDao
 import com.wenyan.app.core.database.dao.ReviewLogDao
 import com.wenyan.app.core.database.dao.StudyProgressDao
 import com.wenyan.app.core.database.dao.SubjectDao
 import com.wenyan.app.core.database.dao.TemplateFillDao
 import com.wenyan.app.core.database.dao.WritingMaterialDao
+import com.wenyan.app.core.database.dao.WritingSessionDao
 import com.wenyan.app.core.database.dao.WritingPatternDao
 import com.wenyan.app.core.database.dao.WrongAnswerDao
 import com.wenyan.app.core.database.entity.AiGradingRecordEntity
@@ -31,15 +36,22 @@ import com.wenyan.app.core.database.entity.ChapterEntity
 import com.wenyan.app.core.database.entity.ChatConversationEntity
 import com.wenyan.app.core.database.entity.ChatMessageEntity
 import com.wenyan.app.core.database.entity.DataSourceEntity
+import com.wenyan.app.core.database.entity.DailyPlanEntity
+import com.wenyan.app.core.database.entity.DailyTaskEntity
+import com.wenyan.app.core.database.entity.PracticeAttemptEntity
+import com.wenyan.app.core.database.dao.PracticeAttemptDao
 import com.wenyan.app.core.database.entity.ExamCodeHistoryEntity
 import com.wenyan.app.core.database.entity.ExamQuestionEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import com.wenyan.app.core.database.entity.LearningUnitEntity
+import com.wenyan.app.core.database.entity.LearningUnitRecordEntity
 import com.wenyan.app.core.database.entity.MemoRecordEntity
 import com.wenyan.app.core.database.entity.ReviewLogEntity
 import com.wenyan.app.core.database.entity.StudyProgressEntity
 import com.wenyan.app.core.database.entity.SubjectEntity
 import com.wenyan.app.core.database.entity.TemplateFillEntity
 import com.wenyan.app.core.database.entity.WritingMaterialEntity
+import com.wenyan.app.core.database.entity.WritingSessionEntity
 import com.wenyan.app.core.database.entity.WritingPatternEntity
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
 
@@ -47,7 +59,7 @@ import com.wenyan.app.core.database.entity.WrongAnswerEntity
  * 文研App Room 数据库。
  *
  * - 数据库名：wenyan.db
- * - 版本：10（v0.9.24：为 exam_questions/knowledge_points 补 3 个筛选索引）
+ * - 版本：15（持久化独立离线写作会话）
  *   - v1→v2：memo_records 补 elapsed_days/scheduled_days/reps 字段
  *   - v2→v3：回填 reps = review_count（修复 v1→v2 未回填导致老卡片被误判为新卡）
  *   - v3→v4：新增 app_meta 表（通用 key-value，存储 last_known_timestamp_ms 等应用级元数据，
@@ -61,8 +73,14 @@ import com.wenyan.app.core.database.entity.WrongAnswerEntity
  *     修复 MIGRATION_7_8 遗漏导致存量 v8 用户缺索引的性能问题）
  *   - v9→v10：为 exam_questions 补 question_type/answer_status 索引、knowledge_points
  *     补 content_source 索引（筛选查询数据量增长后避免全表扫描）
+ *   - v10→v11：增加内容审校状态、来源证据元数据及写作素材标题/关联知识点；
+ *     所有历史内容默认 LEGACY_UNVERIFIED/UNKNOWN
+ *   - v11→v12：增加 learning_units / learning_unit_records，review_logs 可关联 unit
+ *   - v12→v13：增加 daily_plans / daily_tasks；迁移后新表为空，旧用户数据不变
+ *   - v13→v14：增加 practice_attempts；旧用户数据不变
+ *   - v14→v15：增加 writing_sessions；旧写作素材与用户数据不变
  *
- * 共 19 张表（v7 移除 graph_nodes + graph_edges；无 mentors 表，导师信息改为外链官网）：
+ * 共 24 张表（v7 移除 graph_nodes + graph_edges；无 mentors 表，导师信息改为外链官网）：
  * 1. subjects                科目
  * 2. chapters                章节
  * 3. knowledge_points        知识点（含 Spec 新增字段）
@@ -82,6 +100,10 @@ import com.wenyan.app.core.database.entity.WrongAnswerEntity
  * 17. chat_conversations     AI 对话元数据（NF-PP6 新增，替代 chat_history + ai_conversations）
  * 18. chat_messages          AI 对话消息内容（NF-PP6 新增，FK→chat_conversations CASCADE）
  * 19. wrong_answers          错题本（NF-PP5 新增，Cards AGAIN + Quiz 答错双来源）
+ * 20. learning_units         稳定学习单元
+ * 21. learning_unit_records  单元级 FSRS 状态
+ * 22. daily_plans            每日计划快照
+ * 23. daily_tasks            有序且可恢复的每日任务
  *
  * v5 移除的表：chat_history、ai_conversations（死代码表，0 Repository 引用，合并为 chat_conversations + chat_messages）
  * v7 移除的表：graph_nodes、graph_edges（v0.9.0 删 feature:graph UI 后 core 层图谱设施无消费者）
@@ -109,8 +131,14 @@ import com.wenyan.app.core.database.entity.WrongAnswerEntity
         ChatConversationEntity::class,
         ChatMessageEntity::class,
         WrongAnswerEntity::class,
+        LearningUnitEntity::class,
+        LearningUnitRecordEntity::class,
+        DailyPlanEntity::class,
+        DailyTaskEntity::class,
+        PracticeAttemptEntity::class,
+        WritingSessionEntity::class,
     ],
-    version = 10,
+    version = 15,
     exportSchema = true,
 )
 @TypeConverters(WenyanTypeConverters::class)
@@ -135,6 +163,12 @@ abstract class WenyanDatabase : RoomDatabase() {
     abstract fun chatConversationDao(): ChatConversationDao
     abstract fun chatMessageDao(): ChatMessageDao
     abstract fun wrongAnswerDao(): WrongAnswerDao
+    abstract fun learningUnitDao(): LearningUnitDao
+    abstract fun learningUnitRecordDao(): LearningUnitRecordDao
+    abstract fun dailyPlanDao(): DailyPlanDao
+    abstract fun dailyTaskDao(): DailyTaskDao
+    abstract fun practiceAttemptDao(): PracticeAttemptDao
+    abstract fun writingSessionDao(): WritingSessionDao
 
     companion object {
         // 数据库文件名，与 Spec 要求一致

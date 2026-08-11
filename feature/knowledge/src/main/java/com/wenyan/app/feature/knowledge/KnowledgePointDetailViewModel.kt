@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenyan.app.core.data.repository.KnowledgePointDetail
 import com.wenyan.app.core.data.repository.KnowledgeRepository
+import com.wenyan.app.core.data.repository.KnowledgeProgressSource
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.database.entity.DataSourceEntity
 import com.wenyan.app.core.database.entity.ExamQuestionEntity
@@ -19,6 +20,9 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -52,8 +56,22 @@ import javax.inject.Inject
 class KnowledgePointDetailViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val knowledgeRepository: KnowledgeRepository,
+    private val knowledgeProgressRepository: KnowledgeProgressSource,
     private val wrongAnswerRepository: WrongAnswerRepository,
 ) : ViewModel() {
+
+    private val revealedLayersKey = "revealed_study_layers"
+    internal val revealedStudyLayers: StateFlow<Set<KnowledgeStudyLayer>> =
+        savedStateHandle.getStateFlow<ArrayList<String>>(revealedLayersKey, arrayListOf())
+            .map(::decodeStudyLayers)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+
+    internal fun revealStudyLayer(layer: KnowledgeStudyLayer) {
+        val current = savedStateHandle.get<ArrayList<String>>(revealedLayersKey).orEmpty()
+        if (layer.name !in current) {
+            savedStateHandle[revealedLayersKey] = ArrayList(current + layer.name)
+        }
+    }
 
     /**
      * 从导航参数获取知识点 ID(v0.8.19 P1-UI-6 改为 StateFlow)。
@@ -121,7 +139,8 @@ class KnowledgePointDetailViewModel @Inject constructor(
                             knowledgeRepository.observeKnowledgePointDetail(pointId),
                             wrongAnswerRepository.observeByPoint(pointId),
                             knowledgeRepository.observeRelatedEssays(pointId),
-                        ) { detail, wrongAnswers, relatedEssays ->
+                            knowledgeProgressRepository.observe(pointId),
+                        ) { detail, wrongAnswers, relatedEssays, learningUnits ->
                             if (detail == null) {
                                 KnowledgePointDetailUiState(isLoading = false, notFound = true)
                             } else {
@@ -132,6 +151,7 @@ class KnowledgePointDetailViewModel @Inject constructor(
                                     detail = detail,
                                     wrongAnswers = unresolved,
                                     relatedEssays = relatedEssays,
+                                    progress = calculateKnowledgeProgress(learningUnits, System.currentTimeMillis()),
                                 )
                             }
                         }
@@ -211,6 +231,7 @@ data class KnowledgePointDetailUiState(
     val wrongAnswers: List<WrongAnswerEntity> = emptyList(),
     /** 关联论述题列表(v0.9.8 新增,按年份倒序,点击跳转论述题详情) */
     val relatedEssays: List<ExamQuestionEntity> = emptyList(),
+    val progress: KnowledgeProgressUiModel? = null,
 ) {
     /** 知识点实体（便捷访问） */
     val point: KnowledgePointEntity? get() = detail?.point

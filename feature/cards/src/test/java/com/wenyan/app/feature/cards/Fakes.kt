@@ -13,6 +13,7 @@ import com.wenyan.app.core.data.repository.CardSettings
 import com.wenyan.app.core.data.repository.CardSettingsRepository
 import com.wenyan.app.core.data.repository.IntervalPreview
 import com.wenyan.app.core.data.repository.SchedulingRepository
+import com.wenyan.app.core.data.repository.UnitRatingReceipt
 import com.wenyan.app.core.data.repository.StudyProgress
 import com.wenyan.app.core.data.repository.TodayStudyQueue
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
@@ -134,6 +135,10 @@ class FakeSchedulingRepository(
 
     val rateCardCalls: MutableList<Triple<String, Rating, CardTemplateType>> = mutableListOf()
     val previewCalls: MutableList<Pair<String, CardTemplateType>> = mutableListOf()
+    val rateLearningUnitCalls = mutableListOf<Triple<String, String, Rating>>()
+    val previewLearningUnitCalls = mutableListOf<Pair<String, CardTemplateType>>()
+    val undoLearningUnitCalls = mutableListOf<UnitRatingReceipt>()
+    var rateLearningUnitResult: UnitRatingReceipt? = null
     /** v0.9.4 新增:记录 rateWrongAnswer 调用(cards 模块测试不调用,但接口需实现) */
     val rateWrongAnswerCalls: MutableList<Pair<String, Rating>> = mutableListOf()
 
@@ -153,6 +158,30 @@ class FakeSchedulingRepository(
     ): Map<Rating, IntervalPreview> {
         previewCalls.add(pointId to cardType)
         return previewResults
+    }
+
+    override suspend fun rateLearningUnit(
+        pointId: String,
+        unitId: String,
+        rating: Rating,
+        cardType: CardTemplateType,
+    ): UnitRatingReceipt? {
+        throwException?.let { throw it }
+        rateLearningUnitCalls += Triple(pointId, unitId, rating)
+        return rateLearningUnitResult
+    }
+
+    override suspend fun previewLearningUnitIntervals(
+        unitId: String,
+        cardType: CardTemplateType,
+    ): Map<Rating, IntervalPreview> {
+        previewLearningUnitCalls += unitId to cardType
+        return previewResults
+    }
+
+    override suspend fun undoLearningUnitRating(receipt: UnitRatingReceipt): Boolean {
+        undoLearningUnitCalls += receipt
+        return true
     }
 
     /**

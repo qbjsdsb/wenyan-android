@@ -10,6 +10,7 @@ import com.wenyan.app.core.data.repository.KnowledgeRepository
 import com.wenyan.app.core.data.repository.SchedulingRepository
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.database.entity.ExamQuestionEntity
+import com.wenyan.app.core.database.entity.DataSourceEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
 import com.wenyan.app.core.fsrs.Rating
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -99,8 +100,11 @@ class EssayDetailViewModel @Inject constructor(
                     if (examQuestionId.isBlank()) {
                         flowOf(EssayDetailUiState(isLoading = false, notFound = true))
                     } else {
-                        knowledgeRepository.observeEssayById(examQuestionId)
-                            .mapLatest { essay ->
+                        combine(
+                            knowledgeRepository.observeEssayById(examQuestionId),
+                            knowledgeRepository.observeExamQuestionSources(examQuestionId),
+                        ) { essay, sources -> essay to sources }
+                            .mapLatest { (essay, sources) ->
                                 if (essay == null) {
                                     EssayDetailUiState(isLoading = false, notFound = true)
                                 } else {
@@ -128,6 +132,7 @@ class EssayDetailViewModel @Inject constructor(
                                         angle = angle,
                                         notes = notes,
                                         relatedPoints = relatedPoints,
+                                        sources = sources,
                                     )
                                 }
                             }
@@ -387,6 +392,7 @@ data class EssayDetailUiState(
     val angle: EssayAngle? = null,
     val notes: EssayNotes? = null,
     val relatedPoints: List<KnowledgePointEntity> = emptyList(),
+    val sources: List<DataSourceEntity> = emptyList(),
     // Phase 3 新增字段
     val userAnswer: String = "",
     val isAnswering: Boolean = false,

@@ -14,10 +14,20 @@ import com.wenyan.app.core.data.repository.ClockGuardImpl
 import com.wenyan.app.core.data.repository.ExamRepository
 import com.wenyan.app.core.data.repository.ExamRepositoryImpl
 import com.wenyan.app.core.data.repository.LlmConfigProviderImpl
+import com.wenyan.app.core.data.repository.KnowledgeProgressRepository
+import com.wenyan.app.core.data.repository.KnowledgeProgressSource
+import com.wenyan.app.core.data.repository.PracticeAttemptStore
+import com.wenyan.app.core.data.repository.PracticeAttemptStoreImpl
 import com.wenyan.app.core.data.repository.SchedulingRepository
 import com.wenyan.app.core.data.repository.SchedulingRepositoryImpl
 import com.wenyan.app.core.data.repository.UpdateRepository
 import com.wenyan.app.core.data.repository.UpdateRepositoryImpl
+import com.wenyan.app.core.data.repository.WritingEvidenceRepository
+import com.wenyan.app.core.data.repository.WritingEvidenceSource
+import com.wenyan.app.core.data.repository.WritingSessionStore
+import com.wenyan.app.core.data.repository.WritingSessionStoreImpl
+import com.wenyan.app.core.data.writing.SystemWritingClock
+import com.wenyan.app.core.data.writing.WritingClock
 import com.wenyan.app.core.data.repository.WrongAnswerRepository
 import com.wenyan.app.core.data.repository.WrongAnswerRepositoryImpl
 import dagger.Binds
@@ -44,6 +54,26 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class DataModule {
+
+    @Binds
+    @Singleton
+    abstract fun bindWritingEvidenceSource(impl: WritingEvidenceRepository): WritingEvidenceSource
+
+    @Binds
+    @Singleton
+    abstract fun bindWritingClock(impl: SystemWritingClock): WritingClock
+
+    @Binds
+    @Singleton
+    abstract fun bindWritingSessionStore(impl: WritingSessionStoreImpl): WritingSessionStore
+
+    @Binds
+    @Singleton
+    abstract fun bindPracticeAttemptStore(impl: PracticeAttemptStoreImpl): PracticeAttemptStore
+
+    @Binds
+    @Singleton
+    abstract fun bindKnowledgeProgressSource(impl: KnowledgeProgressRepository): KnowledgeProgressSource
 
     @Binds
     @Singleton

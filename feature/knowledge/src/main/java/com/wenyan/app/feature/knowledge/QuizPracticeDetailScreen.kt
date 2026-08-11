@@ -22,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -49,6 +50,7 @@ import com.wenyan.app.core.designsystem.component.Spacing
 import com.wenyan.app.core.designsystem.component.WenyanLargeTopAppBar
 import com.wenyan.app.core.designsystem.component.WenyanLoadingIndicator
 import com.wenyan.app.core.designsystem.motion.WenyanMotion
+import com.wenyan.app.core.designsystem.component.ProvenanceBadge
 import kotlinx.coroutines.withTimeout
 
 // v0.9.33：对齐 CardsScreen v0.9.23 / WrongAnswerScreen v0.9.25 模式——
@@ -79,6 +81,10 @@ fun QuizPracticeDetailScreen(
     val showAnswer by viewModel.showAnswer.collectAsStateWithLifecycle()
     val progress by viewModel.progress.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
+    val keywords by viewModel.keywords.collectAsStateWithLifecycle()
+    val outline by viewModel.outline.collectAsStateWithLifecycle()
+    val body by viewModel.body.collectAsStateWithLifecycle()
+    val sessionSummary by viewModel.sessionSummary.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
     )
@@ -142,6 +148,13 @@ fun QuizPracticeDetailScreen(
                     PracticeQuestionContent(
                         question = question!!,
                         showAnswer = showAnswer,
+                        keywords = keywords,
+                        outline = outline,
+                        body = body,
+                        sessionSummary = sessionSummary,
+                        onKeywordsChange = viewModel::updateKeywords,
+                        onOutlineChange = viewModel::updateOutline,
+                        onBodyChange = viewModel::updateBody,
                         onToggleShowAnswer = viewModel::toggleShowAnswer,
                         modifier = Modifier.weight(1f),
                     )
@@ -180,6 +193,13 @@ fun QuizPracticeDetailScreen(
 private fun PracticeQuestionContent(
     question: com.wenyan.app.core.database.entity.ExamQuestionEntity,
     showAnswer: Boolean,
+    keywords: String,
+    outline: String,
+    body: String,
+    sessionSummary: com.wenyan.app.core.data.practice.PracticeSessionSummary,
+    onKeywordsChange: (String) -> Unit,
+    onOutlineChange: (String) -> Unit,
+    onBodyChange: (String) -> Unit,
     onToggleShowAnswer: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -230,6 +250,26 @@ private fun PracticeQuestionContent(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
+            item(key = "provenance") { ProvenanceBadge(status = question.contentStatus) }
+            if (!showAnswer) {
+                item(key = "answer_input") {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                        Text("先作答，再主动揭示核对。", style = MaterialTheme.typography.titleSmall)
+                        OutlinedTextField(
+                            value = keywords, onValueChange = onKeywordsChange,
+                            label = { Text("关键词") }, modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedTextField(
+                            value = outline, onValueChange = onOutlineChange,
+                            label = { Text("答题提纲") }, modifier = Modifier.fillMaxWidth(), minLines = 3,
+                        )
+                        OutlinedTextField(
+                            value = body, onValueChange = onBodyChange,
+                            label = { Text("正文（可选）") }, modifier = Modifier.fillMaxWidth(), minLines = 4,
+                        )
+                    }
+                }
+            }
             item(key = "answer") {
                 AnimatedVisibility(
                     visible = showAnswer,
@@ -259,6 +299,23 @@ private fun PracticeQuestionContent(
                                 .fillMaxWidth()
                                 .padding(top = Spacing.xs),
                         )
+                    }
+                }
+            }
+            if (sessionSummary.completed > 0) {
+                item(key = "session_summary") {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        Text("本组已完成 ${sessionSummary.completed} 题", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "漏项：关键词 ${sessionSummary.missingKeywords} · 提纲 ${sessionSummary.missingOutlines} · 正文 ${sessionSummary.missingBodies}",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        if (sessionSummary.errorCounts.isNotEmpty()) {
+                            Text(
+                                "错因：" + sessionSummary.errorCounts.entries.joinToString { "${it.key.name} ${it.value}" },
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                     }
                 }
             }

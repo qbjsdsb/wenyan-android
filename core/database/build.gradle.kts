@@ -41,4 +41,6 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    // Cloud C00：无需 Android/KVM，直接对 Room 导出 schema 执行生产 migration SQL。
+    testImplementation(libs.sqlite.jdbc)
 }

@@ -7,6 +7,8 @@ import com.wenyan.app.core.database.WenyanDatabase
 import com.wenyan.app.core.database.entity.CardTemplateType
 import com.wenyan.app.core.database.entity.ChapterEntity
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import com.wenyan.app.core.database.entity.LearningUnitEntity
+import com.wenyan.app.core.database.entity.LearningUnitRecordEntity
 import com.wenyan.app.core.database.entity.SubjectEntity
 import com.wenyan.app.core.database.entity.WrongAnswerEntity
 import com.wenyan.app.core.fsrs.Rating
@@ -169,6 +171,76 @@ class SchedulingRepositoryTest {
 
         val memo = db.memoRecordDao().getById("")
         assertNull("memo_records 应无记录", memo)
+    }
+
+    @Test
+    fun `rating one learning unit updates only that unit and logs both ids`() = runTest {
+        insertUnit("point_1:core:0", "CORE")
+        insertUnit("point_1:keyword:0", "KEYWORD")
+
+        val receipt = repository.rateLearningUnit(
+            "point_1", "point_1:core:0", Rating.GOOD, CardTemplateType.TERM_EXPLANATION,
+        )
+
+        assertNotNull(receipt)
+        assertTrue(db.learningUnitRecordDao().getById("point_1:core:0")!!.reps > 0)
+        assertEquals(0, db.learningUnitRecordDao().getById("point_1:keyword:0")!!.reps)
+        val log = db.reviewLogDao().getById(receipt!!.reviewLogId)!!
+        assertEquals("point_1", log.pointId)
+        assertEquals("point_1:core:0", log.learningUnitId)
+        assertNull(db.memoRecordDao().getById("point_1"))
+    }
+
+    @Test
+    fun `unit undo restores exact record and removes its review log`() = runTest {
+        insertUnit("point_1:core:0", "CORE")
+        val before = db.learningUnitRecordDao().getById("point_1:core:0")!!
+        val receipt = repository.rateLearningUnit(
+            "point_1", "point_1:core:0", Rating.AGAIN, CardTemplateType.TERM_EXPLANATION,
+        )!!
+
+        assertTrue(repository.undoLearningUnitRating(receipt))
+        assertEquals(before, db.learningUnitRecordDao().getById("point_1:core:0"))
+        assertNull(db.reviewLogDao().getById(receipt.reviewLogId))
+        assertTrue(!repository.undoLearningUnitRating(receipt))
+    }
+
+    @Test
+    fun `review unit AGAIN increments lapse to leech threshold without changing sibling`() = runTest {
+        insertUnit("point_1:core:0", "CORE", state = "REVIEW", failCount = 7, reps = 10)
+        insertUnit("point_1:keyword:0", "KEYWORD", state = "REVIEW", failCount = 2, reps = 4)
+
+        val receipt = repository.rateLearningUnit(
+            "point_1", "point_1:core:0", Rating.AGAIN, CardTemplateType.TERM_EXPLANATION,
+        )!!
+
+        assertEquals(8, receipt.updated.failCount)
+        assertEquals("RELEARNING", receipt.updated.state)
+        assertEquals(2, db.learningUnitRecordDao().getById("point_1:keyword:0")!!.failCount)
+    }
+
+    private suspend fun insertUnit(
+        id: String,
+        type: String,
+        state: String = "NEW",
+        failCount: Int = 0,
+        reps: Int = 0,
+    ) {
+        db.learningUnitDao().upsertAll(
+            listOf(
+                LearningUnitEntity(
+                    id = id, pointId = "point_1", unitType = type, position = id.substringAfterLast(':').toInt(),
+                    prompt = id, answer = id, createdAt = 1, updatedAt = 1,
+                ),
+            ),
+        )
+        db.learningUnitRecordDao().upsert(
+            LearningUnitRecordEntity(
+                learningUnitId = id, state = state, stability = if (state == "REVIEW") 5f else 0f,
+                difficulty = 5f, lastReviewAt = if (state == "REVIEW") 1 else 0,
+                nextReviewAt = 2, reviewCount = reps, failCount = failCount, reps = reps,
+            ),
+        )
     }
 
     // ── v0.9.4 新增:rateWrongAnswer FSRS 调度测试 ──────────────────

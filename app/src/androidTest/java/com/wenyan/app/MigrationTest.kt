@@ -6,6 +6,11 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.wenyan.app.core.database.WenyanDatabase
 import com.wenyan.app.core.database.migration.MIGRATION_8_9
 import com.wenyan.app.core.database.migration.MIGRATION_9_10
+import com.wenyan.app.core.database.migration.MIGRATION_10_11
+import com.wenyan.app.core.database.migration.MIGRATION_11_12
+import com.wenyan.app.core.database.migration.MIGRATION_12_13
+import com.wenyan.app.core.database.migration.MIGRATION_13_14
+import com.wenyan.app.core.database.migration.MIGRATION_14_15
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,6 +58,90 @@ class MigrationTest {
     fun migrate9To10_filterIndicesCreated() {
         helper.createDatabase(TEST_DB, 9).use { }
         helper.runMigrationsAndValidate(TEST_DB, 10, true, MIGRATION_9_10)
+    }
+
+    @Test
+    fun migrate10To11_provenanceSchemaCreated() {
+        helper.createDatabase(TEST_DB, 10).use { db ->
+            db.execSQL("INSERT INTO subjects (id, name, short_name, sort_order) VALUES ('migration-subject', 'subject', 's', 1)")
+            db.execSQL("INSERT INTO chapters (id, subject_id, title, sort_order) VALUES ('migration-chapter', 'migration-subject', 'chapter', 1)")
+            db.execSQL(
+                """INSERT INTO knowledge_points
+                    (id, chapter_id, title, core_conclusion, full_content, exam_frequency, created_at, updated_at)
+                    VALUES ('migration-point', 'migration-chapter', 'title', 'conclusion', 'content', 'HIGH', 1, 1)""",
+            )
+        }
+        helper.runMigrationsAndValidate(TEST_DB, 11, true, MIGRATION_10_11).use { db ->
+            db.query("SELECT content_status FROM knowledge_points WHERE id = 'migration-point'").use { cursor ->
+                check(cursor.moveToFirst())
+                check(cursor.getString(0) == "LEGACY_UNVERIFIED")
+            }
+        }
+    }
+
+    @Test
+    fun migrate11To12_learningTablesStartEmptyAndReviewPointIdSurvives() {
+        helper.createDatabase(TEST_DB, 11).use { db ->
+            db.execSQL("INSERT INTO subjects (id, name, short_name, sort_order) VALUES ('unit-subject', 'subject', 's', 1)")
+            db.execSQL("INSERT INTO chapters (id, subject_id, title, sort_order) VALUES ('unit-chapter', 'unit-subject', 'chapter', 1)")
+            db.execSQL(
+                """INSERT INTO knowledge_points
+                    (id, chapter_id, title, core_conclusion, full_content, exam_frequency, created_at, updated_at)
+                    VALUES ('unit-point', 'unit-chapter', 'title', 'conclusion', 'content', 'HIGH', 1, 1)""",
+            )
+            db.execSQL(
+                """INSERT INTO review_logs (id, point_id, rating, created_at)
+                    VALUES ('unit-review', 'unit-point', 'Good', 2)""",
+            )
+        }
+        helper.runMigrationsAndValidate(TEST_DB, 12, true, MIGRATION_11_12).use { db ->
+            db.query("SELECT point_id, learning_unit_id FROM review_logs WHERE id = 'unit-review'").use { cursor ->
+                check(cursor.moveToFirst())
+                check(cursor.getString(0) == "unit-point")
+                check(cursor.isNull(1))
+            }
+            db.query("SELECT COUNT(*) FROM learning_units").use { cursor ->
+                check(cursor.moveToFirst())
+                check(cursor.getInt(0) == 0)
+            }
+        }
+    }
+
+    @Test
+    fun migrate12To13_dailyPlanTablesStartEmpty() {
+        helper.createDatabase(TEST_DB, 12).use { }
+        helper.runMigrationsAndValidate(TEST_DB, 13, true, MIGRATION_12_13).use { db ->
+            db.query("SELECT COUNT(*) FROM daily_plans").use { cursor ->
+                check(cursor.moveToFirst())
+                check(cursor.getInt(0) == 0)
+            }
+            db.query("SELECT COUNT(*) FROM daily_tasks").use { cursor ->
+                check(cursor.moveToFirst())
+                check(cursor.getInt(0) == 0)
+            }
+        }
+    }
+
+    @Test
+    fun migrate13To14_practiceAttemptsStartEmpty() {
+        helper.createDatabase(TEST_DB, 13).use { }
+        helper.runMigrationsAndValidate(TEST_DB, 14, true, MIGRATION_13_14).use { db ->
+            db.query("SELECT COUNT(*) FROM practice_attempts").use { cursor ->
+                check(cursor.moveToFirst())
+                check(cursor.getInt(0) == 0)
+            }
+        }
+    }
+
+    @Test
+    fun migrate14To15_writingSessionsStartEmpty() {
+        helper.createDatabase(TEST_DB, 14).use { }
+        helper.runMigrationsAndValidate(TEST_DB, 15, true, MIGRATION_14_15).use { db ->
+            db.query("SELECT COUNT(*) FROM writing_sessions").use { cursor ->
+                check(cursor.moveToFirst())
+                check(cursor.getInt(0) == 0)
+            }
+        }
     }
 
     companion object {

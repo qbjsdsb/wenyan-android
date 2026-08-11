@@ -75,13 +75,15 @@ fun QuizPracticeListScreen(
         selectedType: String?,
         selectedSubjectId: String?,
         selectedYear: Int?,
-    ) -> Unit = { _, _, _, _ -> },
+        selectedPaperCode: String?,
+    ) -> Unit = { _, _, _, _, _ -> },
     viewModel: QuizPracticeListViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val selectedType by viewModel.selectedType.collectAsStateWithLifecycle()
     val selectedSubjectId by viewModel.selectedSubjectId.collectAsStateWithLifecycle()
     val selectedYear by viewModel.selectedYear.collectAsStateWithLifecycle()
+    val selectedPaperCode by viewModel.selectedPaperCode.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
     )
@@ -117,10 +119,13 @@ fun QuizPracticeListScreen(
                 selectedSubjectId = selectedSubjectId,
                 years = uiState.years,
                 selectedYear = selectedYear,
+                paperCodes = uiState.paperCodes,
+                selectedPaperCode = selectedPaperCode,
                 enabled = uiState.error == null,
                 onTypeSelected = viewModel::selectType,
                 onSubjectSelected = viewModel::selectSubject,
                 onYearSelected = viewModel::selectYear,
+                onPaperCodeSelected = viewModel::selectPaperCode,
             )
 
             // ── 列表区 ──
@@ -151,7 +156,8 @@ fun QuizPracticeListScreen(
                         }
                     }
                     isEmpty -> {
-                        val hasFilter = selectedType != null || selectedSubjectId != null || selectedYear != null
+                        val hasFilter = selectedType != null || selectedSubjectId != null || selectedYear != null ||
+                            selectedPaperCode != null
                         EmptyState(
                             icon = Icons.Default.Inbox,
                             title = stringResource(
@@ -172,6 +178,7 @@ fun QuizPracticeListScreen(
                                     selectedType,
                                     selectedSubjectId,
                                     selectedYear,
+                                    selectedPaperCode,
                                 )
                             },
                             contentPadding = PaddingValues(Spacing.lg),
@@ -198,10 +205,13 @@ private fun QuizPracticeFilterBar(
     selectedSubjectId: String?,
     years: List<Int>,
     selectedYear: Int?,
+    paperCodes: List<String>,
+    selectedPaperCode: String?,
     enabled: Boolean,
     onTypeSelected: (String?) -> Unit,
     onSubjectSelected: (String?) -> Unit,
     onYearSelected: (Int?) -> Unit,
+    onPaperCodeSelected: (String?) -> Unit,
 ) {
     // v0.9.34 横屏：筛选栏与下方列表对齐限宽居中（列表已 widthIn comfortable），
     // 避免横屏下题型/科目/年份 LazyRow 全宽拉伸
@@ -287,6 +297,30 @@ private fun QuizPracticeFilterBar(
                         onClick = { onYearSelected(year) },
                         enabled = enabled,
                         label = { Text(stringResource(R.string.kp_quiz_year_format, year)) },
+                    )
+                }
+            }
+        }
+
+        if (paperCodes.isNotEmpty()) {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = Spacing.lg),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                item(key = "paper_all") {
+                    FilterChip(
+                        selected = selectedPaperCode == null,
+                        onClick = { onPaperCodeSelected(null) },
+                        enabled = enabled,
+                        label = { Text("全部试卷") },
+                    )
+                }
+                items(paperCodes, key = { it }) { code ->
+                    FilterChip(
+                        selected = selectedPaperCode == code,
+                        onClick = { onPaperCodeSelected(code) },
+                        enabled = enabled,
+                        label = { Text(code) },
                     )
                 }
             }

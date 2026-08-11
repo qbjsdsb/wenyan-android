@@ -2,10 +2,12 @@ package com.wenyan.app.core.database.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
+import androidx.room.Transaction
 import com.wenyan.app.core.database.entity.WritingMaterialEntity
+import com.wenyan.app.core.database.entity.WritingMaterialWithSources
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -14,10 +16,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface WritingMaterialDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insert(entity: WritingMaterialEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertAll(entities: List<WritingMaterialEntity>)
 
     @Update
@@ -51,4 +53,8 @@ interface WritingMaterialDao {
 
     @Query("SELECT * FROM writing_materials ORDER BY created_at DESC")
     fun observeAll(): Flow<List<WritingMaterialEntity>>
+
+    @Transaction
+    @Query("SELECT * FROM writing_materials ORDER BY created_at DESC")
+    fun observeAllWithSources(): Flow<List<WritingMaterialWithSources>>
 }

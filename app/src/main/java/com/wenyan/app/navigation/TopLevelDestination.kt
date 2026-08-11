@@ -6,6 +6,9 @@ import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Style
+import androidx.compose.material.icons.filled.Today
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
@@ -31,6 +34,12 @@ sealed class TopLevelDestination(
     val label: String,
     val icon: ImageVector,
 ) {
+    data object Today : TopLevelDestination(
+        route = ROUTE_TODAY,
+        label = "今日",
+        icon = Icons.Filled.Today,
+    )
+
     data object Knowledge : TopLevelDestination(
         route = ROUTE_KNOWLEDGE,
         label = "知识点",
@@ -61,8 +70,23 @@ sealed class TopLevelDestination(
         icon = Icons.Filled.Settings,
     )
 
+    data object Training : TopLevelDestination(
+        route = ROUTE_TRAINING,
+        label = "训练",
+        icon = Icons.Filled.FitnessCenter,
+    )
+
+    data object My : TopLevelDestination(
+        route = ROUTE_MY,
+        label = "我的",
+        icon = Icons.Filled.Person,
+    )
+
     companion object {
         // 顶级路由常量，供 NavHost 与导航调用共用
+        const val ROUTE_TODAY = "today"
+        const val ROUTE_TRAINING = "training"
+        const val ROUTE_MY = "my"
         const val ROUTE_KNOWLEDGE = "knowledge"
         const val ROUTE_ESSAY = "essay"
         const val ROUTE_CARDS = "cards"
@@ -71,11 +95,23 @@ sealed class TopLevelDestination(
 
         // 全部顶级目的地，按底部导航顺序排列
         val destinations: List<TopLevelDestination> = listOf(
+            Today,
             Knowledge,
-            Essay,
-            Cards,
-            WrongAnswer,
-            Settings,
+            Training,
+            My,
         )
+
+        fun parentRouteFor(route: String?): String? = when {
+            route == null -> null
+            route == ROUTE_TODAY -> ROUTE_TODAY
+            route == ROUTE_KNOWLEDGE || route.startsWith("knowledge_detail/") -> ROUTE_KNOWLEDGE
+            route == ROUTE_TRAINING || route == ROUTE_ESSAY || route == ROUTE_CARDS ||
+                route == "quiz_practice" || route.startsWith("quiz_practice_detail/") ||
+                route == "writing_materials" || route == "cards_fullscreen" -> ROUTE_TRAINING
+            route == ROUTE_MY || route == ROUTE_WRONG_ANSWER || route == ROUTE_SETTINGS ||
+                route == "about" || route == "update_check" || route == "api_config" ||
+                route == "aiassistant" -> ROUTE_MY
+            else -> null
+        }
     }
 }

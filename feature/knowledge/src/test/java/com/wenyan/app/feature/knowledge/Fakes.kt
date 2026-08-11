@@ -167,13 +167,19 @@ private fun KnowledgePointWithSubject.toListItem() = KnowledgePointListItem(
  */
 class FakeDataSourceDao(
     initialSourcesByPoint: Map<String, List<DataSourceEntity>> = emptyMap(),
+    initialSourcesByExam: Map<String, List<DataSourceEntity>> = emptyMap(),
 ) : DataSourceDao {
 
     private val _sourcesByPoint = MutableStateFlow(initialSourcesByPoint)
+    private val _sourcesByExam = MutableStateFlow(initialSourcesByExam)
 
     /** 设置某知识点的来源列表 */
     fun setSourcesForPoint(pointId: String, sources: List<DataSourceEntity>) {
         _sourcesByPoint.value = _sourcesByPoint.value + (pointId to sources)
+    }
+
+    fun setSourcesForExam(questionId: String, sources: List<DataSourceEntity>) {
+        _sourcesByExam.value = _sourcesByExam.value + (questionId to sources)
     }
 
     override suspend fun insert(entity: DataSourceEntity) {
@@ -192,8 +198,8 @@ class FakeDataSourceDao(
         throw UnsupportedOperationException("deleteById not used in knowledge feature tests")
     }
 
-    override suspend fun deleteManagedKnowledgePointSources() {
-        throw UnsupportedOperationException("deleteManagedKnowledgePointSources not used in knowledge feature tests")
+    override suspend fun deleteManagedSeedSources() {
+        throw UnsupportedOperationException("deleteManagedSeedSources not used in knowledge feature tests")
     }
 
     override suspend fun getById(id: String): DataSourceEntity? {
@@ -204,7 +210,10 @@ class FakeDataSourceDao(
         _sourcesByPoint.mapStateFlow { it[pointId] ?: emptyList() }
 
     override fun observeByExamQuestion(questionId: String): Flow<List<DataSourceEntity>> =
-        throw UnsupportedOperationException("observeByExamQuestion not used in knowledge tests")
+        _sourcesByExam.mapStateFlow { it[questionId] ?: emptyList() }
+
+    override fun observeByWritingMaterial(materialId: String): Flow<List<DataSourceEntity>> =
+        throw UnsupportedOperationException()
 
     override fun observeByContentSource(source: String): Flow<List<DataSourceEntity>> =
         throw UnsupportedOperationException("observeByContentSource not used in knowledge tests")

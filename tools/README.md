@@ -86,3 +86,23 @@ python -m tools.content_pipeline.audit_seed \
 ```bash
 python -m unittest discover -s tools/tests -p 'test*.py'
 ```
+
+## PR-01B：普通 Android CI 内容门禁
+
+普通 Android CI 使用 Python 3.12，先运行审计器单测，再对同一份正式 seed
+连续执行两次只读审计并用 `cmp` 验证报告字节一致。任一检查失败都会阻止
+Android 单测和 APK 构建；失败时只上传不含教材正文或完整题干的精简 JSON
+报告，保留 7 天。
+
+```bash
+python -m tools.content_pipeline.audit_seed \
+  --seed app/src/main/assets/seed_data.json \
+  --schema content/schema/seed.schema.json \
+  --baseline content/baselines/seed-baseline.json \
+  --report /tmp/wenyan-seed-audit.json \
+  --as-of-year 2026 \
+  --check
+```
+
+CI 只允许使用 `--check`，不得使用 `--write-baseline`。baseline 更新仍是独立的
+人工审阅动作；CI 不重建 seed、不读取 OCR/教材输入，也不把正式正文写入报告。

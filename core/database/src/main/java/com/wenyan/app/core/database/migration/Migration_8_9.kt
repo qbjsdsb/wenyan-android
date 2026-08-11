@@ -29,13 +29,13 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * @see com.wenyan.app.core.database.entity.WrongAnswerEntity
  * @see com.wenyan.app.core.database.WenyanDatabase
  */
+internal val MIGRATION_8_9_STATEMENTS = listOf(
+    "CREATE INDEX IF NOT EXISTS index_wrong_answers_point_id_source ON wrong_answers(point_id, source)",
+    "CREATE INDEX IF NOT EXISTS index_wrong_answers_exam_question_id_source ON wrong_answers(exam_question_id, source)",
+)
+
 val MIGRATION_8_9: Migration = object : Migration(8, 9) {
     override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL(
-            "CREATE INDEX IF NOT EXISTS index_wrong_answers_point_id_source ON wrong_answers(point_id, source)",
-        )
-        database.execSQL(
-            "CREATE INDEX IF NOT EXISTS index_wrong_answers_exam_question_id_source ON wrong_answers(exam_question_id, source)",
-        )
+        MIGRATION_8_9_STATEMENTS.forEach(database::execSQL)
     }
 }

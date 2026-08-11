@@ -8,7 +8,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -42,11 +41,7 @@ fun WenyanApp(
         // 计算当前高亮的顶级 Tab 路由。
         // 用 hierarchy 检查：当用户在子路由（如知识点详情）时，
         // 其所属的顶级 Tab（如"知识点"）仍保持高亮。
-        val selectedTopLevelRoute = TopLevelDestination.destinations
-            .firstOrNull { dest ->
-                currentDestination?.hierarchy?.any { it.route == dest.route } == true
-            }
-            ?.route
+        val selectedTopLevelRoute = TopLevelDestination.parentRouteFor(currentDestination?.route)
 
         // P2-REC-5 修正：用 remember 缓存静态映射，避免每次重组都创建新 List 分配内存。
         // TopLevelDestination.destinations 是静态列表（companion object val），映射结果不变。

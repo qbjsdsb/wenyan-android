@@ -7057,3 +7057,198 @@ while (retryCount <= maxRetries) {
 - **本版内容**：详情页 A→B 关联跳转不入栈修复（launchSingleTop 折叠动态路由 → 策略化单栈判定）、同点防重复、路径编码；新增导航策略测试 + GroupedCard 测试
 - **receipt**：`docs/release-receipts/v0.9.43-release-receipt.md`
 - **下次继续**：路线图——复习提醒通知（WorkManager）/ 学习统计页（review_logs 就绪）/ 知识图谱 Graph 视图
+
+# 2026-08-09 — Cloud MVP C00 模拟器依赖修复与阻塞确认
+
+- 平台 checkout HEAD `cef480a72272c6a9dd0f01ec929245eef3d6ee49` 与用户外部核验的 GitHub main SHA 精确一致；当前分支为平台隔离分支 `work`，`origin=N/A`，未添加或修改 remote。
+- Ubuntu 24.04.4 安装正式运行库 `libasound2t64`、`libdrm2`、`libpulse0`、`libtcmalloc-minimal4t64`、`libxi6`、`libxkbfile1`，未创建假 `.so` 或软链接。Android emulator 37.1.11.0 二进制已可运行，`wenyan-api35` AVD 与 API 35 Google APIs x86_64 system image 已安装。
+- Cloud runner 不提供 `/dev/kvm`；emulator 使用 `-no-window -no-audio -gpu swiftshader_indirect -no-snapshot` 启动后明确因 x86_64 必需硬件加速而退出，未被 `adb` 识别，因此 migration instrumentation 真实执行为 BLOCKED。
+- Python 18 tests、两次 seed audit 与报告 `cmp` 均通过。Gradle 首次因 Robolectric `android-all-instrumented` runtime 未预热失败；从 Maven Central 下载准确正式 artifact 到临时 Maven cache 后，同一 `testDebugUnitTest assembleDebug :app:assembleDebugAndroidTest` 命令以退出码 0、BUILD SUCCESSFUL 完成。
+- C00 保持 BLOCKED，不进入 C01；未修改产品代码、Room schema、migration、seed、既有 ID 或用户数据。
+
+# 2026-08-09 — Cloud MVP C00 JVM/SQLite migration fallback
+
+- 经用户明确授权，按 `CLOUD-MVP-EXECUTION.md` 3.2 节实现无需 KVM 的 SQLite JDBC migration verifier；Android `MigrationTestHelper` 未删除，继续作为有 KVM runner 的第二层门禁。
+- v8→v9 与 v9→v10 的原 SQL 文本和顺序未改变，仅提取为生产 Migration 和 JVM 测试共用的 statement list，避免测试另一套 SQL。
+- 新增 3 个真实 SQLite 测试：8→9、9→10、8→10 链式迁移；从 Room 导出 schema 建库，模拟历史 v8 缺失索引，插入 7 表合法外键 fixture，验证目标列/索引、`foreign_key_check` 和迁移前后逐字段快照。
+- 定向测试 3/3、全量 Gradle 639/639、Python 18/18、两次 seed audit 与 `cmp` 全绿；Debug 与 androidTest APK 构建成功。正式 seed、Room schema、既有 ID 和用户数据语义未修改。
+- C00 重新判定为 PASS；`connectedDebugAndroidTest` 明确保持 NOT_RUN/PENDING_KVM，不冒充 instrumentation 已执行。下一检查点为 C01 / PR-01B。
+
+# 2026-08-09 — Cloud MVP C01 / PR-01B CI 内容门禁
+
+- 普通 Android CI 固定 Python 3.12，在 Gradle 前运行 Python 审计测试、正式 seed 两次只读审计和 `cmp`；失败报告使用 `if: always()` 上传 7 天，Android 单测仍先于 Debug APK 构建。
+- 新增 workflow 静态合同测试及 `--check` SHA mismatch/只读、报告不含知识点正文或完整题干回归测试；CI 审计步骤不含 `--write-baseline` 或吞错逻辑。
+- Python 25 tests、双审计与 `cmp`、Gradle 全量 639 tests / 0 failures、assembleDebug 全绿；seed/schema/baseline SHA 前后不变。
+- C01 本地判定 PASS，真实 Actions 记为 PENDING_CI（当前 Cloud checkout 无 remote，最终由 Cloud 页面创建 Draft PR）；进入 C02。
+
+# 2026-08-09 — Cloud MVP C02 / PR-02A 内容溯源数据库 v11
+
+- Room 升至 v11，只追加 provenance 数据能力：内容状态 `REVIEWED/LEGACY_UNVERIFIED/AI_DRAFT/REJECTED` 与来源证据 `OFFICIAL_ORIGINAL/USER_CONFIRMED/SECONDARY_RECOLLECTION/UNKNOWN` 分离；未知存储值安全降级。
+- v10→11 对所有历史内容使用 `LEGACY_UNVERIFIED`、所有历史来源使用 `UNKNOWN`；旧 `ocr_status=VERIFIED` 不会被误判为人工审校。写作素材新增可空标题、关联知识点，来源新增可空书名、版本、页码范围、校验值和审校备注。
+- JVM/SQLite 实际执行 v10→11 与仓库最早导出 v2→11 的完整生产 migration 链，严格核对 v11 schema、外键、索引和旧 fixture 快照；定向 8 tests、全量 644 tests、Debug 与 androidTest APK 均通过。
+- Python 25 tests、两次 seed audit 与 `cmp` 通过；seed SHA 保持 `d6385911…6446`，1101 知识点、564 真题、909 写作素材 ID 集合不变。未修改 loader、UI、seed 或用户数据语义。
+- Android MigrationTestHelper 的 v10→11 测试已保留并成功编译；Cloud 无 `/dev/kvm`，真实 instrumentation 如实标记 PENDING_KVM。C02 PASS，进入 C03。
+
+# 2026-08-09 — Cloud MVP C03 / PR-02B loader 可信度语义
+
+- 从 SeedDataLoader 提取 fail-closed provenance mapper：只有显式合法值成为 `REVIEWED`；缺失、旧 `DRAFT`、未知值均为 `LEGACY_UNVERIFIED`，不能再由旧 `ocr_status=VERIFIED` 暗示人工审校。
+- 来源同时要求非占位标题和显式合法证据类型；“其他”、空来源不落来源记录，未知证据降为 `UNKNOWN`。seed 管理记录统一使用 `seed-*-source:` 清理范围，用户来源不受影响，重复升级幂等。
+- 正式知识查询统一排除 `AI_DRAFT/REJECTED`，覆盖复习、列表、搜索和 RAG；legacy 内容仍可学习且将在 C04 如实显示可信度。
+- provenance/loader/JVM migration 定向测试、全量 649 JVM tests、Debug/androidTest APK、Python 25 tests、双 seed audit 与 `cmp` 全绿；seed/ID/用户 FSRS 进度不变量未改。C03 PASS，进入 C04。
+
+# 2026-08-09 — Cloud MVP C04 / PR-02C 来源与可信度 UI
+
+- 设计系统新增可复用 `ProvenanceBadge` 与 `SourceSection`：未知状态安全降为“历史资料”，legacy 使用中性 surface 色而非危险红；来源类型、版本、页码范围、审校备注按真实非空值组合。
+- 知识点和论述题详情接入可信度 badge 与多来源区块；无来源时整个区块不渲染，不生成伪书名或页码。论述题来源通过 repository 流进入 ViewModel，新增回归测试。
+- 论述题顶栏新增写作素材只读入口，909 条素材通过 LazyColumn 展示内容可信度；来源使用 Room relation 读取，只有真实来源才显示，历史“其他/未知/待补”均隐藏。
+- previews 覆盖多来源、长书名、1.5x/2x 大字体和横屏；A→B→返回 A 既有导航策略复跑通过。
+- 定向 tests、JVM migration verifier、全量 656 JVM tests、Debug/androidTest APK、Python 25 tests、双 audit/cmp 全绿；seed/ID/用户数据不变量未改。C04 PASS，进入 C05。
+
+# 2026-08-09 — Cloud MVP C05 / PR-03A LearningUnit 数据库 v12
+
+- Room 升至 v12，新增空的 `learning_units` / `learning_unit_records`；unit 支持 active=false，Record 预留完整 FSRS 状态。ReviewLog 新增可空 `learning_unit_id` 外键，同时原 `point_id` 保持非空和原语义。
+- 稳定 ID 工厂固定为 `pointId:type:position`（小写 type），覆盖 CORE/KEYWORD/SEQUENCE/COMPARE/EVIDENCE/EXAM_OUTLINE，不读取内容 hash。
+- JVM/SQLite 实际执行 v11→12 与仓库最早 v2→12 完整生产 migration 链；v11 旧 memo/review/错题/进度 fixture 逐字段保留，新两表均验证为 0 行，ReviewLog 的 point ID 保留且 unit ID 为 null。
+- 定向 8 tests、全量 659 JVM tests、Debug/androidTest APK、Python 25 tests、双 audit/cmp 全绿；seed/ID 不变量未改。Android helper 保持 PENDING_KVM。C05 PASS，进入 C06。
+
+# 2026-08-09 — Cloud MVP C06 / PR-03B 确定性单元生成与旧进度映射
+
+- 新增纯函数 LearningUnit generator/reconciler：所有知识点生成 `:core:0`；只有结构化 tags 生成 KEYWORD，无可靠结构不从自由文本猜拆分，也不调用 LLM。
+- reconcile 保留 surviving keyword 的 position；末尾新增使用未占用新 position，移除只 active=false，重新出现复用原 ID；标题/结论文案变化更新内容但不改变 ID。
+- seed import schema 3→4 触发一次显式同步。首次启用仅 CORE record 逐字段复制旧 MemoRecord，其他 unit 为 NEW；已有 record 绝不覆盖，重复同步保持用户评分状态。
+- 定向生成/同步/loader/JVM migration tests 与全量 665 JVM tests、Debug/androidTest APK、Python 25 tests、双 audit/cmp 全绿；seed、旧 ID、MemoRecord 与用户数据不变量未改。C06 PASS，进入 C07。
+
+# 2026-08-09 — Cloud MVP C07 数据层子提交（IN_PROGRESS）
+
+- 新增 LearningUnitRecord↔FSRS FlashCard mapper，并在 SchedulingRepository 增加 unit 独立预览、评分与 receipt 撤销；未重写 FSRS 公式，继续调用现有 FsrsWrapper 与 tier 配置。
+- unit 评分事务只更新当前 `learning_unit_records` 并写 ReviewLog（同时保留 point_id + learning_unit_id），不再双写旧 MemoRecord；inactive、错 point 或缺 record 均 fail-closed。
+- receipt undo 仅在 DB 当前值仍等于本次 updated snapshot 且 log 匹配时执行，原样恢复 before record 并删除该 log，避免覆盖后续评分。
+- 真实 in-memory Room tests 覆盖 sibling 隔离、AGAIN/leech 7→8、日志双 ID、精确 undo/重复 undo；同步与 JVM migration tests 一并通过。
+- C07 尚未 PASS；下一子提交继续 CardRepository/CardsViewModel 的 unit 队列、preview/rate/undo、sibling 公平性与进程恢复，再跑全量门禁。
+
+# 2026-08-09 — Cloud MVP C07 / PR-03C unit 独立 FSRS 完成
+
+- 正式卡片队列改读 `learning_units + learning_unit_records`：每个 active unit 都有稳定卡片身份，NEW 或已到期记录进入队列；同知识点 sibling 只做 round-robin 分散，不再用 point 级去重吞掉后续单元。
+- CardsViewModel 按 `learningUnitId` 独立预览、评分、leech 跟踪和 receipt 撤销；事务评分只写当前 unit record 与同时含 point/unit ID 的 review log，旧 MemoRecord 仅作为兼容 fallback，不形成双写真相源。
+- 新增持久化快照跨时点、sibling 公平性和 ViewModel 独立评分测试；既有真实 Room tests 继续覆盖当前 unit 隔离、AGAIN 7→8、日志与精确 undo，FSRS 参考向量随全量 suite 复跑。
+- 全量 Gradle 单测、Debug/androidTest APK、JVM migration verifier、Python 25 tests、双 seed audit/cmp 全绿；seed SHA 和既有内容 ID 未变化。Android helper 仍因无 KVM 标记 PENDING_KVM。C07 PASS，下一检查点 C08。
+
+# 2026-08-09 — Cloud MVP C08 / PR-04A DailyPlanner 纯函数
+
+- 新增完全不访问 Room/UI 的确定性 DailyPlanner，注入 Clock 并固定 Asia/Taipei 日期语义；候选按到期、遗忘修复、新内容、输出训练、计划内 610 写作分桶。
+- 排序严格落实 overdue/retrievability/考频/近期弱项/科目轮换/stable ID 链；NEW 内容 fail-closed 过滤不可信候选。
+- 配额不会为了低优先级任务无限扩张；零配额、考试已过、无可信新内容、逾期积压、缺输出训练或缺计划内写作都返回可解释 PlanIssue。
+- 10 个 planner tests、阶段全量 Gradle、JVM migration、Debug/androidTest APK、Python 25 tests 和双 seed audit/cmp 全绿；seed/schema/ID/用户数据未改。C08 PASS，进入 C09。
+
+# 2026-08-09 — Cloud MVP C09 / PR-04B DailyPlan Room v13
+
+- Room 12→13 新增 daily_plans/daily_tasks；计划按日期唯一，任务在计划内 stableId/position 唯一，完整保存设置/内容版本/状态/预计时间/遗留来源，旧表不改写。
+- 新增事务化 getOrCreate：同日已有则只读，首次生成使用 INSERT IGNORE 仲裁并发，task 使用 ABORT；任一 task 写入失败整份新计划回滚，不使用 REPLACE。
+- 显式按 position/id 恢复任务，完成状态跨 repository 重建保持；真实 in-memory Room tests 覆盖 8 并发调用、恢复、回滚和输入归属校验。
+- JVM SQLite 实际执行 v12→13 和 v2→13 完整生产迁移链并严格匹配 13.json；Android helper 12→13 已编译、无 KVM 保持 PENDING_KVM。全量 583 tests、构建、Python 25 tests、双 audit/cmp 全绿。C09 PASS，进入 C10。
+
+# 2026-08-10 — Cloud MVP C10 / PR-04C 跨日与显式重建
+
+- 用固定 Asia/Taipei 时区验证台北 23:59→00:01 是唯一换日边界；同日 getOrCreate 忽略设置变化并保留原计划，次日计划采用新快照。
+- 新增显式遗留集合和 CARRY/SKIP/SPECIAL_SESSION 三种事务决定；later-date + carriedFromTaskId + 确定性 ID 防循环/重复，重复调用幂等，不静默搬运昨日任务。
+- 显式 rebuild 只处理未完成任务：DONE 永不复活，移除项标 SUPERSEDED 而非删除；输入或写入失败整事务回滚。
+- 定向 tests、JVM migration、全量 Gradle（542 tasks）、Debug/androidTest APK、Python 25 tests、双 audit/cmp 全绿。首次定向测试仅因新容器缺 Robolectric artifact 失败，预取 Maven Central 官方 artifact 后原测试通过。C10 PASS，进入 C11。
+
+# 2026-08-11 — Cloud MVP C11 / PR-05A Today 内容页
+
+- 新增 feature:today；TodayViewModel 只通过 source/use-case 订阅持久化 DailyPlan，不直接访问 DAO，也不复制或调用 planner。
+- mapper 诚实呈现倒计时（仅 snapshot 有明确 examDate）、剩余预计时间、到期/修复/新学/输出/写作分组、一键继续、空态、不可行提示和完成总结；历史 superseded/carry source 不进入今日可见列表。
+- 旧入口 callback 固定映射 CARDS/QUIZ/WRITING_MATERIALS，C11 不提前替换导航。tests 覆盖 loading/empty/partial/finished/infeasible/error 和 callback；2x 大字、横屏 previews 编译。
+- feature 定向、JVM migration、全量 Gradle/Debug/androidTest APK、Python 25 tests、双 audit/cmp 全绿；seed/schema/ID/用户数据未改。C11 PASS，进入 C12。
+
+# 2026-08-11 — Cloud MVP C12 / PR-05B 四段顶层导航
+
+- 顶层收敛为今日/知识/训练/我的，Today 成为冷启动目的地；顶层仍用 save/restore，旧 route 全部保留为子入口。
+- Training hub 承接卡片/真题背诵/论述题/写作素材，My hub 承接错题本/设置/AI；纯 parentRouteFor 覆盖旧入口与深链高亮归属。
+- 论述/素材/错题增加显式返回 parent；知识动态详情 A→B→C 与 Cards fullscreen 共享 ViewModel 既有实现不变并复跑测试/编译。
+- 定向导航 tests、全量 Gradle、JVM migration、Debug/androidTest APK、Python 25 tests、双 audit/cmp 全绿。C12 PASS，进入 C13；真机 10 分钟清单留到 C24。
+
+# 2026-08-11 — Cloud MVP C13 / PR-06A 知识详情纯拆分
+
+- 先用纯测试锁定详情页六段内容的原始顺序与空段省略语义，再提取 slot-based Recall、Outline/Explanation、Evidence、Relations 结构合同。
+- 保留原 LazyColumn key/contentType、显隐条件、现有小组件、文案、回调、导航和数据查询；行为与视觉变化均为无。
+- feature:knowledge 全量测试、知识详情导航回归、模块 assembleDebug 与 diff check 通过；Room v13、migration、seed、ID 和用户数据未改。C13 PASS，进入 C14。
+
+# 2026-08-11 — Cloud MVP C14 / PR-06B 主动回忆与分层学习
+
+- 知识详情默认先回忆，再按 30 秒回忆、2 分钟骨架、考试表达、理解辨析、证据来源顺序揭示；页面明确说明揭示不等于掌握。
+- 只映射现有 summary/coreConclusion/studyText/multiPerspectives/source；缺少独立骨架时诚实为空，不由 UI 或 AI 生成。
+- reveal 名称保存到 SavedStateHandle，未知值安全忽略；顺序/空层/恢复 tests、大字体与横屏 previews、feature assemble、Python 25 tests 和双 audit/cmp 全绿。C14 PASS，进入 C15。
+
+# 2026-08-11 — Cloud MVP C15 / PR-06C 显式关系与 fallback
+
+- 新增七种完整关系类型与 EXPLICIT/AUTOMATIC_FALLBACK 来源；旧 contrast 显式为 COMPARE_WITH，旧 extension 因无方向保持 UNKNOWN，tag 关联明确标“自动关联”。
+- resolver 过滤 self/悬空、显式优先并稳定去重，记录可追踪 reason；eq_0038 的 related_point_ids 固定映射 EXAM_VARIANT 并由测试锁定。
+- core:data、knowledge feature、repository 与 A→B→C 导航回归全绿；Room/schema/seed/ID/用户数据未改，未回写 REVIEWED。C15 PASS，进入 C16。
+
+# 2026-08-11 — Cloud MVP C16 / PR-06D 三维进度
+
+- 知识详情新增见过/记得/写得出三维解释；前两维仅读取 unit 真实复习与到期记录，写得出在 PracticeAttempt 尚未建立时 fail-closed 为尚未练习。
+- 不显示虚假精确百分比，不用浏览或卡片评分冒充输出能力；定向单测与 knowledge assembleDebug 通过。
+- C16 PASS，断点进入 C17。
+
+# 2026-08-11 — Cloud MVP C17 / PR-07A PracticeAttempt v14
+
+- 新增独立 PracticeAttempt 表、DAO、固定错因与安全枚举解析；显式 v13→14 migration 只创建表/索引。
+- JVM 迁移测试覆盖 13→14 与完整 2→14；14.json 已导出。Android instrumentation 保持 PENDING_KVM。
+- C17 本地数据层门禁通过，断点进入 C18；阶段 androidTest APK 构建受单轮执行时限中断，后续全量门禁补跑。
+
+# 2026-08-11 — Cloud MVP C18 / PR-07B Training 薄容器
+
+- Training 收敛为快速回忆、真题作答、610 写作、错题修复四入口，全部复用既有路由与业务。
+- stable contract tests、Debug 构建、大字体和横屏 Preview 通过；不复制数据查询或计划逻辑。C18 PASS，进入 C19。
+
+# 2026-08-11 — Cloud MVP C19 状态机子提交
+
+- 先以纯测试建立先作答、保存、主动揭示、自评错因、完成的单调状态机；未完成 repository/UI 接线，因此 C19 保持 IN_PROGRESS。
+
+# 2026-08-11 — Cloud MVP C19 / PR-07C 完成
+
+- 真题详情完成先作答、reviewed-only 主动揭示、自评错因、持久化与 SavedState 恢复；空白和未审校框架 fail closed。
+- 定向 tests/assemble 通过，C19 PASS，进入 C20。
+
+# 2026-08-11 — Cloud MVP C20 领域/事务子提交
+
+- 建立七维稳定 session planner、漏项/错因总结和 later-date 幂等修复事务；UI 接线尚未完成，C20 保持 IN_PROGRESS。
+- 纯测试通过；Room 测试因当前容器缺 Robolectric runtime artifact 为环境限制，不冒充执行。
+
+# 2026-08-11 — Cloud MVP C20 UI/恢复子提交
+
+- 专项试卷代码筛选贯穿列表到详情；session Flow 展示完成/漏项/错因总结。targeted tests/Debug 构建通过。
+- Room repair tests 仍被当前容器 Robolectric runtime artifact 下载限制阻断，C20 保持 IN_PROGRESS，不进入 C21。
+
+# 2026-08-11 — Cloud MVP C20 / PR-07D 完成
+
+- 从 Maven Central 补齐本机 Robolectric 官方 runtime 后，真实 Room repair tests 通过；later-date、幂等、当天不变与事务回滚均获得运行证据。
+- 全量 JVM tests、Debug/androidTest APK、Python tests、双 seed audit/cmp 全绿。C20 PASS，断点进入 C21。
+
+# 2026-08-11 — Cloud MVP C21 / PR-08A WritingSession v15
+
+- 以独立表保存离线写作生命周期、内容、自评和可恢复计时，保持旧素材/模板/批改记录语义不变。
+- v14→15 与完整 v2→15 JVM migration、导出 schema、枚举测试和 androidTest APK 通过。C21 PASS，进入 C22。
+
+# 2026-08-11 — Cloud MVP C22 / PR-08B 离线写作编辑器
+
+- 新增离线写作工作台、持久化 Store、750ms 自动保存与失败重试；SavedState session ID 加 Room 草稿支持进程恢复。
+- 三模式、暂停恢复、时钟回拨和长正文测试通过，Debug APK 成功。C22 PASS，进入 C23。
+
+# 2026-08-11 — Cloud MVP C23 / PR-08C 本地量规
+
+- 七维可解释自评、透明非官方总分、reviewed-only 引用、待核线索、历史趋势与弱项修复任务完成。
+- 自评编码随 WritingSession 恢复；定向测试与 feature 编译通过。C23 PASS，进入 C24 最终审计。
+
+# 2026-08-11 — Cloud MVP C24 最终审计
+
+- 13 项闭环、v10→v15 migration、全量 JVM/build、Python 与双 seed audit/cmp 通过；seed SHA 与冻结基线一致。
+- 完整 diff 自审和十分钟设备清单已落盘。C24 PASS_LOCAL；仅等待 Cloud 页面创建 Draft PR，未执行 push/Ready/merge/tag/release。
+
+# 2026-08-11 — Cloud MVP C22–C24 续审修正
+
+- 不接受先前弱证据：补齐 monotonic 活动计时、返回前 autosave flush、直接 ViewModel 进程恢复测试、真实证据 repository 与 reviewed-only 选择、量规备注/历史趋势接线。
+- 发现并修复 `WritingMaterialDao.REPLACE` 与 provenance CASCADE 的组合误删风险，改用 `@Upsert`，真实 Room 测试证明素材更新不会删除来源。
+- 定向写作/Room tests、全模块 JVM tests、Debug/androidTest APK、Python 25 tests、双 seed audit/cmp 全绿；seed SHA 未漂移。C24 仍为 PASS_LOCAL，仅等待 Cloud Draft PR。

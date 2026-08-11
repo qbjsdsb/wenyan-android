@@ -4,12 +4,18 @@ import com.wenyan.app.core.data.cards.CardSplitter
 import com.wenyan.app.core.data.cards.CardTemplate
 import com.wenyan.app.core.data.cards.DistinctionCard
 import com.wenyan.app.core.data.cards.EssayPointsCard
+import com.wenyan.app.core.data.cards.LearningUnitCard
 import com.wenyan.app.core.data.util.catchAndLog
 import com.wenyan.app.core.database.dao.KnowledgePointDao
+import com.wenyan.app.core.database.dao.LearningUnitDao
 import com.wenyan.app.core.database.entity.KnowledgePointEntity
+import com.wenyan.app.core.database.entity.LearningUnitWithRecord
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -72,6 +78,7 @@ interface CardRepository {
 class CardRepositoryImpl @Inject constructor(
     private val knowledgePointDao: KnowledgePointDao,
     private val reviewRepository: ReviewRepository,
+    private val learningUnitDao: LearningUnitDao,
 ) : CardRepository {
 
     private companion object {
@@ -106,11 +113,29 @@ class CardRepositoryImpl @Inject constructor(
      *
      * @return 今日待复习卡片流(已按最小信息原则拆分 + sibling 打散)
      */
-    override fun getCardsForReview(): Flow<List<CardTemplate>> =
-        reviewRepository.getTodayStudyQueue().map { queue ->
-            val points = queue.duePoints + queue.newPoints
-            buildCardsIfChanged(points)
-        }.catchAndLog(TAG, "getCardsForReview") { emptyList() }
+    override fun getCardsForReview(): Flow<List<CardTemplate>> = combine(
+        learningUnitDao.observeActiveWithRecords(),
+        minuteTicks(),
+    ) { units, now ->
+        val due = selectDueLearningUnits(units, now).map { it.unit to requireNotNull(it.record) }.sortedWith(
+            compareBy<Pair<com.wenyan.app.core.database.entity.LearningUnitEntity, com.wenyan.app.core.database.entity.LearningUnitRecordEntity>> {
+                val record = it.second
+                if (record.state == "NEW" && record.reps == 0 && record.reviewCount == 0) 1 else 0
+            }.thenBy { it.second.nextReviewAt }.thenBy { it.first.id },
+        )
+        interleaveUnitSiblings(due.groupBy { it.first.pointId }.values.map { group ->
+            group.map { (unit, _) ->
+                LearningUnitCard(unit.prompt, unit.answer, unit.pointId, unit.id)
+            }
+        })
+    }.catchAndLog(TAG, "getCardsForReview") { emptyList() }
+
+    private fun minuteTicks(): Flow<Long> = flow {
+        while (true) {
+            emit(System.currentTimeMillis())
+            delay(60_000)
+        }
+    }
 
     /**
      * 拆卡缓存（v0.9.37 P0-2）。
@@ -275,6 +300,30 @@ class CardRepositoryImpl @Inject constructor(
             )
         }
     }
+}
+
+internal fun <T> interleaveUnitSiblings(groups: List<List<T>>): List<T> {
+    val queues = groups.filter(List<T>::isNotEmpty).map { ArrayDeque(it) }.toMutableList()
+    val result = mutableListOf<T>()
+    while (queues.isNotEmpty()) {
+        val iterator = queues.iterator()
+        while (iterator.hasNext()) {
+            val queue = iterator.next()
+            result += queue.removeFirst()
+            if (queue.isEmpty()) iterator.remove()
+        }
+    }
+    return result
+}
+
+/** Pure DB-snapshot selection keeps process recovery and day-boundary behavior testable. */
+internal fun selectDueLearningUnits(
+    units: List<LearningUnitWithRecord>,
+    now: Long,
+): List<LearningUnitWithRecord> = units.filter { item ->
+    val record = item.record ?: return@filter false
+    val pristineNew = record.state == "NEW" && record.reps == 0 && record.reviewCount == 0
+    pristineNew || record.nextReviewAt <= now
 }
 
 /**

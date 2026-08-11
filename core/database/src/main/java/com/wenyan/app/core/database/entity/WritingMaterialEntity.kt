@@ -21,6 +21,7 @@ import androidx.room.PrimaryKey
     tableName = "writing_materials",
     indices = [
         Index("category"),
+        Index("content_status"),
     ],
 )
 data class WritingMaterialEntity(
@@ -46,4 +47,15 @@ data class WritingMaterialEntity(
 
     @ColumnInfo(name = "created_at")
     val createdAt: Long,
+
+    /** Optional display title; legacy material remains untitled rather than being guessed. */
+    @ColumnInfo(name = "title")
+    val title: String? = null,
+
+    /** Explicit related knowledge-point IDs encoded by the existing list converter. */
+    @ColumnInfo(name = "related_point_ids")
+    val relatedPointIds: List<String>? = null,
+
+    @ColumnInfo(name = "content_status", defaultValue = "LEGACY_UNVERIFIED")
+    val contentStatus: String = ContentReviewStatus.LEGACY_UNVERIFIED.name,
 )
